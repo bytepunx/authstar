@@ -78,14 +78,17 @@ bootstrap and scheduled rotation rather than needing a second implementation lat
 
 A Kubernetes `CronJob` runs the same image in `MODE=rotate` on a recurring basis.
 
-Kubernetes' cron schedule is calendar-based, not interval-based — there is no native
-expression for "every 30 days" that stays accurate across month boundaries (`*/30` on the
-day-of-month field does not mean "every 30 days"; it matches days 1 and 31, which skips
-entirely in months with no 31st). To get a true 30-day cadence, the `CronJob` fires **daily**
-at 3 AM, and the script itself reads a last-rotated timestamp annotation off each credential's
-`Secret` and no-ops unless at least 30 days have elapsed — the same idempotency check
-`MODE=rotate` needs anyway, just evaluated against a rolling window instead of "does it exist
-at all."
+The `CronJob` fires **daily** at 3 AM and rotates unconditionally on every firing — a 24-hour
+cadence, chosen deliberately short so the rotation path (the ordered RabbitMQ-then-signet
+cutover from the previous section) gets exercised constantly during the period where it's
+being validated for outage-free behavior, rather than waiting weeks between real-world
+exercises of it. No elapsed-time gate is needed against the credential's `Secret`, since the
+fire interval already equals the intended rotation interval; `MODE=rotate` runs every time the
+`CronJob` fires. This cadence is expected to change once the ordering has been proven safe
+under testing — likely to something considerably longer for steady-state production use — at
+which point reintroducing an elapsed-time check (rather than assuming the schedule alone
+defines the interval) is worth reconsidering, particularly if the schedule ever needs to tolerate
+a missed/delayed firing without silently skipping a rotation or double-rotating.
 
 "3 AM in the server's time zone" is expressed via the `CronJob`'s `spec.timeZone` field (stable
 since Kubernetes 1.27), set to an IANA time zone name supplied as a Helm value for the
