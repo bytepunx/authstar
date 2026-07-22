@@ -49,25 +49,75 @@ Operator's `User`/`Permission` CRDs, within the namespace RabbitMQ runs in.
 Wired as a Helm `post-install` hook on the authstar chart, so it runs automatically once
 RabbitMQ and the Topology Operator are up, without a manual step.
 
-## Open Items — Not Resolved Here
+## Rotation-Safe Design
 
-- **Idempotency vs. rotation.** As a `post-install` hook, the Job should check whether each
-  target secret/User already exists and skip generation if so — a `post-upgrade` re-run should
-  not silently rotate credentials on every deploy. Deliberate credential rotation is a distinct
-  operation this ADR does not design: rotating requires coordinating signet's
-  watch-triggered restart of tower/keep with the Topology Operator applying the new password to
-  the actual RabbitMQ user, and a naive re-run risks a window where the two are out of sync
-  (tower holds the new credential before RabbitMQ accepts it, or vice versa). **Tracked for a
-  future ADR when rotation is actually needed.**
+The script is written from the start to support two modes, so the same image serves both
+bootstrap and scheduled rotation rather than needing a second implementation later:
+
+- **`MODE=bootstrap`** (used by the `post-install` hook): generate and provision a credential
+  only if one doesn't already exist for that user. A `post-upgrade` or otherwise-repeated run
+  in this mode is a no-op against an already-provisioned user.
+- **`MODE=rotate`** (used by the scheduled CronJob below): always generates a fresh credential
+  and runs the cutover in a specific order that bounds the risk window instead of leaving it
+  undesigned:
+  1. Generate the new credential.
+  2. Update the RabbitMQ side **first** — the `Secret` and the `User` CRD — and wait for the
+     Topology Operator to report the change applied before continuing.
+  3. Only then deposit the new credential into tower's/keep's own signet bundle via
+     `SyncBundle`, which triggers their normal watch-and-coordinated-restart cycle.
+
+  RabbitMQ does not drop already-established connections on a password change — only new
+  connection attempts require the new credential — so this ordering means the only remaining
+  exposure is a service needing to *reconnect* (e.g. after a network blip) during the short
+  window between step 2 and the service actually restarting with the new credential. That's a
+  materially smaller, bounded risk than rotating with no ordering at all, though it is not
+  zero; a further hardening step (e.g. RabbitMQ accepting two live credentials per user during
+  a grace period) is possible but not implemented here.
+
+## Scheduled Rotation
+
+A Kubernetes `CronJob` runs the same image in `MODE=rotate` on a recurring basis.
+
+Kubernetes' cron schedule is calendar-based, not interval-based — there is no native
+expression for "every 30 days" that stays accurate across month boundaries (`*/30` on the
+day-of-month field does not mean "every 30 days"; it matches days 1 and 31, which skips
+entirely in months with no 31st). To get a true 30-day cadence, the `CronJob` fires **daily**
+at 3 AM, and the script itself reads a last-rotated timestamp annotation off each credential's
+`Secret` and no-ops unless at least 30 days have elapsed — the same idempotency check
+`MODE=rotate` needs anyway, just evaluated against a rolling window instead of "does it exist
+at all."
+
+"3 AM in the server's time zone" is expressed via the `CronJob`'s `spec.timeZone` field (stable
+since Kubernetes 1.27), set to an IANA time zone name supplied as a Helm value for the
+deployment — not a hardcoded UTC offset, which would drift incorrectly across DST changes and
+would be wrong for any deployment not in the chart author's own time zone.
+
+```yaml
+spec:
+  schedule: "0 3 * * *"
+  timeZone: "America/New_York"   # Helm value, per-deployment
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: rabbitmq-provisioner
+              env:
+                - name: MODE
+                  value: rotate
+```
 
 ## Consequences
 
 - No manual step is needed to get tower/keep talking to RabbitMQ with their own least-privilege
   credentials after a fresh install.
 - Introduces one more small, purpose-built component (the provisioner Job/image) to build and
-  maintain, with its own narrow signet identity and Kubernetes RBAC grant.
-- Rotation remains explicitly unsolved and should not be assumed to work by simply re-running
-  this Job.
+  maintain, with its own narrow signet identity and Kubernetes RBAC grant — now also including
+  a `CronJob` and permission to read/write a rotation timestamp annotation on each credential
+  `Secret`.
+- Rotation now has a defined, ordered cutover rather than being unsolved, but still carries a
+  small residual reconnect-race window (see above) that a future hardening pass could close
+  further.
 
 ## Related
 
