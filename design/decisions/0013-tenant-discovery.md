@@ -1,8 +1,15 @@
 # ADR 0013: Tenant Discovery via Signet
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md)
 - **Date:** 2026-07-22
 - **Affects:** portcullis, tower
+
+> **Superseded 2026-07-22.** The separate discovery document and dynamic per-tenant
+> watch-add/remove behavior below added a second portcullis↔tower coupling to avoid a restart
+> that was never actually avoidable — a bundle change already triggers one. See
+> [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md), which folds the tenant list into
+> portcullis's single bundle and drops the dynamic watch machinery entirely. Kept below for the
+> record of what was considered.
 
 ## Context
 

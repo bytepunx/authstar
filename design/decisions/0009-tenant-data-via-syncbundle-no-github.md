@@ -1,9 +1,16 @@
 # ADR 0009: Tenant Config and Secrets via SyncBundle — No GitHub Dependency
 
-- **Status:** Accepted
+- **Status:** Accepted (path examples corrected by [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md))
 - **Date:** 2026-07-21
 - **Affects:** tower
 - **Amends:** [ADR 0007](0007-signet-tenant-namespace-mapping.md) (drops the `authstar-tenants` GitHub repo)
+
+> **Note (2026-07-22):** the per-tenant-namespace paths used as examples below
+> (`config/prod/tenant-acme/portcullis.yaml`) reflect ADR 0007, which is now superseded by
+> [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md) — actual paths are flat and
+> prefix-named under portcullis's single bundle, e.g.
+> `secrets/prod/authstar/tenant-acme-session-key.yaml`. This ADR's core decision (no GitHub
+> dependency, `SyncBundle` from an in-cluster tree) is otherwise unchanged.
 
 ## Context
 

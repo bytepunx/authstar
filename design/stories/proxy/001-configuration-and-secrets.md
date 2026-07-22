@@ -19,9 +19,9 @@ signet's git-native config/secrets delivery (ADR 0004).
 ## Background
 
 See [ADR 0004](../../decisions/0004-signet-for-configuration-and-secrets.md) (hard signet
-dependency), [ADR 0007](../../decisions/0007-signet-tenant-namespace-mapping.md) (per-tenant
-namespace convention), [ADR 0013](../../decisions/0013-tenant-discovery.md) (tenant discovery),
-and [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md)
+dependency), [ADR 0014](../../decisions/0014-single-bundle-prefixed-tenant-keys.md) (single
+bundle, prefixed tenant keys — supersedes the earlier per-tenant-namespace design in ADR 0007/
+0013), and [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md)
 (per-tenant, per-purpose signing keys).
 
 ---
@@ -46,40 +46,32 @@ and [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management
 - [ ] Portcullis embeds the Rust `signet-client` crate directly (no kickr wrapper — see ADR
       0004's note that Rust services embedding the client don't need a process-host sidecar).
 
-### Own service bundle
+### The single bundle
 
-- [ ] At startup, portcullis calls `GetServiceBundle` for its own scope
-      (`ns/authstar/sa/portcullis`). This bundle's config includes the tenant discovery
-      document (ADR 0013) — the list of active tenants and their hostnames. It is not expected
-      to contain meaningful secrets of its own, since portcullis has no direct database/cache
-      access (ADR 0004).
-- [ ] Portcullis opens a `WatchServiceBundle` stream on its own scope and reacts to a change via
-      the standard coordinated-restart cycle (`AcquireRestartLock` → refetch on next process
-      start).
-
-### Per-tenant bundles
-
-- [ ] For every tenant listed in the discovery document, portcullis calls `GetServiceBundle` on
-      that tenant's namespace (`ns/tenant-<slug>/sa/portcullis`) to obtain its operational
-      config (providers, CORS origin, cookie domain, upstream routing, exempt list) and its two
-      signing keypairs (session, internal — ADR 0002).
-- [ ] Portcullis opens a `WatchServiceBundle` stream per tenant and reacts to a change via the
-      coordinated-restart cycle, scoped so that one tenant's bundle change does not force a
-      restart cycle for unrelated tenants' traffic where avoidable.
-- [ ] When the tenant discovery document adds or removes a tenant, portcullis starts or stops
-      watching that tenant's bundle at runtime — no full portcullis restart is required merely
-      because a tenant was added or removed.
-
-### Config shape
-
-- [ ] The non-secret config shape for a tenant's bundle mirrors the original reference sections
-      (`server`, `upstream`, `exempt`, `auth`, `cookie`, `cors`, `providers`) — the schema
-      itself largely survives, per ADR 0011; only the source and per-tenant scoping change.
-      `jwt` key-file-path fields are removed — keys arrive as secrets in the bundle, not file
-      paths (see Story 008).
-- [ ] The `providers` config continues to use insertion-order-preserving structures so provider
-      listings (Story 017) and the selection page (Story 018) render in a stable, operator-
-      defined order.
+- [ ] Portcullis has exactly one signet scope: `ns/authstar/sa/portcullis`. There is no
+      per-tenant namespace and no wildcard cross-namespace policy (ADR 0014).
+- [ ] At startup, portcullis calls `GetServiceBundle` once for this scope and opens one
+      `WatchServiceBundle` stream on it. Any change — a new tenant, a rotated key, an updated
+      provider list, anything — is picked up through the single, standard coordinated-restart
+      cycle (`AcquireRestartLock` → refetch on next process start). No per-tenant watch is ever
+      opened or torn down at runtime.
+- [ ] The bundle's plain config has a top-level `tenants` map, keyed by tenant slug, each entry
+      giving that tenant's hostname(s) and its operational config (providers, CORS origin,
+      cookie domain, upstream routing, exempt list — mirroring the original reference's
+      `server`/`upstream`/`exempt`/`auth`/`cookie`/`cors`/`providers` sections, now nested per
+      tenant). `jwt` key-file-path fields are removed entirely — keys arrive as secrets, not
+      file paths (see Story 008).
+- [ ] The bundle's `secrets` map holds each tenant's two signing keys (session, internal — ADR
+      0002) under `tenant-<slug>-session-key` / `tenant-<slug>-internal-key` naming — flat,
+      prefixed names, not a nested or namespaced structure.
+- [ ] The `tenants.<slug>.providers` config continues to use insertion-order-preserving
+      structures so provider listings (Story 017) and the selection page (Story 018) render in
+      a stable, operator-defined order.
+- [ ] Removing a tenant's entry from the `tenants` map (full deletion/offboarding, not
+      suspension — see ADR 0013's still-applicable distinction) is what stops portcullis from
+      recognizing its hostname at all. A merely *suspended* tenant stays in the map; suspension
+      is enforced per-request through the normal enrichment `Deny` outcome (ADR 0001/0003), not
+      by removing proxy-level routing.
 
 ---
 

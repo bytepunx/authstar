@@ -1,9 +1,15 @@
 # ADR 0007: Signet Tenant/Namespace Mapping and Automated Tenant Onboarding
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md)
 - **Date:** 2026-07-21
 - **Affects:** portcullis, tower
 - **Resolves an open item in:** [ADR 0004](0004-signet-for-configuration-and-secrets.md)
+
+> **Superseded 2026-07-22.** The per-tenant-namespace design below turned out to buy nothing:
+> portcullis already reacts to any bundle change via a coordinated restart (ADR 0004), so
+> adding a tenant triggers that same cycle regardless of how tenant data is organized within
+> the bundle. See [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md) for the corrected
+> single-bundle, prefixed-key design. Kept below for the record of what was considered.
 
 ## Context
 

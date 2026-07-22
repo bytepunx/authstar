@@ -17,9 +17,10 @@ enforce authentication.
 
 ## Acceptance Criteria
 
-- [ ] The exempt list is part of the requesting tenant's own signet-delivered config bundle
-      (Story 001) — there is no `EXEMPT_ROUTES` environment variable merge; signet's
-      git-reviewed config is the only source.
+- [ ] The exempt list is part of the requesting tenant's section (`tenants.<slug>.exempt`) of
+      portcullis's single signet bundle (Story 001) — there is no `EXEMPT_ROUTES` environment
+      variable merge and no separate per-tenant fetch; signet's git-reviewed config is the only
+      source.
 - [ ] For each incoming request, the path (without query string) is tested against every
       pattern in the resolved tenant's exempt list.
 - [ ] Two pattern types are supported:
