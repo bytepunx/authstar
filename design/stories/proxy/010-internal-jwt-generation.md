@@ -37,9 +37,9 @@ changes is everything that now determines the internal token's contents.
 
   | Outcome | Behavior |
   |---|---|
-  | `Allow(claims)` | Sign the internal token with the identity claims plus tower's returned claims merged in (claims cannot override `sub`/`iat`/`exp`). `enrichment_status: "ok"`. Forward. |
-  | `Deny{status, reason}` | **No internal token is generated.** The request is rejected immediately with `status`; `reason` is logged, never returned to the client (ADR 0003). Not forwarded upstream. |
-  | `Unreachable(err)` | Subject to the tenant's configured fail-open/fail-closed policy (ADR 0001). Fail-closed: reject (5xx), not forwarded. Fail-open: sign the internal token with **only** the bare identity claims (`sub`, `idp`, `idp_sub`) — no role/status/entitlement claims fabricated — and `enrichment_status: "degraded"`. Forward. |
+  | `Allow(claims)` | Sign the internal token with the identity claims plus tower's returned claims merged in (claims cannot override `sub`/`iat`/`exp`). `enrichment_status: "ok"`. Forward. Unconditional — same on exempt and protected routes. |
+  | `Deny{status, reason}` | **No internal token is generated.** On a **protected** route, the request is rejected immediately with `status`; `reason` is logged, never returned to the client (ADR 0003). Not forwarded upstream. On an **exempt** route, the request is instead forwarded with no `Authorization` header — identical to an anonymous request to that route (ADR 0015) — it is not rejected. |
+  | `Unreachable(err)` | Fail-open: sign the internal token with **only** the bare identity claims (`sub`, `idp`, `idp_sub`) — no role/status/entitlement claims fabricated — and `enrichment_status: "degraded"`. Forward. Unconditional — same on exempt and protected routes. Fail-closed, **protected** route: reject (5xx), not forwarded. Fail-closed, **exempt** route: forward with no `Authorization` header, not rejected (ADR 0015). |
 
 - [ ] `enrichment_status` (`"ok"` or `"degraded"`) is always present on a forwarded internal
       token — this is what lets an upstream application distinguish "tower said this user has

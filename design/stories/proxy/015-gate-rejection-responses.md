@@ -16,6 +16,10 @@ route, tower's explicit `Deny`, or an `Unreachable` enrichment call under a fail
 All three share one response contract: a generic client-facing body, full detail logged
 server-side, nothing that leaks *why* to the caller.
 
+**Scope:** every response in this story applies to **protected routes only**. On an exempt
+route, a `Deny` or fail-closed `Unreachable` outcome never produces any of these responses — the
+request is forwarded instead, per [ADR 0015](../../decisions/0015-exempt-routes-never-blocked.md).
+
 ---
 
 ## Acceptance Criteria
