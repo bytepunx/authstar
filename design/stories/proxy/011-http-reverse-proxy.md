@@ -4,15 +4,15 @@
 **Repo:** portcullis
 **Status:** Draft
 **Adapted from:** `ref-design` Story 011 — mechanics unchanged; upstream config is now
-tenant-scoped. WebSocket upgrade requests are handled by Story 011a instead of falling under
-"out of scope."
+application-scoped (ADR 0016). WebSocket upgrade requests are handled by Story 011a instead of
+falling under "out of scope."
 
 ---
 
 ## Summary
 
-Portcullis forwards authenticated HTTP requests to the resolved tenant's upstream service(s)
-and streams responses back to the client transparently.
+Portcullis forwards authenticated HTTP requests to the resolved application's upstream
+service(s) and streams responses back to the client transparently.
 
 ---
 
@@ -34,12 +34,12 @@ and streams responses back to the client transparently.
 - [ ] The upstream response status, headers, and body are forwarded back unchanged, except
       standard hop-by-hop headers (`Connection`, `Keep-Alive`, `Transfer-Encoding`, `Upgrade`),
       which are stripped in both directions.
-- [ ] If the resolved tenant's upstream is unreachable, portcullis returns `502 Bad Gateway`
+- [ ] If the resolved application's upstream is unreachable, portcullis returns `502 Bad Gateway`
       with `{ "error": "upstream unavailable" }`.
-- [ ] If the upstream exceeds `tenants.<slug>.upstream.timeout` seconds (default 30), portcullis
-      returns `504 Gateway Timeout`.
-- [ ] The catch-all proxy target is `tenants.<slug>.upstream.base`. Any request not matched by a
-      prefix route (Story 012) is forwarded here.
+- [ ] If the upstream exceeds `tenants.<slug>.applications.<appSlug>.upstream.timeout` seconds
+      (default 30), portcullis returns `504 Gateway Timeout`.
+- [ ] The catch-all proxy target is `tenants.<slug>.applications.<appSlug>.upstream.base`. Any
+      request not matched by a prefix route (Story 012) is forwarded here.
 
 ---
 

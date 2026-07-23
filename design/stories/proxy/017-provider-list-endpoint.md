@@ -3,21 +3,23 @@
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**Adapted from:** `ref-design` Story 017 — response shape unchanged; scope is now per-tenant.
+**Adapted from:** `ref-design` Story 017 — response shape unchanged; scope is now per-application
+(ADR 0016) — an application lists the subset of its tenant's providers it exposes, not every
+provider the tenant has credentials for.
 
 ---
 
 ## Summary
 
-Portcullis exposes `GET /oauth2/providers` for the resolved tenant, returning a JSON array of
-that tenant's configured, currently-available authentication providers.
+Portcullis exposes `GET /oauth2/providers` for the resolved application, returning a JSON array
+of the providers that application exposes and are currently working.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] `GET /oauth2/providers` is handled locally under the resolved tenant, on that tenant's
-      exempt list (no authentication required).
+- [ ] `GET /oauth2/providers` is handled locally under the resolved application, on that
+      application's exempt list (no authentication required).
 - [ ] `200 OK`, `Content-Type: application/json`. Each entry:
 
   ```json
@@ -26,14 +28,16 @@ that tenant's configured, currently-available authentication providers.
 
   - `id` — the provider key as configured (lowercase).
   - `name` — the provider key with its first letter capitalised.
-  - `loginUrl` — the provider's configured `loginPath`.
+  - `loginUrl` — the provider's configured `loginPath`, under this application.
 
-- [ ] Order matches `tenants.<slug>.providers`' insertion order.
-- [ ] A provider that failed OIDC discovery for this tenant (Story 004's per-tenant isolation)
-      is **omitted** from this response — it has no working login handler, so listing it would
-      offer a dead link.
-- [ ] If the tenant has no working providers (none configured, or all failed discovery), the
-      endpoint returns an empty array `[]`.
+- [ ] Order matches the application's configured provider-exposure list (ADR 0016), which
+      references — but is not required to include all of — the owning tenant's `providers` map.
+- [ ] A provider that failed OIDC discovery for the owning tenant (Story 004's per-tenant
+      isolation), or that this application doesn't expose, is **omitted** from this response —
+      it has no working login handler under this application, so listing it would offer a dead
+      link.
+- [ ] If the application has no working exposed providers, the endpoint returns an empty array
+      `[]`.
 
 ---
 

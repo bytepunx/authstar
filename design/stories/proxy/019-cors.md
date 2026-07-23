@@ -4,25 +4,25 @@
 **Repo:** portcullis
 **Status:** Draft
 **Adapted from:** `ref-design` Story 019 — mechanics unchanged; origin config is now
-tenant-scoped.
+application-scoped (ADR 0016).
 
 ---
 
 ## Summary
 
 Portcullis handles CORS preflight requests locally and attaches CORS headers to all responses,
-using the resolved tenant's allowed origin configuration.
+using the resolved application's allowed origin configuration.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] `OPTIONS` requests are handled locally, under the resolved tenant, and never forwarded
-      upstream.
-- [ ] `tenants.<slug>.cors.origin` accepts a single string or a list.
-- [ ] For each request, the `Origin` header is checked against that tenant's configured allowed
-      origins: matching origin → echoed in `Access-Control-Allow-Origin`; non-matching → CORS
-      headers omitted (never echo back an unconfigured origin).
+- [ ] `OPTIONS` requests are handled locally, under the resolved application, and never
+      forwarded upstream.
+- [ ] The application's `cors.origin` accepts a single string or a list.
+- [ ] For each request, the `Origin` header is checked against that application's configured
+      allowed origins: matching origin → echoed in `Access-Control-Allow-Origin`; non-matching →
+      CORS headers omitted (never echo back an unconfigured origin).
 - [ ] CORS headers on matching-origin responses:
 
   | Header | Value |

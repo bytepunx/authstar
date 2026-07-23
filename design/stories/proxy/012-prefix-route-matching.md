@@ -10,29 +10,29 @@ reference flagged this as needing confirmation; adds an explicit tie-breaker rul
 
 ## Summary
 
-Portcullis routes requests to different upstream services within a tenant based on URL path
-prefixes, so one tenant can front multiple backend services through a single portcullis
-deployment.
+Portcullis routes requests to different upstream services within an application based on URL
+path prefixes, so one application can front multiple backend services through a single
+portcullis deployment.
 
 ---
 
 ## Acceptance Criteria
 
-- [ ] `tenants.<slug>.upstream.routes` accepts entries of the form `<prefix>: <upstream URL>`,
-      as an insertion-order-preserving map.
-- [ ] For each incoming request (after tenant resolution), portcullis checks that tenant's
-      configured prefixes.
+- [ ] `tenants.<slug>.applications.<appSlug>.upstream.routes` accepts entries of the form
+      `<prefix>: <upstream URL>`, as an insertion-order-preserving map.
+- [ ] For each incoming request (after application resolution), portcullis checks that
+      application's configured prefixes.
 - [ ] **The longest matching prefix wins.** If both `/api` and `/api/admin` are configured, a
       request to `/api/admin/users` routes to the `/api/admin` upstream.
 - [ ] **Tie-breaker:** if two or more configured prefixes of *equal* length match the same
       request path (only possible with prefixes that are literally identical strings, since two
       distinct prefixes of the same length can't both be a prefix of the same path unless
-      they're equal), the one defined **earlier** in `tenants.<slug>.upstream.routes` (insertion
-      order) wins. In practice this resolves duplicate-key configuration mistakes
+      they're equal), the one defined **earlier** in the application's `upstream.routes`
+      (insertion order) wins. In practice this resolves duplicate-key configuration mistakes
       deterministically rather than leaving them undefined behavior.
 - [ ] When a prefix matches, it is **stripped** from the path before forwarding — `/library/books`
       with prefix `/library` becomes `/books`. An empty remaining path becomes `/`.
-- [ ] If no prefix matches, the request is forwarded to `tenants.<slug>.upstream.base` (the
+- [ ] If no prefix matches, the request is forwarded to the application's `upstream.base` (the
       catch-all) with the path unchanged.
 - [ ] All prefix-route upstreams are subject to the same auth gate (Story 013) and header
       rewriting (Story 010) as the catch-all.
@@ -45,12 +45,14 @@ deployment.
 ```yaml
 tenants:
   acme:
-    upstream:
-      base: http://web-service:4411
-      routes:
-        /api: http://api-service:4412
-        /api/admin: http://admin-service:4413
-        /assets: http://cdn-service:4414
+    applications:
+      main:
+        upstream:
+          base: http://web-service:4411
+          routes:
+            /api: http://api-service:4412
+            /api/admin: http://admin-service:4413
+            /assets: http://cdn-service:4414
 ```
 
 ## Example Routing

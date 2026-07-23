@@ -18,9 +18,10 @@ enricher needs.
 
 ## Acceptance Criteria
 
-- [ ] Tenant resolution (from `Host`, Story 013) happens **before** this step — verification
-      cannot proceed without knowing which tenant's key(s) to check against. A request whose
-      `Host` matches no configured tenant never reaches JWT verification at all (see Story 013).
+- [ ] Application (and owning tenant) resolution (from `Host`, Story 013, ADR 0016) happens
+      **before** this step — verification cannot proceed without knowing which tenant's key(s)
+      to check against. A request whose `Host` matches no configured application never reaches
+      JWT verification at all (see Story 013).
 - [ ] For every incoming request (post tenant-resolution), portcullis looks for the `jwt`
       cookie.
 - [ ] If found, the token's `kid` header is used to select the matching public key from the
@@ -40,7 +41,7 @@ enricher needs.
       logged at debug level and never returned to the client.
 - [ ] Verification order relative to the rest of the gate is unchanged from `ref-design`:
       1. Attempt JWT verification (if cookie present, against the resolved tenant's keys).
-      2. Check if the route is exempt (resolved tenant's exempt list — Story 003).
+      2. Check if the route is exempt (resolved application's exempt list — Story 003).
       3. Decide the authentication outcome (Story 013).
 
 ---

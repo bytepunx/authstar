@@ -18,7 +18,7 @@ endpoint — capturing both `email` **and** the provider's own immutable `sub`, 
 ## Acceptance Criteria
 
 - [ ] Each provider registers a `GET` handler at its derived `callbackPath` under the resolved
-      tenant (same tenant-scoping as Story 005).
+      application (same application/tenant scoping as Story 005, per ADR 0016).
 - [ ] **State validation:** `oauth2-state` cookie compared against the `state` query parameter;
       mismatch or missing cookie → `400 Bad Request`. Cookie cleared immediately after
       validation regardless of outcome.

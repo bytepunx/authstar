@@ -20,8 +20,8 @@ returns the user there after successful authentication.
 
 - [ ] When an unauthenticated browser request is intercepted (Story 013), portcullis sets an
       `authstar-return` cookie containing the full request path + query string, using the
-      resolved tenant's cookie `domain`/`path`, before redirecting to that tenant's
-      `auth.loginUrl`.
+      resolved tenant's cookie `domain`/`path` (shared across the tenant's applications — ADR
+      0016), before redirecting to the resolved application's `auth.loginUrl`.
 - [ ] At the OAuth2 callback (Story 006), after issuing the session JWT, portcullis reads
       `authstar-return`.
 - [ ] The return URL is validated with `is_safe_return_url` before use:

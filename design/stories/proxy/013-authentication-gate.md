@@ -8,16 +8,18 @@
 [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
 [ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
 [ADR 0014](../../decisions/0014-single-bundle-prefixed-tenant-keys.md),
-[ADR 0015](../../decisions/0015-exempt-routes-never-blocked.md).
+[ADR 0015](../../decisions/0015-exempt-routes-never-blocked.md),
+[ADR 0016](../../decisions/0016-application-layer-and-sso-scope.md).
 
 ---
 
 ## Summary
 
 Every request passes through an authentication gate before being proxied. The gate resolves the
-tenant, verifies the session, calls tower's claims enricher, and decides whether to forward the
-request (with or without auth headers), redirect to login, or reject it. This is the single
-enforcement point for all authentication and authorization policy.
+application (and its owning tenant), verifies the session, calls tower's claims enricher, and
+decides whether to forward the request (with or without auth headers), redirect to login, or
+reject it. This is the single enforcement point for all authentication and authorization
+policy.
 
 ---
 
@@ -27,18 +29,19 @@ enforcement point for all authentication and authorization policy.
 Incoming Request
       │
       ▼
-Resolve tenant from Host header (Story 001's `tenants` map)
+Resolve application from Host header, and its owning tenant
+(Story 001's `tenants.<slug>.applications` map — ADR 0016)
       │
    No match                          Match
       │                                │
       ▼                                ▼
-404 (no tenant for this host)   JWT cookie present and valid
-                                 for this tenant? (Story 009)
+404 (no application for this host)  JWT cookie present and valid
+                                     for the resolved tenant? (Story 009)
                                        │
                                     Yes│                              No│
                                        ▼                                ▼
                           Call tower's claims enricher          Is route exempt for
-                          (Story 010)                           this tenant? (Story 003)
+                          (Story 010)                           this application? (Story 003)
                                        │                                │
                         ┌──────────────┼──────────────┐             Yes│    No│
                         ▼              ▼               ▼                ▼      ▼
@@ -66,9 +69,9 @@ call itself always runs when a valid session exists, exempt or not (ADR 0015).
 
 ## Acceptance Criteria
 
-- [ ] Tenant resolution runs first, before any other step, for every request. A `Host` matching
-      no entry in the `tenants` map is rejected (`404`) before touching JWT verification,
-      exemption, or enrichment.
+- [ ] Application resolution (and its owning tenant) runs first, before any other step, for
+      every request. A `Host` matching no application's `hosts` list is rejected (`404`) before
+      touching JWT verification, exemption, or enrichment.
 - [ ] The gate runs as middleware applied to every route handler before proxying.
 - [ ] A request with a **valid session JWT** for the resolved tenant always triggers the claims
       enrichment call and its three-way outcome — regardless of whether the route is exempt.
@@ -100,8 +103,9 @@ call itself always runs when a valid session exists, exempt or not (ADR 0015).
 ## Notes
 
 - "Valid JWT" means verified per Story 009 (correct signature against the resolved tenant's
-  key, correct issuer/audience, not expired). The gate does not differentiate between an absent
-  cookie and an invalid/expired one — both are "no valid JWT," unchanged from `ref-design`.
+  key — shared across all of that tenant's applications, per ADR 0016 — correct
+  issuer/audience, not expired). The gate does not differentiate between an absent cookie and
+  an invalid/expired one — both are "no valid JWT," unchanged from `ref-design`.
 - Exempt routes are public-facing by definition — an anonymous visitor is always let through.
   A visitor carrying a *denied* session must never end up worse off than that anonymous
   visitor purely for having once authenticated; ADR 0015 exists specifically to prevent that.
