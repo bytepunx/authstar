@@ -5,7 +5,9 @@
 **Status:** Draft
 **Adapted from:** `ref-design` Story 010 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
 [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
-[ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md).
+[ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
+[ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
+[ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md).
 
 ---
 
@@ -33,14 +35,22 @@ changes is everything that now determines the internal token's contents.
 ### Enrichment call and the three-way outcome
 
 - [ ] After successful session JWT verification (Story 009), portcullis calls tower's claims
-      enricher with `{ idp, idp_sub, email }` (ADR 0001) and receives one of three outcomes:
+      enricher with `{ idp, idp_sub, email, application }` (ADR 0001, ADR 0017 — `application`
+      is the resolved application's slug, needed so tower can filter role scope) and receives
+      one of three outcomes:
 
   | Outcome | Behavior |
   |---|---|
-  | `Allow(claims)` | Sign the internal token with the identity claims plus tower's returned claims merged in (claims cannot override `sub`/`iat`/`exp`). `enrichment_status: "ok"`. Forward. Unconditional — same on exempt and protected routes. |
+  | `Allow({ accountId, grantedRoles, trialRoles, trialExpiresAt })` | Sign the internal token. `enrichment_status: "ok"`. Forward. Unconditional — same on exempt and protected routes. |
   | `Deny{status, reason}` | **No internal token is generated.** On a **protected** route, the request is rejected immediately with `status`; `reason` is logged, never returned to the client (ADR 0003). Not forwarded upstream. On an **exempt** route, the request is instead forwarded with no `Authorization` header — identical to an anonymous request to that route (ADR 0015) — it is not rejected. |
-  | `Unreachable(err)` | Fail-open: sign the internal token with **only** the bare identity claims (`sub`, `idp`, `idp_sub`) — no role/status/entitlement claims fabricated — and `enrichment_status: "degraded"`. Forward. Unconditional — same on exempt and protected routes. Fail-closed, **protected** route: reject (5xx), not forwarded. Fail-closed, **exempt** route: forward with no `Authorization` header, not rejected (ADR 0015). |
+  | `Unreachable(err)` | Fail-open: sign the internal token with **only** the bare identity claims (`sub`, `idp`, `idp_sub`) — no role/entitlement claims fabricated — and `enrichment_status: "degraded"`. Forward. Unconditional — same on exempt and protected routes. Fail-closed, **protected** route: reject (5xx), not forwarded. Fail-closed, **exempt** route: forward with no `Authorization` header, not rejected (ADR 0015). |
 
+- [ ] **The `Allow` outcome's `roles` claim on the internal token is portcullis's own merge, not
+      a value tower computed** (ADR 0018): `roles = grantedRoles + (trialRoles if
+      now < trialExpiresAt else [])`, both already filtered to the resolved application's scope
+      by tower. This is the only place expiry is evaluated — a trivial, local timestamp
+      comparison, no network call. Tower's response carries `grantedRoles`/`trialRoles`/
+      `trialExpiresAt` as plain current-state fields; it never evaluates expiry itself.
 - [ ] `enrichment_status` (`"ok"` or `"degraded"`) is always present on a forwarded internal
       token — this is what lets an upstream application distinguish "tower said this user has
       no extra claims" from "tower was unreachable and we don't actually know" (ADR 0003).
