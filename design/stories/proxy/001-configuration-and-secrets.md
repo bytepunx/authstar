@@ -72,6 +72,14 @@ products, e.g. one of several related sites sharing a login).
 - [ ] The bundle's `secrets` map holds each tenant's two signing keys (session, internal — ADR
       0002) under `tenant-<slug>-session-key` / `tenant-<slug>-internal-key` naming — flat,
       prefixed names, scoped to the tenant, not to any one application.
+- [ ] The bundle's `secrets` map also holds each tenant's `identity-hash-key` — as **multiple**
+      named secrets, `tenant-<slug>-identity-hash-key-<version>`, one per key generation (ADR
+      0027, ADR 0028) — not a single value. The bundle's plain config carries a matching,
+      non-secret `tenants.<slug>.identityHashKeyGenerations: [{ version, effectiveFrom }]` list,
+      since that metadata needs to be readable without decrypting anything. The retention window
+      implied by how many generations are kept must be at least `tenants.<slug>.cookie.maxAge` —
+      portcullis should treat a configuration where it isn't as a startup validation error, not
+      a silent risk of orphaning in-flight sessions.
 - [ ] The `tenants.<slug>.providers` map, and each application's list of exposed provider
       names, continue to use insertion-order-preserving structures so provider listings (Story
       017) and the selection page (Story 018) render in a stable, operator-defined order.

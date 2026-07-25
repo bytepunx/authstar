@@ -4,7 +4,8 @@
 **Repo:** portcullis
 **Status:** Draft
 **Adapted from:** `ref-design` Story 006 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
-[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md).
+[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md),
+[ADR 0028](../../decisions/0028-identity-hash-key-generations.md).
 
 ---
 
@@ -36,12 +37,24 @@ endpoint — capturing both `email` **and** the provider's own immutable `sub`, 
       ADR 0001; `email` remains a required, separately-extracted field. If either is absent,
       the handler returns `500`.
 - [ ] **`sub` is hashed immediately, never retained or forwarded raw** (ADR 0027): using the
-      resolved tenant's `identity-hash-key` secret, portcullis computes
-      `identityHash = HMAC-SHA256(identityHashKey, tenant + ':' + idp + ':' + sub)`. The raw
-      `sub` value is discarded the moment this computation completes — it is not logged, not
-      placed on any token, and not sent to tower.
+      resolved tenant's `identity-hash-key` generations, portcullis computes
+      `identityHash = HMAC-SHA256(key, tenant + ':' + idp + ':' + sub)` under the **current**
+      key generation, and again under **every other generation still within its retention
+      window** (ADR 0028). The raw `sub` value is discarded the moment these computations
+      complete — it is not logged, not placed on any token, and not sent to tower.
+- [ ] The full ordered list of candidate hashes (current generation first) is sent to tower as
+      part of identity resolution at this login step — **only** at login; this list is never
+      part of the ordinary per-request enrichment call (Story 010), which sends just the single
+      hash the session ends up carrying.
+- [ ] Tower resolves against the first matching candidate and returns the identity's canonical
+      account. If the match was against a non-current candidate, that's tower's signal to alias
+      the older hash forward (ADR 0028) — portcullis doesn't need to do anything with that fact
+      beyond using whatever account tower returns.
 - [ ] On success, the handler issues a session JWT (Story 008) carrying `sub = email`, `idp =
-      <provider name>`, `identityHash = <computed above>`, and redirects per Story 007.
+      <provider name>`, `identityHash = <the current-generation hash computed above>`, and
+      redirects per Story 007. The session always carries the **current**-generation hash,
+      regardless of which candidate tower actually matched — this is what lets the population of
+      sessions converge back toward the current generation over time as people log in again.
 
 ---
 
