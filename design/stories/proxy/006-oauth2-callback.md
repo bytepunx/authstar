@@ -3,7 +3,8 @@
 **Epic:** OAuth2 Authentication
 **Repo:** portcullis
 **Status:** Draft
-**Adapted from:** `ref-design` Story 006 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md).
+**Adapted from:** `ref-design` Story 006 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
+[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md).
 
 ---
 
@@ -34,8 +35,13 @@ endpoint — capturing both `email` **and** the provider's own immutable `sub`, 
       provider's own immutable opaque subject identifier — required for identity resolution per
       ADR 0001; `email` remains a required, separately-extracted field. If either is absent,
       the handler returns `500`.
+- [ ] **`sub` is hashed immediately, never retained or forwarded raw** (ADR 0027): using the
+      resolved tenant's `identity-hash-key` secret, portcullis computes
+      `identityHash = HMAC-SHA256(identityHashKey, tenant + ':' + idp + ':' + sub)`. The raw
+      `sub` value is discarded the moment this computation completes — it is not logged, not
+      placed on any token, and not sent to tower.
 - [ ] On success, the handler issues a session JWT (Story 008) carrying `sub = email`, `idp =
-      <provider name>`, `idp_sub = <userinfo sub>`, and redirects per Story 007.
+      <provider name>`, `identityHash = <computed above>`, and redirects per Story 007.
 
 ---
 
@@ -58,6 +64,9 @@ endpoint — capturing both `email` **and** the provider's own immutable `sub`, 
 - The provider validates `code_verifier` against `code_challenge`; portcullis does not
   re-derive or check it itself — unchanged.
 - This is the one deliberate behavioral change from `ref-design` Story 006: the original only
-  extracted `email`. Capturing `sub` here is what makes ADR 0001's `(idp, idp_sub)`-keyed
-  identity resolution possible — tower resolves the canonical account from this pair, not from
-  email, since email is mutable and not a safe cross-provider linking key.
+  extracted `email`. Capturing `sub` here is what makes ADR 0001's identity resolution
+  possible — tower resolves the canonical account from `identityHash`, not from email, since
+  email is mutable and not a safe cross-provider linking key.
+- Per ADR 0027, `sub` itself never reaches tower at all — only the hash portcullis computes
+  from it. Tower has no ability to recover the raw provider subject identifier under any
+  circumstance.

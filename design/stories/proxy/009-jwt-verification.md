@@ -33,9 +33,9 @@ enricher needs.
       - `iss` claim matches `tenants.<slug>.jwt.issuer`.
       - `aud` claim matches `tenants.<slug>.jwt.audience`.
       - Token is not expired (`exp` > current time, with a small clock-skew leeway, e.g. 30s).
-- [ ] On success, `sub`, `idp`, and `idp_sub` are stored on the request context for downstream
-      use — not just `sub` as in the original reference, since `idp`/`idp_sub` are what the
-      claims enricher (ADR 0001) sends to tower for identity resolution.
+- [ ] On success, `sub`, `idp`, and `identityHash` are stored on the request context for
+      downstream use — not just `sub` as in the original reference, since `idp`/`identityHash`
+      are what the claims enricher (ADR 0001, ADR 0027) sends to tower for identity resolution.
 - [ ] On failure (any check above, including an unmatched `kid`), the JWT is treated as absent —
       the request flows to the unauthenticated handling logic (Story 013/014). Errors are
       logged at debug level and never returned to the client.

@@ -7,7 +7,8 @@
 [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
 [ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
 [ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
-[ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md).
+[ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
+[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md).
 
 ---
 
@@ -35,15 +36,15 @@ changes is everything that now determines the internal token's contents.
 ### Enrichment call and the three-way outcome
 
 - [ ] After successful session JWT verification (Story 009), portcullis calls tower's claims
-      enricher with `{ idp, idp_sub, email, application }` (ADR 0001, ADR 0017 — `application`
-      is the resolved application's slug, needed so tower can filter role scope) and receives
-      one of three outcomes:
+      enricher with `{ idp, identityHash, email, application }` (ADR 0001, ADR 0017, ADR 0027 —
+      `application` is the resolved application's slug, needed so tower can filter role scope)
+      and receives one of three outcomes:
 
   | Outcome | Behavior |
   |---|---|
   | `Allow({ accountId, grantedRoles, trialRoles, trialExpiresAt })` | Sign the internal token. `enrichment_status: "ok"`. Forward. Unconditional — same on exempt and protected routes. |
   | `Deny{status, reason}` | **No internal token is generated.** On a **protected** route, the request is rejected immediately with `status`; `reason` is logged, never returned to the client (ADR 0003). Not forwarded upstream. On an **exempt** route, the request is instead forwarded with no `Authorization` header — identical to an anonymous request to that route (ADR 0015) — it is not rejected. |
-  | `Unreachable(err)` | Fail-open: sign the internal token with **only** the bare identity claims (`sub`, `idp`, `idp_sub`) — no role/entitlement claims fabricated — and `enrichment_status: "degraded"`. Forward. Unconditional — same on exempt and protected routes. Fail-closed, **protected** route: reject (5xx), not forwarded. Fail-closed, **exempt** route: forward with no `Authorization` header, not rejected (ADR 0015). |
+  | `Unreachable(err)` | Fail-open: sign the internal token with **only** the bare identity claims (`sub`, `idp`, `identityHash`) — no role/entitlement claims fabricated — and `enrichment_status: "degraded"`. Forward. Unconditional — same on exempt and protected routes. Fail-closed, **protected** route: reject (5xx), not forwarded. Fail-closed, **exempt** route: forward with no `Authorization` header, not rejected (ADR 0015). |
 
 - [ ] **The `Allow` outcome's `roles` claim on the internal token is portcullis's own merge, not
       a value tower computed** (ADR 0018): `roles = grantedRoles + (trialRoles if
@@ -76,8 +77,9 @@ Authorization: Bearer eyJhbGciOiJFUzI1NiIsInR5cCI6IkpXVCJ9...
 ## Notes
 
 - The internal token's identity is the one upstream applications should trust — not the session
-  cookie's `sub` — since tower resolves the canonical account from `(idp, idp_sub)` and returns
-  it as part of the `Allow` outcome's claims (ADR 0001).
+  cookie's `sub` — since tower resolves the canonical account from `identityHash` and returns
+  it as part of the `Allow` outcome's claims (ADR 0001, ADR 0027). Tower never sees the raw
+  provider subject identifier this hash was derived from.
 - Session and internal tokens now use separate keypairs per tenant (ADR 0002), superseding
   `ref-design`'s note that this was "a potential future hardening measure, out of scope" — it's
   in scope from the start here.

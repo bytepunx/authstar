@@ -5,7 +5,8 @@
 **Status:** Draft
 **Adapted from:** `ref-design` Story 008 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
 [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
-[ADR 0014](../../decisions/0014-single-bundle-prefixed-tenant-keys.md).
+[ADR 0014](../../decisions/0014-single-bundle-prefixed-tenant-keys.md),
+[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md).
 
 ---
 
@@ -31,6 +32,10 @@ for all subsequent requests to that tenant through portcullis.
 - [ ] A tenant with a missing or invalid session key is unable to issue sessions — this is a
       per-tenant failure (that tenant's login is broken) and must not affect any other tenant,
       consistent with Story 004's per-tenant isolation posture.
+- [ ] Each tenant also has an `identity-hash-key` secret (ADR 0027) — distinct from the signing
+      keypairs above, used only for the HMAC computed in Story 006. **This key is never given
+      to tower** — it exists solely so portcullis can compute `identityHash` and, later, verify
+      the claim came from a value it could have produced itself.
 
 ### Claims
 
@@ -40,7 +45,7 @@ for all subsequent requests to that tenant through portcullis.
   |-------|-------|
   | `sub` | User's email address |
   | `idp` | The provider name used to authenticate (e.g. `google`) |
-  | `idp_sub` | The provider's own immutable subject identifier from userinfo |
+  | `identityHash` | The HMAC computed in Story 006 from the provider's subject identifier — never the raw value itself (ADR 0027) |
   | `iss` | The resolved tenant's `tenants.<slug>.jwt.issuer` |
   | `aud` | The resolved tenant's `tenants.<slug>.jwt.audience` |
   | `iat` | Current Unix timestamp |
@@ -70,9 +75,13 @@ for all subsequent requests to that tenant through portcullis.
 
 - `sub = email` is retained rather than switching to a composite identifier — per the explicit
   decision in the ADR 0001 discussion: email stays human-readable for logging/debugging, while
-  `idp`/`idp_sub` carry the actual identity-resolution key tower uses. The session cookie's
-  identity is not what upstream applications should trust; the internal token's resolved
-  identity (Story 010) is.
+  `idp`/`identityHash` carry the actual identity-resolution key tower uses. The session
+  cookie's identity is not what upstream applications should trust; the internal token's
+  resolved identity (Story 010) is.
+- The raw provider subject identifier (`sub` from userinfo — not this token's own `sub` claim,
+  which is email) never reaches this cookie at all, per ADR 0027 — only its hash does. This
+  shrinks its exposure window to portcullis's own process memory during Story 006, rather than
+  sitting in a browser-held cookie for the life of the session.
 - The private key must never be logged, matching the reference's original constraint — now
   extended to mean "never logged at any point after being received from signet," since it's no
   longer a file on disk at all.
