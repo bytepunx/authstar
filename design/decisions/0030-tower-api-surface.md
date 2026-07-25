@@ -20,7 +20,7 @@ the full resource/route inventory.
 | Versioning | Media type via `Accept` header — see below, not the URL |
 | Resource naming | Plural nouns, kebab-case in URLs (`/invite-codes`); camelCase in JSON bodies |
 | Methods | `GET`/`POST`/`PATCH`/`DELETE` only — no `PUT`, nothing here needs full-replace |
-| State transitions | Dedicated action sub-resources (`POST /accounts/{id}/suspend`), not overloaded `PATCH` |
+| State transitions | Field-level `PATCH` — no verb segments in URLs; a state change is a partial update to the resource, same as any other field |
 | Errors | RFC 7807 (`application/problem+json`) |
 | Pagination | Cursor-based: `?limit=&cursor=`, response `{ data: [...], nextCursor }` |
 | Idempotency | `Idempotency-Key` header on side-effecting `POST`s (invites, invite codes) — same discipline as herald (ADR 0022) |
@@ -81,10 +81,7 @@ here.
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/accounts` | `GET` | Search via `account`'s `searchableBy` (ADR 0017) |
-| `/tenants/{tenantSlug}/accounts/{accountId}` | `GET` | |
-| `/tenants/{tenantSlug}/accounts/{accountId}/suspend` | `POST` | Action endpoint |
-| `/tenants/{tenantSlug}/accounts/{accountId}/reactivate` | `POST` | Action endpoint |
-| `/tenants/{tenantSlug}/accounts/{accountId}/delete` | `POST` | Business-initiated offboarding — sets `account.status = deleted`. **Distinct from GDPR erasure** (below), which operates on `contact`, not `account`, and can happen independently of this |
+| `/tenants/{tenantSlug}/accounts/{accountId}` | `GET`, `PATCH` | `PATCH { status: "active" \| "suspended" \| "deleted" }` covers suspend/reactivate/business-offboarding — no separate action endpoints. `deleted` here is a business status field, not resource removal; **distinct from GDPR erasure** (below), which operates on `contact`, not `account`, and can happen independently of this |
 | `/tenants/{tenantSlug}/accounts/{accountId}/roles` | `GET`, `POST` | `roles` (ADR 0017), app-interpreted claims |
 | `/tenants/{tenantSlug}/accounts/{accountId}/roles/{name}` | `DELETE` | Scope disambiguated via query param if needed |
 | `/tenants/{tenantSlug}/accounts/{accountId}/permissions` | `GET`, `POST` | `permissions` (ADR 0018), tower-owned, distinct vocabulary from `roles` |
