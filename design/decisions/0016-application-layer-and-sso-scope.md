@@ -67,6 +67,22 @@ requiring a central redirect-based session-bridging flow) is explicitly **out of
 different applications) is also explicitly **deferred**. Both are tracked as candidates for
 their own dedicated design passes, not designed here.
 
+> **Note for that future pass (added 2026-07-25):** no separate email-verification flow is
+> needed for ordinary signup/invite acceptance — the OIDC provider's own vouching is a
+> sufficient trust anchor there, and building one would add nothing (this was considered and
+> explicitly scoped out). Where verification-shaped work *does* belong is linking itself, and
+> even there, email verification is not the right primary defense — this is a well-documented
+> vulnerability class (accounts hijacked by an attacker linking an identity they control onto a
+> victim's existing account). The established correct defense is requiring **live, simultaneous
+> proof of control of both identities in one continuous, server-correlated flow**: the user must
+> already be authenticated to the *existing* account when they initiate linking, and complete a
+> fresh OIDC round-trip for the *new* identity, with server-side state (the same `state`-cookie
+> correlation portcullis's login flow already uses, Story 005) tying the two together so an
+> attacker can't inject their own identity into someone else's linking transaction via CSRF or a
+> mismatched callback. Email matching stays a hint/suggestion only, never an authorization
+> mechanism — consistent with ADR 0001's original framing, just extended to the security
+> boundary here, not only the lookup.
+
 ## Consequences
 
 - **Story 001** needs a substantial rewrite: the `tenants` map gains a nested `applications`
