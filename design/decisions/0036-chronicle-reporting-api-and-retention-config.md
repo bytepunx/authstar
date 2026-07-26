@@ -36,7 +36,13 @@ bootstrap problem to solve.
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/analytics/reports/auth-funnel` | `GET` | Login attempts/success/failure by provider, signup conversion, invite/code redemption rates. Query params: date range, optional `application` |
-| `/tenants/{tenantSlug}/analytics/reports/active-users` | `GET` | DAU/WAU/MAU, correctly deduplicated tenant-wide via `identityHash` — the exact problem that originally motivated tenant-scoped identity resolution (ADR 0016/0017). Query params: date range, `granularity` |
+| `/tenants/{tenantSlug}/analytics/reports/active-users` | `GET` | DAU/WAU/MAU. Query params: date range, `granularity`, optional `application`. **Omitted** `application` deduplicates tenant-wide via `identityHash` — the exact problem that originally motivated tenant-scoped identity resolution (ADR 0016/0017); an org with several products still wants that rollup. **Specified** `application` scopes the same dedup logic to activity within just that one product — an org with several applications will just as often want to know how one specific product is doing on its own, not only the aggregate |
+
+A **per-application breakdown** (comparing all of a tenant's applications side by side in one
+call, rather than either the full rollup or one at a time) doesn't need a third report
+endpoint — it's already expressible on the query endpoint below via
+`metric: 'unique_count', groupBy: ['application']`, since `application` is already part of the
+allowed `groupBy` vocabulary.
 
 **A constrained metrics-query endpoint** for everything else:
 
