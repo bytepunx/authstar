@@ -1,4 +1,4 @@
-# ADR 0035: Lookout and Chronicle — Portcullis-Sourced Analytics
+# ADR 0035: `lookout` and `chronicle` — Portcullis-Sourced Analytics
 
 - **Status:** Accepted
 - **Date:** 2026-07-25
@@ -54,7 +54,7 @@ identities in analytics.
 
 ### No IP address, anywhere in this pipeline, ever
 
-Not captured by portcullis, not published to RabbitMQ, not stored in Chronicle. This is
+Not captured by portcullis, not published to RabbitMQ, not stored in `chronicle`. This is
 unconditional — not truncated-for-geo, not hashed-for-privacy, simply never collected. (Raw
 `User-Agent` should still be parsed into coarse categories — browser family, device type —
 rather than stored verbatim, for the same fingerprinting-vector reasoning, though this is a
@@ -64,7 +64,7 @@ softer recommendation than the hard IP rule.)
 
 Entitlement events, comms requests, contact-lifecycle messages are all low-frequency, must-not-
 lose business events. Analytics is the opposite: potentially orders of magnitude higher volume,
-and losing some during a brief Chronicle outage is an acceptable, explicitly accepted trade-off
+and losing some during a brief `chronicle` outage is an acceptable, explicitly accepted trade-off
 — not an oversight. Non-durable exchange/queue(s), no persistence guarantee if nothing is
 consuming.
 
@@ -91,7 +91,7 @@ analytics event is exactly as unresolvable to a real person as tower's own dead 
 pointers already are. This reasoning depends entirely on the no-IP rule holding — it's the
 thing that would have complicated this otherwise.
 
-**Chronicle's query/reporting API for `web`** is deferred to its own design pass, same
+**`chronicle`'s query/reporting API for `web`** is deferred to its own design pass, same
 sequencing already used for tower and herald's API surfaces.
 
 ### Explicitly still open, not blocking this architecture
