@@ -60,6 +60,10 @@ blanket delete — more likely anonymize-and-retain-the-facts, disassociating th
 while keeping whatever a given jurisdiction requires kept. Not resolved here; belongs to keep's
 own domain design.
 
+> **Resolved in [ADR 0040](0040-keep-erasure-response.md) (2026-07-29).** Also amends this
+> ADR's `contact.purged` payload to include `accountId`, needed for `accountId`-keyed
+> subscribers (like keep) to correlate the event at all.
+
 ### Portcullis is not a cascade target
 
 Portcullis holds no durable PII store — session state is a stateless, client-held cookie, not a
