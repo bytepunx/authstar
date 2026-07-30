@@ -1,9 +1,13 @@
 # ADR 0038: Plan-to-Entitlement Mapping and Subscription Tracking
 
-- **Status:** Accepted
+- **Status:** Accepted (corrected by [ADR 0042](0042-single-account-billing-model.md))
 - **Date:** 2026-07-29
 - **Affects:** keep
-- **Builds on:** [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md)
+- **Builds on:** [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md) — **note:**
+  ADR 0037 is superseded; read `planMapping` below with ADR 0042's correction — `stripePriceId`
+  refers to the installation's own Stripe account, defined by the operator, not by each tenant.
+  `merchantAccount` (referenced in the webhook table) is replaced by ADR 0042's `customer`
+  record, and the `account.updated` (Connect-specific) row no longer applies.
 
 ## Context
 

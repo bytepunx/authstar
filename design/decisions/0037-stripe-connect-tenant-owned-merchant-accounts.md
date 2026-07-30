@@ -1,9 +1,15 @@
 # ADR 0037: Stripe Connect Standard Accounts — Tenants Own the Merchant Relationship
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0042](0042-single-account-billing-model.md)
 - **Date:** 2026-07-29
 - **Affects:** keep
 - **First foundational decision for `keep`'s design**
+
+> **Superseded 2026-07-29.** Based on a misunderstanding of the business model: authstar
+> installations are single-merchant SaaS businesses (tenants are the installation's own paying
+> customers), not multi-sided marketplaces where each tenant brings their own merchant account.
+> See [ADR 0042](0042-single-account-billing-model.md) for the corrected single-Stripe-account
+> design. Kept below for the record of what was considered.
 
 ## Context
 

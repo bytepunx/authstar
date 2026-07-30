@@ -1,10 +1,18 @@
 # ADR 0040: Keep's Response to Contact Erasure
 
-- **Status:** Accepted
+- **Status:** Accepted (corrected by [ADR 0042](0042-single-account-billing-model.md))
 - **Date:** 2026-07-29
 - **Affects:** tower, keep
 - **Resolves the deferred item in:** [ADR 0026](0026-erasure-cascade.md)
 - **Amends the payload of:** `contact.purged` (ADR 0026)
+
+> **Correction (2026-07-29):** the "Stripe Customer data is the tenant's own data-controller
+> responsibility" conclusion below was based on ADR 0037's tenant-owned-merchant-account model,
+> which is superseded by [ADR 0042](0042-single-account-billing-model.md). Under the corrected
+> single-account model, the installation is the data controller for Customer records, and keep
+> **does** need to act on erasure for account-scoped (individual/B2C) customers — see ADR 0042.
+> The `contact.purged` payload fix (`accountId` added) and the "keep's own actors need no
+> changes" point below are unaffected and still correct.
 
 ## Context
 

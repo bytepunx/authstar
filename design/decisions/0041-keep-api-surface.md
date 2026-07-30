@@ -1,8 +1,15 @@
 # ADR 0041: Keep's HTTP API Surface
 
-- **Status:** Accepted
+- **Status:** Accepted (corrected by [ADR 0042](0042-single-account-billing-model.md))
 - **Date:** 2026-07-29
 - **Affects:** keep, portcullis, web
+
+> **Correction (2026-07-29):** the entire "Merchant account" route group below (Connect OAuth
+> onboarding) is removed per [ADR 0042](0042-single-account-billing-model.md) — there is
+> nothing for a tenant to "connect" under the single-account model. A `customer` read route and
+> a usage-reporting route are needed in its place; not laid out here, left for a follow-up pass.
+> Every other route group (plan mappings, checkout, subscriptions, trials, coupons) is
+> unaffected.
 
 ## Decision
 
