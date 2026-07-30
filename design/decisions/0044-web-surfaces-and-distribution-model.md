@@ -63,10 +63,10 @@ than something an admin sets up.
 
 ## Open Items — Not Resolved Here
 
-- **Whether authstar's own operating team gets a web UI at all**, versus only the CLI/bearer-
-  token operator API ADR 0021 already defined. A genuinely separate question with its own
-  trade-offs (cross-tenant visibility needs a different auth model entirely — bearer-token, not
-  per-tenant OIDC), sequenced for its own pass rather than folded in here.
+- **Resolved in [ADR 0045](0045-steward-operator-console.md) (2026-07-30):** authstar's own
+  operating team gets a separate service (`steward`), not a mode within `web` — cross-tenant
+  visibility needs a genuinely different auth model (bearer-token, direct port-forward, never
+  through portcullis), not per-tenant OIDC.
 - The Web Component theming API's exact shape (which CSS custom properties are exposed, slot
   conventions) — not designed here, follows once concrete widgets are designed.
 

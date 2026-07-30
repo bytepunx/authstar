@@ -34,12 +34,16 @@ Read-only through this API, same reasoning as **Subscriptions** below — a `cus
 created automatically the first time a checkout session completes (Stripe webhook-driven, ADR
 0042), never explicitly by an admin call.
 
-**Plan mappings** (ADR 0038)
+**Plan mappings** (ADR 0038) — **corrected by [ADR 0045](0045-steward-operator-console.md):**
+`GET` is tenant-scoped (an admin can see what plans exist and what they grant); writes are
+**operator-only**, reached via `steward`, not by a tenant admin's own `permissions`. Plans are
+operator-defined (ADR 0042) — a tenant admin writing their own mapping would let them grant
+themselves arbitrary `grantedRoles`/`seatLimit` against a Price they don't control.
 
 | Route | Method | Notes |
 |---|---|---|
-| `/tenants/{tenantSlug}/plan-mappings` | `GET`, `POST` | |
-| `/tenants/{tenantSlug}/plan-mappings/{id}` | `GET`, `PATCH`, `DELETE` | |
+| `/tenants/{tenantSlug}/plan-mappings` | `GET` (tenant), `POST` (operator) | |
+| `/tenants/{tenantSlug}/plan-mappings/{id}` | `GET` (tenant), `PATCH`, `DELETE` (operator) | |
 
 **Checkout**
 
