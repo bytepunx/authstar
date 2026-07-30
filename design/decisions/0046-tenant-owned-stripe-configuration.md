@@ -68,6 +68,28 @@ application, `permissions`-gated) creates and edits their own plan mappings. Thi
 0045's operator-only correction, which was itself only correct under ADR 0042's now-superseded
 premise.
 
+**Concretely, what "tenant-owned" means end to end:**
+
+1. The Stripe Product/Price itself is created in the tenant's own Stripe Dashboard, or via a
+   `web` convenience that calls Stripe's API with the tenant's own key — either way, entirely
+   within the tenant's own account; `keep` has no opinion on how the Price came to exist.
+   `web`'s plan-mapping editor should let the admin pick from a live list of their own Stripe
+   Prices (fetched via their key) rather than requiring manual Price-ID copy-paste.
+2. The `planMapping` record is created via `keep`'s `POST /tenants/{tenantSlug}/plan-mappings`,
+   gated by the `billing:manage` permission (the example grant already named when `permissions`
+   was introduced, ADR 0018/0019) — held typically by a tenant's own admin, not the operator.
+3. `grantedRoles` values are opaque, unvalidated strings, consistent with ADR 0017 — `keep`
+   doesn't check that a role name or application-scope reference is "real" against any
+   registry, because there isn't one it can reach.
+
+**A genuine limitation worth stating plainly:** because `keep` never calls `tower` directly
+(ADR 0018's boundary), it cannot validate at write time that an `application` slug referenced
+inside `grantedRoles` actually exists for that tenant. A typo'd slug doesn't error — it silently
+produces an `entitlement.role-granted` event that never matches anything in tower's
+application-scoped role filtering, so the grant is inert. `web`'s plan-mapping editor should
+validate the application slug client-side against tower's own applications list, since `keep`
+structurally cannot.
+
 ### Webhook receiver: per-tenant, and now genuinely fits portcullis's routing model
 
 ADR 0041 kept the webhook receiver outside portcullis specifically because a single
