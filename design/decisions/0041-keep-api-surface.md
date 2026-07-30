@@ -4,10 +4,10 @@
 - **Date:** 2026-07-29
 - **Affects:** keep, portcullis, web
 
-> **Correction (2026-07-29):** the entire "Merchant account" route group below (Connect OAuth
-> onboarding) is removed per [ADR 0042](0042-single-account-billing-model.md) — there is
-> nothing for a tenant to "connect" under the single-account model. A `customer` read route and
-> a usage-reporting route are needed in its place; not laid out here, left for a follow-up pass.
+> **Correction (2026-07-29, filled in 2026-07-30):** the entire "Merchant account" route group
+> below (Connect OAuth onboarding) is removed per [ADR 0042](0042-single-account-billing-model.md)
+> — there is nothing for a tenant to "connect" under the single-account model. Replaced below by
+> a `customer` read route and the usage-record routes ([ADR 0043](0043-application-reported-usage-metering.md)).
 > Every other route group (plan mappings, checkout, subscriptions, trials, coupons) is
 > unaffected.
 
@@ -23,13 +23,16 @@ since "directly" could otherwise be misread as bypassing portcullis too.
 
 ### Route inventory
 
-**Merchant account** (ADR 0037 — Stripe Connect onboarding)
+**Customer** (ADR 0042 — replaces the removed merchant-account group)
 
 | Route | Method | Notes |
 |---|---|---|
-| `/tenants/{tenantSlug}/merchant-account` | `GET`, `DELETE` | Status; `DELETE` disconnects |
-| `/tenants/{tenantSlug}/merchant-account/connect` | `GET` | Initiates the Stripe Connect OAuth redirect |
-| `/tenants/{tenantSlug}/merchant-account/connect/callback` | `GET` | Stripe's OAuth callback — validated via the same state-cookie pattern already established for portcullis's own OAuth flow (Story 005/006), not a fresh permission check at the callback moment |
+| `/tenants/{tenantSlug}/customer` | `GET` | Tenant-scoped customer record (`scope: {tenant}`) |
+| `/tenants/{tenantSlug}/accounts/{accountId}/customer` | `GET` | Account-scoped customer record (`scope: {account}`, B2C) |
+
+Read-only through this API, same reasoning as **Subscriptions** below — a `customer` record is
+created automatically the first time a checkout session completes (Stripe webhook-driven, ADR
+0042), never explicitly by an admin call.
 
 **Plan mappings** (ADR 0038)
 
@@ -65,27 +68,37 @@ since "directly" could otherwise be misread as bypassing portcullis too.
 | `/tenants/{tenantSlug}/coupons` | `GET`, `POST` | |
 | `/tenants/{tenantSlug}/coupons/{code}` | `GET`, `DELETE` | `DELETE` = revoke |
 
-### Open question: where does the Stripe webhook receiver actually live?
+**Usage records** (ADR 0043)
 
-Not resolved here. Everything else in this inventory is tenant-scoped and fits portcullis's
-`Host`-based application routing naturally. The Stripe webhook endpoint (ADR 0037) is different
-in kind — it's a single **platform-level** URL registered once with Stripe, covering events
-across every tenant's connected account, not addressed to any one tenant's domain. Two real
-options: (a) route it through portcullis anyway as a new reserved, non-tenant-scoped path
-(the same category `/_authstar/*` already is for analytics, ADR 0035, just without a tenant in
-the URL at all), keeping portcullis the single ingress point for everything; or (b) expose it
-as a direct, keep-owned ingress separate from portcullis, since it doesn't conceptually belong
-to the tenant-routing model at all. Signature verification (a Stripe-issued webhook secret,
-signet-managed like every other secret in this design) is the actual authentication either way
-— this is a routing-topology question, not a security one.
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/usage-records` | `GET`, `POST` | `GET` is paginated, filterable by `meter`/`application`/date range — the `web` admin view. `POST` is what portcullis's `/_authstar/usage` route (Story 021) actually calls; body carries `application`, `accountId`, `meter`, `quantity`, plus portcullis-attached identity/role context. Idempotency is expressed via the `Idempotency-Key` header (ADR 0030's convention for this API), even though the app-facing contract at the portcullis layer (ADR 0043) carries `idempotencyKey` in its body for simplicity — portcullis translates one into the other when it proxies the call |
+| `/tenants/{tenantSlug}/usage-records/{id}` | `GET` | |
+
+A dedicated current-period summary endpoint (totals per meter, rather than a raw list) is a
+plausible future addition, following the same purpose-built-report pattern `chronicle` already
+established (ADR 0036) — not added here since `web` hasn't asked for it yet.
+
+### Stripe webhook receiver: a direct, keep-owned ingress — not through portcullis
+
+Resolved (was open in the prior version of this ADR). Portcullis's request handling starts with
+`Host`-based tenant/application resolution (Story 013) — a request matching no application
+`404`s before anything else runs. There is no notion of a "platform-level" hostname in
+portcullis's model today. Stripe's webhook is genuinely installation-level, tied to no tenant's
+domain — forcing it through portcullis would mean inventing a new virtual-host concept solely
+for this one endpoint. Instead, keep exposes its own direct ingress (own Kubernetes Service/
+Ingress, TLS via cert-manager — the same pattern already used for RabbitMQ's listener, ADR
+0008, which similarly sits outside portcullis's routing model), registered with Stripe as its
+own URL. Authentication is Stripe's webhook signature (a signet-managed secret, same as every
+other secret in this design) — this was always the actual security boundary regardless of
+routing topology, per the original open question's own framing.
 
 ## Consequences
 
 - Keep's fastify routes follow the same schema-first, swagger-generated approach as tower/
   herald.
-- The webhook-routing question needs an answer before implementation, though it doesn't block
-  any of the rest of this design.
+- Keep needs its own direct ingress (separate from portcullis) for the Stripe webhook receiver.
 
 ## Related
 
-- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md) (the `/_authstar/*` reserved-path precedent), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md)
+- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0042](0042-single-account-billing-model.md), [ADR 0043](0043-application-reported-usage-metering.md)

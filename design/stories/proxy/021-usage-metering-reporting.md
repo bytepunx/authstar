@@ -40,6 +40,10 @@ silently dropped on failure.
 - [ ] Portcullis attaches `tenant`, `application`, `accountId`, and `roles` (all already
       resolved from the verified internal JWT's claims) to the request forwarded to `keep`,
       overriding anything the request body might otherwise claim for these fields.
+- [ ] The forwarded call targets keep's `POST /tenants/{tenantSlug}/usage-records` (ADR 0041).
+      The app-facing `idempotencyKey` body field is translated to the `Idempotency-Key` header
+      keep's API expects (ADR 0030's convention) — the app-facing and keep-facing contracts are
+      allowed to differ in this one detail for the app's own simplicity.
 - [ ] **This call is proxied to `keep` over SPIFFE mTLS as a real request/response — not
       fire-and-forget.** Portcullis awaits `keep`'s response and relays it back to the calling
       application largely unchanged (status code and body), including a rejection (e.g.
