@@ -39,7 +39,11 @@ created automatically the first time a checkout session completes (Stripe webhoo
 — fully tenant-scoped again, including writes. Plans are tenant-defined (each tenant owns its
 own Stripe account per ADR 0046) — a tenant admin's own `permissions` gate reading and writing
 their own plan mappings, no operator involvement. (ADR 0045's operator-only restriction was
-correct only under ADR 0042's now-superseded premise and is reversed.)
+correct only under ADR 0042's now-superseded premise and is reversed.) **Writes are validated**
+against keep's locally-materialized, tower-sourced reference cache of known applications and
+role definitions ([ADR 0047](0047-application-and-role-slug-validation.md)) — a `grantedRoles`
+entry referencing an unknown application or unregistered role name is rejected, not silently
+accepted as an inert grant.
 
 | Route | Method | Notes |
 |---|---|---|

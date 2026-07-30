@@ -1,9 +1,15 @@
 # ADR 0017: Account, Identity, and Role Model
 
-- **Status:** Accepted
+- **Status:** Accepted (role opacity partially revised by [ADR 0047](0047-application-and-role-slug-validation.md))
 - **Date:** 2026-07-24
 - **Affects:** tower, portcullis
 - **Resolves an open item in:** [ADR 0016](0016-application-layer-and-sso-scope.md)
+
+> **Note (2026-07-30):** roles remain app-interpreted, opaque-to-tower *strings* as designed
+> below — tower still never interprets what a role name grants. What changed is that a role's
+> `(name, scope)` now must be pre-registered in a tower-owned catalog before it can be granted
+> anywhere (ADR 0047) — a validation gate, not a reversal of tower's non-interpretation of role
+> *meaning*.
 
 ## Context
 

@@ -82,7 +82,7 @@ here.
 |---|---|---|
 | `/tenants/{tenantSlug}/accounts` | `GET` | Search via `account`'s `searchableBy` (ADR 0017) |
 | `/tenants/{tenantSlug}/accounts/{accountId}` | `GET`, `PATCH` | `PATCH { status: "active" \| "suspended" \| "deleted" }` covers suspend/reactivate/business-offboarding — no separate action endpoints. `deleted` here is a business status field, not resource removal; **distinct from GDPR erasure** (below), which operates on `contact`, not `account`, and can happen independently of this |
-| `/tenants/{tenantSlug}/accounts/{accountId}/roles` | `GET`, `POST` | `roles` (ADR 0017), app-interpreted claims |
+| `/tenants/{tenantSlug}/accounts/{accountId}/roles` | `GET`, `POST` | `roles` (ADR 0017), app-interpreted claims. `POST` validates `(name, scope)` against an active `roleDefinition` ([ADR 0047](0047-application-and-role-slug-validation.md)) before granting |
 | `/tenants/{tenantSlug}/accounts/{accountId}/roles/{name}` | `DELETE` | Scope disambiguated via query param if needed |
 | `/tenants/{tenantSlug}/accounts/{accountId}/permissions` | `GET`, `POST` | `permissions` (ADR 0018), tower-owned, distinct vocabulary from `roles` |
 | `/tenants/{tenantSlug}/accounts/{accountId}/permissions/{grant}` | `DELETE` | |
@@ -90,6 +90,15 @@ here.
 No `POST /accounts` — accounts are created only via identity resolution (OIDC login) or invite
 acceptance, never directly through this API, since a direct-create would bypass identity
 resolution entirely.
+
+**Role definitions** (added by [ADR 0047](0047-application-and-role-slug-validation.md)) — the
+catalog of valid `(name, scope)` role values grantable within the tenant; must exist before a
+role can be granted anywhere (accounts, invites, invite codes, `keep`'s plan mappings)
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/role-definitions` | `GET`, `POST` | `POST` gated by `roles:manage`; validates `scope.application` exists if application-scoped |
+| `/tenants/{tenantSlug}/role-definitions/{id}` | `GET`, `PATCH`, `DELETE` | `DELETE` retires (`status: retired`), does not remove — existing grants of an already-retired role stay intact |
 
 **Contacts** (ADR 0023) — narrowly permissioned given the sensitivity of what this exposes
 
@@ -108,7 +117,7 @@ resolution entirely.
 
 | Route | Method | Notes |
 |---|---|---|
-| `/tenants/{tenantSlug}/invites` | `GET`, `POST` | `POST` gated by `invite:send` |
+| `/tenants/{tenantSlug}/invites` | `GET`, `POST` | `POST` gated by `invite:send`; each entry in the invite's `roles` list is validated against an active `roleDefinition` at creation time, not redemption time (ADR 0047) |
 | `/tenants/{tenantSlug}/invites/{token}` | `GET`, `DELETE` | `DELETE` = revoke |
 
 Redemption is **not** a `web`-facing endpoint on this surface — it's triggered internally as
@@ -119,7 +128,7 @@ an admin or the invitee calls directly.
 
 | Route | Method | Notes |
 |---|---|---|
-| `/tenants/{tenantSlug}/invite-codes` | `GET`, `POST` | `POST` gated by `invite:code:issue` — note this permission is **not** admin-exclusive (ADR 0019); a regular account can legitimately call this if granted the scoped permission |
+| `/tenants/{tenantSlug}/invite-codes` | `GET`, `POST` | `POST` gated by `invite:code:issue` — note this permission is **not** admin-exclusive (ADR 0019); a regular account can legitimately call this if granted the scoped permission. `roles` validated against an active `roleDefinition` at creation time, same as invites (ADR 0047) |
 | `/tenants/{tenantSlug}/invite-codes/{code}` | `GET`, `DELETE` | `DELETE` = revoke |
 
 ### Implementation recommendation: schema-first with fastify, not a hand-maintained spec
@@ -141,4 +150,4 @@ for free from the same schemas used to generate documentation — directly servi
 
 ## Related
 
-- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md)
+- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md)
