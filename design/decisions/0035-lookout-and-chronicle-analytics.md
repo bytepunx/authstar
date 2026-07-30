@@ -94,6 +94,15 @@ thing that would have complicated this otherwise.
 **`chronicle`'s query/reporting API for `web`** is deferred to its own design pass, same
 sequencing already used for tower and herald's API surfaces.
 
+### Not the pipeline for billing-relevant usage metering
+
+`lookout`/`chronicle` is a deliberately loss-tolerant pipeline (non-durable queues, dropped
+events during an outage explicitly accepted above). Application-reported usage metering that
+feeds real billing ([ADR 0043](0043-application-reported-usage-metering.md)) is the opposite —
+losing an event there means undercharging or, on a naive retry, overcharging — and needs
+durable delivery straight to `keep`, not this pipeline. The two were considered as one
+mechanism and deliberately kept separate; see ADR 0043 for the reasoning.
+
 ### Explicitly still open, not blocking this architecture
 
 - **Path normalization.** Portcullis doesn't know an upstream's route templates, so raw paths

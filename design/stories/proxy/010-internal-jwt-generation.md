@@ -8,7 +8,8 @@
 [ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
 [ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
 [ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md).
+[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md),
+[ADR 0043](../../decisions/0043-application-reported-usage-metering.md).
 
 ---
 
@@ -42,7 +43,7 @@ changes is everything that now determines the internal token's contents.
 
   | Outcome | Behavior |
   |---|---|
-  | `Allow({ accountId, grantedRoles, trialRoles, trialExpiresAt })` | Sign the internal token. `enrichment_status: "ok"`. Forward. Unconditional — same on exempt and protected routes. |
+  | `Allow({ accountId, grantedRoles, trialRoles, trialExpiresAt, usage })` | Sign the internal token. `enrichment_status: "ok"`. Forward. Unconditional — same on exempt and protected routes. |
   | `Deny{status, reason}` | **No internal token is generated.** On a **protected** route, the request is rejected immediately with `status`; `reason` is logged, never returned to the client (ADR 0003). Not forwarded upstream. On an **exempt** route, the request is instead forwarded with no `Authorization` header — identical to an anonymous request to that route (ADR 0015) — it is not rejected. |
   | `Unreachable(err)` | Fail-open: sign the internal token with **only** the bare identity claims (`sub`, `idp`, `identityHash`) — no role/entitlement claims fabricated — and `enrichment_status: "degraded"`. Forward. Unconditional — same on exempt and protected routes. Fail-closed, **protected** route: reject (5xx), not forwarded. Fail-closed, **exempt** route: forward with no `Authorization` header, not rejected (ADR 0015). |
 
@@ -52,6 +53,12 @@ changes is everything that now determines the internal token's contents.
       by tower. This is the only place expiry is evaluated — a trivial, local timestamp
       comparison, no network call. Tower's response carries `grantedRoles`/`trialRoles`/
       `trialExpiresAt` as plain current-state fields; it never evaluates expiry itself.
+- [ ] **`usage` (ADR 0043) is attached to the internal token unchanged — no merge logic
+      needed**, unlike `roles` above. Tower's response already carries current
+      `periodUsage`/`periodLimit` per meter, filtered to the resolved application; portcullis
+      just passes it through. Applications must treat `usage` as advisory (necessarily one
+      keep→tower round trip stale), never as an authoritative real-time cap — authstar performs
+      no enforcement against it.
 - [ ] `enrichment_status` (`"ok"` or `"degraded"`) is always present on a forwarded internal
       token — this is what lets an upstream application distinguish "tower said this user has
       no extra claims" from "tower was unreachable and we don't actually know" (ADR 0003).
