@@ -1,9 +1,16 @@
 # ADR 0045: `steward` — a Separate Operator Console, Distinct from Tenant Admin
 
-- **Status:** Accepted
+- **Status:** Accepted (keep-specific correction below reversed by [ADR 0046](0046-tenant-owned-stripe-configuration.md))
 - **Date:** 2026-07-30
 - **Affects:** steward (new service), tower, keep
 - **Resolves the open item in:** [ADR 0044](0044-web-surfaces-and-distribution-model.md)
+
+> **Note (2026-07-30):** the "Correction: `keep`'s plan-mapping writes are operator-only"
+> section below was correct only under ADR 0042's now-superseded single-account billing model.
+> [ADR 0046](0046-tenant-owned-stripe-configuration.md) restores tenant-owned Stripe accounts,
+> which means plan mappings are tenant-managed again — `steward` has no keep-specific role at
+> all now. Everything else in this ADR (why `steward` exists, its relationship to **tower**, the
+> shared operator-token, direct port-forward posture) is entirely unaffected.
 
 ## Context
 

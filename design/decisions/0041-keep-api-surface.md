@@ -1,15 +1,16 @@
 # ADR 0041: Keep's HTTP API Surface
 
-- **Status:** Accepted (corrected by [ADR 0042](0042-single-account-billing-model.md))
+- **Status:** Accepted (corrected by [ADR 0046](0046-tenant-owned-stripe-configuration.md))
 - **Date:** 2026-07-29
 - **Affects:** keep, portcullis, web
 
-> **Correction (2026-07-29, filled in 2026-07-30):** the entire "Merchant account" route group
-> below (Connect OAuth onboarding) is removed per [ADR 0042](0042-single-account-billing-model.md)
-> — there is nothing for a tenant to "connect" under the single-account model. Replaced below by
-> a `customer` read route and the usage-record routes ([ADR 0043](0043-application-reported-usage-metering.md)).
-> Every other route group (plan mappings, checkout, subscriptions, trials, coupons) is
-> unaffected.
+> **Correction (2026-07-30):** there is still nothing for a tenant to "connect" (no Connect
+> OAuth, no `merchantAccount` — that stays removed), so the "Customer" route group below is
+> unaffected. But two things below are now stale per
+> [ADR 0046](0046-tenant-owned-stripe-configuration.md): **Plan mappings** reverts to fully
+> tenant-scoped (writes included — the operator-only restriction added by ADR 0045 is reversed),
+> and the **Stripe webhook receiver** moves from a direct keep-owned ingress to a portcullis
+> reserved path, since it's tenant-scoped again. Both sections below are updated to reflect this.
 
 ## Decision
 
@@ -34,16 +35,16 @@ Read-only through this API, same reasoning as **Subscriptions** below — a `cus
 created automatically the first time a checkout session completes (Stripe webhook-driven, ADR
 0042), never explicitly by an admin call.
 
-**Plan mappings** (ADR 0038) — **corrected by [ADR 0045](0045-steward-operator-console.md):**
-`GET` is tenant-scoped (an admin can see what plans exist and what they grant); writes are
-**operator-only**, reached via `steward`, not by a tenant admin's own `permissions`. Plans are
-operator-defined (ADR 0042) — a tenant admin writing their own mapping would let them grant
-themselves arbitrary `grantedRoles`/`seatLimit` against a Price they don't control.
+**Plan mappings** (ADR 0038, restored by [ADR 0046](0046-tenant-owned-stripe-configuration.md))
+— fully tenant-scoped again, including writes. Plans are tenant-defined (each tenant owns its
+own Stripe account per ADR 0046) — a tenant admin's own `permissions` gate reading and writing
+their own plan mappings, no operator involvement. (ADR 0045's operator-only restriction was
+correct only under ADR 0042's now-superseded premise and is reversed.)
 
 | Route | Method | Notes |
 |---|---|---|
-| `/tenants/{tenantSlug}/plan-mappings` | `GET` (tenant), `POST` (operator) | |
-| `/tenants/{tenantSlug}/plan-mappings/{id}` | `GET` (tenant), `PATCH`, `DELETE` (operator) | |
+| `/tenants/{tenantSlug}/plan-mappings` | `GET`, `POST` | |
+| `/tenants/{tenantSlug}/plan-mappings/{id}` | `GET`, `PATCH`, `DELETE` | |
 
 **Checkout**
 
@@ -83,26 +84,27 @@ A dedicated current-period summary endpoint (totals per meter, rather than a raw
 plausible future addition, following the same purpose-built-report pattern `chronicle` already
 established (ADR 0036) — not added here since `web` hasn't asked for it yet.
 
-### Stripe webhook receiver: a direct, keep-owned ingress — not through portcullis
+### Stripe webhook receiver: a portcullis reserved path, per tenant
 
-Resolved (was open in the prior version of this ADR). Portcullis's request handling starts with
-`Host`-based tenant/application resolution (Story 013) — a request matching no application
-`404`s before anything else runs. There is no notion of a "platform-level" hostname in
-portcullis's model today. Stripe's webhook is genuinely installation-level, tied to no tenant's
-domain — forcing it through portcullis would mean inventing a new virtual-host concept solely
-for this one endpoint. Instead, keep exposes its own direct ingress (own Kubernetes Service/
-Ingress, TLS via cert-manager — the same pattern already used for RabbitMQ's listener, ADR
-0008, which similarly sits outside portcullis's routing model), registered with Stripe as its
-own URL. Authentication is Stripe's webhook signature (a signet-managed secret, same as every
-other secret in this design) — this was always the actual security boundary regardless of
-routing topology, per the original open question's own framing.
+**Revised by [ADR 0046](0046-tenant-owned-stripe-configuration.md).** Each tenant now has its
+own Stripe account (ADR 0046) and therefore its own webhook, tied to that tenant's own domain —
+the "no platform-level hostname exists" objection that previously ruled portcullis out no
+longer applies, since this is tenant-scoped like everything else. `POST
+/_authstar/webhooks/stripe` is a reserved portcullis path (registered against the tenant's
+`_admin` application's host specifically — stable, always present, per ADR 0044 — rather than a
+product domain that could change), resolved via normal `Host`-based tenant/application
+resolution (Story 013) and proxied straight to `keep` with no session/JWT check of its own —
+Stripe's own webhook signature (verified by `keep` against
+`tenant-<slug>-stripe-webhook-secret`) is the actual authentication, unchanged in substance from
+before, just relocated.
 
 ## Consequences
 
 - Keep's fastify routes follow the same schema-first, swagger-generated approach as tower/
   herald.
-- Keep needs its own direct ingress (separate from portcullis) for the Stripe webhook receiver.
+- A new portcullis story is needed for the `/_authstar/webhooks/stripe` reserved pass-through
+  route (written alongside ADR 0046).
 
 ## Related
 
-- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0042](0042-single-account-billing-model.md), [ADR 0043](0043-application-reported-usage-metering.md)
+- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md)

@@ -1,10 +1,19 @@
 # ADR 0042: Single-Account Billing Model — Tenants Are Customers of the Installation
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0046](0046-tenant-owned-stripe-configuration.md)
 - **Date:** 2026-07-29
 - **Affects:** keep
 - **Supersedes:** [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md)
 - **Corrects:** [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0040](0040-keep-erasure-response.md), [ADR 0041](0041-keep-api-surface.md)
+
+> **Superseded 2026-07-30.** This ADR's own correction of ADR 0037 went too far: it correctly
+> rejected Stripe Connect as overkill, but incorrectly concluded tenants shouldn't own their own
+> Stripe account at all. `entitlement.scope: {tenant}` was always meant to represent a benefit a
+> tenant's own business funds for its own end users, not the tenant paying authstar — which
+> means each tenant genuinely needs to receive its own revenue. See
+> [ADR 0046](0046-tenant-owned-stripe-configuration.md) for the corrected model: tenant-owned
+> Stripe, but via plain per-tenant credentials (mirroring herald's adapter pattern, ADR 0032),
+> not Connect. Kept below for the record of what was considered.
 
 ## Context
 
