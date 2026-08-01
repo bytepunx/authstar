@@ -1,8 +1,12 @@
 # ADR 0034: Herald's HTTP API Surface
 
-- **Status:** Accepted
+- **Status:** Accepted (extended by [ADR 0049](0049-web-admin-information-architecture.md))
 - **Date:** 2026-07-25
 - **Affects:** herald, portcullis, web
+
+> **Gap found and closed 2026-08-01:** ADR 0032 defined per-tenant sending config's *shape*
+> (provider, addresses, credential) but no route ever existed for a tenant to actually set it up
+> via `web`. Added below.
 
 ## Context
 
@@ -58,6 +62,12 @@ isn't nested under a `/contacts/` path; it's herald's own resource, keyed by the
 | `/tenants/{tenantSlug}/opt-outs/{contactId}` | `GET` | Current opted-out categories |
 | `/tenants/{tenantSlug}/opt-outs/{contactId}/categories` | `POST` | Support-initiated opt-out (e.g. a phone request) |
 | `/tenants/{tenantSlug}/opt-outs/{contactId}/categories/{category}` | `DELETE` | Re-subscribe, if legitimately requested |
+
+**Sending configuration** (ADR 0032) — a per-tenant singleton, not a collection
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/sending-config` | `GET`, `PATCH` | `GET` never returns the credential field (write-only, same discipline as tower's provider `clientSecret`). `PATCH` (not `PUT` — stays consistent with this API's no-`PUT` convention, ADR 0030) accepts `provider`, `fromAddress`, `fromName`, `replyTo`, `physicalAddress`, and optionally `credential` to set/rotate it. Gated by `sending-config:manage` |
 
 **Unsubscribe** (ADR 0032) — public, token-authenticated, not tenant/permission-gated
 
