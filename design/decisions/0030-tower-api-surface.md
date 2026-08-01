@@ -51,7 +51,12 @@ Unversioned requests are answered but a request for a version tower no longer se
   enforces that the URL's `{tenantSlug}` matches the caller's own tenant.
 - **Operator** (ADR 0021): bearer-token-gated, cross-tenant, reusing the **same route handlers**
   under `/operator/...` — no parallel vocabulary. The only differences are the auth
-  middleware and the removal of the same-tenant restriction.
+  middleware and the removal of the same-tenant restriction. Two routes exist **only** under
+  this tree, with no tenant-scoped equivalent, added by
+  [ADR 0048](0048-steward-ux.md): `GET /operator/tenants` (search/list — nothing in the
+  tenant-scoped tree lets a caller enumerate tenants, since a tenant-scoped caller already knows
+  its own slug) and `GET /operator/tenants/{tenantSlug}/activity` (read-only recent-activity
+  view, surfacing consequent's existing per-actor event history for `steward`'s UI).
 - **Portcullis → tower** (enrichment, login-time identity resolution): SPIFFE mTLS,
   service-to-service — not a signet-delivered bearer token. Tower still independently verifies
   the internal JWT's own signature on top of the mTLS identity check (defense in depth).
@@ -150,4 +155,4 @@ for free from the same schemas used to generate documentation — directly servi
 
 ## Related
 
-- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md)
+- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md)

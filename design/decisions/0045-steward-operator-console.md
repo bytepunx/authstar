@@ -69,10 +69,10 @@ tree only, called via `steward`.
 - ADR 0041's plan-mappings route group needs its auth-tier annotation corrected (`GET`
   tenant-scoped, writes operator-only) — not rewritten in full here, flagged for that ADR's next
   touch.
-- `steward`'s own screens/functionality (managing tenants' admins/OIDC providers via tower's
-  operator API, managing the installation's plan catalog via keep's operator API) are not
-  designed in this ADR — this settles the surface's existence and mechanism, not its UI.
+- `steward`'s own screens/functionality — designed in [ADR 0048](0048-steward-ux.md): tower's
+  operator API only (the keep-facing role above is itself reversed by ADR 0046) — admin access
+  and OIDC provider management for existing tenants.
 
 ## Related
 
-- [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0041](0041-keep-api-surface.md), [ADR 0042](0042-single-account-billing-model.md), [ADR 0044](0044-web-surfaces-and-distribution-model.md)
+- [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0041](0041-keep-api-surface.md), [ADR 0044](0044-web-surfaces-and-distribution-model.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0048](0048-steward-ux.md)
