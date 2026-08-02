@@ -88,6 +88,8 @@ Admin-set on `communicationType` (ADR 0025) — never auto-detected, never appli
 - Bounce/complaint feedback mechanics still vary by adapter (flagged previously, not resolved
   here) — SMTP in particular has no standard webhook mechanism and would need inbound-email
   processing to get bounce signal at all, a materially bigger feature than anything else here.
+  **Resolved for API-based adapters by [ADR 0074](0074-herald-bounce-complaint-and-suppression.md)**;
+  the SMTP limitation named above is unchanged and still stands.
 
 ## Related
 

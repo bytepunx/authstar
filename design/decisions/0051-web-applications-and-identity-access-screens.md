@@ -133,6 +133,7 @@ be over-engineering for a small, slow-changing, admin-tool-only need:
 | `activity:read` | ADR 0060 | `tenant` — deliberately coarse, one gate for the merged tower/keep/herald activity feed, not per-entry filtering |
 | `billing:read` | ADR 0060 | `tenant` — distinct from `billing:manage`; viewing a revenue summary shouldn't require the ability to edit plans/Stripe config |
 | `tenant:manage` | ADR 0062 | `tenant` — `name`/`cookie` edits and the restricted `active → suspended` transition only; reactivation and deletion are unreachable through any tenant-scoped permission, operator-only |
+| `suppressions:manage` | ADR 0074 | `tenant` — herald's bounce/complaint-driven suppression list; one grant for read and write, same posture as `opt-outs:manage` |
 
 Treated as the canonical list going forward — a new route added later should draw from this
 table or extend it deliberately, not invent a grant string in isolation the way prior ADRs did.

@@ -62,6 +62,11 @@ narrowly permissioned, already correctly a `GET` on a representation rather than
 unchanged from ADR 0034; confirmed the category-removal `DELETE` is *not* part of ADR 0053's
 fix (collection membership, not entity status).
 
+**Suppressions** (added by [ADR 0074](0074-herald-bounce-complaint-and-suppression.md)) — list
+(filterable by `reason`), manual add, admin-override remove. Deliberately a separate view from
+Opt-outs, not merged into it — blanket/deliverability-driven vs. category-scoped/consent-driven
+are different concerns that happen to share a `contactId` key.
+
 **Sending Configuration** — provider, addresses, credential (write-only, via ADR 0052's
 mechanism for herald's own `sending-config` route).
 

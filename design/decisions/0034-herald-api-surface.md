@@ -69,6 +69,14 @@ isn't nested under a `/contacts/` path; it's herald's own resource, keyed by the
 |---|---|---|
 | `/tenants/{tenantSlug}/sending-config` | `GET`, `PATCH` | `GET` never returns the credential field (write-only, same discipline as tower's provider `clientSecret`). `PATCH` (not `PUT` — stays consistent with this API's no-`PUT` convention, ADR 0030) accepts `provider`, `fromAddress`, `fromName`, `replyTo`, `physicalAddress`, and optionally `credential` to set/rotate it. Gated by `sending-config:manage` |
 
+**Suppressions** (added by [ADR 0074](0074-herald-bounce-complaint-and-suppression.md)) —
+blanket, deliverability-driven, distinct from category-scoped `opt-outs` above
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/suppressions` | `GET`, `POST` | `POST` is manual add (`{ contactId, reason: "manual" }`). Gated by `suppressions:manage` |
+| `/tenants/{tenantSlug}/suppressions/{contactId}` | `DELETE` | Admin override — re-enables sending |
+
 **Activity** (added by [ADR 0060](0060-activity-feed-and-revenue-summary.md))
 
 | Route | Method | Notes |
@@ -91,4 +99,4 @@ isn't nested under a `/contacts/` path; it's herald's own resource, keyed by the
 
 ## Related
 
-- [ADR 0030](0030-tower-api-surface.md) (conventions this follows), [ADR 0022](0022-herald-communications-service.md), [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0032](0032-per-tenant-sending-and-can-spam.md), [ADR 0033](0033-herald-send-worker-and-retry.md), [ADR 0052](0052-keep-herald-own-signet-access.md) (sending-config secret delivery mechanism), [ADR 0053](0053-lifecycle-status-consolidation.md) (`communicationType` status field)
+- [ADR 0030](0030-tower-api-surface.md) (conventions this follows), [ADR 0022](0022-herald-communications-service.md), [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0032](0032-per-tenant-sending-and-can-spam.md), [ADR 0033](0033-herald-send-worker-and-retry.md), [ADR 0052](0052-keep-herald-own-signet-access.md) (sending-config secret delivery mechanism), [ADR 0053](0053-lifecycle-status-consolidation.md) (`communicationType` status field), [ADR 0074](0074-herald-bounce-complaint-and-suppression.md) (suppressions routes, `sending-config` webhook secret, `communication` new fields)

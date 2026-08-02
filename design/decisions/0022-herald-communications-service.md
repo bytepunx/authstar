@@ -102,7 +102,10 @@ recipient has opted out of that category for that tenant.
 ## Explicitly Deferred
 
 - Bounce/complaint handling and broader suppression-list management (deliverability concerns
-  beyond simple opt-outs) — a real future need, not designed here.
+  beyond simple opt-outs) — a real future need, not designed here. **Resolved by
+  [ADR 0074](0074-herald-bounce-complaint-and-suppression.md)** for API-based adapters (SES);
+  SMTP-adapter bounce/complaint signal remains out of scope, per the reasoning ADR 0032 already
+  gave.
 - Per-tenant/per-application template branding (so Math Overflow's emails look like Math
   Overflow, not generic authstar) — deferred to whenever herald's actual rendering pipeline is
   designed.
