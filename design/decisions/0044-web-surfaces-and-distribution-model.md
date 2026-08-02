@@ -1,13 +1,16 @@
 # ADR 0044: `web`'s Three Surfaces and Distribution Model
 
-- **Status:** Accepted (extended by [ADR 0050](0050-portal-reserved-application.md))
+- **Status:** Accepted (mechanism corrected by [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md))
 - **Date:** 2026-07-30
 - **Affects:** web, portcullis, tower
 
-> **Gap found and closed 2026-08-01:** this ADR says `web` serves hosted login/payment pages
-> but never assigned them a reserved application distinct from `_admin`. See
-> [ADR 0050](0050-portal-reserved-application.md) — they live under a second reserved
-> application, `_portal`.
+> **Corrected 2026-08-01:** "full-page redirects" below is imprecise for how this actually
+> works — see [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md). Portcullis *proxies*
+> these reserved paths to `web` on whatever application's own host the user is already on; the
+> browser's URL never changes. An earlier version of this correction (ADR 0050/0064) introduced
+> a second reserved application, `_portal`, requiring an actual redirect — that's since been
+> superseded too. The three-surface distinction itself (hosted pages vs. embeddable widgets vs.
+> the admin app) remains correct; only the delivery mechanism for hosted pages changed.
 
 ## Context
 
@@ -22,12 +25,13 @@ sensitivity profiles and consumption models.
 
 1. **Admin surface** (tenant admins, and authstar operators — see Open Items) — a full
    SvelteKit app, not embedded anywhere.
-2. **Login and payment-method entry** — **hosted, full-page redirects**, never embedded in an
-   adopting app's own DOM. Not a new pattern: portcullis's `auth.loginUrl` is already a fully
-   configurable redirect target (Story 018 frames its built-in `/oauth2/select` as a
-   placeholder specifically expecting a custom hosted page), and Stripe itself only ever
-   handles raw card data inside its own iframe-isolated Elements/Checkout/Billing Portal — for
-   PCI reasons, never embeddable third-party UI. This also matches Auth0's own documented
+2. **Login and payment-method entry** — **hosted pages, never embedded in an adopting app's own
+   DOM** (delivered via proxy-through on the app's own host, not a cross-domain redirect — ADR
+   0066). Not a new pattern: portcullis's `auth.loginUrl` is already a fully configurable
+   target (Story 018 frames its built-in `/oauth2/select` as a placeholder specifically
+   expecting a custom hosted page), and Stripe itself only ever handles raw card data inside
+   its own iframe-isolated Elements/Checkout/Billing Portal — for PCI reasons, never embeddable
+   third-party UI. This also matches Auth0's own documented
    guidance (hosted "Universal Login" recommended over an embedded login widget, specifically
    because embedding credential entry inside a third-party page's DOM/JS context is a real,
    well-documented XSS attack surface a separate-origin redirect avoids entirely). `web` serves

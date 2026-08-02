@@ -26,9 +26,10 @@ existing subscribers on a retired plan still need their renewals processed corre
 `grantedRoles` editor uses the same live, tower-sourced application/role dropdowns already
 established for Identity & Access (ADR 0047/0051) — not redesigned independently here.
 
-**Checkout Sessions** — not a primary admin screen. Session creation is driven by `_portal`'s
-upgrade page or an embeddable widget (end users upgrading their own access), not something an
-admin routinely does *for* a user. A small utility action ("send this customer a checkout link")
+**Checkout Sessions** — not a primary admin screen. Session creation is driven by the
+`/_authstar/upgrade` proxied page ([ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md))
+or an embeddable widget (end users upgrading their own access), not something an admin routinely
+does *for* a user. A small utility action ("send this customer a checkout link")
 is a reasonable secondary affordance, not the section's main purpose.
 
 **Subscriptions** — read-only list/detail, webhook-driven, as already scoped.

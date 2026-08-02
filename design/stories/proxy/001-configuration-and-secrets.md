@@ -67,25 +67,27 @@ products, e.g. one of several related sites sharing a login).
       [ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md). Portcullis
       enforces this at the tenant-resolution stage, before any application under it is resolved
       (Story 013).
-- [ ] Each tenant entry also carries `branding` (`name`, `logoUrl`, `primaryColor`) — added by
-      [ADR 0064](../../decisions/0064-portal-signin-flow.md). Non-secret, served directly from
-      this bundle via a new local, reserved, exempt route (below) — no live tower call at
-      request time, the same pattern already used for `/oauth2/providers` (Story 017).
+- [ ] Each tenant entry also carries `branding` (`name`, `logoUrl`, `primaryColor`) — non-secret.
+      Not served via any dedicated route — portcullis attaches it as request headers when
+      proxying `/oauth2/select` to `web`'s upstream (ADR 0066), the same "already in the bundle,
+      no live tower call needed" principle `/oauth2/providers` (Story 017) already relies on.
 - [ ] Each tenant entry has a nested `applications` map, keyed by application slug. Each
       application entry holds what's specific to that one product: `hosts`, `server.publicUrl`,
       `upstream` (base, routes, timeout), `cors.origin`, `exempt`, `auth.loginUrl`, and which of
       the tenant's providers this application exposes (a name list referencing the tenant-level
       `providers` map, optionally with per-application `loginPath`/`callbackPath` overrides —
       still defaulting to `/oauth2/{name}/login` and `/oauth2/{name}/callback` if unset).
-- [ ] **`auth.loginUrl`'s computed default is `_portal`'s hosted login page plus an explicit
-      `?app={appSlug}` identifier** (`https://<_portal's host>/login?app=<this application's
-      slug>`), not `/oauth2/select` (ADR 0064) — since `_portal` is always auto-provisioned per
-      tenant (ADR 0050), this is the real default; Story 018's built-in selection page is a
-      fallback only, reachable if an operator explicitly overrides `auth.loginUrl` back to it.
-- [ ] **New reserved, local, exempt route**: `GET /_authstar/branding` — serves the resolved
-      tenant's `branding` fields directly from portcullis's own bundle, the same reserved
-      category as `/_authstar/usage` and `/_authstar/analytics/events` (ADR 0064). No
-      authentication required, no upstream tower call.
+- [ ] `auth.loginUrl`'s computed default is `/oauth2/select` when 2+ providers are exposed, or
+      that single provider's own `loginPath` directly when only one is — unchanged from the
+      original reference design. `/oauth2/select` is now proxied to `web` for tenant-branded
+      rendering (ADR 0066) rather than always using portcullis's own built-in page (Story 018),
+      but the *default value itself* was never something requiring a separate reserved
+      application to express — an earlier design (superseded) briefly introduced one.
+- [ ] **The bundle gains a new top-level, non-tenant-scoped field**: `webUpstream: { address,
+      timeout }` — the installation-wide address of `web`'s own service, reached via SPIFFE mTLS
+      (ADR 0066), used for proxying `/oauth2/select` and `/_authstar/upgrade` (Story 023).
+      Delivered via signet the same way every other bundle field is, just not nested under any
+      one tenant, since `web` is a single, shared, first-party service across the installation.
 - [ ] The bundle's `secrets` map holds each tenant's two signing keys (session, internal — ADR
       0002) under `tenant-<slug>-session-key` / `tenant-<slug>-internal-key` naming — flat,
       prefixed names, scoped to the tenant, not to any one application.

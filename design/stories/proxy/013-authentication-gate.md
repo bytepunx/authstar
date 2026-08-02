@@ -37,8 +37,8 @@ Resolve tenant from Host header, check status (ADR 0062)
       ▼                                ▼
 404 (no tenant) / 503 (suspended —  Resolve application from Host header
 applies to every application under  within the tenant (Story 001's
-this tenant, including _admin       `tenants.<slug>.applications` map
-and _portal, ADR 0050)              — ADR 0016)
+this tenant, including _admin)      `tenants.<slug>.applications` map
+                                     — ADR 0016)
                                        │
                                     No match                          Match
                                        │                                │
@@ -80,9 +80,9 @@ call itself always runs when a valid session exists, exempt or not (ADR 0015).
 - [ ] **Tenant resolution and status check run first, before application resolution, before
       any other step** (ADR 0062). A `Host` matching no tenant at all is `404`. A tenant whose
       `status` is `suspended` rejects the request with a clear, generic `503` — this applies
-      uniformly to **every** application under that tenant, including `_admin` and `_portal`
-      (ADR 0050), which is exactly why this check must precede application resolution rather
-      than being handled per-application.
+      uniformly to **every** application under that tenant, including `_admin` itself, which is
+      exactly why this check must precede application resolution rather than being handled
+      per-application.
 - [ ] Application resolution runs only after the tenant is confirmed `active`. A `Host` matching
       no application's `hosts` list within that tenant is rejected (`404`) before touching JWT
       verification, exemption, or enrichment.

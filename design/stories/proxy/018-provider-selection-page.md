@@ -4,9 +4,10 @@
 **Repo:** portcullis
 **Status:** Draft
 **Adapted from:** `ref-design` Story 018 — unchanged; scope is now per-application (ADR 0016).
-**Fallback-only in practice**: `auth.loginUrl`'s real computed default now points at `_portal`'s
-hosted, tenant-branded login page (ADR 0050/0064), not this built-in page — this story's page is
-reached only if an operator explicitly overrides `auth.loginUrl` back to `/oauth2/select`.
+**Fallback path in practice**: `/oauth2/select` is proxied to `web` first, for tenant-branded
+rendering (Story 023/[ADR 0066](../../decisions/0066-portcullis-proxies-branded-pages-to-web.md)).
+This story's own built-in page is reached only if `web` is unreachable — a genuine reliability
+fallback, not something requiring an operator override to ever see.
 
 ---
 

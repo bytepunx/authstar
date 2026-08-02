@@ -16,9 +16,10 @@ ADR covers both the screen designs and the corrections found along the way.
 
 ### Applications section
 
-**List** — slug, name, hosts, status. `_admin` and `_portal` (ADR 0050) are excluded from this
-list entirely, not just filtered — they are system-managed, and exposing them here invites an
-admin to "fix" something that breaks their own access to fix it.
+**List** — slug, name, hosts, status. `_admin` is excluded from this list entirely, not just
+filtered — it's system-managed, and exposing it here invites an admin to "fix" something that
+breaks their own access to fix it. (`_portal`, from an earlier design, no longer exists as a
+separate application — [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md).)
 
 **Create / Edit**, sub-sectioned to match the application actor's own shape (ADR 0020) exactly:
 
@@ -37,9 +38,11 @@ admin to "fix" something that breaks their own access to fix it.
 - **Upstream** — base URL, prefix routes, timeout.
 - **CORS** — allowed origins.
 - **Exempt Paths** — exact and prefix-wildcard patterns (Story 003).
-- **Auth** — `loginUrl`, shown **read-only**, always `_portal`'s hosted page (ADR 0050) unless
-  explicitly overridden to a fully custom, tenant-hosted login page (Story 018's flagged future
-  enhancement) — not further designed here.
+- **Auth** — `loginUrl`, shown **read-only**, always `/oauth2/select` on this application's own
+  host, tenant-branded via `web` proxy-through
+  ([ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md)) unless explicitly overridden to
+  a fully custom, tenant-hosted login page (Story 018's flagged future enhancement) — not
+  further designed here.
 - **Exposed Providers** — an ordered, reorderable multi-select drawn from the tenant's own
   provider catalog (Identity & Access, below) — this is *this application's* subset/ordering of
   the tenant-wide credentials, not a duplicate of them.

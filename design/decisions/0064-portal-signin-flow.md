@@ -1,9 +1,17 @@
 # ADR 0064: `_portal`'s Sign-In Flow — Application-Scoped, Fully Client-Fetchable
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md)
 - **Date:** 2026-08-01
 - **Affects:** portcullis, tower, web
 - **Depends on:** [ADR 0050](0050-portal-reserved-application.md)
+
+> **Superseded 2026-08-01.** The `?app=` parameter and the `/_authstar/branding` endpoint below
+> are both retired — proxying the login page to `web` on the *originating application's own
+> host* (ADR 0066) makes both unnecessary: `X-Forwarded-Host` (already set, Story 011) tells
+> `web` which application it's rendering for, and portcullis attaches branding/providers as
+> request headers when it proxies, rather than `web` needing to fetch them itself. The
+> correctness of Story 007's return-cookie mechanism, confirmed below, is unaffected and still
+> accurate. Kept below for the record of what was considered.
 
 ## Decision
 

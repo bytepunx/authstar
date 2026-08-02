@@ -20,9 +20,9 @@ today would be a pure no-op.
 `tenant.status` joins the fields already flowing into portcullis's bundle (Story 001). Story
 013's decision flow gains a new first step: resolve the tenant from `Host`, check `status`
 *before* resolving which application matched. A `suspended` tenant rejects every request to
-**every** application under it — including `_admin` and `_portal` (ADR 0050) — with a clear,
-generic error. This has to happen before application resolution specifically because it must
-apply uniformly across all of a tenant's applications, not be re-implemented per application.
+**every** application under it — including `_admin` itself — with a clear, generic error. This
+has to happen before application resolution specifically because it must apply uniformly across
+all of a tenant's applications, not be re-implemented per application.
 
 ### `PATCH /tenants/{tenantSlug}` — new tower route, with a deliberately restricted status transition
 

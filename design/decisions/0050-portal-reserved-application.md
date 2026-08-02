@@ -1,10 +1,18 @@
 # ADR 0050: `_portal` — a Second Reserved Application for Hosted Login and Billing Pages
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md)
 - **Date:** 2026-08-01
 - **Affects:** tower, portcullis, web
 - **Extends:** [ADR 0044](0044-web-surfaces-and-distribution-model.md)
 - **Fixes a gap found while designing:** [ADR 0051](0051-web-applications-and-identity-access-screens.md)
+
+> **Superseded 2026-08-01.** The gap this ADR identified (hosted pages had no home distinct
+> from `_admin`) was real, but a second reserved application requiring a redirect was the wrong
+> fix — it visibly moves the browser away from the product the user is trying to reach. See
+> [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md): portcullis proxies these pages to
+> `web` on whatever application's own host the user is already on, no redirect, no second
+> application. `_admin`'s own separate-application status (the actual trust-boundary concern
+> this ADR was also protecting) is unaffected. Kept below for the record of what was considered.
 
 ## Context
 
