@@ -48,6 +48,11 @@ document to learn its authorization, token, and userinfo endpoints.
       (tenant, provider name, URL, HTTP status or error) for operators to diagnose it — subject
       to the same "detailed logging, nothing sensitive exposed to clients" posture established
       in ADR 0003.
+- [ ] Whenever a provider's discovery result **differs** from the last one portcullis observed
+      for it (including the first-ever check), it reports the transition to tower via
+      `POST /provider-discovery-status`, fire-and-forget — see
+      [ADR 0073](../../decisions/0073-provider-discovery-status-feedback.md). A failure to report
+      never affects discovery or login itself.
 
 ---
 
@@ -57,6 +62,7 @@ document to learn its authorization, token, and userinfo endpoints.
   `discoveryUrl` values for common providers, plus the kluster `authstar` profile's local Dex
   instance for dev/test (fixed client `authstar` / `authstar-dev-secret` — ADR 0005).
 - If **every** provider for a given tenant fails discovery, that tenant has no way to
-  authenticate — this is a real operational state (fully misconfigured tenant) and should be
-  visible to operators (metrics/alerting), not just a log line. Exact surfacing mechanism is
-  not decided here.
+  authenticate — this is a real operational state (fully misconfigured tenant). **Resolved by
+  [ADR 0073](../../decisions/0073-provider-discovery-status-feedback.md):** each provider's
+  status becomes admin-visible in `web` and the tenant activity feed; proactive alerting beyond
+  that remains a flagged future enhancement, not designed there either.

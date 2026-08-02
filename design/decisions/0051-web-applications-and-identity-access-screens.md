@@ -60,11 +60,11 @@ recognizing its hosts), not a literal row removal. Preserves audit history, cons
 
 **Providers** (tenant-wide credential catalog, ADR 0016) — list, add (`discoveryUrl`,
 `clientId`, `clientSecret` — write-only, never redisplayed), edit non-secret fields, rotate
-secret, remove. **Open item found, not resolved here:** there is no feedback loop from
-portcullis's per-tenant/per-provider discovery failures (Story 004) back to any admin-visible
-status — an admin can configure a broken `discoveryUrl` with no way to learn it's not working
-short of a user reporting a broken login. Fixing this needs its own design (a status-reporting
-channel from portcullis, which today publishes nothing back to tower) — flagged, not designed.
+secret, remove. Each entry shows its live discovery status inline ("healthy" / "discovery
+failing since {checkedAt}") — resolved by
+[ADR 0073](0073-provider-discovery-status-feedback.md), which closed the gap this section
+originally flagged (no feedback loop from portcullis's discovery failures back to any
+admin-visible status).
 
 **Role Definitions** (ADR 0047) — list (filterable by scope/status), create (`name`, scope
 picker — tenant-wide or a specific application from the Applications list, `description`),
@@ -146,7 +146,7 @@ table or extend it deliberately, not invent a grant string in isolation the way 
 - `roleDefinition`'s route `{id}` is clarified as the actor's own composite key.
 - Two new permission grants (`accounts:manage`, `permissions:manage`) fill gaps the
   consolidated catalog surfaced.
-- Provider discovery status feedback remains a genuinely open item — tracked, not designed.
+- Provider discovery status feedback is resolved by [ADR 0073](0073-provider-discovery-status-feedback.md).
 
 ## Related
 
