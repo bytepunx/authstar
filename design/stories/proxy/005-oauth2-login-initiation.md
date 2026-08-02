@@ -5,6 +5,9 @@
 **Status:** Draft
 **Adapted from:** `ref-design` Story 005 — PKCE/state mechanics unchanged; provider/config
 resolution is now application- and tenant-scoped (ADR 0016).
+**Reused by:** [Story 024](024-self-service-identity-linking.md)'s `/oauth2/{name}/link` —
+identical mechanics plus one additional cookie; see that story rather than duplicating detail
+here.
 
 ---
 

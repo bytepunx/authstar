@@ -67,6 +67,12 @@ requiring a central redirect-based session-bridging flow) is explicitly **out of
 different applications) is also explicitly **deferred**. Both are tracked as candidates for
 their own dedicated design passes, not designed here.
 
+> **Resolved (2026-08-01):** self-service identity linking is designed in
+> [ADR 0070](0070-self-service-identity-linking.md), built exactly on the constraint named in
+> the note below — live, simultaneous proof of control, server-correlated via the same
+> `state`-cookie mechanism Story 005 already uses. Cross-domain SSO remains out of scope,
+> unaffected by that ADR.
+
 > **Note for that future pass (added 2026-07-25):** no separate email-verification flow is
 > needed for ordinary signup/invite acceptance — the OIDC provider's own vouching is a
 > sufficient trust anchor there, and building one would add nothing (this was considered and

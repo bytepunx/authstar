@@ -57,9 +57,11 @@ Unversioned requests are answered but a request for a version tower no longer se
   tenant-scoped tree lets a caller enumerate tenants, since a tenant-scoped caller already knows
   its own slug) and `GET /operator/tenants/{tenantSlug}/activity` (read-only recent-activity
   view, surfacing consequent's existing per-actor event history for `steward`'s UI).
-- **Portcullis → tower** (enrichment, login-time identity resolution): SPIFFE mTLS,
-  service-to-service — not a signet-delivered bearer token. Tower still independently verifies
-  the internal JWT's own signature on top of the mTLS identity check (defense in depth).
+- **Portcullis → tower** (enrichment, login-time identity resolution, and — added by
+  [ADR 0070](0070-self-service-identity-linking.md) — `POST /identity-links`, the self-service
+  identity-linking commit): SPIFFE mTLS, service-to-service — not a signet-delivered bearer
+  token. Tower still independently verifies the internal JWT's own signature on top of the mTLS
+  identity check (defense in depth).
 
 ### Route inventory
 
@@ -90,10 +92,18 @@ Unversioned requests are answered but a request for a version tower no longer se
 | `/tenants/{tenantSlug}/accounts/{accountId}/roles/{name}` | `DELETE` | Scope disambiguated via query param if needed |
 | `/tenants/{tenantSlug}/accounts/{accountId}/permissions` | `GET`, `POST` | `permissions` (ADR 0018), tower-owned, distinct vocabulary from `roles` |
 | `/tenants/{tenantSlug}/accounts/{accountId}/permissions/{grant}` | `DELETE` | |
+| `/tenants/{tenantSlug}/accounts/{accountId}/identities` | `GET` | `{ idp }` per linked identity — self, or an admin holding `accounts:manage` ([ADR 0070](0070-self-service-identity-linking.md)) |
+| `/tenants/{tenantSlug}/accounts/{accountId}/identities/{identityHash}` | `DELETE` | Self, or `accounts:manage`; refuses if it would remove the account's last identity ([ADR 0070](0070-self-service-identity-linking.md)) |
 
 No `POST /accounts` — accounts are created only via identity resolution (OIDC login) or invite
 acceptance, never directly through this API, since a direct-create would bypass identity
 resolution entirely.
+
+**Self-action needs no `permissions` grant** ([ADR 0070](0070-self-service-identity-linking.md)):
+any tenant-scoped account route where `{accountId}` matches the caller's own resolved
+`accountId` is permitted without holding any grant — only acting on a *different* account
+requires one. Applies to the identities routes above and to any future self-service account
+action.
 
 **Role definitions** (added by [ADR 0047](0047-application-and-role-slug-validation.md)) — the
 catalog of valid `(name, scope)` role values grantable within the tenant; must exist before a
@@ -164,4 +174,4 @@ for free from the same schemas used to generate documentation — directly servi
 
 ## Related
 
-- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections), [ADR 0053](0053-lifecycle-status-consolidation.md) (`provider`/`invite`/`inviteCode` `DELETE`-vs-`PATCH` corrections), [ADR 0055](0055-web-privacy-compliance-screens.md) (contacts email search/`PATCH`, erasure-requests list), [ADR 0062](0062-tenant-status-enforcement-and-reactivation.md) (`tenant` `PATCH` route, restricted status transition), [ADR 0067](0067-tenant-creation-and-provisioning.md) (`POST /tenants`, pre-tenant direct ingress, provider-removal safeguard)
+- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections), [ADR 0053](0053-lifecycle-status-consolidation.md) (`provider`/`invite`/`inviteCode` `DELETE`-vs-`PATCH` corrections), [ADR 0055](0055-web-privacy-compliance-screens.md) (contacts email search/`PATCH`, erasure-requests list), [ADR 0062](0062-tenant-status-enforcement-and-reactivation.md) (`tenant` `PATCH` route, restricted status transition), [ADR 0067](0067-tenant-creation-and-provisioning.md) (`POST /tenants`, pre-tenant direct ingress, provider-removal safeguard), [ADR 0070](0070-self-service-identity-linking.md) (`POST /identity-links`, self-service identities routes, self-action-needs-no-permission principle)

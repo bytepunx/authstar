@@ -121,7 +121,11 @@ special permission at all, since acting on one's own data needs only being authe
 oneself. Its actual UI (most naturally an embeddable Web Component, "download my data") is
 deferred to the future embeddable-widget-inventory pass, the same way the invite-code
 self-service case was deferred in ADR 0051 — noted here so the mechanism exists and is
-consistent, not designed twice.
+consistent, not designed twice. **Formalized generally by
+[ADR 0070](0070-self-service-identity-linking.md)**: self-action on one's own resource never
+needs a `permissions` grant — this route and ADR 0070's own self-service identities routes are
+two instances of the same rule, just keyed differently (`contactId`-resolved-from-session here,
+`{accountId}`-matches-caller there) to match each route's own resource shape.
 
 ## Consequences
 

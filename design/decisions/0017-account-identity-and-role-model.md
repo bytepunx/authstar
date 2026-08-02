@@ -17,6 +17,10 @@
 > `account.contactId`. Correct value: `searchableBy: ['tenant', 'contactId', 'status']`. Email
 > search works via `GET /tenants/{tenantSlug}/accounts?email=...`, with tower resolving the
 > HMAC/`contact` lookup internally.
+>
+> **Resolved (2026-08-01, [ADR 0069](0069-role-interpretation-is-application-owned.md)):** the
+> "explicitly undecided" question below about where role interpretation lives is now closed —
+> permanently and entirely inside the consuming application, never centralized or hybrid.
 
 ## Context
 

@@ -3,17 +3,19 @@
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0066](../../decisions/0066-portcullis-proxies-branded-pages-to-web.md).
+**New — not present in `ref-design`.** Per [ADR 0066](../../decisions/0066-portcullis-proxies-branded-pages-to-web.md),
+extended by [ADR 0070](../../decisions/0070-self-service-identity-linking.md) to add a third
+proxied path.
 
 ---
 
 ## Summary
 
-Portcullis proxies two reserved paths — `/oauth2/select` and `/_authstar/upgrade` — to `web`'s
-own upstream instead of either handling them locally (Story 018) or forwarding to the tenant's
-configured product upstream (Story 011/012). The browser's host never changes; `web` renders
-tenant-branded content while the user stays on whichever application's domain they're already
-on.
+Portcullis proxies three reserved paths — `/oauth2/select`, `/_authstar/upgrade`, and
+`/_authstar/link/confirm` — to `web`'s own upstream instead of either handling them locally
+(Story 018) or forwarding to the tenant's configured product upstream (Story 011/012). The
+browser's host never changes; `web` renders tenant-branded content while the user stays on
+whichever application's domain they're already on.
 
 ---
 
@@ -21,10 +23,13 @@ on.
 
 ### Routing
 
-- [ ] `/oauth2/select` and `/_authstar/upgrade`, for **every** application (including `_admin`
-      — no special-casing), route to `webUpstream` (Story 001's new global bundle field) instead
-      of that application's own configured `upstream.base`/`upstream.routes`. This takes
-      precedence over normal prefix routing (Story 012) for these two specific reserved paths.
+- [ ] `/oauth2/select`, `/_authstar/upgrade`, and `/_authstar/link/confirm`, for **every**
+      application (including `_admin` — no special-casing), route to `webUpstream` (Story 001's
+      new global bundle field) instead of that application's own configured
+      `upstream.base`/`upstream.routes`. This takes precedence over normal prefix routing
+      (Story 012) for these three specific reserved paths. Note `POST /_authstar/link/confirm`
+      is **not** proxied — it's portcullis-owned (Story 024) — only the `GET` that renders the
+      confirmation page is.
 - [ ] The proxy call to `web` uses SPIFFE mTLS, the same pattern as portcullis's existing calls
       to tower and lookout — `web` is a first-party authstar service, not an arbitrary tenant
       upstream.
@@ -54,6 +59,16 @@ on.
 - [ ] No fallback exists for this path if `web` is unreachable — it fails the same way any other
       unreachable upstream does (`502`/`504`, Story 011). There is no bare-bones equivalent to
       fall back to.
+
+### `GET /_authstar/link/confirm` — protected, carries the pending link's provider name
+
+- [ ] Not exempt — same protected-route treatment as `/_authstar/upgrade`; requires a valid
+      session (Story 013), forwards the normal internal JWT.
+- [ ] Portcullis attaches the pending link's `idp` name (read from the `oauth2-pending-link`
+      cookie set by Story 006's linking-callback branch — see [Story 024](024-self-service-identity-linking.md))
+      as a request header, the same header-attachment discipline `/oauth2/select` already uses —
+      `web` renders "Link your {idp} account?" with no live tower call needed.
+- [ ] No fallback if `web` is unreachable — same as `/_authstar/upgrade`, an ordinary `502`/`504`.
 
 ---
 

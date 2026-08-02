@@ -53,9 +53,14 @@ thin relay into that shape would add nothing.
 Resolving a true `accountId` requires a live tower enrichment call — adding that dependency here
 would reintroduce exactly the hot-path coupling this pipeline exists to avoid. `identityHash`
 (ADR 0027) is already available locally from the verified session JWT at zero network cost.
-Known limitation, not a new one: until self-service identity linking exists (still deferred,
-ADR 0016), the same person authenticating via two different providers appears as two distinct
-identities in analytics.
+Known limitation: the same person authenticating via two different providers appears as two
+distinct identities in analytics. **Unaffected by [ADR 0070](0070-self-service-identity-linking.md)'s**
+self-service linking — a session's JWT still carries whichever `identityHash` that login used,
+linked or not, and chronicle still only ever sees `identityHash`, never `accountId`, by design.
+Linking makes the two identities the same *account* in tower; it does not make them the same
+*identityHash* in any event, past or future. Closing this gap for real would mean chronicle
+resolving `accountId` at ingest — the exact hot-path coupling this pipeline exists to avoid —
+so it stays a deliberate, permanent trade-off, not a bug.
 
 ### No IP address, anywhere in this pipeline, ever
 

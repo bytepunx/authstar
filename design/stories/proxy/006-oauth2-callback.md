@@ -6,6 +6,11 @@
 **Adapted from:** `ref-design` Story 006 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
 [ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md),
 [ADR 0028](../../decisions/0028-identity-hash-key-generations.md).
+**Branches for linking:** if the `oauth2-link-mode` cookie ([ADR 0070](../../decisions/0070-self-service-identity-linking.md))
+is present, this handler diverts after computing `identityHash` — see
+[Story 024](024-self-service-identity-linking.md), which owns that branch's behavior rather than
+duplicating it here. Everything below (state/PKCE validation, code exchange, userinfo fetch,
+hashing) is shared, unchanged, by both the ordinary-login and linking paths.
 
 ---
 
