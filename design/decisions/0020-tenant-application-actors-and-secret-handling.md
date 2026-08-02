@@ -1,8 +1,12 @@
 # ADR 0020: Tenant and Application Actors; Secrets Never Persisted in Tower's Event Log
 
-- **Status:** Accepted
+- **Status:** Accepted (extended by [ADR 0062](0062-tenant-status-enforcement-and-reactivation.md), [ADR 0064](0064-portal-signin-flow.md))
 - **Date:** 2026-07-24
 - **Affects:** tower
+
+> **Extended:** `tenant` gains `seatLimit` (ADR 0031), and later `branding: { name, logoUrl,
+> primaryColor }` (ADR 0064) — non-secret, flows into portcullis's bundle the same way
+> `providers`/`cookie` already do.
 
 ## Context
 

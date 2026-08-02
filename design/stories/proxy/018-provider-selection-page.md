@@ -4,6 +4,9 @@
 **Repo:** portcullis
 **Status:** Draft
 **Adapted from:** `ref-design` Story 018 — unchanged; scope is now per-application (ADR 0016).
+**Fallback-only in practice**: `auth.loginUrl`'s real computed default now points at `_portal`'s
+hosted, tenant-branded login page (ADR 0050/0064), not this built-in page — this story's page is
+reached only if an operator explicitly overrides `auth.loginUrl` back to `/oauth2/select`.
 
 ---
 

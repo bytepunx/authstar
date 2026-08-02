@@ -67,12 +67,25 @@ products, e.g. one of several related sites sharing a login).
       [ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md). Portcullis
       enforces this at the tenant-resolution stage, before any application under it is resolved
       (Story 013).
+- [ ] Each tenant entry also carries `branding` (`name`, `logoUrl`, `primaryColor`) — added by
+      [ADR 0064](../../decisions/0064-portal-signin-flow.md). Non-secret, served directly from
+      this bundle via a new local, reserved, exempt route (below) — no live tower call at
+      request time, the same pattern already used for `/oauth2/providers` (Story 017).
 - [ ] Each tenant entry has a nested `applications` map, keyed by application slug. Each
       application entry holds what's specific to that one product: `hosts`, `server.publicUrl`,
       `upstream` (base, routes, timeout), `cors.origin`, `exempt`, `auth.loginUrl`, and which of
       the tenant's providers this application exposes (a name list referencing the tenant-level
       `providers` map, optionally with per-application `loginPath`/`callbackPath` overrides —
       still defaulting to `/oauth2/{name}/login` and `/oauth2/{name}/callback` if unset).
+- [ ] **`auth.loginUrl`'s computed default is `_portal`'s hosted login page plus an explicit
+      `?app={appSlug}` identifier** (`https://<_portal's host>/login?app=<this application's
+      slug>`), not `/oauth2/select` (ADR 0064) — since `_portal` is always auto-provisioned per
+      tenant (ADR 0050), this is the real default; Story 018's built-in selection page is a
+      fallback only, reachable if an operator explicitly overrides `auth.loginUrl` back to it.
+- [ ] **New reserved, local, exempt route**: `GET /_authstar/branding` — serves the resolved
+      tenant's `branding` fields directly from portcullis's own bundle, the same reserved
+      category as `/_authstar/usage` and `/_authstar/analytics/events` (ADR 0064). No
+      authentication required, no upstream tower call.
 - [ ] The bundle's `secrets` map holds each tenant's two signing keys (session, internal — ADR
       0002) under `tenant-<slug>-session-key` / `tenant-<slug>-internal-key` naming — flat,
       prefixed names, scoped to the tenant, not to any one application.
