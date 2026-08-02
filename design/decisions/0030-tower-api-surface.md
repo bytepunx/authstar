@@ -67,13 +67,11 @@ Unversioned requests are answered but a request for a version tower no longer se
 
 | Route | Method | Notes |
 |---|---|---|
+| `/tenants` | `POST` | **Not** on this tenant-scoped/operator route tree at all — a third, pre-tenant auth model living on tower's own direct ingress, outside portcullis entirely. Unauthenticated when the installation's `selfServiceEnabled` flag is on, or operator-bearer-token authenticated (via `steward`) always. See [ADR 0067](0067-tenant-creation-and-provisioning.md)/[ADR 0068](0068-tenant-creation-ui-surfaces.md) |
 | `/tenants/{tenantSlug}` | `GET` | Non-secret fields only |
 | `/tenants/{tenantSlug}` | `PATCH` | `name`, `cookie`; `status` accepts **only** `active → suspended` through this route ([ADR 0062](0062-tenant-status-enforcement-and-reactivation.md)) — reactivation and deletion are structurally unreachable here, operator-only via `steward`. Gated by `tenant:manage` |
 | `/tenants/{tenantSlug}/providers` | `GET`, `POST` | `POST` gated by `providers:manage`; secret write triggers the signet push (ADR 0020) |
-| `/tenants/{tenantSlug}/providers/{name}` | `GET`, `PATCH`, `DELETE` | `DELETE` is an alias for `PATCH { status: "removed" }` ([ADR 0053](0053-lifecycle-status-consolidation.md)) — `provider` gains a `status: "active" \| "removed"` field. Tower synchronously checks no active application's `exposedProviders` still references it before allowing removal |
-
-Tenant *creation* is deliberately absent — still an open question per ADR 0021, not designed
-here.
+| `/tenants/{tenantSlug}/providers/{name}` | `GET`, `PATCH`, `DELETE` | `DELETE` is an alias for `PATCH { status: "removed" }` ([ADR 0053](0053-lifecycle-status-consolidation.md)) — `provider` gains a `status: "active" \| "removed"` field. Tower synchronously checks no active application's `exposedProviders` still references it before allowing removal, **and** refuses if it would leave zero providers exposed by `_admin` ([ADR 0067](0067-tenant-creation-and-provisioning.md)) |
 
 **Applications** (ADR 0016)
 
@@ -166,4 +164,4 @@ for free from the same schemas used to generate documentation — directly servi
 
 ## Related
 
-- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections), [ADR 0053](0053-lifecycle-status-consolidation.md) (`provider`/`invite`/`inviteCode` `DELETE`-vs-`PATCH` corrections), [ADR 0055](0055-web-privacy-compliance-screens.md) (contacts email search/`PATCH`, erasure-requests list), [ADR 0062](0062-tenant-status-enforcement-and-reactivation.md) (`tenant` `PATCH` route, restricted status transition)
+- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections), [ADR 0053](0053-lifecycle-status-consolidation.md) (`provider`/`invite`/`inviteCode` `DELETE`-vs-`PATCH` corrections), [ADR 0055](0055-web-privacy-compliance-screens.md) (contacts email search/`PATCH`, erasure-requests list), [ADR 0062](0062-tenant-status-enforcement-and-reactivation.md) (`tenant` `PATCH` route, restricted status transition), [ADR 0067](0067-tenant-creation-and-provisioning.md) (`POST /tenants`, pre-tenant direct ingress, provider-removal safeguard)

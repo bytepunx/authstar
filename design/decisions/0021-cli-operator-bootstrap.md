@@ -4,6 +4,11 @@
 - **Date:** 2026-07-24
 - **Affects:** tower
 
+> **Extended 2026-08-01:** tenant creation/provisioning, named below as explicitly out of scope,
+> is resolved by [ADR 0067](0067-tenant-creation-and-provisioning.md) and
+> [ADR 0068](0068-tenant-creation-ui-surfaces.md) — a new, separate `POST /tenants` route on its
+> own pre-tenant ingress, not a change to the operator API this ADR defines.
+
 ## Context
 
 `claude.md`'s original vision called for a CLI able to create admin accounts independent of a
@@ -47,7 +52,8 @@ this is which credential authorizes the call.
 
 Tenant creation/provisioning via the CLI. This ADR assumes a tenant already exists by the time
 an operator uses this tooling — how the very first tenant comes to exist is a separate,
-unresolved question (likely `web`'s own onboarding design), not addressed here.
+unresolved question (likely `web`'s own onboarding design), not addressed here. **Resolved by
+[ADR 0067](0067-tenant-creation-and-provisioning.md)/[ADR 0068](0068-tenant-creation-ui-surfaces.md).**
 
 ## Consequences
 

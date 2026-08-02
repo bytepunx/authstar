@@ -11,6 +11,11 @@
 > a second reserved application, `_portal`, requiring an actual redirect — that's since been
 > superseded too. The three-surface distinction itself (hosted pages vs. embeddable widgets vs.
 > the admin app) remains correct; only the delivery mechanism for hosted pages changed.
+>
+> **Extended 2026-08-01:** `web` gains a genuine fourth surface —
+> [ADR 0068](0068-tenant-creation-ui-surfaces.md)'s installation-level, pre-tenant public signup
+> page. It deliberately does **not** go through portcullis's proxy-through mechanism (there is no
+> tenant to resolve yet) — the one narrow exception to that pattern.
 
 ## Context
 

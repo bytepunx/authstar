@@ -5,6 +5,11 @@
 - **Affects:** tower
 - **Refines:** [ADR 0009](0009-tenant-data-via-syncbundle-no-github.md)
 
+> **Extended 2026-08-01:** whether this elevated token covers writing to tower's *own* service
+> bundle (not just portcullis's tenant-prefixed one) was left implicit here. [ADR 0067](0067-tenant-creation-and-provisioning.md)
+> confirms it does — tenant creation needs to push `contact-hash-pepper` into tower's own bundle
+> as part of the same provisioning flow that pushes other secrets to portcullis's.
+
 ## Context
 
 ADR 0009 removed the GitHub-repo dependency for tenant provisioning, but left tower needing to

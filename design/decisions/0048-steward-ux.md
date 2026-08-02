@@ -8,6 +8,11 @@
 > Overview needed a tenant-scoped equivalent — and one from keep and herald too, not just tower
 > — so ADR 0060 adds `GET /tenants/{tenantSlug}/activity` to all three, sharing the same
 > response shape as the operator route here.
+>
+> **Extended 2026-08-01:** tenant creation, named below as out of scope, is resolved by
+> [ADR 0067](0067-tenant-creation-and-provisioning.md)/
+> [ADR 0068](0068-tenant-creation-ui-surfaces.md) — `steward` gains a Create Tenant screen
+> calling tower's new pre-tenant `POST /tenants` route with the operator token.
 
 ## Context
 
@@ -36,10 +41,13 @@ displays which installation/environment it's talking to (surfaced from tower's o
 version info) — a safety measure against acting on the wrong installation when an operator
 manages more than one.
 
-### Tenant search — the real landing page, not a create flow
+### Tenant search — the real landing page
 
-Since tenant creation is out of scope, this is a search/browse of existing tenants, not a
-"new tenant" flow. Needs a **new tower operator route**: `GET /operator/tenants` (paginated,
+A search/browse of existing tenants, with a separate **Create Tenant** action alongside it
+(added by [ADR 0067](0067-tenant-creation-and-provisioning.md)/
+[ADR 0068](0068-tenant-creation-ui-surfaces.md)) rather than tenant creation being folded into
+this flow — creation and lookup are different enough operator intents to stay as distinct
+actions from the same landing page. Needs a **new tower operator route**: `GET /operator/tenants` (paginated,
 searchable by slug/name) — the tenant-scoped API only ever exposed `GET /tenants/{tenantSlug}`
 for one already-known tenant; nothing today lets an operator enumerate tenants at all. Selecting
 a result enters that tenant's operator context.
@@ -83,8 +91,6 @@ than implied to be stronger than it is.
 
 ### Explicitly not designed here
 
-- Tenant creation/provisioning — still unresolved anywhere in this design; `steward` assumes
-  tenants already exist by whatever mechanism eventually fills that gap.
 - Any keep-facing functionality — removed by ADR 0046.
 - Visual theming — `steward` deliberately does not use `web`'s Web-Component/CSS-custom-property
   system (ADR 0044); there is no tenant brand for an internal operator tool to match.
