@@ -116,6 +116,15 @@ resolved entirely from the forwarded internal JWT, no `{tenantSlug}`/`{accountId
 | `/tenants/{tenantSlug}/usage-records` | `GET`, `POST` | `GET` is paginated, filterable by `meter`/`application`/date range — the `web` admin view. `POST` is what portcullis's `/_authstar/usage` route (Story 021) actually calls; body carries `application`, `accountId`, `meter`, `quantity`, plus portcullis-attached identity/role context. Idempotency is expressed via the `Idempotency-Key` header (ADR 0030's convention for this API), even though the app-facing contract at the portcullis layer (ADR 0043) carries `idempotencyKey` in its body for simplicity — portcullis translates one into the other when it proxies the call |
 | `/tenants/{tenantSlug}/usage-records/{id}` | `GET` | |
 
+**Usage-reporting credentials** (added by [ADR 0079](0079-batched-usage-reporting-credentials.md))
+— for batched/background usage reporting, distinct from the synchronous JWT-authenticated path
+above
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/applications/{appSlug}/usage-credentials` | `GET`, `POST` | `POST` returns the secret once; only a hash is stored. Gated by `applications:manage` |
+| `/tenants/{tenantSlug}/applications/{appSlug}/usage-credentials/{credentialId}` | `DELETE` | Revoke |
+
 A dedicated current-period summary endpoint (totals per meter, rather than a raw list) is a
 plausible future addition, following the same purpose-built-report pattern `chronicle` already
 established (ADR 0036) — not added here since `web` hasn't asked for it yet.
@@ -143,4 +152,4 @@ before, just relocated.
 
 ## Related
 
-- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md), [ADR 0071](0071-self-service-widget-data-access.md) (`/me/subscription`), [ADR 0077](0077-keep-refunds-and-disputes.md) (`/refunds`, `/disputes`)
+- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md), [ADR 0071](0071-self-service-widget-data-access.md) (`/me/subscription`), [ADR 0077](0077-keep-refunds-and-disputes.md) (`/refunds`, `/disputes`), [ADR 0079](0079-batched-usage-reporting-credentials.md) (`/usage-credentials`)

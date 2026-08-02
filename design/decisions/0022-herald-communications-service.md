@@ -108,7 +108,8 @@ recipient has opted out of that category for that tenant.
   gave.
 - Per-tenant/per-application template branding (so Math Overflow's emails look like Math
   Overflow, not generic authstar) — deferred to whenever herald's actual rendering pipeline is
-  designed.
+  designed. **Resolved by [ADR 0078](0078-herald-template-branding.md)**: logic-less
+  mustache-style rendering, named explicitly, plus an `application.branding` override.
 - Additional channels (SMS, push) — the `channel` field exists from day one so this doesn't
   require a contract change later, but only `email` is implemented now.
 

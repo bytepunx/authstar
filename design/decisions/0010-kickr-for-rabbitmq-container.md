@@ -54,6 +54,9 @@ writes a k8s Secret; generating the credential as part of tenant/environment pro
 (ADR 0009's `SyncBundle` flow) and emitting both the service-facing secret and the
 operator-facing Secret from the same source of truth. **Tracked, not designed further here.**
 
+**Resolved by [ADR 0012](0012-rabbitmq-user-provisioning-job.md)**: a one-shot Kubernetes `Job`
+(the first candidate above), reusing ADR 0011's admin-token-as-bundle-secret pattern.
+
 ## Consequences
 
 - RabbitMQ's Docker image needs kickr as its `PID 1`/entrypoint, wrapping `rabbitmq-server` as

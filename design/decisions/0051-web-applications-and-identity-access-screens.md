@@ -46,6 +46,10 @@ separate application — [ADR 0066](0066-portcullis-proxies-branded-pages-to-web
 - **Exposed Providers** — an ordered, reorderable multi-select drawn from the tenant's own
   provider catalog (Identity & Access, below) — this is *this application's* subset/ordering of
   the tenant-wide credentials, not a duplicate of them.
+- **Usage-Reporting Credentials** (added by [ADR 0079](0079-batched-usage-reporting-credentials.md))
+  — list (metadata only), issue (secret shown once), revoke. For batched/background usage
+  reporting specifically; unrelated to the synchronous, JWT-based path every application already
+  gets for free.
 
 **Delete — correction found:** ADR 0030 lists both `PATCH` and `DELETE` on
 `/applications/{appSlug}`, but with `status` already covering `active`/`suspended`/`deleted`

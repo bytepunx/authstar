@@ -89,7 +89,11 @@ materialization path (ADR 0001/0006/0018). Tower needs no `coupon` actor and no 
 a discount (coupon) in one redemption is plausible (e.g. `LAUNCH50` meaning both "let me in"
 and "50% off"). Whether that's two coordinated redemptions orchestrated by `web`, or something
 that needs a real cross-service design, is an open question for whenever keep's coupon model
-actually gets designed — not resolved here.
+actually gets designed — not resolved here. **Resolved by
+[ADR 0039](0039-keep-trials-and-coupons.md)**, once keep's `coupon` actor existed to answer it:
+no new cross-service mechanism — a `web`/admin-level convention of creating a matching
+`inviteCode` and `coupon` sharing the same code string, checked by the redemption flow. This
+ADR's own text never got a pointer back to that resolution; added now.
 
 ## Consequences
 

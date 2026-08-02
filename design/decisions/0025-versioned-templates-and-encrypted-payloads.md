@@ -6,6 +6,12 @@
 - **Supersedes:** the `communication` actor shape discussed (not yet committed) in response to
   ADR 0024's follow-up
 
+> **Extended 2026-08-02 ([ADR 0078](0078-herald-template-branding.md)):** the rendering
+> mechanism referenced only as a black-box "renders" verb below is now named explicitly
+> (logic-less mustache-style substitution), and `templateData`'s expected shape gains a
+> branding convention — no change to the encryption/versioning design here, just filling in
+> what "renders" actually means.
+
 ## Context
 
 Herald's `communication` record (ADR 0022) needs to be minimal and non-sensitive (a prior

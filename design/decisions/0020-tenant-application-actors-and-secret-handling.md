@@ -7,6 +7,11 @@
 > **Extended:** `tenant` gains `seatLimit` (ADR 0031), and later `branding: { name, logoUrl,
 > primaryColor }` (ADR 0064) — non-secret, flows into portcullis's bundle the same way
 > `providers`/`cookie` already do.
+>
+> **Extended 2026-08-02 ([ADR 0078](0078-herald-template-branding.md)):** `application` gains an
+> optional `branding` field, same shape as `tenant.branding`, nullable — falls back to the
+> tenant's branding when unset. Non-secret, consumed by herald's template rendering, not
+> portcullis.
 
 ## Context
 
@@ -87,8 +92,11 @@ rotation and provider secret management get implemented from here on.
 - Tower needs the `portcullisBundle` view actor described above.
 - Tower needs a distinct code path for secret-affecting admin actions (set/rotate a provider
   secret, rotate a tenant's signing keys) that pushes to signet directly at action time, separate
-  from the ordinary event-sourced config flow.
+  from the ordinary event-sourced config flow. Provider secret rotation is
+  [ADR 0051](0051-web-applications-and-identity-access-screens.md)'s existing tenant-admin path;
+  signing-key rotation is [ADR 0080](0080-tenant-key-rotation-ceremony.md)'s operator-only path
+  — same underlying push mechanism, different callers.
 
 ## Related
 
-- [ADR 0002](0002-multi-tenant-architecture-and-key-management.md), [ADR 0004](0004-signet-for-configuration-and-secrets.md), [ADR 0009](0009-tenant-data-via-syncbundle-no-github.md), [ADR 0011](0011-minimizing-towers-signet-footprint.md), [ADR 0016](0016-application-layer-and-sso-scope.md)
+- [ADR 0002](0002-multi-tenant-architecture-and-key-management.md), [ADR 0004](0004-signet-for-configuration-and-secrets.md), [ADR 0009](0009-tenant-data-via-syncbundle-no-github.md), [ADR 0011](0011-minimizing-towers-signet-footprint.md), [ADR 0016](0016-application-layer-and-sso-scope.md), [ADR 0080](0080-tenant-key-rotation-ceremony.md)

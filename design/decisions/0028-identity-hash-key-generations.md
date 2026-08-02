@@ -6,6 +6,11 @@
 - **Refines:** [ADR 0027](0027-portcullis-computed-identity-hash.md) (addresses its flagged
   key-rotation cost)
 
+> **Extended 2026-08-02:** this ADR fully specifies the multi-generation *shape* and the
+> login-time reconciliation that *recognizes* old generations, but never actually gave anyone a
+> way to *produce* a new generation after tenant creation. [ADR 0080](0080-tenant-key-rotation-ceremony.md)
+> adds that trigger, reusing this shape unchanged.
+
 ## Context
 
 ADR 0027 flagged rotating `identity-hash-key` as a higher-stakes operation than rotating the

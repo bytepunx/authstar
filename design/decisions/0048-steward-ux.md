@@ -79,6 +79,11 @@ own `_admin`, the surface that would otherwise handle it.
   (same discipline as every other secret in this design).
 - Edit non-secret fields; rotate (not view) the secret; remove.
 
+**Rotate Keys** (added by [ADR 0080](0080-tenant-key-rotation-ceremony.md)) — session, internal,
+and identity-hash signing keys, selectable independently, heavy-confirmation given the
+consequence profile (rotating the session key means every un-refreshed session eventually needs
+a fresh login).
+
 ### Activity view — surfaces tower's existing audit trail, doesn't duplicate it
 
 Consequent's event-sourced actors already capture full history for free. `steward` adds a
@@ -88,6 +93,11 @@ operator route**: `GET /operator/tenants/{tenantSlug}/activity`. Entries include
 "acting as" label was supplied at connect time — a real, stated limitation (self-reported
 attribution, not verified identity), not a full audit solution, and displayed as such rather
 than implied to be stronger than it is.
+
+### Stuck Erasure Requests view (added by [ADR 0075](0075-stuck-erasure-request-monitoring.md))
+
+Cross-tenant, unlike `web`'s per-tenant erasure-requests list — surfaces which service hasn't
+acknowledged, not just that a request is stale, via `GET /operator/erasure-requests/stuck`.
 
 ### Explicitly not designed here
 
@@ -107,4 +117,4 @@ than implied to be stronger than it is.
 
 ## Related
 
-- [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0044](0044-web-surfaces-and-distribution-model.md), [ADR 0045](0045-steward-operator-console.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0047](0047-application-and-role-slug-validation.md)
+- [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0044](0044-web-surfaces-and-distribution-model.md), [ADR 0045](0045-steward-operator-console.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0075](0075-stuck-erasure-request-monitoring.md), [ADR 0080](0080-tenant-key-rotation-ceremony.md)

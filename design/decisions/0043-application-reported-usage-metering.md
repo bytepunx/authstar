@@ -34,7 +34,10 @@ app-supplied and required.
 **This only works synchronously, within the internal JWT's 60-second lifetime** — an app
 reporting usage from a background job or a deferred/batched process has no live internal JWT to
 use. That's a genuinely different, harder problem (a durable, app-held API credential issued by
-`keep`) and is **explicitly not solved here** — flagged rather than papered over.
+`keep`) and is **explicitly not solved here** — flagged rather than papered over. **Resolved by
+[ADR 0079](0079-batched-usage-reporting-credentials.md)**: a keep-issued, hashed credential and
+a second, exempt reserved path (`/_authstar/usage-reports`) converging on this same recording
+logic.
 
 ### `/_authstar/usage` is not fire-and-forget — this is the request, not a passenger on one
 

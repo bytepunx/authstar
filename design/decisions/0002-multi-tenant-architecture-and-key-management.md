@@ -4,6 +4,15 @@
 - **Date:** 2026-07-21
 - **Affects:** portcullis, tower
 
+> **Resolved 2026-08-02:** all three open research items below are now closed.
+> Encryption-at-rest and valkey cache access control were both superseded outright by
+> [ADR 0004](0004-signet-for-configuration-and-secrets.md) — signet's own storage replaced
+> tower's durable store, and the valkey tier this ADR worried about access-controlling was
+> retired entirely, so there's nothing left to control access to. The key-generation ceremony
+> (onboarding half) is [ADR 0067](0067-tenant-creation-and-provisioning.md); the rotation half
+> is [ADR 0080](0080-tenant-key-rotation-ceremony.md), which also confirms cross-tenant operator
+> routes never touch the tenant key-resolution path at all.
+
 ## Context
 
 Authstar's target deployment model is multi-tenant: one portcullis deployment (or fleet)
@@ -93,7 +102,8 @@ So there are two distinct access patterns, deliberately asymmetric:
 
 - Secrets handling for key material: encryption at rest in tower's durable store, access
   control for whatever process populates/reads the valkey cache, and the key-generation
-  ceremony at tenant onboarding/rotation. Not designed yet.
+  ceremony at tenant onboarding/rotation. Not designed yet. **All resolved — see the note at the
+  top of this ADR.**
 - Whether a static-config single-tenant mode is retained at all (see Story 001/002 consequence
   above).
 
