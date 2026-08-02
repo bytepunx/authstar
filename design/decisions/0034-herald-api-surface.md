@@ -69,6 +69,12 @@ isn't nested under a `/contacts/` path; it's herald's own resource, keyed by the
 |---|---|---|
 | `/tenants/{tenantSlug}/sending-config` | `GET`, `PATCH` | `GET` never returns the credential field (write-only, same discipline as tower's provider `clientSecret`). `PATCH` (not `PUT` — stays consistent with this API's no-`PUT` convention, ADR 0030) accepts `provider`, `fromAddress`, `fromName`, `replyTo`, `physicalAddress`, and optionally `credential` to set/rotate it. Gated by `sending-config:manage` |
 
+**Activity** (added by [ADR 0060](0060-activity-feed-and-revenue-summary.md))
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/activity` | `GET` | Same shared shape as tower's/keep's own activity routes. Gated by `activity:read` |
+
 **Unsubscribe** (ADR 0032) — public, token-authenticated, not tenant/permission-gated
 
 | Route | Method | Notes |

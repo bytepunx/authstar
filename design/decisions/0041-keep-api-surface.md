@@ -54,7 +54,14 @@ accepted as an inert grant.
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/plan-mappings` | `GET`, `POST` | |
-| `/tenants/{tenantSlug}/plan-mappings/{id}` | `GET`, `PATCH`, `DELETE` | `planMapping` gains `status: "active" \| "retired"` ([ADR 0053](0053-lifecycle-status-consolidation.md)) — a real removal would break renewal processing for existing subscribers on a retired plan. `DELETE` is an alias for `PATCH { status: "retired" }`; keep's own webhook lookup must still find and honor retired mappings, only the admin create/upgrade flow filters to `active` |
+| `/tenants/{tenantSlug}/plan-mappings/{id}` | `GET`, `PATCH`, `DELETE` | `planMapping` gains `status: "active" \| "retired"` ([ADR 0053](0053-lifecycle-status-consolidation.md)) — a real removal would break renewal processing for existing subscribers on a retired plan. `DELETE` is an alias for `PATCH { status: "retired" }`; keep's own webhook lookup must still find and honor retired mappings, only the admin create/upgrade flow filters to `active`. Also gains cached `unitAmount`/`currency`/`interval`, synced from Stripe ([ADR 0060](0060-activity-feed-and-revenue-summary.md)) |
+
+**Activity and revenue** (added by [ADR 0060](0060-activity-feed-and-revenue-summary.md))
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/activity` | `GET` | Same shared shape as tower's/herald's own activity routes. Gated by `activity:read` |
+| `/tenants/{tenantSlug}/revenue-summary` | `GET` | MRR, active-subscription counts by status/plan. Gated by `billing:read`, distinct from `billing:manage` |
 
 **Checkout**
 

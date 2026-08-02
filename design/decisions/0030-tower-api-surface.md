@@ -121,6 +121,13 @@ role can be granted anywhere (accounts, invites, invite codes, `keep`'s plan map
 | `/tenants/{tenantSlug}/erasure-requests` | `GET` | List, paginated, filterable by status/date range — the actual audit-verification path (ADR 0055); gated by `erasure-requests:read`, deliberately narrower than `contacts:read` since these records carry no PII |
 | `/tenants/{tenantSlug}/erasure-requests/{contactId}` | `GET` | Status, `acknowledgedBy`, and `expectedServices` (ADR 0055) — proof-of-completion record |
 
+**Activity** (added by [ADR 0060](0060-activity-feed-and-revenue-summary.md)) — tenant-scoped
+counterpart to the operator-scoped route added in ADR 0048, same shared response shape
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/activity` | `GET` | Paginated; `{ timestamp, actorType, actorId, eventType, summary }` entries. Gated by `activity:read` |
+
 **Invites** (ADR 0018)
 
 | Route | Method | Notes |

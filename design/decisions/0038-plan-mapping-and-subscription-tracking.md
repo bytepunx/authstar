@@ -11,6 +11,10 @@
   `merchantAccount` in the webhook table is replaced by a `customer` record (unchanged shape
   across ADR 0042 and ADR 0046); `account.updated` (Connect-specific) never applies under either
   corrected model.
+- **Extended 2026-08-01 ([ADR 0060](0060-activity-feed-and-revenue-summary.md)):** `planMapping`
+  gains cached `unitAmount`/`currency`/`interval`, synced from Stripe — needed to compute a
+  revenue summary, which nothing in this ADR's original shape supported (no price/amount field
+  ever existed here; Stripe alone owned pricing).
 
 ## Context
 

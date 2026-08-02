@@ -1,8 +1,13 @@
 # ADR 0048: `steward`'s UX — Screens, Flows, and Two New Tower Endpoints
 
-- **Status:** Accepted
+- **Status:** Accepted (extended by [ADR 0060](0060-activity-feed-and-revenue-summary.md))
 - **Date:** 2026-08-01
 - **Affects:** steward, tower
+
+> **Extended 2026-08-01:** the tower activity route below is operator-scoped only. `web`'s
+> Overview needed a tenant-scoped equivalent — and one from keep and herald too, not just tower
+> — so ADR 0060 adds `GET /tenants/{tenantSlug}/activity` to all three, sharing the same
+> response shape as the operator route here.
 
 ## Context
 
