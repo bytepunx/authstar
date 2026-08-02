@@ -24,6 +24,12 @@ since "directly" could otherwise be misread as bypassing portcullis too.
 
 ### Route inventory
 
+**Stripe configuration** (added by [ADR 0052](0052-keep-herald-own-signet-access.md))
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/stripe-config` | `GET`, `PATCH` | `GET` never returns the secret key/webhook secret (write-only). `PATCH` sets/rotates them; keep pushes to its own signet bundle directly. Gated by `billing:manage` |
+
 **Customer** (ADR 0042 — replaces the removed merchant-account group)
 
 | Route | Method | Notes |
@@ -48,7 +54,7 @@ accepted as an inert grant.
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/plan-mappings` | `GET`, `POST` | |
-| `/tenants/{tenantSlug}/plan-mappings/{id}` | `GET`, `PATCH`, `DELETE` | |
+| `/tenants/{tenantSlug}/plan-mappings/{id}` | `GET`, `PATCH`, `DELETE` | `planMapping` gains `status: "active" \| "retired"` ([ADR 0053](0053-lifecycle-status-consolidation.md)) — a real removal would break renewal processing for existing subscribers on a retired plan. `DELETE` is an alias for `PATCH { status: "retired" }`; keep's own webhook lookup must still find and honor retired mappings, only the admin create/upgrade flow filters to `active` |
 
 **Checkout**
 
@@ -68,14 +74,14 @@ accepted as an inert grant.
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/trials` | `GET`, `POST` | |
-| `/tenants/{tenantSlug}/trials/{id}` | `GET`, `PATCH`, `DELETE` | `PATCH { expiresAt }` extends — appends to the `extensions` audit trail (ADR 0039), same convention as every other state change in this design |
+| `/tenants/{tenantSlug}/trials/{id}` | `GET`, `PATCH`, `DELETE` | `PATCH { expiresAt }` extends — appends to the `extensions` audit trail (ADR 0039), same convention as every other state change in this design. `DELETE` is an alias for `PATCH { status: "expired" }` — revoke is immediate expiration ([ADR 0053](0053-lifecycle-status-consolidation.md)) |
 
 **Coupons** (ADR 0039)
 
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/coupons` | `GET`, `POST` | |
-| `/tenants/{tenantSlug}/coupons/{code}` | `GET`, `DELETE` | `DELETE` = revoke |
+| `/tenants/{tenantSlug}/coupons/{code}` | `GET`, `PATCH`, `DELETE` | `PATCH { status: "revoked" }` is the actual mechanism; `DELETE` is an alias ([ADR 0053](0053-lifecycle-status-consolidation.md)) |
 
 **Usage records** (ADR 0043)
 
@@ -111,4 +117,4 @@ before, just relocated.
 
 ## Related
 
-- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md)
+- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md)

@@ -35,7 +35,7 @@ herald, so portcullis stays the single ingress point for everything.
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/communication-types` | `GET`, `POST` | `POST` gated by `communication-types:manage` |
-| `/tenants/{tenantSlug}/communication-types/{type}` | `GET`, `PATCH`, `DELETE` | |
+| `/tenants/{tenantSlug}/communication-types/{type}` | `GET`, `PATCH`, `DELETE` | `communicationType` gains `status: "active" \| "deprecated"` ([ADR 0053](0053-lifecycle-status-consolidation.md)) — historical `communication` records reference `type` and shouldn't become orphaned. `DELETE` is an alias for `PATCH { status: "deprecated" }` |
 
 **Templates** (ADR 0025) — versioned, so editing means creating, not updating
 
@@ -85,4 +85,4 @@ isn't nested under a `/contacts/` path; it's herald's own resource, keyed by the
 
 ## Related
 
-- [ADR 0030](0030-tower-api-surface.md) (conventions this follows), [ADR 0022](0022-herald-communications-service.md), [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0032](0032-per-tenant-sending-and-can-spam.md), [ADR 0033](0033-herald-send-worker-and-retry.md)
+- [ADR 0030](0030-tower-api-surface.md) (conventions this follows), [ADR 0022](0022-herald-communications-service.md), [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0032](0032-per-tenant-sending-and-can-spam.md), [ADR 0033](0033-herald-send-worker-and-retry.md), [ADR 0052](0052-keep-herald-own-signet-access.md) (sending-config secret delivery mechanism), [ADR 0053](0053-lifecycle-status-consolidation.md) (`communicationType` status field)

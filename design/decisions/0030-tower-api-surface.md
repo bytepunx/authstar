@@ -69,7 +69,7 @@ Unversioned requests are answered but a request for a version tower no longer se
 |---|---|---|
 | `/tenants/{tenantSlug}` | `GET` | Non-secret fields only |
 | `/tenants/{tenantSlug}/providers` | `GET`, `POST` | `POST` gated by `providers:manage`; secret write triggers the signet push (ADR 0020) |
-| `/tenants/{tenantSlug}/providers/{name}` | `GET`, `PATCH`, `DELETE` | |
+| `/tenants/{tenantSlug}/providers/{name}` | `GET`, `PATCH`, `DELETE` | `DELETE` is an alias for `PATCH { status: "removed" }` ([ADR 0053](0053-lifecycle-status-consolidation.md)) — `provider` gains a `status: "active" \| "removed"` field. Tower synchronously checks no active application's `exposedProviders` still references it before allowing removal |
 
 Tenant *creation* is deliberately absent — still an open question per ADR 0021, not designed
 here.
@@ -123,7 +123,7 @@ role can be granted anywhere (accounts, invites, invite codes, `keep`'s plan map
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/invites` | `GET`, `POST` | `POST` gated by `invite:send`; each entry in the invite's `roles` list is validated against an active `roleDefinition` at creation time, not redemption time (ADR 0047) |
-| `/tenants/{tenantSlug}/invites/{token}` | `GET`, `DELETE` | `DELETE` = revoke |
+| `/tenants/{tenantSlug}/invites/{token}` | `GET`, `PATCH`, `DELETE` | `PATCH { status: "revoked" }` is the actual mechanism; `DELETE` is an alias ([ADR 0053](0053-lifecycle-status-consolidation.md)) |
 
 Redemption is **not** a `web`-facing endpoint on this surface — it's triggered internally as
 part of the OIDC login flow (Story 006) when a token is carried through the flow, not something
@@ -134,7 +134,7 @@ an admin or the invitee calls directly.
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/invite-codes` | `GET`, `POST` | `POST` gated by `invite:code:issue` — note this permission is **not** admin-exclusive (ADR 0019); a regular account can legitimately call this if granted the scoped permission. `roles` validated against an active `roleDefinition` at creation time, same as invites (ADR 0047) |
-| `/tenants/{tenantSlug}/invite-codes/{code}` | `GET`, `DELETE` | `DELETE` = revoke |
+| `/tenants/{tenantSlug}/invite-codes/{code}` | `GET`, `PATCH`, `DELETE` | `PATCH { status: "revoked" }` is the actual mechanism; `DELETE` is an alias ([ADR 0053](0053-lifecycle-status-consolidation.md)) |
 
 ### Implementation recommendation: schema-first with fastify, not a hand-maintained spec
 
@@ -155,4 +155,4 @@ for free from the same schemas used to generate documentation — directly servi
 
 ## Related
 
-- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections)
+- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections), [ADR 0053](0053-lifecycle-status-consolidation.md) (`provider`/`invite`/`inviteCode` `DELETE`-vs-`PATCH` corrections)
