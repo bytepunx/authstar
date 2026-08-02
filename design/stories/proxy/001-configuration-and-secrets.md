@@ -63,6 +63,10 @@ products, e.g. one of several related sites sharing a login).
       0016): `providers` (credentials — `clientId`/`clientSecret`/`discoveryUrl`/`scope`) and
       `cookie` (`domain`/`path`/`maxAge`/`httpOnly`/`secure`). `jwt` key-file-path fields are
       removed entirely — keys arrive as secrets, not file paths (see Story 008).
+- [ ] Each tenant entry also carries `status` (`active` | `suspended` | `deleted`) — added by
+      [ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md). Portcullis
+      enforces this at the tenant-resolution stage, before any application under it is resolved
+      (Story 013).
 - [ ] Each tenant entry has a nested `applications` map, keyed by application slug. Each
       application entry holds what's specific to that one product: `hosts`, `server.publicUrl`,
       `upstream` (base, routes, timeout), `cors.origin`, `exempt`, `auth.loginUrl`, and which of

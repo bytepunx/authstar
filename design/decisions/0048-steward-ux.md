@@ -44,6 +44,12 @@ searchable by slug/name) — the tenant-scoped API only ever exposed `GET /tenan
 for one already-known tenant; nothing today lets an operator enumerate tenants at all. Selecting
 a result enters that tenant's operator context.
 
+Results show each tenant's current `status`, and a suspended tenant gets a **reactivate**
+action (`PATCH { status: "active" }` via `operator/tenants/{tenantSlug}`) — added by
+[ADR 0062](0062-tenant-status-enforcement-and-reactivation.md). This is the *only* path back
+for a tenant that suspended itself, since suspension (by design) locks that tenant out of its
+own `_admin`, the surface that would otherwise handle it.
+
 ### Tenant operator context — two sections, no sprawling nav
 
 **Admin Access**

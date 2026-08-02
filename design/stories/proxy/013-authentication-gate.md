@@ -9,7 +9,8 @@
 [ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
 [ADR 0014](../../decisions/0014-single-bundle-prefixed-tenant-keys.md),
 [ADR 0015](../../decisions/0015-exempt-routes-never-blocked.md),
-[ADR 0016](../../decisions/0016-application-layer-and-sso-scope.md).
+[ADR 0016](../../decisions/0016-application-layer-and-sso-scope.md),
+[ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md).
 
 ---
 
@@ -29,14 +30,21 @@ policy.
 Incoming Request
       │
       ▼
-Resolve application from Host header, and its owning tenant
-(Story 001's `tenants.<slug>.applications` map — ADR 0016)
+Resolve tenant from Host header, check status (ADR 0062)
       │
-   No match                          Match
+   No match / suspended               Match, active
       │                                │
       ▼                                ▼
-404 (no application for this host)  JWT cookie present and valid
-                                     for the resolved tenant? (Story 009)
+404 (no tenant) / 503 (suspended —  Resolve application from Host header
+applies to every application under  within the tenant (Story 001's
+this tenant, including _admin       `tenants.<slug>.applications` map
+and _portal, ADR 0050)              — ADR 0016)
+                                       │
+                                    No match                          Match
+                                       │                                │
+                                       ▼                                ▼
+                          404 (no application for this host)  JWT cookie present and valid
+                                                                for the resolved tenant? (Story 009)
                                        │
                                     Yes│                              No│
                                        ▼                                ▼
@@ -69,9 +77,15 @@ call itself always runs when a valid session exists, exempt or not (ADR 0015).
 
 ## Acceptance Criteria
 
-- [ ] Application resolution (and its owning tenant) runs first, before any other step, for
-      every request. A `Host` matching no application's `hosts` list is rejected (`404`) before
-      touching JWT verification, exemption, or enrichment.
+- [ ] **Tenant resolution and status check run first, before application resolution, before
+      any other step** (ADR 0062). A `Host` matching no tenant at all is `404`. A tenant whose
+      `status` is `suspended` rejects the request with a clear, generic `503` — this applies
+      uniformly to **every** application under that tenant, including `_admin` and `_portal`
+      (ADR 0050), which is exactly why this check must precede application resolution rather
+      than being handled per-application.
+- [ ] Application resolution runs only after the tenant is confirmed `active`. A `Host` matching
+      no application's `hosts` list within that tenant is rejected (`404`) before touching JWT
+      verification, exemption, or enrichment.
 - [ ] The gate runs as middleware applied to every route handler before proxying.
 - [ ] A request with a **valid session JWT** for the resolved tenant always triggers the claims
       enrichment call and its three-way outcome — regardless of whether the route is exempt.
