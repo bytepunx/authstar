@@ -91,7 +91,11 @@ cascade) — not designed here, since `web` itself hasn't been designed yet.
 - Keep's actual purge/anonymization behavior remains an open, explicitly deferred question.
 - The fixed "expected services" list needs to grow deliberately as new PII-holding services are
   added — worth remembering when herald-like services are introduced later.
+- A request that never gets full acknowledgment stays `pending` indefinitely, with no built-in
+  timeout — an intentional consequence of eventual, no-deadline completion, not an oversight.
+  [ADR 0075](0075-stuck-erasure-request-monitoring.md) adds visibility into this state without
+  changing the underlying no-timeout design.
 
 ## Related
 
-- [ADR 0022](0022-herald-communications-service.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0024](0024-contact-lifecycle-sync-to-herald.md), [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md)
+- [ADR 0022](0022-herald-communications-service.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0024](0024-contact-lifecycle-sync-to-herald.md), [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0075](0075-stuck-erasure-request-monitoring.md)

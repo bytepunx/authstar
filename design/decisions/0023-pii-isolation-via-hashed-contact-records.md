@@ -79,6 +79,10 @@ opt-out recorded against the old `contactId` does not automatically apply to the
 Whatever handles the email-change flow must explicitly carry forward opt-out status from the
 old `contactId` to the new one, or a real anti-spam risk results (re-contacting someone who had
 unsubscribed). Named as a concrete requirement for that flow's design, not resolved here.
+**Resolved by [ADR 0076](0076-admin-initiated-email-change.md)**, which also builds the
+repoint mechanism named just above (until then, described but never actually implemented) and
+extends the carry-forward requirement to suppression records ([ADR 0074](0074-herald-bounce-complaint-and-suppression.md)),
+which didn't exist yet when this was written.
 
 ## Open, Still Unaddressed
 

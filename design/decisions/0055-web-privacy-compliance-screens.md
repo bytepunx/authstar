@@ -73,11 +73,14 @@ latter — the same least-privilege precision already applied elsewhere (`roles:
   [ADR 0056](0056-gdpr-data-export.md)/[ADR 0057](0057-web-data-export-screen.md)**, addressed
   as its own dedicated pass immediately following this one, per the plan stated here.
 - **Monitoring/alerting on a "stuck" erasure request** (a service failing to acknowledge) — an
-  operational/observability concern, not a `web` screen-design one. Flagged, not designed.
+  operational/observability concern, not a `web` screen-design one. **Resolved by
+  [ADR 0075](0075-stuck-erasure-request-monitoring.md)**: a passive client-side staleness flag
+  here, plus a genuinely cross-tenant operator view in `steward` for the observability half.
 - **Admin-initiated email changes on a user's behalf** — `contact.email`'s immutability is by
   design (ADR 0023); a real "change my email" flow is a separate, not-yet-designed capability,
-  most naturally user-self-service rather than admin-triggered. Noted as adjacent, not solved
-  here.
+  most naturally user-self-service rather than admin-triggered. **Resolved by
+  [ADR 0076](0076-admin-initiated-email-change.md)** — admin-triggered, as this section
+  originally named it, with self-service noted there as a compatible future addition.
 
 ## Consequences
 

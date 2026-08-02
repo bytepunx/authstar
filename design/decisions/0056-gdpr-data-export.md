@@ -53,13 +53,26 @@ is a separate field carrying those same raw values, used internally by `web` to 
 `contactId` — keep has never known `contactId` directly, ADR 0040):
 
 ```json
-{ "customer": { "stripeCustomerId": "" }, "subscriptions": [], "trials": [], "usageRecords": [] }
+{ "customer": { "stripeCustomerId": "" }, "subscriptions": [], "trials": [], "usageRecords": [],
+  "payments": { "items": [], "truncated": false } }
 ```
 
-Full Stripe payment/invoice history is not pulled live — `stripeCustomerId` is included as a
-reference, with a note that the tenant's own Stripe dashboard is the system of record for
-detailed billing history. A live Stripe pull is a reasonable future enhancement, not required
-for this to be a legitimate first version.
+`customer.stripeCustomerId` is a field keep already stores (never explicitly declared in ADR
+0041's route section before now, corrected there) — this is what a live pull keys off of.
+
+**`payments` is now a live Stripe pull, not just a reference** — keep already makes live Stripe
+API calls elsewhere (ADR 0054's key-validation-at-set-time check), so this isn't a new
+capability category. On export, if `stripeCustomerId` is present, keep calls Stripe's List
+Invoices for that customer, bounded to a fixed page size (not unbounded history) — each item
+summarized to `{ date, amount, currency, status }`, no raw Stripe object passed through.
+`truncated: true` if more history exists beyond the bounded page, with a note pointing back to
+the tenant's own Stripe dashboard for the full history — consistent with this design's "no
+silent caps" practice (a bound is fine; a silently incomplete "complete" export isn't) and with
+ADR 0054's existing deference to Stripe's own UI for anything beyond what keep itself tracks.
+
+If the live Stripe call itself fails or times out, `payments` is marked unavailable using the
+exact same partial-failure convention the rest of this ADR already established — the export as a
+whole still succeeds with that one section flagged, not held hostage to Stripe's availability.
 
 **Herald** — `GET /tenants/{tenantSlug}/contacts/{contactId}/export`:
 

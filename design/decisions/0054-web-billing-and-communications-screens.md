@@ -34,6 +34,12 @@ is a reasonable secondary affordance, not the section's main purpose.
 
 **Subscriptions** — read-only list/detail, webhook-driven, as already scoped.
 
+**Refunds and Disputes** (added by [ADR 0077](0077-keep-refunds-and-disputes.md)) — read-only,
+webhook-driven, same posture as Subscriptions. A `needs_response` dispute gets a visible warning
+treatment given Stripe's own response deadline, but no response-submission flow is built here —
+that stays in the tenant's own Stripe dashboard, same deference this section already gives it
+for Customer detail.
+
 **Trials** — list, create, extend (`PATCH {expiresAt}`, appends to the `extensions` audit
 trail, ADR 0039), revoke (`PATCH {status: "expired"}` per ADR 0053).
 
@@ -85,4 +91,4 @@ needed, is an operator/infrastructure concern, not a tenant-admin action.
 
 ## Related
 
-- [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0032](0032-per-tenant-sending-and-can-spam.md), [ADR 0033](0033-herald-send-worker-and-retry.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0041](0041-keep-api-surface.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0049](0049-web-admin-information-architecture.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md)
+- [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0032](0032-per-tenant-sending-and-can-spam.md), [ADR 0033](0033-herald-send-worker-and-retry.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0041](0041-keep-api-surface.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0049](0049-web-admin-information-architecture.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md), [ADR 0074](0074-herald-bounce-complaint-and-suppression.md), [ADR 0077](0077-keep-refunds-and-disputes.md)

@@ -60,6 +60,7 @@ a concrete source:
 | `customer.subscription.updated` (upgrade/downgrade) | Look up the new `planMapping`, publish the role-granted/revoked delta reflecting the change |
 | `customer.subscription.deleted` | Publish role-revoked events for the paid-tier grants |
 | `account.updated` (Connect-specific, about the connected account itself) | Updates `merchantAccount.status` (ADR 0037) — this is about whether the *tenant* can still process payments, a separate concern from any individual end-user's entitlements |
+| `charge.refunded`, `charge.dispute.*` | See [ADR 0077](0077-keep-refunds-and-disputes.md) — refund/dispute records and, for disputes only, the same entitlement-degrade reuse pattern this table already established for non-payment |
 
 ### Non-payment handling — resolves the original motivating example from ADR 0001
 
@@ -83,4 +84,4 @@ shape of problem (paid-for access lapsing) and get the same solution.
 
 ## Related
 
-- [ADR 0001](0001-claims-enrichment-via-tower.md) (the original non-payment example), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0031](0031-keep-tower-entitlement-events.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md)
+- [ADR 0001](0001-claims-enrichment-via-tower.md) (the original non-payment example), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0031](0031-keep-tower-entitlement-events.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0077](0077-keep-refunds-and-disputes.md) (refund/dispute webhook handling, entitlement-degrade reuse)

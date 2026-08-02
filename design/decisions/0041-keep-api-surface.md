@@ -37,6 +37,10 @@ since "directly" could otherwise be misread as bypassing portcullis too.
 | `/tenants/{tenantSlug}/customer` | `GET` | Tenant-scoped customer record (`scope: {tenant}`) |
 | `/tenants/{tenantSlug}/accounts/{accountId}/customer` | `GET` | Account-scoped customer record (`scope: {account}`, B2C) |
 
+`customer`'s shape: `{ tenant: '', scope: { account: '' } \| { tenant: '' }, stripeCustomerId: '' }`
+— never explicitly stated before now, though both the Stripe-dashboard deep link (ADR 0054) and
+the export's payment-history pull ([ADR 0056](0056-gdpr-data-export.md)) already assumed it.
+
 Read-only through this API, same reasoning as **Subscriptions** below — a `customer` record is
 created automatically the first time a checkout session completes (Stripe webhook-driven, ADR
 0042), never explicitly by an admin call.
@@ -75,6 +79,14 @@ accepted as an inert grant.
 |---|---|---|
 | `/tenants/{tenantSlug}/subscriptions` | `GET` | |
 | `/tenants/{tenantSlug}/subscriptions/{id}` | `GET` | |
+
+**Refunds and disputes** (added by [ADR 0077](0077-keep-refunds-and-disputes.md)) — read-only,
+webhook-driven, same posture as **Subscriptions**
+
+| Route | Method | Notes |
+|---|---|---|
+| `/tenants/{tenantSlug}/refunds` | `GET` | Gated by `billing:read` |
+| `/tenants/{tenantSlug}/disputes` | `GET` | Gated by `billing:read` |
 
 **Self-service** (added by [ADR 0071](0071-self-service-widget-data-access.md)) — identity
 resolved entirely from the forwarded internal JWT, no `{tenantSlug}`/`{accountId}` segments
@@ -131,4 +143,4 @@ before, just relocated.
 
 ## Related
 
-- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md), [ADR 0071](0071-self-service-widget-data-access.md) (`/me/subscription`)
+- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md), [ADR 0071](0071-self-service-widget-data-access.md) (`/me/subscription`), [ADR 0077](0077-keep-refunds-and-disputes.md) (`/refunds`, `/disputes`)

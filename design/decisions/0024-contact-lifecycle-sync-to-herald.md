@@ -6,6 +6,12 @@
 - **Resolves open items in:** [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md)
 - **Amends:** [ADR 0022](0022-herald-communications-service.md)'s message payload
 
+> **Extended 2026-08-02:** `herald.contact.migrated` existed here with no actual publisher for
+> the email-change case until [ADR 0076](0076-admin-initiated-email-change.md) built the flow
+> that triggers it. That ADR also extends herald's migration handling to carry forward
+> [ADR 0074](0074-herald-bounce-complaint-and-suppression.md)'s `suppression` records, which
+> didn't exist when this was written — `optOut` carry-forward below is unchanged.
+
 ## Context
 
 ADR 0023 flagged two unresolved items: opt-out must carry forward when a `contactId` changes
