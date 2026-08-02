@@ -99,6 +99,14 @@ than implied to be stronger than it is.
 Cross-tenant, unlike `web`'s per-tenant erasure-requests list — surfaces which service hasn't
 acknowledged, not just that a request is stale, via `GET /operator/erasure-requests/stuck`.
 
+### Herald Keys (added by [ADR 0081](0081-herald-key-rotation.md)) — `steward`'s first
+installation-wide, non-tenant-scoped screen
+
+Rotate herald's payload-encryption keypair and/or unsubscribe-signing key, via
+`POST /operator/rotate-keys` on herald's own newly-added operator route. Standard confirmation,
+not the heavy multi-step kind — unlike tower's session-key rotation (ADR 0080), rotating either
+herald key is non-destructive by construction.
+
 ### Explicitly not designed here
 
 - Any keep-facing functionality — removed by ADR 0046.
@@ -117,4 +125,4 @@ acknowledged, not just that a request is stale, via `GET /operator/erasure-reque
 
 ## Related
 
-- [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0044](0044-web-surfaces-and-distribution-model.md), [ADR 0045](0045-steward-operator-console.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0075](0075-stuck-erasure-request-monitoring.md), [ADR 0080](0080-tenant-key-rotation-ceremony.md)
+- [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0044](0044-web-surfaces-and-distribution-model.md), [ADR 0045](0045-steward-operator-console.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0075](0075-stuck-erasure-request-monitoring.md), [ADR 0080](0080-tenant-key-rotation-ceremony.md), [ADR 0081](0081-herald-key-rotation.md)

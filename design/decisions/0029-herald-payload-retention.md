@@ -5,6 +5,11 @@
 - **Affects:** herald
 - **Resolves the open item in:** [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md)
 
+> **Extended 2026-08-02 ([ADR 0081](0081-herald-key-rotation.md)):** this sweep gains one more
+> responsibility — when purging the last `encryptedPayload` referencing a given
+> `payloadKeyVersion`, also discard that private key generation. Purging and key-generation
+> pruning now share the same trigger.
+
 ## Context
 
 ADR 0025 flagged `encryptedPayload` retention as worth bounding but left it unresolved. It

@@ -84,7 +84,8 @@ Admin-set on `communicationType` (ADR 0025) — never auto-detected, never appli
 - Herald needs its own signet bundle and a `sending` config section per tenant, authored by
   tower.
 - Herald needs a dedicated unsubscribe-signing key (distinct from ADR 0025's payload keypair)
-  and the two new public `/unsubscribe` endpoints.
+  and the two new public `/unsubscribe` endpoints. Rotation for this key, and the payload
+  keypair, is designed by [ADR 0081](0081-herald-key-rotation.md).
 - Bounce/complaint feedback mechanics still vary by adapter (flagged previously, not resolved
   here) — SMTP in particular has no standard webhook mechanism and would need inbound-email
   processing to get bounce signal at all, a materially bigger feature than anything else here.

@@ -51,6 +51,10 @@ operator route trees on the operator's behalf — each backend still independent
 against its own copy, unchanged from ADR 0021's actual security model, just no longer requiring
 the operator to hold multiple credentials.
 
+> **Extended 2026-08-02 ([ADR 0081](0081-herald-key-rotation.md)):** herald joins this same
+> distribution, gaining its first (and, so far, only) operator-bearer-token route — the pattern
+> established here generalized to a fourth backend exactly as designed.
+
 ### Correction: `keep`'s plan-mapping writes are operator-only, not tenant-admin-accessible
 
 Surfaced while designing this: ADR 0042 already established that plans are operator-defined

@@ -24,6 +24,11 @@ independently verifies the JWT's signature on top of portcullis already having g
 defense in depth, same reasoning as tower. No operator/bearer-token tier — herald doesn't have
 tower's bootstrap problem, so there's nothing that needs to bypass normal authorization.
 
+> **Extended 2026-08-02 ([ADR 0081](0081-herald-key-rotation.md)):** herald gains exactly one
+> operator-bearer-token route, `POST /operator/rotate-keys`, for its own installation-wide key
+> rotation — the one exception to "no operator tier" above, narrowly scoped to that single
+> purpose.
+
 The public `/unsubscribe` endpoints (ADR 0032) are the one exception — reached through
 portcullis too (not separately exposed), just marked exempt (Story 003) on whatever routes to
 herald, so portcullis stays the single ingress point for everything.
@@ -99,4 +104,4 @@ blanket, deliverability-driven, distinct from category-scoped `opt-outs` above
 
 ## Related
 
-- [ADR 0030](0030-tower-api-surface.md) (conventions this follows), [ADR 0022](0022-herald-communications-service.md), [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0032](0032-per-tenant-sending-and-can-spam.md), [ADR 0033](0033-herald-send-worker-and-retry.md), [ADR 0052](0052-keep-herald-own-signet-access.md) (sending-config secret delivery mechanism), [ADR 0053](0053-lifecycle-status-consolidation.md) (`communicationType` status field), [ADR 0074](0074-herald-bounce-complaint-and-suppression.md) (suppressions routes, `sending-config` webhook secret, `communication` new fields)
+- [ADR 0030](0030-tower-api-surface.md) (conventions this follows), [ADR 0022](0022-herald-communications-service.md), [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md), [ADR 0032](0032-per-tenant-sending-and-can-spam.md), [ADR 0033](0033-herald-send-worker-and-retry.md), [ADR 0052](0052-keep-herald-own-signet-access.md) (sending-config secret delivery mechanism), [ADR 0053](0053-lifecycle-status-consolidation.md) (`communicationType` status field), [ADR 0074](0074-herald-bounce-complaint-and-suppression.md) (suppressions routes, `sending-config` webhook secret, `communication` new fields), [ADR 0081](0081-herald-key-rotation.md) (`POST /operator/rotate-keys`)

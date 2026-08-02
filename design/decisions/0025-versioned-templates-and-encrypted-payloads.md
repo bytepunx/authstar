@@ -11,6 +11,10 @@
 > (logic-less mustache-style substitution), and `templateData`'s expected shape gains a
 > branding convention — no change to the encryption/versioning design here, just filling in
 > what "renders" actually means.
+>
+> **Extended 2026-08-02 ([ADR 0081](0081-herald-key-rotation.md)):** the payload-encryption
+> keypair below never had a rotation mechanism — now it does, and `communication` gains a
+> `payloadKeyVersion` field recording which generation encrypted it.
 
 ## Context
 
