@@ -1,10 +1,17 @@
 # ADR 0026: Erasure Cascade Across Services
 
-- **Status:** Accepted
+- **Status:** Accepted (extended by [ADR 0055](0055-web-privacy-compliance-screens.md))
 - **Date:** 2026-07-24
 - **Affects:** tower, herald, keep, portcullis
 - **Amends:** [ADR 0024](0024-contact-lifecycle-sync-to-herald.md) (generalizes `herald.contact.purged`)
 - **Closes a gap introduced by:** [ADR 0025](0025-versioned-templates-and-encrypted-payloads.md)
+
+> **Extended 2026-08-01 ([ADR 0055](0055-web-privacy-compliance-screens.md)):** `erasureRequest`
+> could only ever be looked up by a known `contactId` — but its stated purpose, proof of
+> compliance, requires producing a *set* of records for an audit period, not spot-checking one
+> at a time. Gains `GET /tenants/{tenantSlug}/erasure-requests` (list, paginated, filterable),
+> and its response gains `expectedServices` alongside `acknowledgedBy` so a caller can diff the
+> two rather than hardcoding a copy of the fixed service list described below.
 
 ## Context
 

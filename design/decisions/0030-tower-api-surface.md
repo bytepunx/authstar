@@ -109,14 +109,17 @@ role can be granted anywhere (accounts, invites, invite codes, `keep`'s plan map
 
 | Route | Method | Notes |
 |---|---|---|
-| `/tenants/{tenantSlug}/contacts/{contactId}` | `GET` | Returns plaintext email/name — gated by a narrow `contacts:read` permission, itself worth auditing given the sensitivity (same posture as herald's on-call viewer, ADR 0025) |
+| `/tenants/{tenantSlug}/contacts` | `GET` | Single-result lookup by `?email=...` only — tower resolves the HMAC internally (ADR 0023/0055). **Deliberately not a browse/list endpoint** — bulk access to plaintext PII is a bigger exposure surface than the actual use case (always "someone gave us an email"), never needed |
+| `/tenants/{tenantSlug}/contacts/{contactId}` | `GET` | Returns plaintext email/name plus a linked-account preview (status/roles/tenure, resolved via `account.contactId`) — gated by a narrow `contacts:read` permission, itself worth auditing given the sensitivity (same posture as herald's on-call viewer, ADR 0025) |
+| `/tenants/{tenantSlug}/contacts/{contactId}` | `PATCH` | `name` only — `email` stays immutable (repoint-only, ADR 0023), since only `email` feeds the `contactId` hash |
 | `/tenants/{tenantSlug}/contacts/{contactId}` | `DELETE` | **This is the erasure trigger** — deletes the `contact` row and kicks off the cascade (ADR 0026) |
 
 **Erasure requests** (ADR 0026) — read-only, for compliance verification
 
 | Route | Method | Notes |
 |---|---|---|
-| `/tenants/{tenantSlug}/erasure-requests/{contactId}` | `GET` | Status + `acknowledgedBy` — proof-of-completion record |
+| `/tenants/{tenantSlug}/erasure-requests` | `GET` | List, paginated, filterable by status/date range — the actual audit-verification path (ADR 0055); gated by `erasure-requests:read`, deliberately narrower than `contacts:read` since these records carry no PII |
+| `/tenants/{tenantSlug}/erasure-requests/{contactId}` | `GET` | Status, `acknowledgedBy`, and `expectedServices` (ADR 0055) — proof-of-completion record |
 
 **Invites** (ADR 0018)
 
@@ -155,4 +158,4 @@ for free from the same schemas used to generate documentation — directly servi
 
 ## Related
 
-- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections), [ADR 0053](0053-lifecycle-status-consolidation.md) (`provider`/`invite`/`inviteCode` `DELETE`-vs-`PATCH` corrections)
+- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections), [ADR 0053](0053-lifecycle-status-consolidation.md) (`provider`/`invite`/`inviteCode` `DELETE`-vs-`PATCH` corrections), [ADR 0055](0055-web-privacy-compliance-screens.md) (contacts email search/`PATCH`, erasure-requests list)

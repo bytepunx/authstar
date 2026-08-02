@@ -121,6 +121,8 @@ be over-engineering for a small, slow-changing, admin-tool-only need:
 | `communications:read` | ADR 0034 | `tenant` |
 | `opt-outs:manage` | ADR 0034 | `tenant` |
 | `sending-config:manage` | ADR 0049 | `tenant` |
+| `billing:manage` (stripe-config) | ADR 0052 | `tenant` |
+| `erasure-requests:read` | ADR 0055 | `tenant` — deliberately narrower than `contacts:read`; erasure-request records carry no PII |
 
 Treated as the canonical list going forward — a new route added later should draw from this
 table or extend it deliberately, not invent a grant string in isolation the way prior ADRs did.

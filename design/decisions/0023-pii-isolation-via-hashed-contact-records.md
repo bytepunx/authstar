@@ -1,8 +1,15 @@
 # ADR 0023: PII Isolation via HMAC-Hashed Contact Records
 
-- **Status:** Accepted
+- **Status:** Accepted (extended by [ADR 0055](0055-web-privacy-compliance-screens.md))
 - **Date:** 2026-07-24
 - **Affects:** tower, herald
+
+> **Extended 2026-08-01:** `web`'s Privacy & Compliance screens needed a way to go from a
+> human-provided email to `contactId` (nothing below provided one) and a way to correct a typo'd
+> `name` without the repoint machinery `email` changes require. See ADR 0055 —
+> `GET /tenants/{tenantSlug}/contacts?email=...` (tower resolves the HMAC internally) and
+> `contact.name` becomes `PATCH`-able (unlike `email`, `name` never fed the hash, so it carries
+> none of the repoint complexity).
 - **Corrects:** `account.profile` (ADR 0017), `identity.email` (ADR 0001/0017), `invite.email`,
   and `optOut`'s key (ADR 0022)
 
