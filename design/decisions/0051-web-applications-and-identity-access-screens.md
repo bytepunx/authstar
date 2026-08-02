@@ -123,6 +123,7 @@ be over-engineering for a small, slow-changing, admin-tool-only need:
 | `sending-config:manage` | ADR 0049 | `tenant` |
 | `billing:manage` (stripe-config) | ADR 0052 | `tenant` |
 | `erasure-requests:read` | ADR 0055 | `tenant` — deliberately narrower than `contacts:read`; erasure-request records carry no PII |
+| `contacts:export` | ADR 0056 | `tenant` — distinct from and broader than `contacts:read`; aggregating a full cross-service export is more sensitive than the contact-detail view alone |
 
 Treated as the canonical list going forward — a new route added later should draw from this
 table or extend it deliberately, not invent a grant string in isolation the way prior ADRs did.

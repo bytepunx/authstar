@@ -1,9 +1,14 @@
 # ADR 0027: Portcullis-Computed Identity Hash Replaces `idp_sub` Storage in Tower
 
-- **Status:** Accepted
+- **Status:** Accepted (extended by [ADR 0056](0056-gdpr-data-export.md))
 - **Date:** 2026-07-25
 - **Affects:** portcullis, tower
 - **Resolves the open item in:** [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md)
+
+> **Extended 2026-08-01:** `identity.searchableBy` gains `accountId` — data export (ADR 0056)
+> needs to enumerate every `identity` linked to an account (to list linked providers, and to
+> correlate to chronicle's analytics via their `identityHash` values), which wasn't previously
+> possible without this.
 
 ## Context
 

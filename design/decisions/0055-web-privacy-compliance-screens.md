@@ -69,12 +69,9 @@ latter — the same least-privilege precision already applied elsewhere (`roles:
 
 ## Explicitly Out of Scope
 
-- **GDPR right of access/portability (Article 15/20)** — a genuinely significant gap: this
-  entire design has addressed erasure thoroughly but has no export mechanism anywhere. Properly
-  designing one means a fan-out mirroring the erasure cascade — every service holding
-  `contactId`/`accountId`-linked data returning its own slice, aggregated into one export —
-  touching tower, keep, herald, and chronicle. That deserves its own dedicated design pass with
-  the same rigor erasure itself received (ADR 0023/0026/0040/0046), not a screen sketched here.
+- **GDPR right of access/portability (Article 15/20)** — **resolved in
+  [ADR 0056](0056-gdpr-data-export.md)/[ADR 0057](0057-web-data-export-screen.md)**, addressed
+  as its own dedicated pass immediately following this one, per the plan stated here.
 - **Monitoring/alerting on a "stuck" erasure request** (a service failing to acknowledge) — an
   operational/observability concern, not a `web` screen-design one. Flagged, not designed.
 - **Admin-initiated email changes on a user's behalf** — `contact.email`'s immutability is by
