@@ -5,6 +5,11 @@
 - **Affects:** tower
 - **Extends:** [ADR 0018](0018-trial-roles-and-keep-boundary.md), the invite discussion preceding it
 
+> **Corrected 2026-08-02 ([ADR 0082](0082-tower-actor-boundary-corrections.md)):**
+> `inviteCode.identifiedBy` below is the bare `code` field — read literally, that means
+> globally unique across every tenant, a real collision risk for human-chosen, memorable codes
+> this ADR explicitly wanted. Corrected to a composite `{tenant}:{code}` key.
+
 ## Context
 
 The targeted `invite` actor (single email, single use, email-match-gated at acceptance) doesn't

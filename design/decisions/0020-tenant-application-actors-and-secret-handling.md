@@ -12,6 +12,11 @@
 > optional `branding` field, same shape as `tenant.branding`, nullable — falls back to the
 > tenant's branding when unset. Non-secret, consumed by herald's template rendering, not
 > portcullis.
+>
+> **Corrected 2026-08-02 ([ADR 0082](0082-tower-actor-boundary-corrections.md)):** `provider`
+> below (`tenant.providers`, a nested map) is promoted to its own `consequent` actor —
+> later ADRs (0053's status, 0073's discoveryStatus) gave it real event-sourced lifecycle a
+> nested field can't support. `tenant.providers` is retired as a state field.
 
 ## Context
 
