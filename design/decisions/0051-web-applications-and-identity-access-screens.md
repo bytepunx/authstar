@@ -98,7 +98,9 @@ end-user self-service case ("invite a friend") is a separate, already-anticipate
 Web Component (ADR 0044's widget list already named "invite management") calling the *same*
 tower endpoint (`POST /tenants/{tenantSlug}/invite-codes`) from inside the tenant's own product
 UI — not designed in detail here, just confirmed as the right home for that case so it isn't
-mistakenly folded into `_admin`.
+mistakenly folded into `_admin`. **Designed in full by
+[ADR 0071](0071-self-service-widget-data-access.md)/[ADR 0072](0072-embeddable-web-component-inventory.md):**
+`<authstar-invite-widget>`, calling the caller-scoped `/_authstar/me/invite-codes`.
 
 ### Consolidated `permissions` catalog — a finding worth fixing now
 

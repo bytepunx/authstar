@@ -76,6 +76,13 @@ accepted as an inert grant.
 | `/tenants/{tenantSlug}/subscriptions` | `GET` | |
 | `/tenants/{tenantSlug}/subscriptions/{id}` | `GET` | |
 
+**Self-service** (added by [ADR 0071](0071-self-service-widget-data-access.md)) — identity
+resolved entirely from the forwarded internal JWT, no `{tenantSlug}`/`{accountId}` segments
+
+| Route | Method | Notes |
+|---|---|---|
+| `/me/subscription` | `GET` | `{ status, planName, currentPeriodEnd }` for the caller's own account-scoped `subscription`; `planName` resolved server-side from `planMapping`. Reached via portcullis's `/_authstar/me/subscription` (Story 025) |
+
 **Trials** (ADR 0039)
 
 | Route | Method | Notes |
@@ -124,4 +131,4 @@ before, just relocated.
 
 ## Related
 
-- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md)
+- [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0030](0030-tower-api-surface.md), [ADR 0034](0034-herald-api-surface.md), [ADR 0035](0035-lookout-and-chronicle-analytics.md), [ADR 0037](0037-stripe-connect-tenant-owned-merchant-accounts.md), [ADR 0038](0038-plan-mapping-and-subscription-tracking.md), [ADR 0039](0039-keep-trials-and-coupons.md), [ADR 0043](0043-application-reported-usage-metering.md), [ADR 0046](0046-tenant-owned-stripe-configuration.md), [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md), [ADR 0071](0071-self-service-widget-data-access.md) (`/me/subscription`)

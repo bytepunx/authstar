@@ -81,8 +81,11 @@ than something an admin sets up.
   operating team gets a separate service (`steward`), not a mode within `web` — cross-tenant
   visibility needs a genuinely different auth model (bearer-token, direct port-forward, never
   through portcullis), not per-tenant OIDC.
-- The Web Component theming API's exact shape (which CSS custom properties are exposed, slot
-  conventions) — not designed here, follows once concrete widgets are designed.
+- **Resolved in [ADR 0071](0071-self-service-widget-data-access.md)/[ADR 0072](0072-embeddable-web-component-inventory.md)
+  (2026-08-01):** the Web Component theming API's exact shape (a small, fixed, host-application-set
+  CSS custom property set) and the concrete widget set (six named Custom Elements, each with a
+  designed data contract) are both settled. Slot conventions are deliberately left
+  per-widget, not globally standardized — itself the resolution, not a further deferral.
 
 ## Related
 

@@ -105,6 +105,18 @@ any tenant-scoped account route where `{accountId}` matches the caller's own res
 requires one. Applies to the identities routes above and to any future self-service account
 action.
 
+**Self-service** (added by [ADR 0071](0071-self-service-widget-data-access.md)) — a separate
+`/me/*` family, no `{tenantSlug}`/`{accountId}` segments at all; identity resolved entirely
+from the forwarded internal JWT, a thin layer over the tenant-scoped handlers above
+
+| Route | Method | Notes |
+|---|---|---|
+| `/me/account` | `GET` | `{ status, grantedRoles, trialRoles, permissions, contactId, email, name, usage }` — includes the plaintext `contact` join (no `contacts:read` gate needed for one's own record) and the same materialized `usage` shape carried on the internal JWT (ADR 0043) |
+| `/me/identities`, `/me/identities/{identityHash}` | `GET`, `DELETE` | Alias over the `{accountId}`-matches-caller identities routes above |
+| `/me/invite-codes` | `GET`, `POST` | `GET` filters to `issuedBy` = caller; `POST` still gated by `invite:code:issue` — issuing is an action with real consequences, not a data read, so the self-action exemption does **not** apply here |
+
+Reached via portcullis's `/_authstar/me/*` (Story 025), never called directly by a browser.
+
 **Role definitions** (added by [ADR 0047](0047-application-and-role-slug-validation.md)) — the
 catalog of valid `(name, scope)` role values grantable within the tenant; must exist before a
 role can be granted anywhere (accounts, invites, invite codes, `keep`'s plan mappings)
