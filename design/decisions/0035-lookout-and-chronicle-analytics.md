@@ -1,8 +1,13 @@
 # ADR 0035: `lookout` and `chronicle` — Portcullis-Sourced Analytics
 
-- **Status:** Accepted
+- **Status:** Accepted (extended by [ADR 0058](0058-analytics-event-shape-corrections.md))
 - **Date:** 2026-07-25
 - **Affects:** portcullis, and two new services — `lookout`, `chronicle`
+
+> **Extended 2026-08-01:** the auth-funnel report (ADR 0036) needed fields
+> `analytics.auth.login-succeeded`/`login-failed` never specified (`idp`, a coarse `reason` on
+> failure) and a new event, `analytics.auth.signup-completed`, to make "signup conversion"
+> computable at all. See ADR 0058.
 
 ## Context
 

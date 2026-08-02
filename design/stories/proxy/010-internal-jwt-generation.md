@@ -9,7 +9,8 @@
 [ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
 [ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
 [ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md),
-[ADR 0043](../../decisions/0043-application-reported-usage-metering.md).
+[ADR 0043](../../decisions/0043-application-reported-usage-metering.md),
+[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md).
 
 ---
 
@@ -63,6 +64,12 @@ changes is everything that now determines the internal token's contents.
       token — this is what lets an upstream application distinguish "tower said this user has
       no extra claims" from "tower was unreachable and we don't actually know" (ADR 0003).
       Applications must not treat `degraded` claims as authoritative.
+- [ ] **`isNewAccount` (ADR 0058) is consumed by portcullis only — it is never placed on the
+      internal token.** When `true` (the account was just created by this enrichment call),
+      portcullis dispatches an `analytics.auth.signup-completed` event (Story 020's
+      fire-and-forget discipline), alongside whatever else it dispatches for this request.
+      Unlike `usage`, this is a purely authstar-internal analytics signal with no reason to
+      reach the upstream application.
 - [ ] `exp` is set to 60 seconds from signing time, independent of the session token's
       `expiresIn` — unchanged from `ref-design`.
 - [ ] The internal token is never set as a cookie and never sent to the browser — unchanged.

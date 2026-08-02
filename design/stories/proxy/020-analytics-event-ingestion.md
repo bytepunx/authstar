@@ -3,7 +3,8 @@
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0035](../../decisions/0035-lookout-and-chronicle-analytics.md).
+**New — not present in `ref-design`.** Per [ADR 0035](../../decisions/0035-lookout-and-chronicle-analytics.md),
+[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md).
 
 ---
 
@@ -29,8 +30,17 @@ report analytics through a first-party endpoint instead of a third-party script.
       on the proxied request — no retry, no error-level log, at most a debug-level note or a
       metric counter. This must never be a source of added latency or failure.
 - [ ] Auth-funnel events (`analytics.auth.login-succeeded`, `login-failed`, `logout`,
-      `invite-redeemed`) are dispatched the same fire-and-forget way at the point each occurs
-      (Stories 006, 008, 016), not synthesized later from generic request events.
+      `invite-redeemed`, `signup-completed`) are dispatched the same fire-and-forget way at the
+      point each occurs (Stories 006, 008, 010, 016), not synthesized later from generic request
+      events.
+- [ ] **`analytics.auth.login-succeeded` and `login-failed` carry `idp`** (already a claim on
+      the verified session JWT, Story 009 — no new plumbing, just an explicit field
+      requirement, ADR 0058). **`login-failed` additionally carries a coarse `reason` category**
+      (`state_mismatch | pkce_missing | token_exchange_failed | userinfo_failed |
+      incomplete_profile`, mapped from Story 006's error table) — never the raw provider error,
+      which stays server-side-only per Story 006's existing discipline.
+- [ ] `analytics.auth.signup-completed` is dispatched from Story 010, when enrichment's `Allow`
+      outcome carries `isNewAccount: true` (ADR 0058) — not derived or inferred anywhere else.
 - [ ] Sampling rate is configurable per application (default: full fidelity) — exact config key
       not decided here, flagged as a tunable per ADR 0035.
 
