@@ -1,8 +1,13 @@
 # ADR 0044: `web`'s Three Surfaces and Distribution Model
 
-- **Status:** Accepted
+- **Status:** Accepted (extended by [ADR 0050](0050-portal-reserved-application.md))
 - **Date:** 2026-07-30
 - **Affects:** web, portcullis, tower
+
+> **Gap found and closed 2026-08-01:** this ADR says `web` serves hosted login/payment pages
+> but never assigned them a reserved application distinct from `_admin`. See
+> [ADR 0050](0050-portal-reserved-application.md) — they live under a second reserved
+> application, `_portal`.
 
 ## Context
 

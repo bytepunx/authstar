@@ -10,6 +10,13 @@
 > `(name, scope)` now must be pre-registered in a tower-owned catalog before it can be granted
 > anywhere (ADR 0047) — a validation gate, not a reversal of tower's non-interpretation of role
 > *meaning*.
+>
+> **Correction (2026-08-01, [ADR 0051](0051-web-applications-and-identity-access-screens.md)):**
+> `account.searchableBy` below still lists `profile.email`, a field that no longer exists —
+> [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md) replaced `account.profile` with
+> `account.contactId`. Correct value: `searchableBy: ['tenant', 'contactId', 'status']`. Email
+> search works via `GET /tenants/{tenantSlug}/accounts?email=...`, with tower resolving the
+> HMAC/`contact` lookup internally.
 
 ## Context
 

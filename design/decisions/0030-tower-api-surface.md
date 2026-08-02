@@ -79,7 +79,7 @@ here.
 | Route | Method | Notes |
 |---|---|---|
 | `/tenants/{tenantSlug}/applications` | `GET`, `POST` | Gated by `applications:manage` |
-| `/tenants/{tenantSlug}/applications/{appSlug}` | `GET`, `PATCH`, `DELETE` | |
+| `/tenants/{tenantSlug}/applications/{appSlug}` | `GET`, `PATCH`, `DELETE` | `DELETE` is a soft alias for `PATCH { status: "deleted" }` ([ADR 0051](0051-web-applications-and-identity-access-screens.md)) — not a row removal, consistent with `account`/`tenant`. `PATCH` also validates `publicUrl`'s host is present in `hosts` |
 
 **Accounts** (ADR 0017/0018)
 
@@ -155,4 +155,4 @@ for free from the same schemas used to generate documentation — directly servi
 
 ## Related
 
-- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md)
+- [ADR 0017](0017-account-identity-and-role-model.md), [ADR 0018](0018-trial-roles-and-keep-boundary.md), [ADR 0019](0019-invite-codes.md), [ADR 0020](0020-tenant-application-actors-and-secret-handling.md), [ADR 0021](0021-cli-operator-bootstrap.md), [ADR 0023](0023-pii-isolation-via-hashed-contact-records.md), [ADR 0026](0026-erasure-cascade.md), [ADR 0047](0047-application-and-role-slug-validation.md), [ADR 0048](0048-steward-ux.md), [ADR 0051](0051-web-applications-and-identity-access-screens.md) (permissions catalog consolidated, `roleDefinition` route `{id}` clarified, `application`/`account` route corrections)

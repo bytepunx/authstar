@@ -57,6 +57,10 @@ GET, POST     /tenants/{tenantSlug}/role-definitions
 GET, PATCH, DELETE  /tenants/{tenantSlug}/role-definitions/{id}   # DELETE retires, doesn't remove
 ```
 
+**Clarified in [ADR 0051](0051-web-applications-and-identity-access-screens.md):** `{id}` is the
+actor's own composite business key (`{tenant}:{scope}:{name}`), URL-encoded — not a separate
+generated identifier.
+
 ### Tower publishes application and role-definition lifecycle events — the same precedent already established for herald, not a new capability
 
 Tower already publishes outbound events for another service's benefit (`contact.migrated`/
