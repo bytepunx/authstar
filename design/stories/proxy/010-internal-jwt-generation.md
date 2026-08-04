@@ -37,10 +37,12 @@ changes is everything that now determines the internal token's contents.
 
 ### Enrichment call and the three-way outcome
 
-- [ ] After successful session JWT verification (Story 009), portcullis calls tower's claims
-      enricher with `{ idp, identityHash, email, application }` (ADR 0001, ADR 0017, ADR 0027 —
-      `application` is the resolved application's slug, needed so tower can filter role scope)
-      and receives one of three outcomes:
+- [ ] After successful session JWT verification (Story 009), portcullis calls tower's
+      `POST /enrich` ([tower Story 002](../tower/002-claims-enrichment-endpoint.md)) with
+      `{ tenant, idp, identityHash, email, application }` (ADR 0001, ADR 0017, ADR 0027 —
+      `tenant`/`application` are the already-resolved tenant/application slugs; `identityHash`
+      is always a single string here, never the candidate array Story 006's login-time call
+      uses) and receives one of three outcomes:
 
   | Outcome | Behavior |
   |---|---|
@@ -71,12 +73,13 @@ changes is everything that now determines the internal token's contents.
       token — this is what lets an upstream application distinguish "tower said this user has
       no extra claims" from "tower was unreachable and we don't actually know" (ADR 0003).
       Applications must not treat `degraded` claims as authoritative.
-- [ ] **`isNewAccount` (ADR 0058) is consumed by portcullis only — it is never placed on the
-      internal token.** When `true` (the account was just created by this enrichment call),
-      portcullis dispatches an `analytics.auth.signup-completed` event (Story 020's
-      fire-and-forget discipline), alongside whatever else it dispatches for this request.
-      Unlike `usage`, this is a purely authstar-internal analytics signal with no reason to
-      reach the upstream application.
+- [ ] **No `isNewAccount` field exists on this call's response, and none is expected here.**
+      Ordinary per-request enrichment (this story, tower's `/enrich`) never creates an account —
+      only login-time resolution does (Story 006, tower's separate `/identities/resolve`,
+      [tower Story 003](../tower/003-identity-resolution-at-login.md)) — see that story for the
+      `isNewAccount`/`analytics.auth.signup-completed` handling (ADR 0058). This note exists
+      specifically because an earlier draft of this story described `isNewAccount` as arriving
+      from this call; it doesn't, and can't, by construction.
 - [ ] `exp` is set to 60 seconds from signing time, independent of the session token's
       `expiresIn` — unchanged from `ref-design`.
 - [ ] The internal token is never set as a cookie and never sent to the browser — unchanged.

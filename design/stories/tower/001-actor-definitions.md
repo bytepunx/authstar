@@ -18,7 +18,8 @@ its shape. Where an ADR's original shape was later corrected, only the **final**
 the ADR list under each actor names every ADR that contributed to it, in order.
 
 `contact` is the one deliberate exception — a plain Postgres row, not a `consequent` actor,
-because GDPR erasure needs a real hard delete (Story 010 covers it separately, not here).
+because GDPR erasure needs a real hard delete (a future tower story covers it separately, not
+here — not yet numbered).
 
 ---
 
@@ -45,12 +46,15 @@ because GDPR erasure needs a real hard delete (Story 010 covers it separately, n
 
 ```ts
 {
-  actor: { namespace: 'tower', type: 'tenant', identifiedBy: 'slug', searchableBy: ['status'] },
+  actor: { namespace: 'tower', type: 'tenant', identifiedBy: 'slug', searchableBy: ['status'],
+           aggregateFrom: ['application', 'provider'] },
   state: {
     slug: '', name: '', status: 'active',   // active | suspended | deleted
     cookie: { domain: '', path: '/', maxAge: 604800, httpOnly: true, secure: true },
     seatLimit: null,
     branding: { name: '', logoUrl: '', primaryColor: '' },
+    applications: [],   // [{ _id, slug, name, status, hosts, ... }] — see below
+    providers: [],       // [{ _id, key, name, status, discoveryUrl, ... }] — see below
     createdAt: '', createdBy: '',
   }
 }
@@ -65,10 +69,40 @@ because GDPR erasure needs a real hard delete (Story 010 covers it separately, n
       **separate** operator-only route, `POST /operator/tenants/{slug}/rotate-keys` (ADR 0080)
       — not a `tenant` field at all; rotated material goes straight to signet, never through
       this actor's own state.
-- [ ] `tenant.providers` **does not exist** as a state field — see `provider` below (ADR 0082).
+
+### `applications`/`providers` are live, self-reconciling embedded summaries, not a nested config blob
+
+Resolved via `consequent`'s actual `aggregateFrom` mechanism, checked directly against its
+source rather than assumed (`manager.ts`/`dispatch.ts`) — no separate "view actor" is needed for
+this, and no expansion to `consequent` itself is needed either:
+
+- [ ] **Creating** an application or provider is a **command issued against `tenant`**
+      (`tenant.add-application`, `tenant.add-provider`), not a direct create call against a
+      fresh `application`/`provider` instance. The command handler returns a cross-type event —
+      e.g. `{ type: 'application.created', application: { _id: <new appId>, tenant: slug, ... } }`
+      — which `consequent` routes to **both** the new `application` instance (via
+      `event.application._id`) **and**, because `tenant` declares `aggregateFrom: ['application']`
+      and an `events: { 'application.created': onApplicationAdded }` handler, back onto `tenant`'s
+      own state, appending the embedded summary. This is exactly the same pattern `consequent`'s
+      own `vehicle`/`passenger` fixtures demonstrate (a `vehicle.board` command producing a
+      `passenger.boarded` event that both moves the passenger and grows `vehicle.passengers`).
+- [ ] This has a real, useful side effect: `consequent`'s single-writer-per-actor command queue
+      means concurrent application/provider creations under the *same* tenant serialize
+      automatically — exactly what per-tenant slug/name uniqueness checks need, for free.
+- [ ] **Updating** an existing application or provider (e.g. editing hosts, rotating a client
+      secret's non-secret metadata) is issued **directly** against that actor's own id — no need
+      to route an ordinary edit through `tenant`. `aggregateFrom` is what keeps `tenant`'s
+      embedded copy from ever going stale despite updates arriving this second way: whenever
+      `tenant` is next fetched, `consequent` also pulls and reapplies each referenced
+      application's/provider's own subsequent events on top of the embedded summary.
+- [ ] A fetch of `tenant` (`consequent.fetch('tenant', slug)`) therefore already **is** the full
+      shape portcullis's bundle needs (hosts, upstream, CORS, exempt, provider metadata, cookie,
+      branding) — no separate `portcullisBundle` view actor, no second read path to keep in sync
+      with the first.
 
 **ADRs:** 0020 (origin), 0031 (`seatLimit`), 0064 (`branding`), 0062 (status restriction,
-`httpOnly`), 0067 (creation), 0080 (rotation), 0082 (removes `providers`).
+`httpOnly`), 0067 (creation), 0080 (rotation), 0082 (removes the old nested `providers` map,
+promotes `provider` to its own actor — resolved into the `aggregateFrom` shape above).
 
 ---
 
@@ -85,7 +119,7 @@ because GDPR erasure needs a real hard delete (Story 010 covers it separately, n
     cors: { origin: [] },
     exempt: [],
     auth: { loginUrl: '/oauth2/select' },
-    exposedProviders: [],   // ordered provider names/keys this application exposes
+    exposedProviders: [],   // ordered, full provider keys (`${tenant}:${name}`) — not bare names
     branding: null,          // same shape as tenant.branding, nullable, falls back to tenant's
   }
 }
@@ -94,6 +128,12 @@ because GDPR erasure needs a real hard delete (Story 010 covers it separately, n
 - [ ] `identifiedBy` is a generated `appId`, **not** a composite of `tenant`+`slug` — `tenant`
       and `slug` are plain searchable state fields (ADR 0020). Slug uniqueness is enforced
       server-side per tenant at write time, not via the business key itself.
+- [ ] **Created via a `tenant.add-application` command, not a direct create call** — see
+      `tenant`'s own section above for why. Once it exists, ordinary edits (`PATCH`) are issued
+      directly against this actor's own `appId`.
+- [ ] `exposedProviders` stores each entry as the **full** `provider` key (`{tenant}:{name}`),
+      not the bare `name` — avoids every reader needing to reconstruct the key from context to
+      look one up.
 - [ ] `publicUrl`'s host must be present in `hosts` — validated on every write, rejecting a
       mismatch (ADR 0051).
 - [ ] `DELETE` is a soft alias for `PATCH { status: "deleted" }` (ADR 0051).
@@ -122,6 +162,9 @@ because GDPR erasure needs a real hard delete (Story 010 covers it separately, n
 
 - [ ] `clientSecret` is never a field here — write-only, pushed straight to signet at
       set/rotate time.
+- [ ] **Created via a `tenant.add-provider` command**, same reasoning as `application` above.
+      Ordinary edits (`PATCH` of `discoveryUrl`/`scope`, secret rotation) go directly against
+      this actor's own `key`.
 - [ ] Removal checks two things before allowing it: no active `application.exposedProviders`
       still references this key, and it isn't the last provider `_admin` exposes (ADR 0051,
       ADR 0067) — either violation rejects the write.
@@ -176,10 +219,18 @@ time behavior, not a shape change), 0056 (`accountId` added to `searchableBy`), 
     trialRoles: [],           // same element shape — time-boxed
     trialExpiresAt: null,
     permissions: [],           // tower-owned closed vocabulary — distinct from roles (ADR 0069)
+    usage: [],                  // [{ application, meter, periodUsage, periodLimit }] (ADR 0043)
     createdAt: '',
   }
 }
 ```
+
+- [ ] **`usage` is a real field on `account`, not a separate view.** Populated by an ordinary
+      `consequent` command (`account.usage-updated`) issued by a RabbitMQ consumer reacting to
+      keep's `entitlement.usage-updated` events (ADR 0043) — the standard "external event
+      triggers an internal command" shape already used elsewhere in this design (e.g. herald's
+      `contact.purged` handling), not `aggregateFrom` — keep isn't a `consequent` actor tower has
+      any way to aggregate from, since it's a different service reachable only via RabbitMQ.
 
 - [ ] `accountId` is a `node-flakes` generated id, not derived from anything — `tenant` is a
       plain state field, not part of the key (ADR 0017).
@@ -207,13 +258,20 @@ closure), 0070 (self-action principle).
 {
   actor: { namespace: 'tower', type: 'roleDefinition', identifiedBy: 'key' },
   state: {
-    key: '',   // `${tenant}:${scope}:${name}`
+    key: '',   // `${tenant}:${name}` (tenant-wide) or `${tenant}:${appSlug}:${name}` (app-scoped)
     tenant: '', name: '', scope: 'tenant' | { application: '' },
     description: '', status: 'active',   // active | retired
   }
 }
 ```
 
+- [ ] `key` is **positional, no static tags** — `{tenant}:{name}` when `scope === 'tenant'`,
+      `{tenant}:{appSlug}:{name}` when `scope === {application: appSlug}`, disambiguated purely
+      by segment count (2 vs. 3). Safe because `tenant`/`appSlug`/`name` already can't contain
+      the delimiter (the same delimiter-safe slug character set ADR 0002 established elsewhere)
+      — a lookup always knows which shape to construct anyway, since the caller already knows
+      `scope` from the role grant it's validating; nothing ever needs to *parse* an ambiguous key
+      back into its parts.
 - [ ] A role must have an active `roleDefinition` before it can be granted **anywhere** —
       accounts, invites, invite codes, keep's plan mappings (ADR 0047).
 - [ ] `DELETE` is an alias for `PATCH { status: "retired" }` — existing grants of an
@@ -328,29 +386,33 @@ no shape change).
 
 ---
 
-## View Actors
+## No Separate View Actors — Two Different Patterns, Neither Needs One
 
-Two distinct views, easy to conflate — they serve different callers and aggregate different
-source actors:
+Consolidating this reference against `consequent`'s actual source (not just its README) found
+that "view actor" isn't the right concept for either of this design's two aggregation needs —
+each has a simpler, more direct answer:
 
-- [ ] **Enrichment view** — keyed by `identity`'s business key (`identityHash`), aggregates
-      `identity` + `account` events into the materialized state portcullis's per-request
-      claims call reads: `{ accountId, status, grantedRoles, trialRoles, trialExpiresAt,
-      permissions, usage }`. `usage` is populated from keep's `entitlement.usage-updated`
-      events, filtered by the resolved `application` (ADR 0017, ADR 0018, ADR 0043).
-- [ ] **`portcullisBundle` view** — one per tenant, aggregates `tenant` + its `application`s +
-      its `provider`s (now a real actor, ADR 0082) into the non-secret config shape portcullis's
-      own bundle needs (hosts, upstream, CORS, exempt, provider metadata, cookie). A change
-      triggers a `SyncBundle` push (ADR 0009/0020). **The exact mechanics of how this view
-      discovers which `application`/`provider` instances belong to a given tenant are not
-      resolved here** — flagged in ADR 0082 as needing its own focused pass once `consequent`'s
-      actual cross-type-aggregation API is being written against directly, not before.
+- [ ] **Tenant → applications/providers** (a genuine 1:N, need-everything-at-once relationship,
+      what portcullis's bundle needs) uses `aggregateFrom` **directly on `tenant`**, per the
+      `tenant` section above — no separate actor.
+- [ ] **Identity → account** (`/enrich`'s per-request lookup, Story 002) is a 1:1 relationship
+      resolved by **two plain sequential `consequent.fetch()` calls in tower's own `/enrich`
+      handler code** — `fetch('identity', identityHash)` then `fetch('account', identity.state.
+      accountId)` — combined in application code, not via `aggregateFrom`. A single-lookup
+      relationship doesn't benefit from the embedded-summary machinery the tenant case needs;
+      it would only add an event-handler-maintenance burden (keeping an embedded copy in sync)
+      for something a second fetch already does simply and correctly.
+- [ ] `SyncBundle` pushes to portcullis (ADR 0009/0020) are triggered by `tenant`'s own event
+      stream — since `applications`/`providers` are now embedded directly in `tenant`'s state via
+      `aggregateFrom`, a change to either already surfaces as a change to `tenant` when next
+      fetched, with no separate mechanism needed to notice "an application changed" versus "the
+      tenant itself changed."
 
 ---
 
 ## Not Covered Here
 
-- `contact` (Postgres row, not a `consequent` actor) — Story 010.
+- `contact` (Postgres row, not a `consequent` actor) — a future tower story, not yet numbered.
 - Signet secrets that are *not* actors at all (`identity-hash-key` generations,
   `contact-hash-pepper`, signing keypairs) — referenced by the actors above but never modeled
   as one; see [tech-stack.md](../../docs/tech-stack.md) and ADR 0028/0067/0080 for their actual

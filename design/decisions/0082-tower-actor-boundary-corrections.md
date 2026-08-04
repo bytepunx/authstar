@@ -50,13 +50,14 @@ the time but never reconciled against each other:
 
 `clientSecret` is never part of this state — pushed directly to signet at set/rotate time,
 unchanged from ADR 0020's original discipline. `tenant.providers` (ADR 0020's original nested
-map) is retired as a state field; the `portcullisBundle` view actor now aggregates `provider`
-instances filtered by `tenant` directly, the same cross-type aggregation `consequent` already
-supports for any view actor (matching how the enrichment view already aggregates `identity` +
-`account`). This is a small, mechanical correction, not a behavior change — every route,
-permission, and lifecycle rule ADR 0030/0051/0053/0073 already established for "the provider
-resource" is unchanged; only its underlying representation moves from a nested field to a real
-actor.
+map) is retired as a state field; `tenant` itself now aggregates `application`/`provider`
+instances directly via `consequent`'s real `aggregateFrom` mechanism — no separate
+`portcullisBundle` view actor, resolved in full by
+[tower Story 001](../stories/tower/001-actor-definitions.md) once this correction's aggregation
+question was actually checked against `consequent`'s source rather than assumed. This is a
+small, mechanical correction, not a behavior change — every route, permission, and lifecycle
+rule ADR 0030/0051/0053/0073 already established for "the provider resource" is unchanged; only
+its underlying representation moves from a nested field to a real actor.
 
 ### `inviteCode.identifiedBy` becomes `{tenant}:{code}`
 
@@ -110,10 +111,10 @@ already negligible by construction; no correction needed there. `DELETE` remains
   the key shape, but this design has no running system yet to migrate, so it costs nothing to
   fix now rather than carrying the collision risk into implementation.
 - `invite` finally has one authoritative, complete shape instead of scattered field mentions.
-- The `portcullisBundle` view actor's exact aggregation mechanics (how it discovers which
-  `provider`/`application` instances belong to a given tenant) still needs its own focused
-  design pass — flagged here, not resolved, since it's a genuine `consequent`-usage question
-  or Story-level implementation detail rather than a tower domain-model correction.
+- The `provider`/`application` aggregation question this ADR originally flagged as needing its
+  own pass is resolved — `tenant` aggregates both directly via `aggregateFrom`, no separate view
+  actor, no expansion to `consequent` needed; see
+  [tower Story 001](../stories/tower/001-actor-definitions.md).
 
 ## Related
 

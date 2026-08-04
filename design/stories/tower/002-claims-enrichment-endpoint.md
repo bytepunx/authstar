@@ -4,26 +4,25 @@
 **Repo:** tower
 **Status:** Draft
 **New — tower's side of the contract [portcullis Story 010](../proxy/010-internal-jwt-generation.md)
-and [Story 006](../proxy/006-oauth2-callback.md) already assume exists.** Per
-[ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
+already assumes exists.** Per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
 [ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
 [ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
 [ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0028](../../decisions/0028-identity-hash-key-generations.md),
-[ADR 0043](../../decisions/0043-application-reported-usage-metering.md),
-[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md).
+[ADR 0043](../../decisions/0043-application-reported-usage-metering.md).
+**Sibling:** [Story 003](003-identity-resolution-at-login.md) covers the separate, explicit
+login-time resolve-or-create call — kept as its own route rather than folded into this one, so
+account creation is never an implicit side effect of the endpoint the auth gate hits on every
+single request.
 
 ---
 
 ## Summary
 
-`POST /enrich` is the single endpoint behind both calls portcullis makes to tower: the
-per-request claims lookup on every authenticated request (Story 010), and login-time identity
-resolution (Story 006). Both are "given one or more candidate identity hashes, resolve the
-canonical account and return what portcullis needs to build a token" — they differ only in
-whether `identityHash` is a single string or an ordered array, and this story is deliberately
-one endpoint handling both shapes rather than two separate ones, since nothing in how
-portcullis actually calls it needs them to be different routes.
+`POST /enrich` is the live, per-request lookup portcullis calls on every authenticated request
+(Story 010) — given a **single** identity hash for an **already-established** session, resolve
+its account and return what portcullis needs to build the internal token. It never creates
+anything; an established session's hash that resolves to nothing is treated as anomalous, not
+as an implicit new signup.
 
 This is the **one call in the entire design authenticated by SPIFFE mTLS alone** — no bearer
 token (there's no operator involved), no internal JWT to independently verify (there isn't one
@@ -39,12 +38,11 @@ definition.
 ```
 POST /enrich
 {
-  tenant: '',                    // resolved tenant slug (portcullis already resolved from Host)
+  tenant: '',        // resolved tenant slug (portcullis already resolved from Host)
   idp: '',
-  identityHash: '' | [''],       // single string: ordinary per-request. Ordered array,
-                                  // current-generation first: login-time only (Story 006).
-  email: '',                     // linking hint only, never authoritative (ADR 0001)
-  application: '',                // resolved application slug — scopes roles/usage (ADR 0017)
+  identityHash: '',   // a single hash — the session's own, never a candidate list (Story 003 only)
+  email: '',           // linking hint only, never authoritative (ADR 0001) — unused by this route today
+  application: '',      // resolved application slug — scopes roles/usage (ADR 0017)
 }
 ```
 
@@ -52,34 +50,31 @@ POST /enrich
 
 ## Acceptance Criteria
 
-### Identity resolution
+### Identity resolution — lookup only, never resolve-or-create
 
-- [ ] **Single-string `identityHash`** (the ordinary per-request shape, Story 010): look up the
-      matching `identity` record directly. **No account is created if it doesn't match anything**
-      — an established session whose hash resolves to nothing is anomalous (possible tampering,
-      not a legitimate new signup; a real new signup always arrives as the array shape below),
-      and returns `Deny` rather than silently fabricating an account for it.
-- [ ] **Array `identityHash`** (login-time only, Story 006): check each candidate **in order**
-      against existing `identity` records; the first match wins.
-  - [ ] If the match was against a **non-current-generation** candidate (anything but
-        `identityHash[0]`), create an additional `identity` record keyed by the
-        **current**-generation hash (`identityHash[0]`), pointing at the same `accountId` — this
-        is the "alias the older hash forward" behavior ADR 0028 named but didn't spell out the
-        mechanics of. Future logins converge on the current-generation hash directly without
-        re-walking older generations.
-  - [ ] If **no** candidate matches, create a new `account` (`status: active`, empty
-        `grantedRoles`/`trialRoles`, `contactId` resolved/created the same deterministic way
-        invite acceptance already does, ADR 0023) and a new `identity` keyed by
-        `identityHash[0]`, pointing at it. Set `isNewAccount: true` on the response.
-- [ ] `email` never participates in matching — used only as a linking *hint* elsewhere (self-
-      service linking, ADR 0070, is the actual mechanism for attaching a second identity; this
-      endpoint never merges accounts based on email similarity).
+- [ ] Look up the `identity` matching `identityHash` directly (no candidate list, no fallback
+      generations to check — that reconciliation only ever happens at login, Story 003).
+- [ ] **No match → `Deny`.** An established session's hash resolving to nothing is not treated
+      as a new signup — that only happens through Story 003's explicit path. Two legitimate
+      (non-bug) ways this can actually happen: the account's own identity was just unlinked by
+      the user *of that same session* (structurally prevented for the currently-active identity
+      specifically, ADR 0070's correction — but still possible if a *different* device's session
+      is using an identity that gets unlinked from elsewhere), or a key-generation retention
+      window was misconfigured shorter than the tenant's cookie `maxAge` (an operator error ADR
+      0028 already named the invariant for). Either way, forcing re-authentication is the correct
+      response, not silently fabricating a new account for what should be an established session.
+- [ ] Fetch the matching `identity`, then `fetch('account', identity.state.accountId)` — two
+      plain sequential lookups combined in this handler's own code, not a view actor (see tower
+      Story 001's "No Separate View Actors" section for why a 1:1 relationship like this doesn't
+      benefit from `aggregateFrom`).
+- [ ] `email` is accepted on the request but not used for matching by this route at all — reserved
+      for future linking-suggestion UX, never authorization (ADR 0001).
 
 ### Outcome
 
 - [ ] Resolved `account.status === "suspended"` or `"deleted"` → `Deny` (`403`, `reason: "account
-      locked"` or similar, server-side detail only per ADR 0003 — the client-facing body is
-      always generic).
+      locked"` or similar — server-side detail only, ADR 0003; the client-facing body is always
+      generic).
 - [ ] Otherwise → `Allow`:
 
 ```
@@ -91,9 +86,7 @@ POST /enrich
                           // does that, comparing trialExpiresAt against its own clock)
   trialExpiresAt: null,
   permissions: [],       // unfiltered — permissions are tenant-wide only, no per-application scope
-  usage: [],              // [{ application, meter, periodUsage, periodLimit }], filtered to
-                            // this application, sourced from the enrichment view (ADR 0043)
-  isNewAccount: false,     // true only via the array/login-time path above
+  usage: [],              // account.usage (tower Story 001), filtered to this application
 }
 ```
 
@@ -101,9 +94,11 @@ POST /enrich
       evaluates `trialExpiresAt` itself; that comparison happens once, locally, in portcullis
       (ADR 0018) — this endpoint would otherwise be the only place in the whole design doing a
       clock comparison against data that's about to cross a network boundary anyway.
-- [ ] `usage` sourced from the enrichment view actor (Story 001's View Actors section) — already
-      filtered to `application` before this response is built, no filtering logic duplicated at
-      the HTTP layer.
+- [ ] `usage` is read directly from the fetched `account.usage` field (tower Story 001) and
+      filtered to the request's `application` before response — no separate materialization step,
+      it's already current on the actor itself.
+- [ ] No `isNewAccount` field on this route's response at all — it genuinely cannot be true here
+      (see Story 003 for where it actually applies).
 
 ### Auth
 
@@ -127,7 +122,7 @@ POST /enrich
 - `Deny.reason`'s detail level is a server-side logging concern only (ADR 0003) — never
   returned in the response body beyond a generic `reason` string safe for the caller to log at
   its own discretion (portcullis logs it, never a client).
-- Not covered here: the enrichment *view actor*'s own construction (aggregating `identity` +
-  `account` + keep's `entitlement.usage-updated` events into the state this endpoint reads) —
-  see Story 001's View Actors section; this story is the HTTP surface over it, not the
-  materialization itself.
+- Deliberately a **separate route** from Story 003 rather than one endpoint with a
+  union-typed `identityHash: string | string[]` field — keeping "can this call create an
+  account" a property of *which route was called*, visible at the routing layer, rather than a
+  runtime branch buried in a conditional on request shape.

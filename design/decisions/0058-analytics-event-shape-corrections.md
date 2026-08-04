@@ -23,22 +23,31 @@ a returning login at all.
   already keeps server-side-only: `state_mismatch | pkce_missing | token_exchange_failed |
   userinfo_failed | incomplete_profile`, mapped directly from Story 006's existing error table.
 
-### Enrichment's `Allow` outcome gains `isNewAccount`; portcullis dispatches a new event
+### Login-time identity resolution gains `isNewAccount`; portcullis dispatches a new event
 
-Tower's `Allow` response (Story 010/ADR 0017/0018) gains `isNewAccount: boolean` — true exactly
-once, the first time enrichment resolves a given identity into a newly-created account. On
-`true`, portcullis dispatches a new `analytics.auth.signup-completed` event (same fire-and-forget
-discipline as every other analytics dispatch, Story 020) — this is what makes "signup
-conversion" (`signup-completed` ÷ `login-succeeded`) a real, computable metric rather than an
-aspirational report description.
+> **Corrected 2026-08-03:** originally described as part of the ordinary enrichment `Allow`
+> outcome (Story 010) — since split into two separate tower endpoints
+> ([tower Story 002](../stories/tower/002-claims-enrichment-endpoint.md) for ordinary
+> per-request enrichment, which never creates accounts and therefore never has this field;
+> [tower Story 003](../stories/tower/003-identity-resolution-at-login.md) for login-time
+> resolve-or-create, called once via [Story 006](../stories/proxy/006-oauth2-callback.md), which
+> is where this actually lives). The decision below is otherwise unchanged.
 
-**`isNewAccount` is consumed by portcullis for this dispatch only — it never appears on the
-internal token.** Unlike `usage` (ADR 0043), which the upstream application genuinely needs,
-this is purely an authstar-internal analytics signal with no reason to reach the application.
+Tower's login-time identity-resolution response gains `isNewAccount: boolean` — true exactly
+once, the first time resolution creates a new account rather than matching an existing identity.
+On `true`, portcullis dispatches a new `analytics.auth.signup-completed` event (same
+fire-and-forget discipline as every other analytics dispatch, Story 020) — this is what makes
+"signup conversion" (`signup-completed` ÷ `login-succeeded`) a real, computable metric rather
+than an aspirational report description.
+
+**`isNewAccount` is consumed by portcullis for this dispatch only — it never appears on any
+token.** Unlike `usage` (ADR 0043), which the upstream application genuinely needs, this is
+purely an authstar-internal analytics signal with no reason to reach the application.
 
 ## Consequences
 
-- Tower's enrichment response and Story 010's handling both need this field added.
+- Tower's login-time identity-resolution response and Story 006's handling both need this field
+  added (not Story 010 — see the correction above).
 - Portcullis gains one more conditional analytics dispatch, alongside its existing ones.
 - The auth-funnel report (ADR 0036/0059) can now compute what it was always described as
   computing.
