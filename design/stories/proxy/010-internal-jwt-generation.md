@@ -48,6 +48,13 @@ changes is everything that now determines the internal token's contents.
   | `Deny{status, reason}` | **No internal token is generated.** On a **protected** route, the request is rejected immediately with `status`; `reason` is logged, never returned to the client (ADR 0003). Not forwarded upstream. On an **exempt** route, the request is instead forwarded with no `Authorization` header — identical to an anonymous request to that route (ADR 0015) — it is not rejected. |
   | `Unreachable(err)` | Fail-open: sign the internal token with **only** the bare identity claims (`sub`, `idp`, `identityHash`) — no role/entitlement claims fabricated — and `enrichment_status: "degraded"`. Forward. Unconditional — same on exempt and protected routes. Fail-closed, **protected** route: reject (5xx), not forwarded. Fail-closed, **exempt** route: forward with no `Authorization` header, not rejected (ADR 0015). |
 
+- [ ] **`sub`, `idp`, and `identityHash` are baseline identity claims present on every issued
+      internal token, `Allow` or `degraded` alike** — `Allow` layers `accountId`/roles/etc. on
+      top of them, it doesn't replace them. Worth stating explicitly: this is what lets tower
+      compare a request's own `identityHash` claim against a target in the body/path (e.g. "am I
+      being asked to unlink the identity I'm currently authenticated with," ADR 0070) without
+      needing a separate mechanism to carry that fact.
+
 - [ ] **The `Allow` outcome's `roles` claim on the internal token is portcullis's own merge, not
       a value tower computed** (ADR 0018): `roles = grantedRoles + (trialRoles if
       now < trialExpiresAt else [])`, both already filtered to the resolved application's scope

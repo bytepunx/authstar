@@ -98,6 +98,20 @@ admin authorization; only acting on a *different* account does. New routes:
   the same lockout safeguard shape as ADR 0067's provider-removal fix; an account must always
   retain at least one way to sign back in.
 
+> **Corrected 2026-08-03:** a second safeguard, found while designing tower's identities story —
+> **refuses unconditionally if `{identityHash}` matches the caller's own currently-authenticated
+> identity**, regardless of how many other identities the account has linked. Unlinking the
+> identity you're actively signed in with, mid-session, is a confusing state to support (the
+> request that removes access arrives authenticated *by* the access being removed) for no real
+> benefit — the correct, well-trodden pattern is: log out, log back in via the *other* linked
+> identity, then unlink the first one from there. This check is enforced by comparing the path's
+> `{identityHash}` against the caller's own `identityHash` claim — already present on every
+> forwarded internal JWT regardless of outcome (Story 010, both `Allow` and `degraded` cases
+> carry it as a baseline identity claim), so no new header or token field is needed to make this
+> work. Applies identically whether reached via `/me/identities` or the explicit
+> `{accountId}`-addressed route — an admin acting on a *different* account's identity is
+> unaffected, since their own `identityHash` never coincidentally matches someone else's.
+
 ### UI — no widget designed here, two valid entry points
 
 An adopting application can link directly to `/oauth2/{name}/link` itself, exactly as it already
