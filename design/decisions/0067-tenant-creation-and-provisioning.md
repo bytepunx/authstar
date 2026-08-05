@@ -107,6 +107,14 @@ afterward, is a separate open question.
 - Tower needs its own direct, portcullis-bypassing ingress.
 - Provider `DELETE` gains the last-provider safeguard.
 - `web` and `steward` both need a UI surface for this (ADR 0068).
+- **Found while writing [tower Story 012](../stories/tower/012-tenant-creation-and-provisioning.md):**
+  provisioning is a multi-step sequence (tenant → provider → `_admin` application → four secrets
+  → invite) with no cross-step rollback — `consequent` has no multi-actor transaction primitive,
+  and undoing it would mean deleting actors this design otherwise never deletes. A failure partway
+  through leaves a real, partially-provisioned tenant. Each step's own create-or-skip semantics
+  make retrying safe from wherever it stopped, so the operational answer is "retry the same
+  request," not a rollback — not previously stated, worth naming plainly rather than leaving
+  implicit.
 
 ## Related
 
