@@ -94,6 +94,12 @@ operator route**: `GET /operator/tenants/{tenantSlug}/activity`. Entries include
 attribution, not verified identity), not a full audit solution, and displayed as such rather
 than implied to be stronger than it is.
 
+> **Made concrete by [tower Story 010](../stories/tower/010-activity-feed.md):** "supplied at
+> connect time" was underspecified — a session-display artifact can't attribute events written
+> after that session ends. Resolved as an `X-Operator-Actor` header, required on every mutating
+> operator request, threaded into the resulting event's own metadata at write time — durable on
+> the historical record itself, not re-derived from `steward`'s current session later.
+
 ### Stuck Erasure Requests view (added by [ADR 0075](0075-stuck-erasure-request-monitoring.md))
 
 Cross-tenant, unlike `web`'s per-tenant erasure-requests list — surfaces which service hasn't
