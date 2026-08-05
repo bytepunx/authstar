@@ -138,6 +138,7 @@ be over-engineering for a small, slow-changing, admin-tool-only need:
 | `billing:read` | ADR 0060 | `tenant` — distinct from `billing:manage`; viewing a revenue summary shouldn't require the ability to edit plans/Stripe config |
 | `tenant:manage` | ADR 0062 | `tenant` — `name`/`cookie` edits and the restricted `active → suspended` transition only; reactivation and deletion are unreachable through any tenant-scoped permission, operator-only |
 | `suppressions:manage` | ADR 0074 | `tenant` — herald's bounce/complaint-driven suppression list; one grant for read and write, same posture as `opt-outs:manage` |
+| `contacts:erase` | *new, filling a gap found in [tower Story 008](../stories/tower/008-contacts-erasure-and-export.md)* | `tenant` — gates `DELETE /contacts/{contactId}`, the erasure trigger, specifically. Found missing while grounding tower's contacts story: `contacts:export` was already split from `contacts:read` because aggregating a full export is more sensitive than viewing — the exact same reasoning applies, more forcefully, to *triggering an irreversible, cross-service erasure cascade*, which had been left implicitly gated by the same permission as merely viewing a contact's name and email. `PATCH` (the `name`-only edit) stays under `contacts:read` — a correctable, non-cascading, low-severity write doesn't need its own grant the way erasure does. |
 
 Treated as the canonical list going forward — a new route added later should draw from this
 table or extend it deliberately, not invent a grant string in isolation the way prior ADRs did.
