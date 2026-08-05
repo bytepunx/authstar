@@ -105,7 +105,19 @@ resolution entirely.
 any tenant-scoped account route where `{accountId}` matches the caller's own resolved
 `accountId` is permitted without holding any grant — only acting on a *different* account
 requires one. Applies to the identities routes above and to any future self-service account
-action.
+*read* or account-*hygiene* action (linked identities, own contact/email).
+
+> **Corrected 2026-08-05 ([tower Story 005](../stories/tower/005-accounts-roles-and-permissions.md)):**
+> this exemption **never** applies to `POST`/`DELETE` on `/accounts/{accountId}/roles` or
+> `/accounts/{accountId}/permissions`, self or not — granting or revoking your own roles or
+> permissions is a privilege-escalation action, not a data read or hygiene action, and always
+> requires the same `roles:manage`/`permissions:manage` grant an admin acting on someone else
+> would need. The phrasing above ("any future self-service account action") was written broadly
+> enough to be misread as covering these too; this correction exists specifically to close that
+> reading before it gets implemented that way. `invite:code:issue`'s existing carve-out
+> (ADR 0071 — "issuing is an action with real system consequences... the self-action exemption
+> does **not** apply here") is the same reasoning, applied here explicitly rather than left to
+> be inferred by analogy.
 
 **Self-service** (added by [ADR 0071](0071-self-service-widget-data-access.md)) — a separate
 `/me/*` family, no `{tenantSlug}`/`{accountId}` segments at all; identity resolved entirely
