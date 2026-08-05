@@ -4,6 +4,13 @@
 - **Date:** 2026-07-24
 - **Affects:** tower, keep, portcullis (as publishers), a new service — `herald`
 
+> **Corrected 2026-08-05 ([ADR 0084](0084-herald-actor-boundary-corrections.md)):**
+> `communicationType`'s only confirmed key material was the bare `{type}` route parameter — a
+> real cross-tenant collision risk, likely the highest-probability one found across this whole
+> pass, since tenants are *expected* to reuse conventional type names like `"invite-sent"`.
+> Corrected to a composite `{tenant}:{type}` key. `communication`'s `idempotencyKey` business key
+> also gained the same tenant-scoping fix already applied to keep's `usageRecord` (ADR 0083).
+
 ## Context
 
 Every service that needs to notify a human (invite sent, trial expiring, payment failed,
