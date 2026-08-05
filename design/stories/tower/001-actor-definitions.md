@@ -407,6 +407,16 @@ each has a simpler, more direct answer:
       `aggregateFrom`, a change to either already surfaces as a change to `tenant` when next
       fetched, with no separate mechanism needed to notice "an application changed" versus "the
       tenant itself changed."
+- [ ] **Concretely**: any command that affects `tenant`, `application`, or `provider` state
+      triggers an **async, best-effort** re-push after the underlying write already succeeded —
+      re-fetching `tenant` (picking up the fresh change via `aggregateFrom`'s on-fetch
+      reconciliation) and streaming it to signet. This never blocks or gates the API response
+      the write's own caller receives; the write is already durable and correct regardless of
+      whether the push itself succeeds immediately. A failed push isn't rolled back or retried
+      by this story — stronger delivery guarantees (retry, a periodic reconciliation sweep as a
+      safety net) are a reasonable future hardening, not designed in full here, consistent with
+      how this design treats other "eventual, best-effort" delivery paths elsewhere (RabbitMQ
+      publish-after-store, [tech-stack.md](../../docs/tech-stack.md)).
 
 ---
 
