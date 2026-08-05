@@ -5,6 +5,16 @@
 - **Affects:** tower, keep, web
 - **Resolves the gap surfaced in:** [ADR 0046](0046-tenant-owned-stripe-configuration.md)
 
+> **Corrected 2026-08-05 ([tower Story 001](../stories/tower/001-actor-definitions.md)):** the
+> key format below (`{tenant}:{scope}:{name}`, with `scope` serialized as the literal string
+> `tenant` or `application:{slug}`) used a static tag. Corrected to purely positional, no static
+> strings: `{tenant}:{name}` when tenant-wide, `{tenant}:{appSlug}:{name}` when
+> application-scoped, disambiguated by segment count alone — safe because `tenant`/`appSlug`/
+> `name` can never contain the delimiter, and a caller always already knows `scope` from the
+> role grant it's constructing the key to validate, so nothing ever needs to parse an ambiguous
+> key back into parts. Same deterministic-composite-key reasoning as here, just without the
+> redundant tag.
+
 ## Context
 
 `keep`'s `planMapping.grantedRoles` can reference an application slug and role name that don't

@@ -134,6 +134,22 @@ layer.
 
 ---
 
+## Publishing to keep — application lifecycle events
+
+- [ ] Every write that changes `application.status`, `application.hosts`, or creates a new
+      application publishes the matching `application.<created|hosts-changed|suspended|deleted>`
+      event (ADR 0047) — `{ tenant, application, name, status }`. Consumed by keep to maintain
+      its own local, disposable reference cache (a plain projection, not a `consequent` actor)
+      used to validate `planMapping.grantedRoles` at write time, since keep never calls tower
+      directly for anything on the request path. This is the same outbound-event precedent tower
+      already established publishing to herald (`contact.migrated`/`contact.purged`, ADR 0024) —
+      not a new capability, just a third consumer of it.
+- [ ] Providers have no equivalent publish requirement — keep's reference cache only tracks
+      applications and role definitions (ADR 0047), since `planMapping.grantedRoles` never
+      references a provider.
+
+---
+
 ## Not Covered Here
 
 - `POST /provider-discovery-status` — portcullis's own write-back call (ADR 0073), a completely
