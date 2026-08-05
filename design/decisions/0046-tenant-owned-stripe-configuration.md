@@ -90,6 +90,13 @@ application-scoped role filtering, so the grant is inert. `web`'s plan-mapping e
 validate the application slug client-side against tower's own applications list, since `keep`
 structurally cannot.
 
+> **Resolved by [ADR 0047](0047-application-and-role-slug-validation.md)**, written immediately
+> after this one: keep gains a local, tower-sourced reference cache (applications + active role
+> definitions, seeded by a startup backfill) and validates `grantedRoles` against it at write
+> time — the exact gap named above. The two ADRs were never cross-referenced before now, which
+> made this limitation read as still-current to anyone encountering this ADR on its own; it
+> isn't. Keep's plan-mapping writes reject an unknown application/role reference outright today.
+
 ### Webhook receiver: per-tenant, and now genuinely fits portcullis's routing model
 
 ADR 0041 kept the webhook receiver outside portcullis specifically because a single

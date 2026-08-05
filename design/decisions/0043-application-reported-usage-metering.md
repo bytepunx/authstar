@@ -5,6 +5,11 @@
 - **Affects:** portcullis, keep, tower
 - **Builds on:** [ADR 0038](0038-plan-mapping-and-subscription-tracking.md) (as corrected by [ADR 0042](0042-single-account-billing-model.md)), [ADR 0031](0031-keep-tower-entitlement-events.md)
 
+> **Corrected 2026-08-05 ([ADR 0083](0083-keep-actor-boundary-corrections.md)):** `usageRecord`'s
+> business key (`idempotencyKey`) is application-supplied, not internally generated — a less
+> trusted source than this design's other identifiers, and not tenant-scoped. Corrected to a
+> composite `{tenant}:{idempotencyKey}` key, closing a real cross-tenant collision risk.
+
 ## Context
 
 Every other authstar interaction stays entirely upstream of an adopting application — the app's

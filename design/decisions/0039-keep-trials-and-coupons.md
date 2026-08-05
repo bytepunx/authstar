@@ -5,6 +5,12 @@
 - **Affects:** keep, tower
 - **Resolves an open item in:** [ADR 0019](0019-invite-codes.md)
 
+> **Corrected 2026-08-05 ([ADR 0083](0083-keep-actor-boundary-corrections.md)):** `coupon`'s
+> business key below is the bare `code` field — the same cross-tenant collision risk `inviteCode`
+> had (ADR 0082), for the identical reason: this ADR explicitly modeled `coupon` "structurally
+> close to `inviteCode` by design," but the fix never carried over. Corrected to a composite
+> `{tenant}:{code}` key.
+
 ## Context
 
 ADR 0018 sketched org-level and individual-level trials conceptually but never gave keep a

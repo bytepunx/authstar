@@ -5,6 +5,12 @@
 - **Affects:** keep, web
 - **Extends:** [ADR 0038](0038-plan-mapping-and-subscription-tracking.md)
 
+> **Corrected 2026-08-05 ([ADR 0083](0083-keep-actor-boundary-corrections.md)):** neither shape
+> below ever included the actual Stripe object id (`stripeRefundId`/`stripeDisputeId`) —
+> `stripeChargeId` alone can't uniquely key `refund`, since Stripe permits multiple partial
+> refunds against one charge. Both actors gain their real Stripe id as `identifiedBy`;
+> `stripeChargeId` moves to `searchableBy`.
+
 ## Context
 
 Keep's Stripe webhook table (ADR 0038) covers subscription lifecycle events only —
