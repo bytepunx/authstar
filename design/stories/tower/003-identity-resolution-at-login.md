@@ -23,6 +23,11 @@ Given an ordered list of candidate identity hashes (current key generation first
 the canonical account — creating one if genuinely nothing matches — and tells portcullis whether
 this was a brand-new account.
 
+This call also carries an optional `redeem` field for invite/invite-code redemption —
+[Story 007](007-invites-and-invite-codes.md) owns that field's full shape and behavior; it's
+folded into this same call (rather than a separate one) so a new account and its invite-granted
+roles apply atomically, from portcullis's perspective, in one round trip.
+
 ---
 
 ## Request
