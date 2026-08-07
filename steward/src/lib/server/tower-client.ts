@@ -1,0 +1,178 @@
+// Steward's proxy client for tower's operator API tree. Every function here
+// maps directly onto a route named in design/stories/tower/013-operator-api.md
+// (and 010/011/012 which 013 reuses unchanged) -- steward invents nothing new
+// backend-side, only calls what those Stories already specify.
+
+import { backendRequest, type BackendResult, type FetchLike } from './backend-client.js'
+import type {
+  Account,
+  AccountListResponse,
+  ActivityListResponse,
+  CreateTenantRequest,
+  CreateTenantResponse,
+  InviteRequest,
+  InviteResponse,
+  PermissionGrant,
+  RotateTenantKeysRequest,
+  RotateTenantKeysResponse,
+  StuckErasureRequestsResponse,
+  Tenant,
+  TenantListResponse,
+} from '../types.js'
+
+export interface TowerClientOptions {
+  baseUrl: string
+  fetchImpl?: FetchLike
+}
+
+export function createTowerClient({ baseUrl, fetchImpl = fetch }: TowerClientOptions) {
+  const call = <T>(opts: Parameters<typeof backendRequest<T>>[2]) => backendRequest<T>(fetchImpl, baseUrl, opts)
+
+  return {
+    // Story 001: the lightweight token-confirmation call, `limit=0` so it's
+    // cheap regardless of how many tenants the installation has.
+    confirmToken(token: string): Promise<BackendResult<TenantListResponse>> {
+      return call<TenantListResponse>({ path: '/operator/tenants', token, query: { limit: 0 } })
+    },
+
+    // Story 002 / tower Story 013: paginated, searchable by slug/name.
+    listTenants(
+      token: string,
+      params: { search?: string; limit?: number; offset?: number } = {},
+    ): Promise<BackendResult<TenantListResponse>> {
+      return call<TenantListResponse>({
+        path: '/operator/tenants',
+        token,
+        query: { search: params.search, limit: params.limit, offset: params.offset },
+      })
+    },
+
+    // Story 002 / tower Story 011: `PATCH /operator/tenants/{slug}`, the one
+    // path back for a self-suspended tenant.
+    reactivateTenant(token: string, actorLabel: string, slug: string): Promise<BackendResult<Tenant>> {
+      return call<Tenant>({
+        method: 'PATCH',
+        path: `/operator/tenants/${encodeURIComponent(slug)}`,
+        token,
+        actorLabel,
+        body: { status: 'active' },
+      })
+    },
+
+    suspendTenant(token: string, actorLabel: string, slug: string): Promise<BackendResult<Tenant>> {
+      return call<Tenant>({
+        method: 'PATCH',
+        path: `/operator/tenants/${encodeURIComponent(slug)}`,
+        token,
+        actorLabel,
+        body: { status: 'suspended' },
+      })
+    },
+
+    // Story 002 / tower Story 012: `POST /tenants`, standalone ingress (not
+    // the operator tree), but still takes the operator bearer token.
+    createTenant(token: string, body: CreateTenantRequest): Promise<BackendResult<CreateTenantResponse>> {
+      return call<CreateTenantResponse>({ method: 'POST', path: '/tenants', token, body })
+    },
+
+    // Story 003 Admin Access -- read + email search share one route.
+    listAccounts(
+      token: string,
+      tenantSlug: string,
+      params: { email?: string } = {},
+    ): Promise<BackendResult<AccountListResponse>> {
+      return call<AccountListResponse>({
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/accounts`,
+        token,
+        query: { email: params.email },
+      })
+    },
+
+    grantPermission(
+      token: string,
+      actorLabel: string,
+      tenantSlug: string,
+      accountId: string,
+      grant: PermissionGrant,
+    ): Promise<BackendResult<Account>> {
+      return call<Account>({
+        method: 'POST',
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/accounts/${encodeURIComponent(accountId)}/permissions`,
+        token,
+        actorLabel,
+        body: grant,
+      })
+    },
+
+    revokePermission(
+      token: string,
+      actorLabel: string,
+      tenantSlug: string,
+      accountId: string,
+      grant: string,
+    ): Promise<BackendResult<Account>> {
+      return call<Account>({
+        method: 'DELETE',
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/accounts/${encodeURIComponent(accountId)}/permissions/${encodeURIComponent(grant)}`,
+        token,
+        actorLabel,
+      })
+    },
+
+    // Story 003 bootstrap path -- elevated invite.
+    createInvite(
+      token: string,
+      actorLabel: string,
+      tenantSlug: string,
+      body: InviteRequest,
+    ): Promise<BackendResult<InviteResponse>> {
+      return call<InviteResponse>({
+        method: 'POST',
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/invites`,
+        token,
+        actorLabel,
+        body,
+      })
+    },
+
+    // Story 004 -- activity feed, operator-scoped.
+    getActivity(
+      token: string,
+      tenantSlug: string,
+      params: { sinceEventId?: string; until?: string } = {},
+    ): Promise<BackendResult<ActivityListResponse>> {
+      return call<ActivityListResponse>({
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/activity`,
+        token,
+        query: { sinceEventId: params.sinceEventId, until: params.until },
+      })
+    },
+
+    // Story 004 -- stuck erasure requests, cross-tenant.
+    getStuckErasureRequests(token: string, olderThanHours: number): Promise<BackendResult<StuckErasureRequestsResponse>> {
+      return call<StuckErasureRequestsResponse>({
+        path: '/operator/erasure-requests/stuck',
+        token,
+        query: { olderThanHours },
+      })
+    },
+
+    // Story 005 -- tenant key rotation.
+    rotateTenantKeys(
+      token: string,
+      actorLabel: string,
+      tenantSlug: string,
+      body: RotateTenantKeysRequest,
+    ): Promise<BackendResult<RotateTenantKeysResponse>> {
+      return call<RotateTenantKeysResponse>({
+        method: 'POST',
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/rotate-keys`,
+        token,
+        actorLabel,
+        body,
+      })
+    },
+  }
+}
+
+export type TowerClient = ReturnType<typeof createTowerClient>
