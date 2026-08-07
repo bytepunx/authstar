@@ -1,0 +1,42 @@
+{
+  "name": "@bytepunx/authstar-tower",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Tower -- identity, roles, tenant, and application API for authstar",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/server.ts",
+    "pretest": "npm run build",
+    "test": "npm run test:behavior && npm run test:e2e",
+    "test:behavior": "vitest run spec/behavior",
+    "test:e2e": "vitest run spec/e2e",
+    "pretest:integration": "npm run build",
+    "test:integration": "vitest run spec/integration",
+    "test:all": "npm run build && vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@fastify/swagger": "^9.0.0",
+    "consequent": "^2.0.1",
+    "consequent-postgres": "^2.0.4",
+    "fastify": "^5.0.0",
+    "fount": "^1.1.5",
+    "jose": "^5.9.0",
+    "node-flakes": "^2.1.0",
+    "pino": "^9.0.0"
+  },
+  "devDependencies": {
+    "@testcontainers/postgresql": "^10.13.0",
+    "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^3.0.0",
+    "testcontainers": "^10.13.0",
+    "tsx": "^4.19.0",
+    "typescript": "~5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
