@@ -4,6 +4,10 @@
 - **Date:** 2026-07-25
 - **Affects:** chronicle, portcullis, web
 
+> **Filled by [ADR 0085](0085-chronicle-clickhouse-schema.md):** the schema referenced below as
+> "discussed alongside ADR 0035" was never actually written into either ADR — a real gap, closed
+> while writing chronicle's Stories, not before.
+
 ## Context
 
 Following on from `chronicle`'s ClickHouse schema (discussed alongside ADR 0035): retention
