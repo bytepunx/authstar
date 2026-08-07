@@ -1,0 +1,51 @@
+{
+  "name": "@bytepunx/authstar-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "web -- admin app, hosted pages, and embeddable widget library for authstar",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "build:widgets": "vite build --config vite.widgets.config.ts",
+    "build:all": "npm run build && npm run build:widgets",
+    "preview": "vite preview",
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test:behavior": "vitest run --config vitest.config.ts spec/behavior",
+    "test:components": "vitest run --config vitest.components.config.ts",
+    "test:integration": "vitest run --config vitest.config.ts spec/integration",
+    "test": "npm run test:behavior && npm run test:components && npm run test:integration",
+    "pretest:e2e": "npm run build:widgets",
+    "test:e2e": "playwright test",
+    "test:all": "npm run test && npm run test:e2e",
+    "test:watch": "vitest --config vitest.config.ts"
+  },
+  "dependencies": {
+    "@sveltejs/adapter-node": "^5.5.7",
+    "jose": "^6.2.8"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.62.1",
+    "@sveltejs/kit": "^2.70.2",
+    "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "@testing-library/jest-dom": "^7.0.0",
+    "@testing-library/svelte": "^5.4.2",
+    "@types/node": "^26.1.2",
+    "@vitest/coverage-v8": "^4.1.10",
+    "autoprefixer": "^10.5.4",
+    "jsdom": "^30.0.1",
+    "postcss": "^8.5.26",
+    "svelte": "^5.56.8",
+    "svelte-check": "^4.1.0",
+    "tailwindcss": "^4.3.3",
+    "@tailwindcss/vite": "^4.3.3",
+    "tsx": "^4.19.0",
+    "typescript": "^5.9.3",
+    "vite": "^8.2.1",
+    "vitest": "^4.1.10"
+  }
+}
