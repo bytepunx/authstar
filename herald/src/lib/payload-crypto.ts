@@ -12,12 +12,26 @@
 // key per message, wrapped with the recipient's RSA public key. Anyone
 // holding the public key (a publisher, e.g. tower) can encrypt; only the
 // keyring's owner (herald) can unwrap and decrypt.
-import { constants, generateKeyPairSync, privateDecrypt, publicEncrypt, randomBytes, createCipheriv, createDecipheriv, type KeyObject } from 'node:crypto'
+import { constants, generateKeyPairSync, privateDecrypt, publicEncrypt, randomBytes, createCipheriv, createDecipheriv, createPrivateKey, createPublicKey, type KeyObject } from 'node:crypto'
 
 export interface PayloadKeyGeneration {
   version: number
   publicKey: KeyObject
   privateKey: KeyObject
+}
+
+// A signet-sourced generation, as it would arrive decoded out of the
+// bundle's secrets (PEM strings, not `KeyObject`s -- `KeyObject` isn't
+// serializable). No ADR names herald's actual bundle schema for this yet
+// (payload-crypto.ts's own header already flags "signet isn't available in
+// this dev environment... real deployment fetches these from signet" as a
+// documented, unresolved gap) -- this shape is `server.ts`'s own
+// best-effort guess at what that schema should look like, not a contract
+// anything else in this design has committed to.
+export interface PersistedPayloadKeyGeneration {
+  version: number
+  publicKeyPem: string
+  privateKeyPem: string
 }
 
 export interface EncryptedEnvelope {
@@ -35,8 +49,28 @@ export class PayloadKeyring {
   private generations = new Map<number, PayloadKeyGeneration>()
   private currentVersion = 0
 
-  constructor() {
-    this.rotate()
+  // No-arg (every existing test, and every generation that follows a real
+  // `rotate()` call) behaves exactly as before -- generates one fresh
+  // ephemeral in-process keypair. Passing `seed` (real deployment only,
+  // sourced from signet by `server.ts`) imports already-persisted key
+  // material instead of generating anything, so a process restart doesn't
+  // orphan every `communication.encryptedPayload` written under a
+  // generation that no longer exists once the old ephemeral keypair is
+  // gone -- the exact correctness problem always-generate-on-boot would
+  // otherwise cause. `currentVersion` becomes the highest version seeded.
+  constructor(seed?: PersistedPayloadKeyGeneration[]) {
+    if (seed && seed.length > 0) {
+      for (const generation of seed) {
+        this.generations.set(generation.version, {
+          version: generation.version,
+          publicKey: createPublicKey(generation.publicKeyPem),
+          privateKey: createPrivateKey(generation.privateKeyPem),
+        })
+        if (generation.version > this.currentVersion) this.currentVersion = generation.version
+      }
+    } else {
+      this.rotate()
+    }
   }
 
   rotate(): PayloadKeyGeneration {

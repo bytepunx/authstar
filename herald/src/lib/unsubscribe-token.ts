@@ -15,6 +15,14 @@ export interface UnsubscribeClaims {
   keyVersion: number
 }
 
+// A signet-sourced generation, as it would arrive decoded out of the
+// bundle's secrets -- same "no ADR names the actual schema yet" caveat as
+// `payload-crypto.ts`'s `PersistedPayloadKeyGeneration`.
+export interface PersistedUnsubscribeKeyGeneration {
+  version: number
+  keyBase64: string
+}
+
 // Never automatically pruned (Story 001) -- an unsubscribe link's real
 // lifetime has no reliable bound. Verification checks every generation
 // still held, not a fixed overlap window.
@@ -22,8 +30,20 @@ export class UnsubscribeKeyring {
   private generations = new Map<number, Buffer>()
   private currentVersion = 0
 
-  constructor() {
-    this.rotate()
+  // Same additive convention as `PayloadKeyring`: no-arg generates one
+  // fresh ephemeral key (every existing caller); `seed` (real deployment,
+  // sourced from signet by `server.ts`) imports persisted key material
+  // instead, so a restart doesn't invalidate every unsubscribe link already
+  // mailed out under an old generation.
+  constructor(seed?: PersistedUnsubscribeKeyGeneration[]) {
+    if (seed && seed.length > 0) {
+      for (const generation of seed) {
+        this.generations.set(generation.version, Buffer.from(generation.keyBase64, 'base64'))
+        if (generation.version > this.currentVersion) this.currentVersion = generation.version
+      }
+    } else {
+      this.rotate()
+    }
   }
 
   rotate(): number {
