@@ -1,0 +1,10 @@
+# Plain (non-secret) config for lookout.
+#
+# NOTE: as of this writing, lookout/src/server.ts has NO signet-client wiring
+# at all — it reads LOOKOUT_RABBITMQ_URL directly from the process
+# environment (with an explicit code comment flagging this as a stand-in).
+# This file/scope is provisioned ahead of that wiring landing, following the
+# sibling services' rabbitmqUrl convention, so the plumbing is ready when
+# lookout's own code catches up. Until then, nothing in lookout actually
+# fetches this value from signet.
+rabbitmqUrl: amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/

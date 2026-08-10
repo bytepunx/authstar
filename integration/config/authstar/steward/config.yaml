@@ -1,0 +1,16 @@
+# Plain (non-secret) config for steward.
+#
+# NOTE: steward has NO signet-client dependency at all (confirmed: no
+# @bytepunx/signet-client in package.json, no "signet" references outside
+# comments flagging this as future work). It currently reads TOWER_URL/
+# HERALD_URL as plain process.env vars (src/lib/server/env.ts). This file is
+# provisioned ahead of that wiring landing, following the ns/authstar/sa/
+# convention, so the scope exists once steward adopts a signet client.
+#
+# The operator bearer token is deliberately NEVER held by steward's own
+# process — per ADR 0045/0048 and design/stories/steward/001-connect-and-
+# session.md, a human operator types it in each session and steward only
+# forwards it per-request. No secret scope is provisioned for steward as a
+# result.
+towerUrl: http://tower.authstar.svc.cluster.local:3000
+heraldUrl: http://herald.authstar.svc.cluster.local:3300

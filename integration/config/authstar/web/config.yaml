@@ -1,0 +1,17 @@
+# Plain (non-secret) config for web.
+#
+# NOTE: web has NO signet-client dependency at all (confirmed: no
+# @bytepunx/signet-client in package.json; every "signet" reference in the
+# tree is a comment flagging deferred work, e.g. src/lib/server/jwt.ts:6-9,
+# hooks.server.ts:7-15). It currently reads TOWER_BASE_URL/
+# INTERNAL_JWT_JWKS_URL/PUBLIC_TOWER_BASE_URL as plain env vars, and with
+# INTERNAL_JWT_JWKS_URL unset every request is treated as unauthenticated
+# (explicit comment in hooks.server.ts). This file is provisioned ahead of
+# that wiring landing.
+#
+# No secret scope is provisioned for web: it holds no signing key of its own
+# (it only verifies portcullis-signed JWTs via a JWKS URL), and that JWKS
+# endpoint is public key material, not a secret.
+towerBaseUrl: http://tower.authstar.svc.cluster.local:3000
+publicTowerBaseUrl: http://localhost:3000
+internalJwtJwksUrl: http://portcullis.authstar.svc.cluster.local:8443/.well-known/jwks.json

@@ -1,0 +1,6 @@
+# Plain (non-secret) config for herald. payloadKeyGenerations/
+# unsubscribeKeyGenerations are secret-only (see secrets/authstar/herald/) —
+# herald/src/server.ts:34-46 flags those two key names as an unratified,
+# best-effort schema of its own, not covered by any ADR yet.
+dbConnectionString: postgres://postgres:postgres@postgresql.postgres.svc.cluster.local:5432/herald?sslmode=disable
+rabbitmqUrl: amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/
