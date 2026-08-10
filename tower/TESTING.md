@@ -37,7 +37,7 @@ so every tier runs against the same compiled artifact the real server loads, not
 - Needs Docker running locally / in CI. `beforeAll`'s own timeout should be generous (60s+) —
   container pull + start can genuinely take a while on a cold image cache.
 
-## Three real bugs this pilot found — worth knowing before writing more services' tests
+## Five real bugs this pilot found — worth knowing before writing more services' tests
 
 1. **`consequent`'s loader only finds compiled `*_actor.js` files** — pointing it at `src/actors`
    (TypeScript source) silently loads zero actors (`Object.keys(actors) === []`), which then
@@ -56,3 +56,141 @@ so every tier runs against the same compiled artifact the real server loads, not
    `buildApp()` call in this codebase overrides this (`ajv: { customOptions: { removeAdditional:
    false } }`) so a schema that says "reject unknown fields" actually does, everywhere, not just
    where someone remembers to check.
+4. **A *command* handler's `then` function receives the whole `ActorInstance` wrapper as its
+   first argument, not `instance.state`** — unlike an *event* handler, which correctly receives
+   `instance.state` (confirmed directly against `consequent/dist/apply.js`: `processCommand`
+   calls `handle(instance, command)`, `processEvent` calls `handle(instance.state, event)`).
+   Every command handler in this codebase before `erasureRequest.acknowledge` (the erasure
+   cascade's tracking actor, ADR 0026) happened to never read its first parameter, which is why
+   this went unnoticed — naming the parameter `_tenant`/`_account`/etc. and ignoring it papered
+   over the real behavior. `acknowledge` needed to read prior `acknowledgedBy` state to decide
+   whether to also flip `status` to `completed`, discovered this the hard way (a test that
+   silently never reached "completed"), and was restructured to make that decision inside the
+   corresponding *event* handler instead, which does get real state — see
+   `src/actors/erasure_request_actor.ts`'s own header comment for the full writeup. If a future
+   command handler needs to read prior state, it cannot do so from its own first parameter;
+   fetch the actor's current state at the route/caller level before invoking the command instead.
+5. **`consequent-postgres`'s `<type>_id_map` table stores `aggregate_id` as a fixed
+   `character(42)` column** (`create_id_map_table.sql`) — an actor id longer than 42 characters
+   fails with a real Postgres error (`value too long for type character(42)`) the moment any
+   command targets it, only surfacing once the integration tier ran against real Postgres (the
+   in-memory adapter has no such limit, so behavior/e2e tests never caught it). This pilot slice
+   hit it directly: `contact`'s id and the first-admin invite's `token` are both HMAC/hash-derived
+   and were originally full 64-character hex SHA-256 digests — both now truncated to 40 hex
+   chars (160 bits, still cryptographically ample) in `src/lib/contact-store.ts`'s
+   `computeContactId` and `src/routes/provisioning.ts`'s invite-token derivation. **This is a
+   platform-level constraint worth flagging beyond this pilot slice**: ADR 0027's own
+   `identityHash = HMAC-SHA256(...)` is described only as a raw hash with no stated encoding —
+   if portcullis ever sends a full 64-character hex digest as `identityHash`, the real `identity`
+   actor (`identifiedBy: 'identityHash'`) will hit this exact ceiling against real Postgres. Not
+   fixed here (portcullis's hash encoding is out of this task's scope) — flagged for whoever
+   picks up the live cross-service integration work next.
+
+## Scope covered by this pass (tower's four target cross-service flows)
+
+Extends the pilot above with `src/server.ts` (the first real production entrypoint) and the
+specific slice of Stories 002/003/005/007/008/012 needed to make four cross-service flows real:
+the login/enrichment journey through portcullis, tenant creation/provisioning (triggering
+herald's invite-sent), the keep→tower entitlement consumer, and tower's producer/tracking role in
+the erasure cascade. Same three-tier convention as above; new suites:
+
+- `spec/behavior/provisioning.spec.ts`, `enrich.spec.ts`, `identities.spec.ts`, `contacts.spec.ts`,
+  `entitlement-consumer.spec.ts`, `erasure-ack-consumer.spec.ts`
+- `spec/e2e/tenant-provisioning-and-login.e2e.spec.ts` (provision → first-admin login/invite
+  redemption → enrichment → a simulated keep entitlement event → enrichment reflecting it, all
+  through HTTP except the RabbitMQ publish, which is simulated via the same fake-`ChannelLike`
+  the consumer's own behavior tests use), `erasure-cascade.e2e.spec.ts` (signup → erasure request
+  → two simulated downstream acknowledgements → completed)
+- `spec/integration/provisioning.integration.spec.ts`: the new actors (`application`, `provider`,
+  `account`, `identity`, `invite`, `erasureRequest`) plus `ContactStore`'s real Postgres
+  implementation against a real, disposable Postgres, following the same testcontainers template
+  as `tenants.integration.spec.ts`.
+
+**Fixed after the fact — a real cross-service shape bug, caught by herald's own build pass**:
+`provisioning.ts`'s `comms.transactional.invite-sent` publish originally used a pre-ADR-0025
+plaintext shape (`{to, templateData, ...}`) that predates herald's amended, encrypted-payload
+contract — herald's real `IngestMessage` interface (`src/lib/ingest.ts`) requires `contactId`,
+`title`, `templateVersion`, `encryptedPayload`, `payloadKeyVersion`, and has no `to` field at all
+(recipient addressing goes through `contactId`; herald resolves the email itself). Fixed to match
+that contract exactly, using a new `src/lib/herald-payload-crypto.ts` (RSA-OAEP-SHA256-wrapped
+AES-256-GCM, byte-for-byte mirroring herald's own `payload-crypto.ts` algorithm) to build the
+`encryptedPayload` envelope. Verified two ways, not just structurally: `spec/behavior/
+herald-payload-crypto.spec.ts` proves a full local encrypt→decrypt round trip (plus that a
+different keypair genuinely cannot decrypt it), and a one-off script importing both packages'
+*real compiled output* directly (tower's `encryptForHerald` → herald's real `decryptPayload`)
+confirmed genuine cross-package interop, not just two independently-correct implementations that
+happen to agree on paper.
+
+**A second, similar cross-service shape bug — caught while scaffolding the integration-test
+repo's signet secrets, before it ever hit a real cluster**: `provisioning.ts`'s four per-tenant
+secrets all used the same `randomSecret()` (opaque random bytes, base64url). That's correct for
+`identity-hash-key`/`contact-hash-pepper` (raw HMAC-SHA256 key material, any bytes work -- see
+portcullis's `identity_hash.rs`), but wrong for `session-key`/`internal-key`: portcullis's
+`EcKeyPair::from_pem_bytes` (`authstar-middleware/src/keys.rs`) parses these as PEM-encoded P-256
+EC private keys for `jsonwebtoken`'s ES256 signing, which random bytes are not. Confirmed against
+portcullis's actual source, not assumed, before fixing. Real-world impact if unfixed: every
+tenant's session/internal JWT issuance would fail the moment a real portcullis instance tried to
+load the key. Fixed with a new `randomEcPrivateKeyPem()` (Node's own `generateKeyPairSync('ec',
+{namedCurve: 'prime256v1', ...})`, PKCS8 PEM) used for just those two secrets. Verified by parsing
+the actual generated PEM back through `node:crypto`'s `createPrivateKey` and asserting it's a real
+`ec`/`prime256v1` key (`spec/behavior/provisioning.spec.ts`) -- not a separate cross-language
+interop script this time, since PKCS8 is a well-defined, unambiguous standard (unlike the
+bespoke encrypted-envelope format above) and portcullis's own test suite already exercises
+`from_pem_bytes` against standard PKCS8 PEM fixtures.
+
+Two gaps this fix does *not* close, flagged rather than silently assumed away:
+1. **No real signet-based public-key distribution exists yet** (ADR 0025 names this as a required
+   piece: "every publisher needs the public key distributed via signet"). `heraldPayloadKey`
+   defaults to a throwaway ephemeral keypair (`createEphemeralHeraldKey`) — real deployment must
+   inject herald's actual current public key via `BuildAppOptions`/`server.ts`, and doesn't yet.
+   `server.ts` logs a loud warning on every boot until this is wired.
+2. **No herald template exists for `invite-sent` at the point tower publishes this event** —
+   `templateVersion: 1` is an assumption, not something this provisioning flow actually
+   provisions. Nothing here calls herald to create the template. Until that exists, herald's
+   ingest will accept the message structurally but the send itself will fail (herald's own
+   `template-lookup.ts` reports "no template found") — a second, separate gap from the shape
+   mismatch this pass fixed.
+
+**Deliberately deferred** (documented here, matching every other authstar service's own scope
+notes, rather than left unstated):
+
+- **Code-based invites** (Story 007's `inviteCode`, multi-redemption trial codes with
+  `maxRedemptions`/`trialDurationDays`) — only token-based invite redemption is implemented.
+  `POST /identities/resolve`'s `redeem.type` schema only accepts `"invite"`.
+- **Full RBAC/permission enforcement** — no route in this codebase (old or new) checks a
+  caller's `permissions` grants before allowing a write; `contacts:read`/`contacts:erase`/etc.
+  are modeled on the `account`/`invite` actors' state but nothing gates on them yet. Story 005's
+  permission-checking middleware is a separate, larger piece of work.
+- **The operator route-tree reuse pattern (Story 013 / ADR 0030)** — `POST /tenants`'s operator
+  check is a single shared bearer-token header comparison, not the full `/operator/...` route
+  tree, `X-Operator-Actor` threading, or cross-tenant search/activity/stuck-erasure views (ADR
+  0075's `GET /operator/erasure-requests/stuck` is not implemented; `GET
+  /tenants/:tenantSlug/erasure-requests/:contactId` covers the single-request read path only).
+- **mTLS/SPIFFE verification at the fastify layer** for `/enrich` and `/identities/resolve` — both
+  routes trust their caller's `tenant` field as-is, matching ADR 0001/0003's stated posture, but
+  this pilot slice doesn't add fastify-level SPIFFE peer-certificate verification (portcullis's
+  real client is real; tower's own server-side check of *who's calling* is not).
+- **`aggregateFrom`'s built-in cross-actor event routing** — `tenant`'s `add-application`/
+  `add-provider` commands are hand-rolled (a direct route-level `consequent.handle()` against the
+  new child actor, plus a best-effort convenience mirror onto `tenant`'s own embedded array)
+  rather than using `consequent`'s own `aggregateFrom` mechanism (`manager.js`'s `getSourceIds`/
+  `onActor`), which infers source actor ids from state shapes it never gets a chance to see for a
+  same-request child creation. See `tenant_actor.ts`'s header comment for the full rationale.
+- **Identity-alias garbage collection** (ADR 0028) — an aliased older-generation `identity`
+  record is created but nothing ever prunes it after its retention window closes; no such sweep
+  is designed anywhere in the source docs either.
+- **Real signet secret encryption** — `src/lib/signet-admin.ts`'s `createSignetAdmin` wires the
+  actual `GitOpsService.syncBundle` RPC (real tar.gz streaming, real auth) but pushes secret
+  values as plaintext YAML, not SOPS-encrypted — see that file's own header comment for why (the
+  exact repo layout and SOPS-encryption step weren't confirmable without deeper access to
+  signet's own server source within this pass's scope).
+- **Live signet/RabbitMQ/SPIFFE validation** — `src/server.ts` was not run against a real
+  `kluster up --profile signet` cluster in this pass (time budget went to the tested, injectable-
+  interface vertical slice instead, which this task's own instructions explicitly allow: "You do
+  NOT need a live cluster to build/test most of this"). Every I/O boundary it wires is exercised
+  for real only through its own injected interface's test double (`ContactStore`, `SignetAdmin`,
+  `Publisher`, the RabbitMQ `ChannelLike` consumers) — `server.ts` itself has no test coverage of
+  its own, consistent with how every other authstar service scopes its entrypoint.
+- **Usage-record writes** (`account.update-usage`) — the command/event exist (symmetry with the
+  `usage` field `/enrich` reports) but nothing calls it yet; no service publishes usage events to
+  tower in this pass.

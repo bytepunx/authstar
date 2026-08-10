@@ -1,0 +1,193 @@
+import { fileURLToPath } from 'node:url'
+import path from 'node:path'
+import { dialWorkload, waitForRestart } from '@bytepunx/signet-client'
+import { initialize as initializePostgresAdapters } from 'consequent-postgres'
+import initializeConsequent from 'consequent'
+import amqplib from 'amqplib'
+import { Pool } from 'pg'
+import buildApp from './lib/build-app.js'
+import { createPgContactStore, ensureContactsSchema } from './lib/contact-store.js'
+import { createSignetAdmin } from './lib/signet-admin.js'
+import { createAmqpPublisher } from './lib/publisher.js'
+import { createIdGenerator } from './lib/ids.js'
+import { startEntitlementConsumer } from './lib/entitlement-consumer.js'
+import { startErasureAckConsumer } from './lib/erasure-ack-consumer.js'
+import type { ProvisioningConfig } from './routes/provisioning.js'
+
+// Production entrypoint. Follows the fetch-once/watch/restart-lock pattern
+// documented in `signet-clients/typescript/examples/echo/index.ts` and
+// mirrored conceptually from portcullis's own live-validated Rust bootstrap
+// (`BootstrapEnv` -> `dial` -> `fetch` -> serve -> race shutdown against
+// `wait_for_restart`, see `~/git/authstar/portcullis/TESTING.md`): no
+// config files, no static env-var configuration beyond the handful of
+// bootstrap coordinates signet itself needs to be dialed at all, no
+// hot-reload -- a bundle change triggers a clean process exit and lets
+// Kubernetes restart into a fresh fetch.
+//
+// NOT LIVE-VALIDATED in this pass -- no `kluster up --profile signet`
+// cluster was exercised against this file (see TESTING.md and the
+// project's final report for the explicit scope note). Every I/O
+// dependency this file wires (signet, Postgres, RabbitMQ) is exercised for
+// real by this repo's own test tiers only indirectly, through the
+// injectable interfaces (`ContactStore`, `SignetAdmin`, `Publisher`,
+// `ChannelLike`) those tiers fake -- this file itself has no test coverage,
+// consistent with how `TESTING.md` scopes every other authstar service's
+// entrypoint.
+
+const actorsPath = path.join(path.dirname(fileURLToPath(import.meta.url)), 'actors')
+
+function requireEnv(name: string): string {
+  const value = process.env[name]
+  if (!value) throw new Error(`missing required environment variable ${name}`)
+  return value
+}
+
+function decodeBundleSecrets(bundle: Record<string, unknown> | undefined): Record<string, string> {
+  const secrets = (bundle?.secrets as Record<string, string> | undefined) ?? {}
+  const decoded: Record<string, string> = {}
+  for (const [key, value] of Object.entries(secrets)) {
+    decoded[key] = Buffer.from(value, 'base64').toString('utf8')
+  }
+  return decoded
+}
+
+async function main(): Promise<void> {
+  const namespace = requireEnv('SIGNET_NAMESPACE')
+  const service = process.env.SIGNET_SERVICE ?? 'tower'
+  const address = requireEnv('SIGNET_ADDR')
+  const trustDomain = requireEnv('SIGNET_TRUST_DOMAIN')
+  const adminAddress = process.env.SIGNET_ADMIN_ADDR ?? address
+
+  const controller = new AbortController()
+  const onSignal = () => controller.abort(new Error('shutdown signal received'))
+  process.once('SIGTERM', onSignal)
+  process.once('SIGINT', onSignal)
+
+  const workload = await dialWorkload({ address, trustDomain })
+
+  let bundleResponse: { bundle?: Record<string, unknown>, configVersion: number }
+  try {
+    bundleResponse = await new Promise((resolve, reject) => {
+      workload.client.getServiceBundle({ namespace, service }, (err, resp) => {
+        if (err) reject(err)
+        else resolve(resp)
+      })
+    })
+  } catch (err) {
+    workload.close()
+    throw err
+  }
+
+  const bundle = bundleResponse.bundle ?? {}
+  const secrets = decodeBundleSecrets(bundle)
+
+  const dbConnectionString = (bundle.dbConnectionString as string | undefined) ?? secrets.dbConnectionString
+  const rabbitmqUrl = (bundle.rabbitmqUrl as string | undefined) ?? secrets.rabbitmqUrl
+  const signetAdminToken = secrets.signetAdminToken ?? requireEnv('SIGNET_ADMIN_TOKEN')
+  const contactHashPepper = secrets.contactHashPepper
+  if (!dbConnectionString) throw new Error('signet bundle missing dbConnectionString')
+  if (!rabbitmqUrl) throw new Error('signet bundle missing rabbitmqUrl')
+  if (!contactHashPepper) throw new Error('signet bundle missing contactHashPepper secret')
+
+  const provisioningConfig: ProvisioningConfig = {
+    selfServiceEnabled: Boolean((bundle.provisioning as Record<string, unknown> | undefined)?.selfServiceEnabled ?? false),
+    baseDomain: ((bundle.provisioning as Record<string, unknown> | undefined)?.baseDomain as string | undefined) ?? 'authstar.app',
+    operatorToken: secrets.operatorToken ?? '',
+    defaultProvider: ((bundle.provisioning as Record<string, unknown> | undefined)?.defaultProvider as ProvisioningConfig['defaultProvider'] | undefined) ?? {
+      name: '', clientId: '', discoveryUrl: '', scope: [],
+    },
+    defaultProviderClientSecret: secrets['default-provider-client-secret'] ?? '',
+  }
+
+  const pgPool = new Pool({ connectionString: dbConnectionString })
+  await ensureContactsSchema(pgPool)
+
+  const pgAdapters = initializePostgresAdapters({ connectionString: dbConnectionString })
+  // `consequent-postgres`'s own adapter types (`ActorStore`/`EventStore`/
+  // `SearchAdapter`, concrete `string`-keyed) are structurally compatible
+  // at runtime with `consequent`'s own looser `unknown`-keyed adapter
+  // interfaces (confirmed by the existing integration test tier wiring
+  // them together the same way) but not nominally assignable under
+  // `--strict` -- the same friction the 2.0.1/2.0.4 `find()` fix this
+  // pilot slice depends on didn't change. Cast at this one boundary rather
+  // than loosening either package's own types.
+  const consequent = await initializeConsequent({
+    actors: actorsPath,
+    actorStore: pgAdapters.actor as never,
+    eventStore: pgAdapters.event as never,
+    searchAdapter: pgAdapters.search as never,
+    logging: { level: 'info' },
+  })
+
+  const amqpConnection = await amqplib.connect(rabbitmqUrl)
+  const amqpChannel = await amqpConnection.createChannel()
+  await amqpChannel.assertExchange('authstar', 'topic', { durable: true })
+
+  const entitlementQueue = await amqpChannel.assertQueue('tower.entitlement', { durable: true })
+  await amqpChannel.bindQueue(entitlementQueue.queue, 'authstar', 'entitlement.#')
+  await startEntitlementConsumer(amqpChannel, entitlementQueue.queue, { consequent })
+
+  const ackQueue = await amqpChannel.assertQueue('tower.contact-purge-ack', { durable: true })
+  await amqpChannel.bindQueue(ackQueue.queue, 'authstar', 'contact.purge.acknowledged')
+  await startErasureAckConsumer(amqpChannel, ackQueue.queue, { consequent })
+
+  const publisher = createAmqpPublisher(amqpChannel, 'authstar')
+  const signetAdmin = createSignetAdmin({ address: adminAddress, token: signetAdminToken, namespace })
+  const contactStore = createPgContactStore(pgPool, contactHashPepper)
+  const ids = createIdGenerator(service)
+
+  const app = await buildApp({
+    consequent,
+    contactStore,
+    signetAdmin,
+    publisher,
+    ids,
+    provisioningConfig,
+    logger: true,
+  })
+
+  // No real signet-sourced herald public key exists yet (ADR 0025's public-
+  // key-distribution gap -- see herald-payload-crypto.ts) -- falls back to
+  // a throwaway ephemeral key, same class of gap herald's own server.ts
+  // documents for its own key material. Every `comms.transactional.*`
+  // event published from this process is encrypted to a key herald cannot
+  // actually decrypt with until that wiring exists.
+  app.log.warn('no signet-sourced herald payload-encryption public key configured -- using an ephemeral throwaway key; comms.* events published from this process are not decryptable by a real herald instance until ADR 0025\'s key distribution is wired')
+
+  const port = Number(process.env.PORT ?? 8080)
+  await app.listen({ port, host: '0.0.0.0' })
+  app.log.info(`tower listening on :${port} (signet config version ${bundleResponse.configVersion})`)
+
+  // Race our own shutdown signal against signet's coordinated-restart wait
+  // so a stuck `waitForRestart` (an anomaly portcullis's own live-cluster
+  // testing found under real SPIFFE mTLS -- see TESTING.md) can never block
+  // an operator-issued SIGTERM.
+  await Promise.race([
+    waitForRestart(workload.client, namespace, service, 30, 10_000, { signal: controller.signal })
+      .then(async (lock) => {
+        app.log.info('signet bundle changed -- acquired restart lock, shutting down for Kubernetes to restart')
+        await app.close()
+        await lock.release()
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return // expected: our own shutdown aborted the wait
+        app.log.error({ err }, 'waitForRestart failed')
+      }),
+    new Promise<void>((resolve) => controller.signal.addEventListener('abort', () => resolve())).then(async () => {
+      app.log.info('shutdown signal received -- closing')
+      await app.close()
+    }),
+  ])
+
+  await pgAdapters.close()
+  await pgPool.end()
+  await amqpChannel.close()
+  await amqpConnection.close()
+  workload.close()
+  process.exit(0)
+}
+
+main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})

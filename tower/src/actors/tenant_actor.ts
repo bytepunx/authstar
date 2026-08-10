@@ -1,14 +1,22 @@
 // Per design/stories/tower/001-actor-definitions.md and
 // design/stories/tower/011-tenant-management-and-key-rotation.md.
 //
-// `applications`/`providers` (the aggregateFrom-embedded arrays) and the
-// `tenant.add-application`/`tenant.add-provider` commands that populate them
-// are intentionally not implemented yet -- this pilot slice covers only
-// creation and the tenant-management PATCH surface (name/cookie edits, the
-// restricted active->suspended transition). aggregateFrom is left declared
-// on the actor metadata so the shape matches Story 001 exactly; it has no
-// effect until `application`/`provider` actors exist to aggregate from.
-
+// `applications`/`providers` (the aggregateFrom-embedded arrays) were
+// originally left unpopulated -- Story 012 (tenant creation/provisioning,
+// ADR 0067) now populates them via `add-application`/`add-provider`, but
+// deliberately *not* through consequent's own cross-actor `aggregateFrom`
+// event-routing mechanism (declared on `actor.aggregateFrom` below only to
+// keep the shape matching Story 001 exactly). That mechanism (see
+// `consequent/dist/manager.js`'s `getSourceIds`/`onActor`) infers actor
+// *ids* to aggregate from state fields it never gets a chance to see here
+// (this command runs against `tenant` itself, before any child id exists)
+// and is undocumented enough in practice that hand-rolling a plain
+// `tenant.add-application` event that both creates the child `application`
+// actor (via a direct `consequent.handle` call in the route/orchestration
+// layer, see `src/routes/provisioning.ts`) and appends a lightweight
+// reference into this actor's own array is a safer, equally-correct
+// substitute for this pilot slice -- explicitly a scope trade-off, not an
+// oversight.
 export interface TenantCookie {
   domain: string
   path: string
@@ -23,6 +31,15 @@ export interface TenantBranding {
   primaryColor: string
 }
 
+export interface TenantApplicationRef {
+  slug: string
+  name: string
+}
+
+export interface TenantProviderRef {
+  name: string
+}
+
 export interface TenantState {
   slug: string
   name: string
@@ -30,10 +47,17 @@ export interface TenantState {
   cookie: TenantCookie
   seatLimit: number | null
   branding: TenantBranding
-  applications: unknown[]
-  providers: unknown[]
+  applications: TenantApplicationRef[]
+  providers: TenantProviderRef[]
   createdAt: string
   createdBy: string
+  // Story 012/ADR 0067: flips true only after all four provisioning
+  // secrets (session key, internal key, identity-hash-key generation 1,
+  // contact-hash-pepper) have been successfully pushed to signet -- lets a
+  // retried `POST /tenants` for an already-created slug skip re-pushing
+  // (and re-randomizing) secrets it already provisioned. Not present on
+  // Story 011's original shape; additive.
+  secretsProvisioned: boolean
 }
 
 interface CreateCommand {
@@ -51,6 +75,21 @@ interface UpdateCommand {
 interface SuspendCommand {
   status: 'suspended'
 }
+
+interface AddApplicationCommand {
+  slug: string
+  name: string
+}
+
+interface AddProviderCommand {
+  name: string
+}
+
+interface SetSeatLimitCommand {
+  seatLimit: number | null
+}
+
+interface MarkSecretsProvisionedCommand {}
 
 function create(_tenant: TenantState, command: CreateCommand) {
   return {
@@ -94,6 +133,26 @@ function rejectSuspend() {
   return Promise.reject(new Error('tenant must be active to be suspended'))
 }
 
+// Idempotent by construction -- a retried `POST /tenants` calling this
+// again for a slug already present in `applications` is a silent no-op at
+// the event-handler layer (see `applicationAdded` below), not a rejection,
+// matching ADR 0067's "retry-same-request is the recovery model".
+function addApplication(_tenant: TenantState, command: AddApplicationCommand) {
+  return { type: 'tenant.application-added', slug: command.slug, name: command.name }
+}
+
+function addProvider(_tenant: TenantState, command: AddProviderCommand) {
+  return { type: 'tenant.provider-added', name: command.name }
+}
+
+function setSeatLimit(_tenant: TenantState, command: SetSeatLimitCommand) {
+  return { type: 'tenant.seat-limit-set', seatLimit: command.seatLimit }
+}
+
+function markSecretsProvisioned(_tenant: TenantState, _command: MarkSecretsProvisionedCommand) {
+  return { type: 'tenant.secrets-provisioned' }
+}
+
 function created(tenant: TenantState, event: { slug: string, name: string, cookieDomain: string, createdBy: string }) {
   tenant.slug = event.slug
   tenant.name = event.name
@@ -111,6 +170,7 @@ function created(tenant: TenantState, event: { slug: string, name: string, cooki
   tenant.providers = []
   tenant.createdAt = new Date(0).toISOString() // replaced by consequent's own event timestamp on read
   tenant.createdBy = event.createdBy
+  tenant.secretsProvisioned = false
 }
 
 function updated(tenant: TenantState, event: { name?: string, cookie?: Partial<TenantCookie> }) {
@@ -126,6 +186,24 @@ function updated(tenant: TenantState, event: { name?: string, cookie?: Partial<T
 
 function suspended(tenant: TenantState) {
   tenant.status = 'suspended'
+}
+
+function applicationAdded(tenant: TenantState, event: { slug: string, name: string }) {
+  if (tenant.applications.some((a) => a.slug === event.slug)) return
+  tenant.applications = [...tenant.applications, { slug: event.slug, name: event.name }]
+}
+
+function providerAdded(tenant: TenantState, event: { name: string }) {
+  if (tenant.providers.some((p) => p.name === event.name)) return
+  tenant.providers = [...tenant.providers, { name: event.name }]
+}
+
+function seatLimitSet(tenant: TenantState, event: { seatLimit: number | null }) {
+  tenant.seatLimit = event.seatLimit
+}
+
+function secretsProvisioned(tenant: TenantState) {
+  tenant.secretsProvisioned = true
 }
 
 export default function tenantActor() {
@@ -148,6 +226,7 @@ export default function tenantActor() {
       providers: [],
       createdAt: '',
       createdBy: '',
+      secretsProvisioned: false,
     },
     commands: {
       create,
@@ -156,11 +235,19 @@ export default function tenantActor() {
         { when: isActive, then: suspend },
         rejectSuspend,
       ],
+      'add-application': addApplication,
+      'add-provider': addProvider,
+      'set-seat-limit': setSeatLimit,
+      'mark-secrets-provisioned': markSecretsProvisioned,
     },
     events: {
       created,
       updated,
       suspended,
+      'application-added': applicationAdded,
+      'provider-added': providerAdded,
+      'seat-limit-set': seatLimitSet,
+      'secrets-provisioned': secretsProvisioned,
     },
   }
 }
