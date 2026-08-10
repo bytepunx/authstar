@@ -1,0 +1,15 @@
+# Throwaway image for the real-signet smoke test (crates/authstar-config/examples/signet_smoke.rs).
+# Not part of portcullis's real deployment artifact — see the top-level Dockerfile for that.
+FROM rust:1-slim-bookworm AS builder
+WORKDIR /src
+RUN apt-get update && apt-get install -y --no-install-recommends pkg-config libssl-dev protobuf-compiler && rm -rf /var/lib/apt/lists/*
+COPY Cargo.toml Cargo.lock ./
+COPY crates/authstar-config ./crates/authstar-config
+COPY crates/authstar-middleware ./crates/authstar-middleware
+COPY crates/authstar-proxy ./crates/authstar-proxy
+RUN cargo build --example signet_smoke -p authstar-config --release
+
+FROM debian:bookworm-slim AS runtime
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && rm -rf /var/lib/apt/lists/*
+COPY --from=builder /src/target/release/examples/signet_smoke /usr/local/bin/signet_smoke
+ENTRYPOINT ["/usr/local/bin/signet_smoke"]

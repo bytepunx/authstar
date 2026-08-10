@@ -1,0 +1,915 @@
+//! Behavior-tier integration tests: a real axum app (gate + CORS + oauth2 routes + a stub
+//! "proxied" fallback), driven in-process via `tower::ServiceExt::oneshot` — no real sockets for
+//! the app under test. The OIDC provider and tower are both faked with `wiremock` (real HTTP
+//! servers bound to `127.0.0.1:0`, since the code under test makes real `reqwest` calls to
+//! them) — this is the same shape ref-proxy's own integration tests used, and the same
+//! philosophy the other authstar services' `TESTING.md`s describe for their behavior tier: real
+//! request/response handling, faked external dependencies only.
+
+use std::collections::HashMap;
+use std::sync::Arc;
+
+use authstar_config::bundle::Bundle;
+use authstar_config::RawSecrets;
+use authstar_middleware::enricher::{ClaimsEnricher, TowerClaimsEnricher};
+use authstar_middleware::gate::auth_gate;
+use authstar_middleware::router::{apply_auth_gate, apply_cors, oauth_routes};
+use authstar_middleware::state::{build_state, PortcullisState};
+use axum::body::Body;
+use axum::http::{header, Request, StatusCode};
+use axum::middleware::from_fn_with_state;
+use axum::response::IntoResponse;
+use axum::routing::get;
+use axum::Router;
+use base64::Engine;
+use http_body_util::BodyExt;
+use p256::pkcs8::{EncodePrivateKey, LineEnding};
+use p256::SecretKey;
+use serde_json::json;
+use tower::ServiceExt;
+use wiremock::matchers::{method, path};
+use wiremock::{Mock, MockServer, ResponseTemplate};
+
+// ---------------------------------------------------------------------------------------------
+// Test key generation (p256 is already a normal dependency of authstar-middleware, so it's
+// available here without any extra dev-dependency).
+// ---------------------------------------------------------------------------------------------
+
+struct OsRngAdapter;
+impl p256::elliptic_curve::rand_core::RngCore for OsRngAdapter {
+    fn next_u32(&mut self) -> u32 {
+        rand::rngs::OsRng.next_u32()
+    }
+    fn next_u64(&mut self) -> u64 {
+        rand::rngs::OsRng.next_u64()
+    }
+    fn fill_bytes(&mut self, dest: &mut [u8]) {
+        rand::rngs::OsRng.fill_bytes(dest)
+    }
+    fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+        rand::rngs::OsRng.fill_bytes(dest);
+        Ok(())
+    }
+}
+impl p256::elliptic_curve::rand_core::CryptoRng for OsRngAdapter {}
+
+fn generate_pem_key() -> String {
+    SecretKey::random(&mut OsRngAdapter)
+        .to_pkcs8_pem(LineEnding::LF)
+        .unwrap()
+        .to_string()
+}
+
+fn b64(s: &str) -> String {
+    base64::engine::general_purpose::STANDARD.encode(s)
+}
+
+// ---------------------------------------------------------------------------------------------
+// Test harness
+// ---------------------------------------------------------------------------------------------
+
+struct Harness {
+    app: Router,
+    #[allow(dead_code)]
+    oidc_server: MockServer,
+    tower_server: MockServer,
+}
+
+async fn build_harness() -> Harness {
+    let oidc_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/.well-known/openid-configuration"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "authorization_endpoint": format!("{}/authorize", oidc_server.uri()),
+            "token_endpoint": format!("{}/token", oidc_server.uri()),
+            "userinfo_endpoint": format!("{}/userinfo", oidc_server.uri()),
+        })))
+        .mount(&oidc_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "test-access-token",
+        })))
+        .mount(&oidc_server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/userinfo"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "email": "user@example.com",
+            "sub": "provider-sub-123",
+        })))
+        .mount(&oidc_server)
+        .await;
+
+    let tower_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/identities/resolve"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accountId": "acct-1",
+            "isNewAccount": false,
+        })))
+        .mount(&tower_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/enrich"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accountId": "acct-1",
+            "grantedRoles": ["member"],
+            "trialRoles": [],
+            "trialExpiresAt": null,
+            "usage": {},
+        })))
+        .mount(&tower_server)
+        .await;
+
+    let state = build_state_for(&oidc_server.uri(), &tower_server.uri()).await;
+    let app = build_app(state);
+
+    Harness {
+        app,
+        oidc_server,
+        tower_server,
+    }
+}
+
+async fn build_state_for(oidc_base: &str, tower_base: &str) -> Arc<PortcullisState> {
+    build_state_with_enricher_base(oidc_base, tower_base, tower_base).await
+}
+
+/// Like [`build_state_for`], but lets the `/enrich` calls (via the [`ClaimsEnricher`]) target a
+/// different base URL than `/identities/resolve` (used directly by the callback handler via
+/// `PortcullisState::tower_base_url`) — needed to simulate "identity resolution works fine at
+/// login time, but tower becomes unreachable later for per-request enrichment" without a whole
+/// separate bundle/harness.
+async fn build_state_with_enricher_base(
+    oidc_base: &str,
+    identities_tower_base: &str,
+    enrich_tower_base: &str,
+) -> Arc<PortcullisState> {
+    let session_key = generate_pem_key();
+    let internal_key = generate_pem_key();
+    let identity_hash_key = "identity-hash-key-material";
+
+    let bundle_json = json!({
+        "tenants": {
+            "acme": {
+                "status": "active",
+                "providers": {
+                    "testidp": {
+                        "clientId": "client-123",
+                        "discoveryUrl": oidc_base,
+                        "scope": ["openid", "email"],
+                    }
+                },
+                "cookie": {
+                    "domain": "app.acme.test",
+                    "path": "/",
+                    "maxAge": 604800,
+                    "httpOnly": true,
+                    "secure": false,
+                },
+                "jwt": {
+                    "issuer": "authstar",
+                    "audience": "acme",
+                    "expiresIn": "168h",
+                },
+                "identityHashKeyGenerations": [
+                    { "version": 1 }
+                ],
+                "applications": {
+                    "app": {
+                        "hosts": ["app.acme.test"],
+                        "server": { "publicUrl": "http://app.acme.test" },
+                        "upstream": {
+                            "base": "http://upstream.invalid",
+                            "routes": {},
+                            "timeout": 30,
+                        },
+                        "cors": { "origin": "https://allowed.example.com" },
+                        "exempt": ["/health", "/api/public/*"],
+                        "providers": ["testidp"],
+                    }
+                }
+            }
+        },
+        "secrets": {
+            "tenant-acme-session-key": b64(&session_key),
+            "tenant-acme-internal-key": b64(&internal_key),
+            "tenant-acme-identity-hash-key-1": b64(identity_hash_key),
+            "tenant-acme-provider-testidp-client-secret": b64("provider-client-secret"),
+        }
+    });
+
+    let config: Bundle = serde_json::from_value(bundle_json.clone()).unwrap();
+    let secrets = RawSecrets::from_bundle_json(&bundle_json).unwrap();
+    let http_client = reqwest::Client::new();
+    let enricher: Arc<dyn ClaimsEnricher> = Arc::new(TowerClaimsEnricher::new(
+        http_client.clone(),
+        enrich_tower_base.to_string(),
+    ));
+
+    let (state, warnings) = build_state(
+        config,
+        secrets,
+        http_client.clone(),
+        http_client,
+        enricher,
+        identities_tower_base.to_string(),
+    )
+    .await;
+    assert!(
+        warnings.is_empty(),
+        "expected no startup warnings, got: {:?}",
+        warnings.iter().map(|w| w.to_string()).collect::<Vec<_>>()
+    );
+    Arc::new(state)
+}
+
+/// A stub "upstream" handler standing in for the real reverse-proxy forwarding logic (tested
+/// separately, with its own routing concerns, in authstar-proxy). Reflects whether an internal
+/// token was attached so gate behavior can be asserted on directly.
+async fn stub_fallback(req: Request<Body>) -> axum::response::Response {
+    let ctx = req
+        .extensions()
+        .get::<authstar_middleware::context::ForwardContext>()
+        .cloned();
+    match ctx {
+        Some(c) => (
+            StatusCode::OK,
+            [(
+                "x-internal-token-present",
+                if c.internal_token.is_some() {
+                    "true"
+                } else {
+                    "false"
+                },
+            )],
+            "ok",
+        )
+            .into_response(),
+        None => (StatusCode::INTERNAL_SERVER_ERROR, "no forward context").into_response(),
+    }
+}
+
+fn build_app(state: Arc<PortcullisState>) -> Router {
+    let proxy_router: Router<Arc<PortcullisState>> = Router::new().fallback(stub_fallback);
+    let proxy_router = apply_auth_gate(proxy_router, state.clone());
+
+    let app: Router<Arc<PortcullisState>> = Router::new().merge(oauth_routes()).merge(proxy_router);
+    let app = apply_cors(app, state.clone());
+    app.with_state(state)
+}
+
+async fn body_string(response: axum::response::Response) -> String {
+    let bytes = response.into_body().collect().await.unwrap().to_bytes();
+    String::from_utf8(bytes.to_vec()).unwrap()
+}
+
+fn set_cookie_headers(response: &axum::response::Response) -> Vec<String> {
+    response
+        .headers()
+        .get_all(header::SET_COOKIE)
+        .iter()
+        .map(|v| v.to_str().unwrap().to_string())
+        .collect()
+}
+
+// ---------------------------------------------------------------------------------------------
+// Gate: unauthenticated
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn unauthenticated_browser_request_redirects_with_return_cookie() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::ACCEPT, "text/html")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FOUND);
+    let location = response
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert_eq!(location, "/oauth2/testidp/login"); // single working provider -> direct login path
+
+    let cookies = set_cookie_headers(&response);
+    assert!(cookies
+        .iter()
+        .any(|c| c.starts_with("authstar-return=/dashboard")));
+}
+
+#[tokio::test]
+async fn unauthenticated_api_client_gets_401() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::ACCEPT, "application/json")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+    assert_eq!(
+        response.headers().get(header::WWW_AUTHENTICATE).unwrap(),
+        "Bearer realm=\"authstar\""
+    );
+    let body = body_string(response).await;
+    assert!(body.contains("Unauthorized"));
+}
+
+#[tokio::test]
+async fn exempt_route_forwards_without_authentication() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/health")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-internal-token-present").unwrap(),
+        "false"
+    );
+}
+
+#[tokio::test]
+async fn exempt_wildcard_route_matches_subpath() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/api/public/widgets")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+}
+
+#[tokio::test]
+async fn unknown_host_is_404() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/")
+        .header(header::HOST, "nowhere.invalid")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
+// ---------------------------------------------------------------------------------------------
+// OAuth2 login initiation (Story 005)
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn login_redirects_to_provider_with_pkce_and_state() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/testidp/login")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FOUND);
+    let location = response
+        .headers()
+        .get(header::LOCATION)
+        .unwrap()
+        .to_str()
+        .unwrap();
+    assert!(location.contains("/authorize"));
+    assert!(location.contains("response_type=code"));
+    assert!(location.contains("client_id=client-123"));
+    assert!(location.contains("code_challenge_method=S256"));
+    assert!(location.contains("state="));
+
+    let cookies = set_cookie_headers(&response);
+    assert!(cookies.iter().any(|c| c.starts_with("oauth2-state=")));
+    assert!(cookies
+        .iter()
+        .any(|c| c.starts_with("oauth2-pkce-verifier=")));
+}
+
+#[tokio::test]
+async fn login_for_unknown_provider_is_404() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/nope/login")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
+// ---------------------------------------------------------------------------------------------
+// OAuth2 callback (Story 006)
+// ---------------------------------------------------------------------------------------------
+
+fn extract_cookie_value(cookies: &[String], name: &str) -> String {
+    cookies
+        .iter()
+        .find_map(|c| {
+            let prefix = format!("{name}=");
+            c.strip_prefix(&prefix)
+                .map(|rest| rest.split(';').next().unwrap().to_string())
+        })
+        .unwrap_or_else(|| panic!("cookie {name} not found in {cookies:?}"))
+}
+
+async fn perform_login(app: &Router) -> HashMap<String, String> {
+    let req = Request::builder()
+        .uri("/oauth2/testidp/login")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let response = app.clone().oneshot(req).await.unwrap();
+    let cookies = set_cookie_headers(&response);
+    let mut map = HashMap::new();
+    map.insert(
+        "oauth2-state".to_string(),
+        extract_cookie_value(&cookies, "oauth2-state"),
+    );
+    map.insert(
+        "oauth2-pkce-verifier".to_string(),
+        extract_cookie_value(&cookies, "oauth2-pkce-verifier"),
+    );
+    map
+}
+
+fn cookie_header(cookies: &HashMap<String, String>) -> String {
+    cookies
+        .iter()
+        .map(|(k, v)| format!("{k}={v}"))
+        .collect::<Vec<_>>()
+        .join("; ")
+}
+
+#[tokio::test]
+async fn callback_with_valid_code_and_state_issues_session() {
+    let harness = build_harness().await;
+    let flow_cookies = perform_login(&harness.app).await;
+    let state_value = flow_cookies.get("oauth2-state").unwrap().clone();
+
+    let req = Request::builder()
+        .uri(format!(
+            "/oauth2/testidp/callback?code=abc123&state={state_value}"
+        ))
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, cookie_header(&flow_cookies))
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FOUND);
+    assert_eq!(response.headers().get(header::LOCATION).unwrap(), "/");
+
+    let cookies = set_cookie_headers(&response);
+    assert!(cookies.iter().any(|c| c.starts_with("jwt=")));
+    // Flow cookies must always be cleared.
+    assert!(cookies
+        .iter()
+        .any(|c| c.starts_with("oauth2-state=") && c.contains("Max-Age=0")));
+    assert!(cookies
+        .iter()
+        .any(|c| c.starts_with("oauth2-pkce-verifier=") && c.contains("Max-Age=0")));
+}
+
+#[tokio::test]
+async fn callback_with_return_url_redirects_there() {
+    let harness = build_harness().await;
+    let flow_cookies = perform_login(&harness.app).await;
+    let state_value = flow_cookies.get("oauth2-state").unwrap().clone();
+    let mut cookies_with_return = flow_cookies.clone();
+    cookies_with_return.insert("authstar-return".to_string(), "/billing".to_string());
+
+    let req = Request::builder()
+        .uri(format!(
+            "/oauth2/testidp/callback?code=abc123&state={state_value}"
+        ))
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, cookie_header(&cookies_with_return))
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(
+        response.headers().get(header::LOCATION).unwrap(),
+        "/billing"
+    );
+}
+
+#[tokio::test]
+async fn callback_rejects_unsafe_return_url() {
+    let harness = build_harness().await;
+    let flow_cookies = perform_login(&harness.app).await;
+    let state_value = flow_cookies.get("oauth2-state").unwrap().clone();
+    let mut cookies_with_return = flow_cookies.clone();
+    cookies_with_return.insert("authstar-return".to_string(), "//evil.com".to_string());
+
+    let req = Request::builder()
+        .uri(format!(
+            "/oauth2/testidp/callback?code=abc123&state={state_value}"
+        ))
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, cookie_header(&cookies_with_return))
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.headers().get(header::LOCATION).unwrap(), "/");
+}
+
+#[tokio::test]
+async fn callback_state_mismatch_is_400() {
+    let harness = build_harness().await;
+    let flow_cookies = perform_login(&harness.app).await;
+
+    let req = Request::builder()
+        .uri("/oauth2/testidp/callback?code=abc123&state=wrong-state")
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, cookie_header(&flow_cookies))
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+#[tokio::test]
+async fn callback_missing_pkce_verifier_is_400() {
+    let harness = build_harness().await;
+    let flow_cookies = perform_login(&harness.app).await;
+    let state_value = flow_cookies.get("oauth2-state").unwrap().clone();
+
+    let req = Request::builder()
+        .uri(format!(
+            "/oauth2/testidp/callback?code=abc123&state={state_value}"
+        ))
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, format!("oauth2-state={state_value}"))
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::BAD_REQUEST);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Authenticated request through the gate -> enrichment -> internal token (Story 009/010/013)
+// ---------------------------------------------------------------------------------------------
+
+async fn login_and_get_session_cookie(app: &Router) -> String {
+    let flow_cookies = perform_login(app).await;
+    let state_value = flow_cookies.get("oauth2-state").unwrap().clone();
+
+    let req = Request::builder()
+        .uri(format!(
+            "/oauth2/testidp/callback?code=abc123&state={state_value}"
+        ))
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, cookie_header(&flow_cookies))
+        .body(Body::empty())
+        .unwrap();
+    let response = app.clone().oneshot(req).await.unwrap();
+    let cookies = set_cookie_headers(&response);
+    extract_cookie_value(&cookies, "jwt")
+}
+
+#[tokio::test]
+async fn authenticated_request_with_allow_outcome_gets_internal_token() {
+    let harness = build_harness().await;
+    let jwt = login_and_get_session_cookie(&harness.app).await;
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, format!("jwt={jwt}"))
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-internal-token-present").unwrap(),
+        "true"
+    );
+}
+
+#[tokio::test]
+async fn authenticated_exempt_route_still_gets_internal_token() {
+    // Opportunistic auth: exempt doesn't mean "never authenticate," it means "don't require it."
+    let harness = build_harness().await;
+    let jwt = login_and_get_session_cookie(&harness.app).await;
+
+    let req = Request::builder()
+        .uri("/health")
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, format!("jwt={jwt}"))
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-internal-token-present").unwrap(),
+        "true"
+    );
+}
+
+#[tokio::test]
+async fn invalid_jwt_is_treated_as_unauthenticated() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::ACCEPT, "application/json")
+        .header(header::COOKIE, "jwt=not-a-real-token")
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+// ---------------------------------------------------------------------------------------------
+// Enrichment Deny / Unreachable outcomes (Story 013/015)
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn deny_outcome_rejects_protected_route_with_tower_status() {
+    let oidc_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/.well-known/openid-configuration"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "authorization_endpoint": format!("{}/authorize", oidc_server.uri()),
+            "token_endpoint": format!("{}/token", oidc_server.uri()),
+            "userinfo_endpoint": format!("{}/userinfo", oidc_server.uri()),
+        })))
+        .mount(&oidc_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"access_token": "t"})))
+        .mount(&oidc_server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/userinfo"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "email": "user@example.com", "sub": "sub-1"
+        })))
+        .mount(&oidc_server)
+        .await;
+
+    let tower_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/identities/resolve"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accountId": "acct-1", "isNewAccount": false
+        })))
+        .mount(&tower_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/enrich"))
+        .respond_with(
+            ResponseTemplate::new(403).set_body_json(json!({"reason": "no active subscription"})),
+        )
+        .mount(&tower_server)
+        .await;
+
+    let state = build_state_for(&oidc_server.uri(), &tower_server.uri()).await;
+    let app = build_app(state);
+
+    let jwt = login_and_get_session_cookie(&app).await;
+
+    let protected_req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, format!("jwt={jwt}"))
+        .body(Body::empty())
+        .unwrap();
+    let response = app.clone().oneshot(protected_req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FORBIDDEN);
+
+    let exempt_req = Request::builder()
+        .uri("/health")
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, format!("jwt={jwt}"))
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(exempt_req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-internal-token-present").unwrap(),
+        "false"
+    );
+}
+
+#[tokio::test]
+async fn unreachable_tower_fails_open_with_degraded_token() {
+    let oidc_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/.well-known/openid-configuration"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "authorization_endpoint": format!("{}/authorize", oidc_server.uri()),
+            "token_endpoint": format!("{}/token", oidc_server.uri()),
+            "userinfo_endpoint": format!("{}/userinfo", oidc_server.uri()),
+        })))
+        .mount(&oidc_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({"access_token": "t"})))
+        .mount(&oidc_server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/userinfo"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "email": "user@example.com", "sub": "sub-1"
+        })))
+        .mount(&oidc_server)
+        .await;
+
+    let tower_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/identities/resolve"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accountId": "acct-1", "isNewAccount": false
+        })))
+        .mount(&tower_server)
+        .await;
+    // No /enrich mock registered at all would just get wiremock's default 404 (a real HTTP
+    // response, i.e. Deny(404) — not what this test wants). Point *only* the enricher at a port
+    // nothing listens on, to force a genuine connection failure -> Unreachable, while identity
+    // resolution at login time still succeeds against the real tower mock.
+    let state = build_state_with_enricher_base(
+        &oidc_server.uri(),
+        &tower_server.uri(),
+        "http://127.0.0.1:1",
+    )
+    .await;
+    let app = build_app(state);
+
+    let jwt = login_and_get_session_cookie(&app).await;
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, format!("jwt={jwt}"))
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    // Fail-open: still forwarded, still gets a (degraded) internal token.
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-internal-token-present").unwrap(),
+        "true"
+    );
+}
+
+// ---------------------------------------------------------------------------------------------
+// Logout (Story 016)
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn logout_clears_session_cookie_and_redirects() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/logout")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FOUND);
+    assert_eq!(response.headers().get(header::LOCATION).unwrap(), "/");
+    let cookies = set_cookie_headers(&response);
+    assert!(cookies
+        .iter()
+        .any(|c| c.starts_with("jwt=") && c.contains("Max-Age=0")));
+}
+
+// ---------------------------------------------------------------------------------------------
+// /oauth2/providers and /oauth2/select (Stories 017/018)
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn providers_endpoint_lists_working_providers() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/providers")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_string(response).await;
+    let parsed: serde_json::Value = serde_json::from_str(&body).unwrap();
+    assert_eq!(parsed[0]["id"], "testidp");
+    assert_eq!(parsed[0]["name"], "Testidp");
+    assert_eq!(parsed[0]["loginUrl"], "/oauth2/testidp/login");
+}
+
+#[tokio::test]
+async fn select_page_renders_html_links() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/select")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_string(response).await;
+    assert!(body.contains("/oauth2/testidp/login"));
+    assert!(body.contains("Testidp"));
+}
+
+// ---------------------------------------------------------------------------------------------
+// CORS (Story 019)
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn cors_preflight_matching_origin_gets_headers() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .method("OPTIONS")
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::ORIGIN, "https://allowed.example.com")
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NO_CONTENT);
+    assert_eq!(
+        response
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+            .unwrap(),
+        "https://allowed.example.com"
+    );
+    assert_eq!(
+        response
+            .headers()
+            .get(header::ACCESS_CONTROL_ALLOW_CREDENTIALS)
+            .unwrap(),
+        "true"
+    );
+}
+
+#[tokio::test]
+async fn cors_non_matching_origin_gets_no_headers() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .method("OPTIONS")
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::ORIGIN, "https://evil.example.com")
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert!(response
+        .headers()
+        .get(header::ACCESS_CONTROL_ALLOW_ORIGIN)
+        .is_none());
+}
+
+// ---------------------------------------------------------------------------------------------
+// Sanity check that the harness itself doesn't silently no-op (mirrors ref-proxy's own
+// "does the state builder actually reach the mock servers" concern).
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn direct_gate_call_smoke_test() {
+    // Exercises the middleware layer function directly (not just through the router) to catch
+    // any accidental divergence between `auth_gate` and how `router::apply_auth_gate` wires it.
+    let harness = build_harness().await;
+    let state_arc = {
+        // Re-derive an Arc<PortcullisState> the same way build_harness did, just to prove
+        // `from_fn_with_state`-style direct construction also works end to end.
+        let oidc = &harness.oidc_server;
+        let tower = &harness.tower_server;
+        build_state_for(&oidc.uri(), &tower.uri()).await
+    };
+    let router: Router<Arc<PortcullisState>> = Router::new()
+        .route("/health", get(|| async { "ok" }))
+        .layer(from_fn_with_state(state_arc.clone(), auth_gate));
+    let app = router.with_state(state_arc);
+
+    let req = Request::builder()
+        .uri("/health")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+}
