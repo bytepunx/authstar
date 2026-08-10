@@ -1,0 +1,19 @@
+# Plain (non-secret) config for chronicle.
+#
+# NOTE: as of this writing, chronicle/src/lib/config.ts has NO signet-client
+# wiring either — it reads CHRONICLE_* env vars directly (explicit code
+# comment: "a real signet client isn't wired up in this pilot slice").
+# clickhousePassword/rabbitmqUrl/internalJwtSecret are secret-only (see
+# secrets/authstar/chronicle/); the rest are plain per ADR 0036 ("chronicle
+# gets its own signet bundle... holding retentionMonths alongside its
+# ClickHouse and RabbitMQ connection details"). Field names below are this
+# repo's own choice (camelCase, mirroring the CHRONICLE_* env vars) since
+# neither the ADR nor the code pins down a signet bundle schema yet.
+clickhouseUrl: http://clickhouse.clickhouse.svc.cluster.local:8123
+clickhouseUsername: default
+clickhouseDatabase: chronicle
+retentionMonths: 24
+maxDateRangeDays: 92
+queryTimeoutMs: 10000
+rateLimitMax: 60
+rateLimitWindowMs: 60000

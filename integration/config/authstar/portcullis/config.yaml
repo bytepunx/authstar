@@ -1,0 +1,65 @@
+# Plain (non-secret) config for portcullis, matching the Bundle struct in
+# crates/authstar-config/src/bundle.rs exactly (#[serde(rename_all =
+# "camelCase")] throughout — field names below are the literal wire keys,
+# confirmed from the Rust struct definitions, not guessed from ADR 0014's
+# skeleton). Per-tenant secret key material (session-key, internal-key,
+# identity-hash-key-<n>, provider-<name>-client-secret) lives under
+# secrets/authstar/portcullis/ instead — see secrets.rs's own comment that
+# ProviderConfig deliberately has no client_secret field.
+#
+# towerUpstream is a judgment call (not explicitly named in the crate's
+# original story digest per its own code comment) needed for /enrich and
+# /identities/resolve east-west calls to tower.
+webUpstream:
+  address: http://web.authstar.svc.cluster.local:3000
+  timeout: 10
+
+towerUpstream:
+  address: http://tower.authstar.svc.cluster.local:3000
+  timeout: 10
+
+tenants:
+  acme:
+    status: active
+    providers:
+      dex:
+        clientId: authstar
+        discoveryUrl: http://dex.dex.svc.cluster.local:5556/.well-known/openid-configuration
+        scope:
+          - openid
+          - email
+    cookie:
+      domain: acme.authstar.app
+      path: /
+      maxAge: 604800
+      httpOnly: true
+      secure: false
+    jwt:
+      issuer: https://acme.authstar.app
+      audience: acme
+      expiresIn: 168h
+    branding:
+      name: Acme Corp
+      logoUrl: https://acme.authstar.app/logo.png
+      primaryColor: "#1a73e8"
+    identityHashKeyGenerations:
+      - version: 1
+        effectiveFrom: "2026-01-01T00:00:00Z"
+    applications:
+      web:
+        hosts:
+          - acme.authstar.app
+        server:
+          publicUrl: https://acme.authstar.app
+        upstream:
+          base: http://web.authstar.svc.cluster.local:3000
+          routes: {}
+          timeout: 30
+        cors:
+          origin: https://acme.authstar.app
+        exempt:
+          - /healthz
+        auth:
+          loginUrl: /login
+        providers:
+          - dex

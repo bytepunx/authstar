@@ -1,0 +1,17 @@
+# Plain (non-secret) config for tower, synced from config/ by signet's
+# repo-sync (see .sops.yaml's secrets/ scope vs this config/ path — this file
+# is never SOPS-encrypted). Field names/shape confirmed against
+# tower/src/server.ts (bundle.provisioning.*); dbConnectionString/rabbitmqUrl
+# are read here OR as a fallback from the secrets/ bundle — kept here since
+# kluster's postgres/rabbitmq addons use fixed, non-secret dev credentials.
+dbConnectionString: postgres://postgres:postgres@postgresql.postgres.svc.cluster.local:5432/tower?sslmode=disable
+rabbitmqUrl: amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/
+
+provisioning:
+  selfServiceEnabled: false
+  baseDomain: authstar.app
+  defaultProvider:
+    name: dex
+    clientId: authstar
+    discoveryUrl: http://dex.dex.svc.cluster.local:5556/.well-known/openid-configuration
+    scope: openid email

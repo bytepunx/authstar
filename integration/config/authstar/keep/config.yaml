@@ -1,0 +1,6 @@
+# Plain (non-secret) config for keep. dbConnectionString/rabbitmqUrl mirror
+# tower's pattern (server.ts reads bundle field first, secrets/ as fallback);
+# per-tenant Stripe key material is secret-only (see secrets/authstar/keep/),
+# never placed here.
+dbConnectionString: postgres://postgres:postgres@postgresql.postgres.svc.cluster.local:5432/keep?sslmode=disable
+rabbitmqUrl: amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/
