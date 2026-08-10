@@ -46,7 +46,9 @@ entitlement-publishing dependencies.
 
 ## What's covered vs. left for a follow-up pass
 
-**Fully implemented, all 3 tiers passing (70 tests: 65 behavior, 2 e2e, 3 integration):**
+**Fully implemented, all 3 tiers passing (70 tests: 65 behavior, 2 e2e, 3 integration) as of the
+original pilot slice; see "Scope covered by the amqplib/server.ts pass" below for what a later
+pass added on top:**
 
 - All 9 Story 001 actors: `customer`, `planMapping`, `subscription`, `trial`, `coupon`,
   `usageRecord`, `usageReportingCredential`, `refund`, `dispute`.
@@ -78,16 +80,11 @@ entitlement-publishing dependencies.
   0079) — needs portcullis's own `Host`-resolved application context to cross-check the
   credential against; the shared handler both ingress paths call
   (`POST /tenants/{tenantSlug}/usage-records`) *is* implemented and tested directly.
-- Real signet integration (`@bytepunx/signet-client`) — `stripe-config` storage
-  (`src/lib/stripe-config.ts`) and the `grantedRoles` reference cache
-  (`src/lib/role-reference-cache.ts`) are both built as injectable interfaces with in-memory
-  implementations, exactly as this pilot's brief asked for; real signet/tower-polling wiring is
-  a separate piece of work.
-- Real RabbitMQ publishing (`amqplib`/`amqp-connection-manager`) — `EntitlementPublisher`
-  (`src/lib/entitlement-publisher.ts`) is an injectable interface with a real, fully-exercised
-  in-memory implementation; no `createAmqpEntitlementPublisher` production wiring exists yet.
-  Tests thoroughly verify *what* would be published and in what order; not that it successfully
-  reaches a real broker.
+- The `grantedRoles` reference cache's tower-polling backfill (`src/lib/role-reference-cache.ts`)
+  — still an injectable interface with in-memory implementations only; `src/server.ts` (see
+  below) boots it with an empty snapshot rather than block on this unbuilt poller, so every
+  `grantedRoles` validation rejects in a real deployment until it's built. No keep story
+  specifies the polling mechanism yet.
 - Entitlement sequence numbers (`SequenceProvider`) are in-memory only — correct within one
   process's lifetime (what every test needs), not durable across a restart. A real deployment
   needs this backed by something that survives one (a dedicated actor, a Postgres counter table)
@@ -95,8 +92,67 @@ entitlement-publishing dependencies.
 - The periodic plan-mapping pricing re-sync job (Story 003) — the `syncPricing` actor command
   exists and is exercised implicitly by nothing yet; the actual `CronJob`-style scheduler isn't
   built.
-- Server entrypoint (`src/server.ts`) — same scope decision tower's own pilot made; nothing in
-  either pilot's `package.json` `dev` script has anything to point at yet.
+
+## Scope covered by the amqplib/server.ts pass
+
+Closes the two gaps the original pilot slice explicitly left open: real RabbitMQ publishing and
+a real production entrypoint. All 3 tiers still pass, now 74 tests total (65 behavior, 2 e2e, 7
+integration — up from 3, see below).
+
+- **`src/lib/amqp-entitlement-publisher.ts`** — the real `amqplib`-backed
+  `createAmqpEntitlementPublisher`, publishing onto the exact same durable topic exchange
+  (`authstar`, `durable: true`, ADR 0006's must-not-lose tier) tower's own
+  `entitlement-consumer.ts` binds `entitlement.#` against — confirmed directly against tower's
+  `src/server.ts`, not assumed. Routing key is each event's own `type` field
+  (`entitlement.<eventType>`); the published payload strips `type` before serializing, matching
+  tower's `EntitlementEnvelope` shape (which carries no `type`/`eventType` field of its own —
+  the routing key alone conveys which event arrived, per ADR 0031). `persistent: true`, same as
+  tower's own `createAmqpPublisher`.
+- **`src/server.ts`** — real production entrypoint, following tower's own `src/server.ts`
+  pattern exactly: signet bundle fetch (`dialWorkload` + `getServiceBundle`), real
+  `consequent-postgres` adapters, a real `amqplib` connection asserting the `authstar` exchange
+  and wiring it into the entitlement publisher, a real Stripe client factory
+  (`createStripeClientFactory`), fastify app start, then racing `SIGTERM`/`SIGINT` against
+  `waitForRestart`'s coordinated-restart lock. Not live-validated against a real cluster (see
+  below) — same scope decision tower's own `server.ts` documents.
+- **`src/lib/signet-stripe-config-store.ts`** — real signet wiring for `stripe-config`
+  (ADR 0052), filling the gap `src/routes/stripe-config.ts`'s own header comment flagged as
+  out of scope. `get()` reads from a startup snapshot of keep's own decoded bundle secrets;
+  `set()` pushes both secrets via `GitOpsService.syncBundle`, using the same minimal
+  tar.gz-archive-then-gzip approach as tower's `signet-admin.ts` (`pushSecret`), adapted to
+  ADR 0052's narrower "own bundle only" token scope (no `targetService` parameter, no
+  `secrets/<service>/` prefix). Carries the identical plaintext-not-SOPS-encrypted caveat
+  tower's own file documents — not resolved here either.
+- **`spec/integration/entitlement-publishing.integration.spec.ts`** — the new real-RabbitMQ
+  integration coverage (`@testcontainers/rabbitmq`, matching the exact devDependency version
+  chronicle's own RabbitMQ integration tier pins). `consequent` stays in-memory and Stripe
+  stays faked here — scoped to this one dependency (RabbitMQ), same reasoning chronicle's own
+  `rabbitmq.integration.spec.ts` documents for not combining multiple real dependencies in one
+  test. Genuinely passes against a real broker: a checkout-driven webhook publishes
+  `entitlement.converted-to-paid` and `entitlement.role-granted` onto the real `authstar`
+  exchange, a separate consumer connection (standing in for tower's real consumer) binds
+  `entitlement.#` and receives both messages with the exact envelope shape tower's consumer
+  expects (`type` field absent, `sequence` monotonic per tenant/scope), `deliveryMode: 2`
+  (persistent) is confirmed on the wire, and a queue bound to an unrelated routing key
+  (`entitlement.seat-limit-changed`, which this account-scoped subscription never fires)
+  receives nothing.
+
+**Deliberately deferred in this pass, same "documented, not silently glossed over" discipline as
+above:**
+
+- **Live signet/RabbitMQ/Postgres/SPIFFE validation** — `src/server.ts` was not run against a
+  real `kluster up --profile authstar` cluster. Every I/O boundary it wires is exercised for
+  real only through its own injected interface's test double or (Postgres, RabbitMQ) this
+  repo's own integration tier against disposable, real infrastructure — `server.ts` itself has
+  no test coverage of its own, consistent with how tower's own entrypoint is scoped.
+- **`signet-stripe-config-store.ts`'s real `SyncBundle` RPC** — real request shape, real
+  streaming, real auth, but never exercised against a live signet server (no fake signet server
+  in this repo to test against) — same gap tower's own `signet-admin.ts` has.
+- **The `grantedRoles` reference cache poller and `SequenceProvider` durability** — both listed
+  above as already-deferred from the original pilot slice; `src/server.ts` wires them exactly as
+  they exist today (empty snapshot, in-memory counters) rather than building the missing pieces,
+  since no keep story specifies either mechanism yet and this pass's scope was the two gaps
+  named at the top of this section.
 
 ## Six real gotchas this pilot found — worth knowing before writing more services' tests
 
