@@ -64,7 +64,15 @@ function buildSecretArchive(targetService: 'tower' | 'portcullis', key: string, 
 }
 
 export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
-  const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token })
+  // plaintext: true is required, not optional: signet's admin/GitOps listener never
+  // terminates TLS itself, even reached by its in-cluster DNS name (a non-loopback
+  // address) -- per signet-clients' own DialAdminOptions.plaintext doc comment,
+  // omitting this makes the client's loopback heuristic pick TLS and the handshake
+  // fails immediately ("wrong version number") against a server that never speaks
+  // TLS on that port. Confirmed for real against a live cluster: SIGNET_ADMIN_ADDR
+  // is signet.signet.svc.cluster.local:8444, and self-service tenant provisioning
+  // 500'd with exactly that OpenSSL error before this was added.
+  const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token, plaintext: true })
 
   return {
     pushSecret(targetService, key, value) {
