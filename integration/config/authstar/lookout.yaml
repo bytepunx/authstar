@@ -3,8 +3,12 @@
 # NOTE: as of this writing, lookout/src/server.ts has NO signet-client wiring
 # at all — it reads LOOKOUT_RABBITMQ_URL directly from the process
 # environment (with an explicit code comment flagging this as a stand-in).
-# This file/scope is provisioned ahead of that wiring landing, following the
-# sibling services' rabbitmqUrl convention, so the plumbing is ready when
-# lookout's own code catches up. Until then, nothing in lookout actually
-# fetches this value from signet.
-rabbitmqUrl: amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/
+#
+# rabbitmqUrl deliberately NOT here even as a placeholder: it's a
+# credential, and once lookout does adopt signet wiring, a
+# `bundle.field ?? secrets.field`-shaped fallback (the pattern tower/keep/
+# herald already use) would make this config value WIN over the real
+# secrets/authstar/lookout/rabbitmqUrl.yaml value -- exactly the live bug
+# found and fixed in tower/keep/herald's own config.yaml (stale guest/guest
+# silently overriding a correctly-provisioned secret once config sync
+# started working). Not worth reintroducing here pre-emptively.

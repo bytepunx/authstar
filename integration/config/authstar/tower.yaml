@@ -1,11 +1,19 @@
 # Plain (non-secret) config for tower, synced from config/ by signet's
 # repo-sync (see .sops.yaml's secrets/ scope vs this config/ path — this file
 # is never SOPS-encrypted). Field names/shape confirmed against
-# tower/src/server.ts (bundle.provisioning.*); dbConnectionString/rabbitmqUrl
-# are read here OR as a fallback from the secrets/ bundle — kept here since
-# kluster's postgres/rabbitmq addons use fixed, non-secret dev credentials.
-dbConnectionString: postgres://postgres:postgres@postgresql.postgres.svc.cluster.local:5432/tower?sslmode=disable
-rabbitmqUrl: amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/
+# tower/src/server.ts (bundle.provisioning.*).
+#
+# dbConnectionString/rabbitmqUrl deliberately NOT here: they're credentials,
+# and server.ts's `bundle.field ?? secrets.field` fallback means config
+# WINS over secrets when both are set -- this file used to duplicate both
+# with a stale guest/guest placeholder, which silently overrode the real,
+# correctly-provisioned secrets/authstar/tower/rabbitmqUrl.yaml value the
+# moment config sync started actually working (see this repo's own git log
+# for the config/authstar/<service>/config.yaml -> config/authstar/<service>.yaml
+# path-flattening fix — config never synced at all before that, which is
+# the only reason this mistake went unnoticed for as long as it did).
+# Confirmed for real against a live cluster: RabbitMQ's own broker log
+# showed literal user 'guest' being rejected, sourced from exactly this file.
 
 provisioning:
   selfServiceEnabled: false
