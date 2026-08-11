@@ -34,6 +34,27 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
+          # TCP-only (no dedicated health route on any of these services yet):
+          # confirmed for real that a service can be "1/1 Running" in
+          # kubectl's eyes while its HTTP listener has actually stopped
+          # accepting connections (a self-restart-on-signet-bundle-change
+          # whose shutdown hung instead of exiting, observed live against
+          # this exact cluster) -- with no probe at all, Kubernetes has no
+          # way to detect or recover from that. A TCP probe at least catches
+          # "port stopped accepting connections", which is what actually
+          # happened.
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
           env:
             - name: TOWER_BASE_URL
               value: http://tower.authstar.svc.cluster.local:8080
