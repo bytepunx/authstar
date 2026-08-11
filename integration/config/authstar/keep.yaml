@@ -1,6 +1,16 @@
-# Plain (non-secret) config for keep. dbConnectionString/rabbitmqUrl mirror
-# tower's pattern (server.ts reads bundle field first, secrets/ as fallback);
-# per-tenant Stripe key material is secret-only (see secrets/authstar/keep/),
-# never placed here.
-dbConnectionString: postgres://postgres:postgres@postgresql.postgres.svc.cluster.local:5432/keep?sslmode=disable
-rabbitmqUrl: amqp://guest:guest@rabbitmq.rabbitmq.svc.cluster.local:5672/
+# Plain (non-secret) config for keep.
+#
+# dbConnectionString/rabbitmqUrl deliberately NOT here: they're credentials,
+# and server.ts's `bundle.field ?? secrets.field` fallback means config WINS
+# over secrets when both are set -- this file used to duplicate both with a
+# stale guest/guest placeholder, which silently overrode the real,
+# correctly-provisioned secrets/authstar/keep/rabbitmqUrl.yaml value the
+# moment config sync started actually working (see this repo's own git log
+# for the config/authstar/<service>/config.yaml -> config/authstar/<service>.yaml
+# path-flattening fix -- config never synced at all before that, which is the
+# only reason this mistake went unnoticed for as long as it did). Confirmed
+# for real against a live cluster: RabbitMQ's own broker log showed literal
+# user 'guest' being rejected, sourced from exactly this file.
+#
+# No other plain config exists for keep today -- per-tenant Stripe key
+# material is secret-only (see secrets/authstar/keep/), never placed here.
