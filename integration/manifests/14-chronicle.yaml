@@ -1,0 +1,60 @@
+# No signet wiring yet (see config/authstar/chronicle/config.yaml's own
+# note) — no SPIFFE volume, no SIGNET_* env vars, just the CHRONICLE_* env
+# vars its own config.ts reads. Requires 01-db-init-job.yaml to have run
+# first (creates the "chronicle" ClickHouse database).
+#
+# CHRONICLE_RABBITMQ_URL's credential is this specific cluster's live,
+# randomly-generated broker credential, not guest/guest -- see
+# scripts/lib-secrets.sh's header comment for how to read the current one
+# and why guest/guest 403s (ACCESS_REFUSED) against a real broker.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chronicle
+  namespace: authstar
+  labels:
+    app: chronicle
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: chronicle
+  template:
+    metadata:
+      labels:
+        app: chronicle
+    spec:
+      serviceAccountName: chronicle
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: chronicle
+          image: arobson/authstar-chronicle:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: CHRONICLE_CLICKHOUSE_URL
+              value: http://clickhouse.clickhouse.svc.cluster.local:8123
+            - name: CHRONICLE_CLICKHOUSE_USERNAME
+              value: default
+            - name: CHRONICLE_CLICKHOUSE_PASSWORD
+              value: clickhouse
+            - name: CHRONICLE_CLICKHOUSE_DATABASE
+              value: chronicle
+            - name: CHRONICLE_RABBITMQ_URL
+              value: amqp://rmq-286c60bcc9a899b8:9bd84edf3bcdd82aa0ad7b280ea4c9e26efabfe9@rabbitmq.rabbitmq.svc.cluster.local:5672/
+            - name: CHRONICLE_INTERNAL_JWT_SECRET
+              value: dev-only-insecure-secret
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: chronicle
+  namespace: authstar
+spec:
+  selector:
+    app: chronicle
+  ports:
+    - port: 3000
+      targetPort: 3000

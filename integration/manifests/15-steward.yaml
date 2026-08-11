@@ -1,0 +1,47 @@
+# No signet wiring yet, no SPIFFE volume. Steward never holds an operator
+# bearer token itself (ADR 0045/0048) -- a human types tower's operatorToken
+# secret into steward's own Connect UI each session, so nothing here needs
+# to source that secret.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steward
+  namespace: authstar
+  labels:
+    app: steward
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: steward
+  template:
+    metadata:
+      labels:
+        app: steward
+    spec:
+      serviceAccountName: steward
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: steward
+          image: arobson/authstar-steward:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: TOWER_URL
+              value: http://tower.authstar.svc.cluster.local:8080
+            - name: HERALD_URL
+              value: http://herald.authstar.svc.cluster.local:8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: steward
+  namespace: authstar
+spec:
+  selector:
+    app: steward
+  ports:
+    - port: 3000
+      targetPort: 3000

@@ -1,0 +1,59 @@
+# kluster's postgres/clickhouse addons each provision one bare default
+# database ("postgres" / no custom database at all — see
+# kluster-lib/addon/postgres.go and clickhouse.go, neither creates anything
+# per-service). But tower/keep/herald's own committed config/secrets
+# (config/authstar/*/config.yaml, secrets/authstar/*/dbConnectionString.yaml)
+# each name a distinct per-service database ("tower", "keep", "herald"), and
+# chronicle's config names a "chronicle" ClickHouse database — none of which
+# exist until something creates them. This Job does that, once, before the
+# service Deployments start (apply this before 10-19-*.yaml, or re-run it
+# any time — every statement is idempotent: CREATE DATABASE IF NOT EXISTS /
+# equivalent).
+#
+# chronicle's own clickhouse-client.ts already does `CREATE TABLE IF NOT
+# EXISTS` for its own schema on startup, so only the database itself (not
+# its tables) needs to be pre-created here.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: authstar-db-init
+  namespace: authstar
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      initContainers:
+        - name: postgres-databases
+          image: postgres:16-alpine
+          env:
+            - name: PGPASSWORD
+              value: postgres
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              for db in tower keep herald; do
+                exists=$(psql -h postgresql.postgres.svc.cluster.local -U postgres -d postgres -tAc \
+                  "SELECT 1 FROM pg_database WHERE datname='${db}'")
+                if [ "$exists" != "1" ]; then
+                  echo "creating database ${db}"
+                  psql -h postgresql.postgres.svc.cluster.local -U postgres -d postgres \
+                    -c "CREATE DATABASE ${db}"
+                else
+                  echo "database ${db} already exists"
+                fi
+              done
+      containers:
+        - name: clickhouse-database
+          image: curlimages/curl:8.11.1
+          command:
+            - sh
+            - -c
+            - |
+              set -eu
+              curl -sf -u default:clickhouse \
+                "http://clickhouse.clickhouse.svc.cluster.local:8123/" \
+                --data-binary "CREATE DATABASE IF NOT EXISTS chronicle"
+              echo "chronicle database ensured"

@@ -1,0 +1,66 @@
+# tower is the only service whose signet-admin.ts wiring calls signet's
+# GitOpsService (self-service tenant provisioning pushes new secrets/config)
+# — that RPC lives on signet's admin port (8444, gated by the chart's
+# admin.clusterAccess flag — see kluster-lib/addon/signet.go), NOT the
+# regular workload port (8443) tower/src/server.ts's dialWorkload/
+# getServiceBundle calls use. SIGNET_ADMIN_ADDR must be set explicitly:
+# tower's own fallback (`SIGNET_ADMIN_ADDR ?? SIGNET_ADDR`) would silently
+# point GitOps calls at the wrong port otherwise.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tower
+  namespace: authstar
+  labels:
+    app: tower
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tower
+  template:
+    metadata:
+      labels:
+        app: tower
+    spec:
+      serviceAccountName: tower
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: tower
+          image: arobson/authstar-tower:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_ADMIN_ADDR
+              value: signet.signet.svc.cluster.local:8444
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tower
+  namespace: authstar
+spec:
+  selector:
+    app: tower
+  ports:
+    - port: 8080
+      targetPort: 8080

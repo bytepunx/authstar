@@ -1,0 +1,53 @@
+# No signet wiring yet, no SPIFFE volume. INTERNAL_JWT_JWKS_URL is
+# deliberately unset -- portcullis has no JWKS-serving route yet (see
+# config/authstar/web/config.yaml's own note) -- so web falls back to its
+# own documented "treat every request as unauthenticated" mode. Real gap,
+# not something to paper over here.
+#
+# PUBLIC_TOWER_BASE_URL is browser-visible ($env/dynamic/public) and only
+# matters for a human driving the signup page directly; it assumes
+# `kubectl port-forward svc/tower 8080:8080` on the tester's machine, not a
+# real ingress. Scripted (non-browser) flows don't touch this value.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: authstar
+  labels:
+    app: web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      serviceAccountName: web
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: web
+          image: arobson/authstar-web:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: TOWER_BASE_URL
+              value: http://tower.authstar.svc.cluster.local:8080
+            - name: PUBLIC_TOWER_BASE_URL
+              value: http://localhost:8080
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: web
+  namespace: authstar
+spec:
+  selector:
+    app: web
+  ports:
+    - port: 3000
+      targetPort: 3000
