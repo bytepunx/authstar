@@ -19,7 +19,7 @@ source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 require_cmd kubectl
 
 : "${DOCKERHUB_USERNAME:?set DOCKERHUB_USERNAME to a DockerHub account with pull access to bytepunx/authstar-*}"
-: "${DOCKERHUB_TOKEN:?set DOCKERHUB_TOKEN to that account's access token}"
+: "${DOCKERHUB_TOKEN:?set DOCKERHUB_TOKEN to that accounts access token}"
 
 log "applying namespace + service accounts"
 kubectl apply -f "$REPO_ROOT/manifests/00-namespace.yaml"
