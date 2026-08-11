@@ -56,7 +56,15 @@ export default defineConfig({
 			reuseExistingServer: !process.env.CI,
 		},
 		{
-			command: 'npm run build && npm run preview -- --port 4173',
+			// --host 127.0.0.1 is required, not cosmetic: vite preview's default
+			// host binding resolves "localhost" via Node's own DNS order, which
+			// on some platforms (confirmed locally, and matches the exact
+			// failure CI hit) prefers ::1 and never binds the IPv4 loopback at
+			// all -- ADMIN_URL above is a literal 127.0.0.1, so Playwright's
+			// polling GET never connects and the whole webServer wait times
+			// out even though the server is actually up and serving requests
+			// on ::1.
+			command: 'npm run build && npm run preview -- --port 4173 --host 127.0.0.1',
 			env: {
 				TOWER_BASE_URL: FAKE_BACKEND_URL,
 				PUBLIC_TOWER_BASE_URL: FAKE_BACKEND_URL,
@@ -65,7 +73,13 @@ export default defineConfig({
 			},
 			url: ADMIN_URL,
 			reuseExistingServer: !process.env.CI,
-			timeout: 120_000,
+			// 120s wasn't enough on a shared GitHub Actions runner -- this
+			// entry runs a full cold `npm run build` (not just `preview`
+			// startup) before the server is even listening, and CI's
+			// `docker.yml` test job hit "Timed out waiting 120000ms from
+			// config.webServer" for real, before this ever reached the
+			// docker publish step.
+			timeout: 300_000,
 		},
 	],
 })
