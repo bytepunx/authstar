@@ -141,9 +141,17 @@ export default class RealClickHouseClient implements ClickHouseApi {
 
   async insertEvents(rows: AnalyticsEventRow[]): Promise<void> {
     if (rows.length === 0) return
+    // toClickHouseDateTime is required here too, not just for query parameter
+    // binding -- confirmed for real against a live instance: JSONEachRow insert
+    // parsing rejects an RFC 3339 `timestamp` ("...T...Z") with "Cannot parse
+    // input: expected '\"' before: ...", the exact same underlying DateTime64
+    // format restriction this function's own comment already documents for the
+    // query-parameter path. map-event.ts passes the incoming message's
+    // timestamp straight through as an opaque string with no normalization.
+    const normalizedRows = rows.map((row) => ({ ...row, timestamp: toClickHouseDateTime(row.timestamp) }))
     await this.client.insert({
       table: 'analytics_events',
-      values: rows,
+      values: normalizedRows,
       format: 'JSONEachRow',
     })
   }
