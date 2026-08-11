@@ -106,7 +106,16 @@ export default class RealClickHouseClient implements ClickHouseApi {
           method Nullable(String),
           path Nullable(String),
           status Nullable(UInt16),
-          latencyMs Nullable(UInt32),
+          -- Float32, not UInt32: lookout's own event schema declares
+          -- latencyMs as JSON Schema "number" (fractional values allowed,
+          -- e.g. 42.5ms), which a UInt32 column can't store at all --
+          -- confirmed live: every event with a non-integer latencyMs
+          -- failed JSONEachRow insert parsing outright and was silently
+          -- dropped (nacked without requeue). Sub-millisecond precision
+          -- also matters for this table's own p50/p95/p99 percentile
+          -- metrics, so Float32 is the right type on its own merits, not
+          -- just a compatibility fix.
+          latencyMs Nullable(Float32),
           clientPayload Nullable(String),
           eventId String
         )
