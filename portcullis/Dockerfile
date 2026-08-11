@@ -8,6 +8,14 @@
 
 FROM rust:1-slim-bookworm AS chef
 WORKDIR /app
+# CARGO_BUILD_JOBS=1: required for the linux/arm64 leg of a multi-platform build on an amd64
+# runner (see .github/workflows/docker.yml) -- cargo's default parallel codegen-unit/crate
+# compilation deadlocks (not just slows down) under QEMU user-mode emulation, a known
+# characteristic of combining qemu-user with Rust's threading model, not specific to this
+# project or to GitHub Actions. Confirmed for real: the arm64 leg hung for 1h14m+ on one build
+# step with unlimited jobs before this was added. Serializes compilation, so it's slower per
+# build, but it actually completes.
+ENV CARGO_BUILD_JOBS=1
 RUN apt-get update && apt-get install -y --no-install-recommends pkg-config libssl-dev && rm -rf /var/lib/apt/lists/*
 RUN cargo install cargo-chef --locked
 
