@@ -86,7 +86,14 @@ export interface SignetStripeConfigStoreOptions {
 }
 
 export function createSignetStripeConfigStore(opts: SignetStripeConfigStoreOptions): StripeConfigStore {
-  const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token })
+  // plaintext: true is required, not optional: signet's admin/GitOps listener never
+  // terminates TLS itself, even reached by its in-cluster DNS name (a non-loopback
+  // address) -- per signet-clients' own DialAdminOptions.plaintext doc comment,
+  // omitting this makes the client's loopback heuristic pick TLS and the handshake
+  // fails immediately ("wrong version number") against a server that never speaks
+  // TLS on that port. Confirmed for real against a live cluster (same bug found and
+  // fixed in tower's signet-admin.ts).
+  const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token, plaintext: true })
   const secrets = new Map<string, string>(Object.entries(opts.initialSecrets))
 
   function pushSecret(key: string, value: string): Promise<void> {
