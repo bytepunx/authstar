@@ -46,13 +46,26 @@ secrets/authstar/<service>/<name>.yaml
                          <secrets-root>/<namespace>/<service>/<name>.yaml
                          convention (single shared "authstar" namespace, one
                          signet scope per service — ADR 0014)
-config/authstar/<service>/config.yaml
-                         plain (non-secret) config per service, at signet's
-                         <config-root>/<namespace>/<service>.yaml-shaped
-                         convention (nested one level deeper here since each
-                         service's config is non-trivial — see provision.sh's
-                         `--config-path config/` flag, which points at the
-                         directory root, not a fixed filename)
+config/authstar/<service>.yaml
+                         plain (non-secret) config per service. MUST be a flat
+                         file at exactly <config-root>/<namespace>/<service>.yaml
+                         — signet's own ParseConfigPath (internal/gitops/path.go)
+                         requires exactly 2 path components after the config
+                         root and errors otherwise. An earlier version of this
+                         repo nested these one level deeper
+                         (config/authstar/<service>/config.yaml, on the theory
+                         that non-trivial config needed its own directory) —
+                         that never actually synced: signet's gitops sync
+                         silently ignored every file at 3+ components, so
+                         every service's config bundle was empty. Only
+                         portcullis noticed (Rust's Bundle struct fails loudly
+                         on a missing required field); tower/keep/herald
+                         appeared to work because dbConnectionString/
+                         rabbitmqUrl are also provisioned as secrets with a
+                         `bundle.field ?? secrets.field` fallback in their own
+                         code — the secret half masked the broken config half.
+                         Confirmed for real against a live cluster, not
+                         theoretical.
 ```
 
 ## Provisioning flow
