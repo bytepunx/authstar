@@ -12,6 +12,12 @@
 # No secret scope is provisioned for web: it holds no signing key of its own
 # (it only verifies portcullis-signed JWTs via a JWKS URL), and that JWKS
 # endpoint is public key material, not a secret.
-towerBaseUrl: http://tower.authstar.svc.cluster.local:3000
-publicTowerBaseUrl: http://localhost:3000
-internalJwtJwksUrl: http://portcullis.authstar.svc.cluster.local:8443/.well-known/jwks.json
+#
+# internalJwtJwksUrl is intentionally left unset: portcullis's own code has
+# no JWKS-serving route yet (grepped crates/authstar-middleware for "jwks" —
+# no hits outside test/doc strings), so pointing this at any URL would just
+# 404. With it unset, web's own hooks.server.ts falls back to treating every
+# request as unauthenticated (its own documented behavior) — real gap, not
+# this file's bug to paper over.
+towerBaseUrl: http://tower.authstar.svc.cluster.local:8080
+publicTowerBaseUrl: http://localhost:8080

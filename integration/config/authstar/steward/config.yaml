@@ -12,5 +12,5 @@
 # session.md, a human operator types it in each session and steward only
 # forwards it per-request. No secret scope is provisioned for steward as a
 # result.
-towerUrl: http://tower.authstar.svc.cluster.local:3000
-heraldUrl: http://herald.authstar.svc.cluster.local:3300
+towerUrl: http://tower.authstar.svc.cluster.local:8080
+heraldUrl: http://herald.authstar.svc.cluster.local:8080

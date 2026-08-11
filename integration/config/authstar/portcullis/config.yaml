@@ -15,7 +15,7 @@ webUpstream:
   timeout: 10
 
 towerUpstream:
-  address: http://tower.authstar.svc.cluster.local:3000
+  address: http://tower.authstar.svc.cluster.local:8080
   timeout: 10
 
 tenants:
