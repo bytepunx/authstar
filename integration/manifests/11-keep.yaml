@@ -1,0 +1,61 @@
+# SIGNET_ADMIN_ADDR is set for the same reason as tower's (see 10-tower.yaml's
+# header comment): keep's signet-admin.ts wiring also calls signet's
+# GitOpsService on the admin port (8444), not the workload port (8443).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keep
+  namespace: authstar
+  labels:
+    app: keep
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keep
+  template:
+    metadata:
+      labels:
+        app: keep
+    spec:
+      serviceAccountName: keep
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: keep
+          image: arobson/authstar-keep:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          env:
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_ADMIN_ADDR
+              value: signet.signet.svc.cluster.local:8444
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: keep
+  namespace: authstar
+spec:
+  selector:
+    app: keep
+  ports:
+    - port: 8080
+      targetPort: 8080

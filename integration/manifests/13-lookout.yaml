@@ -1,0 +1,49 @@
+# No signet wiring yet (see config/authstar/lookout/config.yaml's own note)
+# — no SPIFFE volume, no SIGNET_* env vars. Just the one env var its code
+# actually reads.
+#
+# LOOKOUT_RABBITMQ_URL's credential is this specific cluster's live,
+# randomly-generated broker credential, not guest/guest -- see
+# scripts/lib-secrets.sh's header comment for how to read the current one
+# and why guest/guest 403s (ACCESS_REFUSED) against a real broker.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lookout
+  namespace: authstar
+  labels:
+    app: lookout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lookout
+  template:
+    metadata:
+      labels:
+        app: lookout
+    spec:
+      serviceAccountName: lookout
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: lookout
+          image: arobson/authstar-lookout:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          env:
+            - name: LOOKOUT_RABBITMQ_URL
+              value: amqp://rmq-286c60bcc9a899b8:9bd84edf3bcdd82aa0ad7b280ea4c9e26efabfe9@rabbitmq.rabbitmq.svc.cluster.local:5672/
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lookout
+  namespace: authstar
+spec:
+  selector:
+    app: lookout
+  ports:
+    - port: 3000
+      targetPort: 3000
