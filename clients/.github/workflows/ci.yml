@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  typescript:
+    name: TypeScript
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: typescript
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: typescript/package-lock.json
+
+      - name: npm ci
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      # Runs each workspace's own build+test (core: plain tsc; fastify: tsc for tests,
+      # tsup separately below to also verify the actual publish artifact).
+      - name: Test
+        run: npm test
+
+      - name: Build publish artifact (fastify) and verify core is fully bundled
+        working-directory: typescript/fastify
+        run: |
+          npm run build
+          if grep -q '@bytepunx/authstar-core' dist/index.js; then
+            echo "::error::dist/index.js still references @bytepunx/authstar-core externally -- bundling failed, see tsup.config.ts noExternal"
+            exit 1
+          fi

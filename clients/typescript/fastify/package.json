@@ -1,0 +1,40 @@
+{
+  "name": "@bytepunx/authstar-fastify",
+  "version": "0.1.0",
+  "description": "Fastify plugin that verifies authstar portcullis's internal JWT and decorates the request with the caller's identity",
+  "type": "module",
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "test": "tsc -p tsconfig.test.json && node --test test-dist/**/*.test.js",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "fastify-plugin": "^5.1.0",
+    "jose": "^6.2.8"
+  },
+  "peerDependencies": {
+    "fastify": "^5.0.0"
+  },
+  "devDependencies": {
+    "@bytepunx/authstar-core": "*",
+    "@types/node": "^22.15.0",
+    "fastify": "^5.6.1",
+    "tsup": "^8.5.0",
+    "typescript": "^5.9.3"
+  }
+}
