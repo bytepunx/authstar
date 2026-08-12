@@ -4,6 +4,13 @@
 - **Date:** 2026-08-12
 - **Affects:** portcullis
 
+> **Refined 2026-08-12:** [ADR 0087](0087-jwks-response-includes-pem-alongside-jwk-point.md)
+> supersedes the "Response shape" and "Implementation shape" sections below — each JWKS entry
+> also carries a `publicKeyPem` member alongside the JWK point, so client libraries whose
+> native crypto API takes PEM/DER input aren't left re-deriving a key object from `x`/`y` on
+> every middleware call. The endpoint itself (URL, `Host` resolution, internal-key-only scope)
+> is unchanged.
+
 ## Context
 
 Every downstream service that receives the internal JWT is expected to independently
@@ -61,6 +68,9 @@ be pure surface area with no consumer. Only the internal key — the one ADR 003
 depth" is actually about — belongs in the response.
 
 ### Response shape: standard JWKS, `keys` array
+
+> Superseded by [ADR 0087](0087-jwks-response-includes-pem-alongside-jwk-point.md) — the actual
+> shape now also includes `publicKeyPem` per entry. Kept below for historical context only.
 
 ```json
 {
