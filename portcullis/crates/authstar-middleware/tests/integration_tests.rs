@@ -237,14 +237,20 @@ async fn stub_fallback(req: Request<Body>) -> axum::response::Response {
     match ctx {
         Some(c) => (
             StatusCode::OK,
-            [(
-                "x-internal-token-present",
-                if c.internal_token.is_some() {
-                    "true"
-                } else {
-                    "false"
-                },
-            )],
+            [
+                (
+                    "x-internal-token-present",
+                    if c.internal_token.is_some() {
+                        "true"
+                    } else {
+                        "false"
+                    },
+                ),
+                (
+                    "x-internal-token",
+                    c.internal_token.as_deref().unwrap_or(""),
+                ),
+            ],
             "ok",
         )
             .into_response(),
@@ -817,6 +823,85 @@ async fn providers_endpoint_lists_working_providers() {
     assert_eq!(parsed[0]["id"], "testidp");
     assert_eq!(parsed[0]["name"], "Testidp");
     assert_eq!(parsed[0]["loginUrl"], "/oauth2/testidp/login");
+}
+
+// ---------------------------------------------------------------------------------------------
+// JWKS (ADR 0086/0087)
+// ---------------------------------------------------------------------------------------------
+
+#[tokio::test]
+async fn jwks_endpoint_serves_the_tenants_internal_key_unauthenticated() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/.well-known/jwks.json")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_string(response).await;
+    let parsed: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let keys = parsed["keys"].as_array().expect("keys array");
+    assert_eq!(keys.len(), 1);
+    let key = &keys[0];
+    assert_eq!(key["kty"], "EC");
+    assert_eq!(key["crv"], "P-256");
+    assert_eq!(key["use"], "sig");
+    assert_eq!(key["alg"], "ES256");
+    assert!(!key["kid"].as_str().unwrap().is_empty());
+    assert!(!key["x"].as_str().unwrap().is_empty());
+    assert!(!key["y"].as_str().unwrap().is_empty());
+    assert!(key["publicKeyPem"]
+        .as_str()
+        .unwrap()
+        .starts_with("-----BEGIN PUBLIC KEY-----"));
+}
+
+#[tokio::test]
+async fn jwks_kid_matches_the_kid_on_an_actually_issued_internal_token() {
+    // The whole point of a JWKS endpoint is letting a downstream service pick the right key by
+    // `kid` -- prove the two actually agree, not just that both individually look well-formed.
+    let harness = build_harness().await;
+    let jwt = login_and_get_session_cookie(&harness.app).await;
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, format!("jwt={jwt}"))
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.clone().oneshot(req).await.unwrap();
+    let internal_token = response
+        .headers()
+        .get("x-internal-token")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let header = jsonwebtoken::decode_header(&internal_token).unwrap();
+
+    let jwks_req = Request::builder()
+        .uri("/.well-known/jwks.json")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let jwks_response = harness.app.oneshot(jwks_req).await.unwrap();
+    let body = body_string(jwks_response).await;
+    let parsed: serde_json::Value = serde_json::from_str(&body).unwrap();
+
+    assert_eq!(parsed["keys"][0]["kid"], header.kid.unwrap());
+}
+
+#[tokio::test]
+async fn jwks_endpoint_is_404_for_unknown_host() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/.well-known/jwks.json")
+        .header(header::HOST, "nowhere.invalid")
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::NOT_FOUND);
 }
 
 #[tokio::test]

@@ -48,6 +48,16 @@ pub struct EcKeyPair {
     pub kid: String,
     pub encoding: EncodingKey,
     pub decoding: DecodingKey,
+    /// SPKI-encoded (X.509 `SubjectPublicKeyInfo`) PEM text for the public half — computed once
+    /// here, not re-derived per JWKS request. Served alongside `x`/`y` on the JWKS response
+    /// (ADR 0087) for client libraries whose native crypto API takes PEM/DER input rather than
+    /// a JWK's raw EC point.
+    pub public_key_pem: String,
+    /// Base64url (no padding), unpadded big-endian coordinates of the public EC point — the
+    /// `x`/`y` a JWK needs. Computed once here from the same `p256::PublicKey` `kid` and
+    /// `public_key_pem` are derived from, not re-derived per JWKS request.
+    pub jwk_x: String,
+    pub jwk_y: String,
 }
 
 impl EcKeyPair {
@@ -59,6 +69,7 @@ impl EcKeyPair {
 
         let public_key = secret_key.public_key();
         let kid = fingerprint(&public_key);
+        let (jwk_x, jwk_y) = jwk_point(&public_key);
 
         let private_pkcs8 = secret_key
             .to_pkcs8_pem(LineEnding::LF)
@@ -74,8 +85,40 @@ impl EcKeyPair {
             kid,
             encoding,
             decoding,
+            public_key_pem: public_spki,
+            jwk_x,
+            jwk_y,
         })
     }
+
+    /// This key's public half as a JWKS entry (ADR 0086/0087) — `permissions`-free, safe to
+    /// serve unauthenticated.
+    pub fn to_jwk(&self) -> Jwk {
+        Jwk {
+            kty: "EC",
+            crv: "P-256",
+            kid: self.kid.clone(),
+            usage: "sig",
+            alg: "ES256",
+            x: self.jwk_x.clone(),
+            y: self.jwk_y.clone(),
+            public_key_pem: self.public_key_pem.clone(),
+        }
+    }
+}
+
+#[derive(Debug, Clone, serde::Serialize)]
+pub struct Jwk {
+    pub kty: &'static str,
+    pub crv: &'static str,
+    pub kid: String,
+    #[serde(rename = "use")]
+    pub usage: &'static str,
+    pub alg: &'static str,
+    pub x: String,
+    pub y: String,
+    #[serde(rename = "publicKeyPem")]
+    pub public_key_pem: String,
 }
 
 fn parse_secret_key(pem: &str) -> Result<SecretKey, KeyError> {
@@ -99,10 +142,23 @@ fn fingerprint(public_key: &p256::PublicKey) -> String {
     base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(&digest[..16])
 }
 
+/// The uncompressed EC point's `x`/`y` coordinates, base64url (no padding) — exactly what a
+/// JWK's own `x`/`y` members expect (RFC 7518 §6.2.1.2/6.2.1.3).
+fn jwk_point(public_key: &p256::PublicKey) -> (String, String) {
+    let encoded_point = public_key.to_encoded_point(false); // uncompressed: 0x04 || X || Y
+    let x = encoded_point.x().expect("uncompressed point always has x");
+    let y = encoded_point.y().expect("uncompressed point always has y");
+    (
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(x),
+        base64::engine::general_purpose::URL_SAFE_NO_PAD.encode(y),
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::test_support::generate_pkcs8_pem as generate_test_pkcs8_pem;
+    use p256::elliptic_curve::sec1::FromEncodedPoint;
 
     #[test]
     fn parses_pkcs8_pem_and_signs_verifies() {
@@ -137,5 +193,64 @@ mod tests {
         let pair1 = EcKeyPair::from_pem_bytes(generate_test_pkcs8_pem().as_bytes()).unwrap();
         let pair2 = EcKeyPair::from_pem_bytes(generate_test_pkcs8_pem().as_bytes()).unwrap();
         assert_ne!(pair1.kid, pair2.kid);
+    }
+
+    #[test]
+    fn jwk_x_y_are_valid_p256_coordinates_for_the_same_key() {
+        let pair = EcKeyPair::from_pem_bytes(generate_test_pkcs8_pem().as_bytes()).unwrap();
+        let jwk = pair.to_jwk();
+
+        let x = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(&jwk.x)
+            .unwrap();
+        let y = base64::engine::general_purpose::URL_SAFE_NO_PAD
+            .decode(&jwk.y)
+            .unwrap();
+        assert_eq!(x.len(), 32, "P-256 field elements are 32 bytes");
+        assert_eq!(y.len(), 32, "P-256 field elements are 32 bytes");
+
+        // Reconstructing a public key from x/y alone must fingerprint identically to the
+        // original -- proof the JWK's point actually represents the same key `kid` was
+        // computed from, not just correctly-shaped bytes.
+        let encoded_point = p256::EncodedPoint::from_affine_coordinates(
+            x.as_slice().into(),
+            y.as_slice().into(),
+            false,
+        );
+        let reconstructed = p256::PublicKey::from_encoded_point(&encoded_point).unwrap();
+        assert_eq!(fingerprint(&reconstructed), jwk.kid);
+        assert_eq!(jwk.kid, pair.kid);
+    }
+
+    #[test]
+    fn to_jwk_public_key_pem_verifies_tokens_signed_by_this_pair() {
+        let pair = EcKeyPair::from_pem_bytes(generate_test_pkcs8_pem().as_bytes()).unwrap();
+        let jwk = pair.to_jwk();
+
+        let claims = serde_json::json!({"sub": "test@example.com", "iat": 0, "exp": 9999999999u64});
+        let header = jsonwebtoken::Header::new(jsonwebtoken::Algorithm::ES256);
+        let token = jsonwebtoken::encode(&header, &claims, &pair.encoding).unwrap();
+
+        let decoding_key_from_pem =
+            DecodingKey::from_ec_pem(jwk.public_key_pem.as_bytes()).unwrap();
+        let validation = {
+            let mut v = jsonwebtoken::Validation::new(jsonwebtoken::Algorithm::ES256);
+            v.validate_aud = false;
+            v
+        };
+        let decoded =
+            jsonwebtoken::decode::<serde_json::Value>(&token, &decoding_key_from_pem, &validation)
+                .unwrap();
+        assert_eq!(decoded.claims["sub"], "test@example.com");
+    }
+
+    #[test]
+    fn to_jwk_has_expected_static_fields() {
+        let pair = EcKeyPair::from_pem_bytes(generate_test_pkcs8_pem().as_bytes()).unwrap();
+        let jwk = pair.to_jwk();
+        assert_eq!(jwk.kty, "EC");
+        assert_eq!(jwk.crv, "P-256");
+        assert_eq!(jwk.usage, "sig");
+        assert_eq!(jwk.alg, "ES256");
     }
 }

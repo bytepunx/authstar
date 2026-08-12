@@ -12,18 +12,19 @@ use axum::routing::get;
 use axum::Router;
 
 use crate::cors::cors_layer;
-use crate::endpoints::{providers_handler, select_handler};
+use crate::endpoints::{jwks_handler, providers_handler, select_handler};
 use crate::gate::auth_gate;
 use crate::oauth::{callback_handler, login_handler, logout_handler};
 use crate::state::PortcullisState;
 
-/// The local, never-proxied `/oauth2/*` routes (Stories 005/006/016/017/018). Deliberately not
-/// wrapped by [`apply_auth_gate`] — gating the login page itself behind a login check would be
-/// circular; each handler resolves its own tenant/application from `Host` and checks tenant
-/// status itself (`PortcullisState::resolve_active_host`), matching what the gate would have
-/// done anyway. Leaves the state type parameter open (`Router<Arc<PortcullisState>>`) so the
-/// caller can merge this with other same-state routers and call `.with_state(...)` exactly once
-/// on the fully composed app (see authstar-proxy's `main.rs`).
+/// The local, never-proxied `/oauth2/*` routes (Stories 005/006/016/017/018), plus
+/// `/.well-known/jwks.json` (ADR 0086/0087). Deliberately not wrapped by [`apply_auth_gate`] —
+/// gating the login page itself behind a login check would be circular; each handler resolves
+/// its own tenant/application from `Host` and checks tenant status itself
+/// (`PortcullisState::resolve_active_host`), matching what the gate would have done anyway.
+/// Leaves the state type parameter open (`Router<Arc<PortcullisState>>`) so the caller can merge
+/// this with other same-state routers and call `.with_state(...)` exactly once on the fully
+/// composed app (see authstar-proxy's `main.rs`).
 pub fn oauth_routes() -> Router<Arc<PortcullisState>> {
     Router::new()
         .route("/oauth2/providers", get(providers_handler))
@@ -31,6 +32,7 @@ pub fn oauth_routes() -> Router<Arc<PortcullisState>> {
         .route("/oauth2/logout", get(logout_handler))
         .route("/oauth2/:name/login", get(login_handler))
         .route("/oauth2/:name/callback", get(callback_handler))
+        .route("/.well-known/jwks.json", get(jwks_handler))
 }
 
 /// Wraps `router` with the authentication gate (Story 013). Apply this only to the
