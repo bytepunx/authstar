@@ -5,6 +5,16 @@
 - **Affects:** tower, steward, portcullis
 - **Resolves the open item in:** [ADR 0002](0002-multi-tenant-architecture-and-key-management.md)
 
+> **Corrected 2026-08-12:** the claim below that session/internal JWT verification "already
+> support a `kid`-selected current key plus one still-valid prior key within a rotation overlap
+> window" is **wrong** — checked against the actual code, exactly one key is ever held per
+> tenant per key purpose, and no secret-naming convention exists for a second one. Tower's
+> `POST /operator/tenants/{tenantSlug}/rotate-keys` was also never implemented for the
+> session/internal cases (`steward` calls a route with nothing on the other end). See
+> [ADR 0088](0088-session-internal-key-rotation-overlap.md), which supersedes this ADR's
+> session/internal-key handling and actually specifies the mechanism. This ADR's
+> identity-hash-key handling and its general route shape remain accurate.
+
 ## Context
 
 ADR 0002 left "the key-generation ceremony at tenant onboarding/rotation" as an open research
