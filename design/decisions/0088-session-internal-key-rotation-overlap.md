@@ -147,6 +147,9 @@ isn't operator-configurable in the way generation *count* is for the other two.
 
 ## Related
 
+- [bytepunx/authstar-portcullis#3](https://github.com/bytepunx/authstar-portcullis/issues/3) (portcullis/authstar-config side)
+- [bytepunx/authstar-tower#1](https://github.com/bytepunx/authstar-tower/issues/1) (tower side)
+
 - [ADR 0028](0028-identity-hash-key-generations.md) (the shape this ADR reuses)
 - [ADR 0080](0080-tenant-key-rotation-ceremony.md) (the route this fills in for session/internal keys)
 - [ADR 0086](0086-jwks-endpoint-for-internal-jwt-verification.md) / [ADR 0087](0087-jwks-response-includes-pem-alongside-jwk-point.md) (the `keys` array this reuses for internal-key overlap)
