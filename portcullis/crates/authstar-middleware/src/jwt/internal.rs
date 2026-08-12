@@ -12,9 +12,11 @@ pub const INTERNAL_TOKEN_TTL_SECS: u64 = 60;
 
 #[derive(Debug, Clone, Serialize)]
 pub struct InternalClaims {
-    /// Same identity as the session cookie's `sub` (the user's email) — present on every issued
-    /// internal token, `Allow` or fail-open `degraded` alike (Story 010's "baseline identity
-    /// claims").
+    /// The user's email address. Same identity as the session cookie's `sub` — present on every
+    /// issued internal token, `Allow` or fail-open `degraded` alike (Story 010's "baseline
+    /// identity claims"). There is no separate `email` claim on this token; `sub` *is* the
+    /// email, verbatim. Downstream consumers (including client libraries) should read `sub`
+    /// directly rather than expecting a dedicated `email` field on the wire.
     pub sub: String,
     pub idp: String,
     #[serde(rename = "identityHash")]

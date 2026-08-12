@@ -7,6 +7,10 @@ use crate::keys::EcKeyPair;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SessionClaims {
+    /// The user's email address. There is no separate `email` claim on this token — `sub` *is*
+    /// the email, verbatim, by design (see `SignSessionParams::email`). Downstream consumers
+    /// (including client libraries) should read `sub` directly rather than expecting a
+    /// dedicated `email` field on the wire.
     pub sub: String,
     pub idp: String,
     #[serde(rename = "identityHash")]
