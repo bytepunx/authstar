@@ -28,8 +28,18 @@ authoritative source:
 
 Neither JWT carries a JWKS URL of its own yet — portcullis has no JWKS-serving route as
 of this writing (`web`'s own `INTERNAL_JWT_JWKS_URL` sits unset for exactly that
-reason). Every language's core library ships a static-key provider so it's fully usable
-today; a JWKS-fetch provider is a drop-in addition once portcullis exposes the route.
+reason; tracked as
+[bytepunx/authstar-portcullis#2](https://github.com/bytepunx/authstar-portcullis/issues/2)).
+Every language's core library ships a static-key provider so it's fully usable today; a
+JWKS-fetch provider is a drop-in addition once portcullis exposes the route.
+
+Neither JWT has a distinct `email` claim — `sub` *is* the email, by design (see
+`internal.rs`/`session.rs`'s own doc comments). Each core library exposes a `getEmail()`
+helper rather than making every consumer rediscover that fact. `InternalClaims` is also
+still missing a `permissions` field tower's `/enrich` already returns but portcullis's
+enrichment doesn't yet thread through to the signed token
+([bytepunx/authstar-portcullis#1](https://github.com/bytepunx/authstar-portcullis/issues/1)) —
+this library will pick it up once that's fixed.
 
 ## Layout
 

@@ -8,4 +8,5 @@ export {
   type VerifyInternalJwtOptions,
 } from './verify.js'
 export { extractBearerToken } from './bearer.js'
+export { getEmail } from './identity.js'
 export type { JWTVerifyGetKey } from 'jose'

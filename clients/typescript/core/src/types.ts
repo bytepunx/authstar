@@ -1,14 +1,16 @@
 // Claim shapes mirror authstar/portcullis/crates/authstar-middleware/src/jwt/
 // {session,internal}.rs's actual serde structs exactly -- confirmed against that
-// source, not guessed or copied from an aspirational/unverified consumer. In
-// particular InternalClaims deliberately has no `permissions` or standalone `email`
-// field: `sub` already carries the user's email (see internal.rs's own comment), and
-// no `permissions` claim exists on the wire today, whatever an earlier, not-yet-wired
-// consumer's local type may have assumed.
+// source, not guessed or copied from an aspirational/unverified consumer. There is no
+// standalone `email` field on either claim type by design -- `sub` already carries the
+// user's email verbatim (see internal.rs's own comment; use `getEmail()` from this
+// package rather than reading `.sub` at call sites). `InternalClaims` also has no
+// `permissions` field yet -- tower's `/enrich` already returns one but portcullis's
+// enrichment doesn't thread it through to the signed token. Tracked as
+// bytepunx/authstar-portcullis#1; this type will gain `permissions` once that's fixed.
 
 /** The long-lived `jwt` cookie portcullis issues after a successful login. */
 export interface SessionClaims {
-  /** The user's email, as reported by the upstream IdP. */
+  /** The user's email. There is no separate email claim -- use `getEmail()`. */
   sub: string
   /** The provider id that authenticated this session, e.g. "dex". */
   idp: string
@@ -33,6 +35,7 @@ export type EnrichmentStatus = 'ok' | 'degraded'
  * reduced trust, not as an error to reject.
  */
 export interface InternalClaims {
+  /** The user's email. There is no separate email claim -- use `getEmail()`. */
   sub: string
   idp: string
   identityHash: string
