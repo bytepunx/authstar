@@ -27,6 +27,12 @@ pub struct InternalClaims {
     pub account_id: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub roles: Vec<String>,
+    /// Tenant-wide, unfiltered permissions (ADR 0018/0030) — the closed, authstar-owned
+    /// vocabulary tower's own authorization is built on, permanently distinct from the
+    /// open, app-owned `roles` vocabulary above (ADR 0069). Always present; empty when
+    /// `enrichmentStatus` is "degraded", same as `roles`.
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub permissions: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub usage: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "isNewAccount")]
@@ -48,11 +54,13 @@ pub struct BaselineIdentity<'a> {
     pub identity_hash: &'a str,
 }
 
-/// Builds the claims for an `Allow` outcome: baseline identity plus accountId/roles/usage.
+/// Builds the claims for an `Allow` outcome: baseline identity plus
+/// accountId/roles/permissions/usage.
 pub fn allow_claims(
     identity: BaselineIdentity,
     account_id: String,
     roles: Vec<String>,
+    permissions: Vec<String>,
     usage: serde_json::Value,
     is_new_account: bool,
 ) -> InternalClaims {
@@ -64,6 +72,7 @@ pub fn allow_claims(
         enrichment_status: EnrichmentStatus::Ok,
         account_id: Some(account_id),
         roles,
+        permissions,
         usage: if usage.is_null() { None } else { Some(usage) },
         is_new_account: if is_new_account { Some(true) } else { None },
         iat: now,
@@ -82,6 +91,7 @@ pub fn degraded_claims(identity: BaselineIdentity) -> InternalClaims {
         enrichment_status: EnrichmentStatus::Degraded,
         account_id: None,
         roles: Vec::new(),
+        permissions: Vec::new(),
         usage: None,
         is_new_account: None,
         iat: now,
@@ -103,4 +113,36 @@ fn now_unix() -> u64 {
         .duration_since(std::time::UNIX_EPOCH)
         .unwrap()
         .as_secs()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn identity() -> BaselineIdentity<'static> {
+        BaselineIdentity {
+            email: "admin@example.com",
+            idp: "dex",
+            identity_hash: "abc123",
+        }
+    }
+
+    #[test]
+    fn allow_claims_carries_permissions_through() {
+        let claims = allow_claims(
+            identity(),
+            "acct-1".to_string(),
+            vec!["member".to_string()],
+            vec!["tenant:manage".to_string()],
+            serde_json::Value::Null,
+            false,
+        );
+        assert_eq!(claims.permissions, vec!["tenant:manage".to_string()]);
+    }
+
+    #[test]
+    fn degraded_claims_never_fabricates_permissions() {
+        let claims = degraded_claims(identity());
+        assert!(claims.permissions.is_empty());
+    }
 }

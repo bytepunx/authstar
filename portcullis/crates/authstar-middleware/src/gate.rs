@@ -145,6 +145,7 @@ async fn handle_enrichment_outcome(
                 identity,
                 allow.account_id,
                 roles,
+                allow.permissions,
                 allow.usage,
                 allow.is_new_account,
             );

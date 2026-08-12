@@ -50,6 +50,12 @@ pub struct AllowOutcome {
     /// Unix timestamp (seconds); `None` means "no trial in effect."
     #[serde(default)]
     pub trial_expires_at: Option<i64>,
+    /// Unfiltered, tenant-wide (no per-application scoping) per tower Story 002 — passed
+    /// through unchanged onto the internal token's own `permissions` claim, the mechanism
+    /// ADR 0030 says tower's own authorization is built on. Distinct, closed vocabulary from
+    /// `roles`/`grantedRoles`/`trialRoles` above (ADR 0069) — never merged with them.
+    #[serde(default)]
+    pub permissions: Vec<String>,
     /// Passed through unchanged onto the internal token per Story 010/ADR 0043 — portcullis
     /// never interprets this beyond forwarding it.
     #[serde(default)]
@@ -181,6 +187,7 @@ mod tests {
             "grantedRoles": ["member"],
             "trialRoles": ["premium"],
             "trialExpiresAt": 2000000000i64,
+            "permissions": ["tenant:manage"],
             "usage": {"apiCalls": {"used": 10, "limit": 100}},
         })
         .to_string();
@@ -189,6 +196,7 @@ mod tests {
             EnrichmentOutcome::Allow(allow) => {
                 assert_eq!(allow.account_id, "acct-1");
                 assert_eq!(allow.granted_roles, vec!["member"]);
+                assert_eq!(allow.permissions, vec!["tenant:manage"]);
                 let roles = allow.merged_roles(0);
                 assert!(roles.contains(&"member".to_string()));
                 assert!(roles.contains(&"premium".to_string()));
@@ -216,5 +224,18 @@ mod tests {
     fn malformed_allow_body_is_treated_as_unreachable() {
         let outcome = parse_enrich_response(200, "not json".to_string());
         assert!(matches!(outcome, EnrichmentOutcome::Unreachable(_)));
+    }
+
+    #[test]
+    fn permissions_defaults_to_empty_when_absent() {
+        let body = serde_json::json!({
+            "accountId": "acct-1",
+        })
+        .to_string();
+        let outcome = parse_enrich_response(200, body);
+        match outcome {
+            EnrichmentOutcome::Allow(allow) => assert!(allow.permissions.is_empty()),
+            other => panic!("expected Allow, got {other:?}"),
+        }
     }
 }
