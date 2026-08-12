@@ -1,13 +1,13 @@
 import { createLocalJWKSet, createRemoteJWKSet, type JSONWebKeySet, type JWTVerifyGetKey } from 'jose'
 
 /**
- * Verifies against a fixed, locally-held key set -- fully usable today. portcullis has
- * no JWKS-serving route yet (see this repo's README), so this is the only option until
- * that lands; it's also the right choice for tests and for any deployment that prefers
- * pinning keys over a runtime fetch. `jwks` is a standard JSON Web Key Set -- each key
- * must carry the same `kid` portcullis embeds in the token header (a fingerprint of its
- * public key; ask your platform team for the tenant's current public JWK(s), not just
- * the raw key material, since the `kid` has to match exactly for lookup to succeed).
+ * Verifies against a fixed, locally-held key set. The right choice for tests, or for any
+ * deployment that prefers pinning keys over a runtime fetch -- `jwksKeyProvider()` below
+ * is the recommended default otherwise, now that portcullis serves a live JWKS endpoint
+ * (ADR 0086/0087). `jwks` is a standard JSON Web Key Set -- each key must carry the same
+ * `kid` portcullis embeds in the token header (a fingerprint of its public key; fetch it
+ * from `https://<tenant-host>/.well-known/jwks.json` rather than hand-copying key
+ * material, since the `kid` has to match exactly for lookup to succeed).
  */
 export function staticKeyProvider(jwks: JSONWebKeySet): JWTVerifyGetKey {
   return createLocalJWKSet(jwks)
@@ -15,10 +15,10 @@ export function staticKeyProvider(jwks: JSONWebKeySet): JWTVerifyGetKey {
 
 /**
  * Verifies by fetching (and caching, with jose's own built-in kid-miss-triggers-refetch
- * behavior) a JWKS document over HTTP. Not usable against portcullis today -- it has no
- * JWKS-serving route yet -- but wired up now so switching is a one-line change the
- * moment that route exists. `options` is passed straight through to jose's
- * `createRemoteJWKSet` (cache TTL, cooldown between fetches, request timeout, etc.).
+ * behavior) a JWKS document over HTTP -- the recommended key-resolution path against a
+ * real portcullis, which serves `GET /.well-known/jwks.json` per tenant (ADR 0086/0087).
+ * `options` is passed straight through to jose's `createRemoteJWKSet` (cache TTL,
+ * cooldown between fetches, request timeout, etc.).
  */
 export function jwksKeyProvider(
   url: string | URL,

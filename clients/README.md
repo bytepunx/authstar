@@ -15,31 +15,29 @@ authoritative source:
 - **Session JWT** (`sub`, `idp`, `identityHash`, `iss`, `aud`, `iat`, `exp`) — the
   long-lived `jwt` cookie. Consumed mainly by portcullis itself.
 - **Internal JWT** (`sub`, `idp`, `identityHash`, `enrichmentStatus`, `accountId?`,
-  `roles`, `usage?`, `isNewAccount?`, `iat`, `exp`) — a 60-second, upstream-facing
-  `Authorization: Bearer` token portcullis mints fresh on every proxied request. Its
-  own doc comment says it plainly: *"downstream services verify it independently
-  against the tenant's public key, per ADR 0030's 'defense in depth'"* — this repo is
-  that verification, so adopting services never have to hand-roll it. This is almost
-  certainly the one your HTTP framework middleware needs.
+  `roles`, `permissions`, `usage?`, `isNewAccount?`, `iat`, `exp`) — a 60-second,
+  upstream-facing `Authorization: Bearer` token portcullis mints fresh on every proxied
+  request. Its own doc comment says it plainly: *"downstream services verify it
+  independently against the tenant's public key, per ADR 0030's 'defense in depth'"* —
+  this repo is that verification, so adopting services never have to hand-roll it. This
+  is almost certainly the one your HTTP framework middleware needs.
   `enrichmentStatus: "degraded"` is a real, load-bearing case (portcullis's fail-open
-  path when tower's `/enrich` is unreachable) — `roles`/`usage` are deliberately empty
-  in that case, never fabricated. Handle it the same way, don't discard it as an
-  error.
+  path when tower's `/enrich` is unreachable) — `roles`/`permissions`/`usage` are
+  deliberately empty in that case, never fabricated. Handle it the same way, don't
+  discard it as an error. `roles` is an open, app-owned vocabulary; `permissions` is a
+  closed, authstar-owned vocabulary tower's own authorization is built on (ADR 0069) —
+  the two are never merged.
 
-Neither JWT carries a JWKS URL of its own yet — portcullis has no JWKS-serving route as
-of this writing (`web`'s own `INTERNAL_JWT_JWKS_URL` sits unset for exactly that
-reason; tracked as
-[bytepunx/authstar-portcullis#2](https://github.com/bytepunx/authstar-portcullis/issues/2)).
-Every language's core library ships a static-key provider so it's fully usable today; a
-JWKS-fetch provider is a drop-in addition once portcullis exposes the route.
+Both JWTs are independently verifiable via a live JWKS endpoint: `GET
+https://<tenant-host>/.well-known/jwks.json` (ADR 0086/0087), serving the tenant's
+current internal-key public key as a standard JWK, plus a `publicKeyPem` member for
+client libraries whose crypto API prefers PEM/DER over a JWK's raw EC point. Use
+`jwksKeyProvider()` for this — the recommended key-resolution path going forward.
+`staticKeyProvider()` remains available for pinned-key deployments or tests.
 
 Neither JWT has a distinct `email` claim — `sub` *is* the email, by design (see
 `internal.rs`/`session.rs`'s own doc comments). Each core library exposes a `getEmail()`
-helper rather than making every consumer rediscover that fact. `InternalClaims` is also
-still missing a `permissions` field tower's `/enrich` already returns but portcullis's
-enrichment doesn't yet thread through to the signed token
-([bytepunx/authstar-portcullis#1](https://github.com/bytepunx/authstar-portcullis/issues/1)) —
-this library will pick it up once that's fixed.
+helper rather than making every consumer rediscover that fact.
 
 ## Layout
 

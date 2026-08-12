@@ -111,6 +111,7 @@ export async function verifyInternalJwt(
     enrichmentStatus: enrichmentStatus as EnrichmentStatus,
     accountId: typeof payload.accountId === 'string' ? payload.accountId : undefined,
     roles: Array.isArray(payload.roles) ? (payload.roles as string[]) : [],
+    permissions: Array.isArray(payload.permissions) ? (payload.permissions as string[]) : [],
     usage: payload.usage,
     isNewAccount: typeof payload.isNewAccount === 'boolean' ? payload.isNewAccount : undefined,
     iat: payload.iat as number,

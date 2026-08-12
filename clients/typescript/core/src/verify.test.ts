@@ -98,6 +98,7 @@ test('verifyInternalJwt accepts an "ok" enrichment token and returns roles', asy
     enrichmentStatus: 'ok',
     accountId: 'acct-1',
     roles: ['admin'],
+    permissions: ['tenant:manage'],
     isNewAccount: true,
   })
     .setProtectedHeader({ alg: 'ES256', kid })
@@ -109,10 +110,11 @@ test('verifyInternalJwt accepts an "ok" enrichment token and returns roles', asy
   assert.equal(claims.enrichmentStatus, 'ok')
   assert.equal(claims.accountId, 'acct-1')
   assert.deepEqual(claims.roles, ['admin'])
+  assert.deepEqual(claims.permissions, ['tenant:manage'])
   assert.equal(claims.isNewAccount, true)
 })
 
-test('verifyInternalJwt accepts a "degraded" token with empty roles, not as an error', async () => {
+test('verifyInternalJwt accepts a "degraded" token with empty roles/permissions, not as an error', async () => {
   const { getKey, kid, privateKey } = await generateTestKey()
   const now = Math.floor(Date.now() / 1000)
   const token = await new SignJWT({
@@ -121,6 +123,7 @@ test('verifyInternalJwt accepts a "degraded" token with empty roles, not as an e
     identityHash: 'abc123',
     enrichmentStatus: 'degraded',
     roles: [],
+    permissions: [],
   })
     .setProtectedHeader({ alg: 'ES256', kid })
     .setIssuedAt(now)
@@ -131,6 +134,7 @@ test('verifyInternalJwt accepts a "degraded" token with empty roles, not as an e
   assert.equal(claims.enrichmentStatus, 'degraded')
   assert.equal(claims.accountId, undefined)
   assert.deepEqual(claims.roles, [])
+  assert.deepEqual(claims.permissions, [])
 })
 
 test('extractBearerToken parses a well-formed header', () => {
