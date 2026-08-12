@@ -68,13 +68,39 @@ impl RawSecrets {
 }
 
 /// The well-known secret name for a tenant's session-JWT signing keypair (private key PEM).
+/// Always version 1's name — see `session_key_name_for_version`'s doc comment for why version 1
+/// never moves off this name even once a tenant has rotated (ADR 0088).
 pub fn session_key_name(tenant_slug: &str) -> String {
     format!("tenant-{tenant_slug}-session-key")
 }
 
 /// The well-known secret name for a tenant's internal-JWT signing keypair (private key PEM).
+/// Always version 1's name — see `internal_key_name_for_version`'s doc comment.
 pub fn internal_key_name(tenant_slug: &str) -> String {
     format!("tenant-{tenant_slug}-internal-key")
+}
+
+/// The secret name for one generation of a tenant's session-JWT signing keypair (ADR 0088).
+/// Version 1 is always `session_key_name`'s existing unversioned name — every tenant already
+/// has a secret there today, and there is no migration to force onto tenants that never rotate.
+/// Version 2 and beyond get their own versioned name, created only the first time a tenant
+/// actually rotates.
+pub fn session_key_name_for_version(tenant_slug: &str, version: u32) -> String {
+    if version <= 1 {
+        session_key_name(tenant_slug)
+    } else {
+        format!("tenant-{tenant_slug}-session-key-{version}")
+    }
+}
+
+/// The secret name for one generation of a tenant's internal-JWT signing keypair (ADR 0088).
+/// Same version-1-is-the-legacy-name convention as `session_key_name_for_version`.
+pub fn internal_key_name_for_version(tenant_slug: &str, version: u32) -> String {
+    if version <= 1 {
+        internal_key_name(tenant_slug)
+    } else {
+        format!("tenant-{tenant_slug}-internal-key-{version}")
+    }
 }
 
 /// The well-known secret name for one generation of a tenant's identity-hash HMAC key.
@@ -125,5 +151,45 @@ mod tests {
             secrets.get("tenant-acme-session-key"),
             Err(SecretsError::Missing(_))
         ));
+    }
+
+    #[test]
+    fn session_key_version_1_is_the_legacy_unversioned_name() {
+        assert_eq!(
+            session_key_name_for_version("acme", 1),
+            session_key_name("acme")
+        );
+        assert_eq!(
+            session_key_name_for_version("acme", 1),
+            "tenant-acme-session-key"
+        );
+    }
+
+    #[test]
+    fn session_key_version_2_gets_a_versioned_name() {
+        assert_eq!(
+            session_key_name_for_version("acme", 2),
+            "tenant-acme-session-key-2"
+        );
+    }
+
+    #[test]
+    fn internal_key_version_1_is_the_legacy_unversioned_name() {
+        assert_eq!(
+            internal_key_name_for_version("acme", 1),
+            internal_key_name("acme")
+        );
+        assert_eq!(
+            internal_key_name_for_version("acme", 1),
+            "tenant-acme-internal-key"
+        );
+    }
+
+    #[test]
+    fn internal_key_version_2_gets_a_versioned_name() {
+        assert_eq!(
+            internal_key_name_for_version("acme", 2),
+            "tenant-acme-internal-key-2"
+        );
     }
 }

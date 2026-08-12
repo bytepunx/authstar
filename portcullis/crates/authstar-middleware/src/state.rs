@@ -5,18 +5,19 @@
 use std::sync::Arc;
 
 use authstar_config::bundle::{
-    Bundle, CookieConfig, CorsConfig, ProviderConfig, TenantJwtConfig, TenantStatus,
+    Bundle, CookieConfig, CorsConfig, KeyGeneration, ProviderConfig, TenantJwtConfig, TenantStatus,
     WebUpstreamConfig,
 };
 use authstar_config::secrets::{
-    identity_hash_key_name, internal_key_name, provider_client_secret_name, session_key_name,
+    identity_hash_key_name, internal_key_name_for_version, provider_client_secret_name,
+    session_key_name_for_version,
 };
 use authstar_config::RawSecrets;
 use indexmap::IndexMap;
 
 use crate::enricher::ClaimsEnricher;
 use crate::identity_hash::IdentityHashKeys;
-use crate::keys::EcKeyPair;
+use crate::keys::{EcKeyGenerations, EcKeyPair};
 use crate::provider::{discover_all, DiscoveryError, DiscoveryTarget, ResolvedProvider};
 
 pub struct ResolvedExposedProvider {
@@ -51,8 +52,14 @@ pub struct TenantRuntime {
     pub cookie: CookieConfig,
     pub jwt: TenantJwtConfig,
     pub branding: Option<authstar_config::bundle::BrandingConfig>,
-    pub session_keys: Option<Arc<EcKeyPair>>,
-    pub internal_keys: Option<Arc<EcKeyPair>>,
+    /// Every in-window session-key generation (ADR 0088), current first. `.current()` signs a
+    /// fresh cookie; `.all()` verifies against any of them (Story 009's overlap window).
+    pub session_keys: EcKeyGenerations,
+    /// Every in-window internal-key generation (ADR 0088), current first. `.current()` signs a
+    /// fresh internal token; `.all()` feeds every in-window key to the JWKS endpoint
+    /// (portcullis itself never verifies this token — ADR 0030 — so there's no local
+    /// "verify against any of them" use here the way there is for `session_keys`).
+    pub internal_keys: EcKeyGenerations,
     pub identity_hash_keys: IdentityHashKeys,
     pub providers: IndexMap<String, ProviderConfig>,
     /// Provider name -> client secret, loaded from signet secrets (see
@@ -142,16 +149,20 @@ fn strip_port(host: &str) -> &str {
 pub enum StartupWarning {
     MissingSessionKey {
         tenant: String,
+        version: u32,
     },
     InvalidSessionKey {
         tenant: String,
+        version: u32,
         error: String,
     },
     MissingInternalKey {
         tenant: String,
+        version: u32,
     },
     InvalidInternalKey {
         tenant: String,
+        version: u32,
         error: String,
     },
     MissingIdentityHashKey {
@@ -176,19 +187,27 @@ pub enum StartupWarning {
 impl std::fmt::Display for StartupWarning {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StartupWarning::MissingSessionKey { tenant } => {
-                write!(f, "tenant {tenant:?}: missing session signing key — login is broken for this tenant only")
+            StartupWarning::MissingSessionKey { tenant, version } => {
+                write!(f, "tenant {tenant:?}: missing session signing key generation {version} — login is broken for this tenant only")
             }
-            StartupWarning::InvalidSessionKey { tenant, error } => {
-                write!(f, "tenant {tenant:?}: invalid session signing key ({error}) — login is broken for this tenant only")
+            StartupWarning::InvalidSessionKey {
+                tenant,
+                version,
+                error,
+            } => {
+                write!(f, "tenant {tenant:?}: invalid session signing key generation {version} ({error}) — login is broken for this tenant only")
             }
-            StartupWarning::MissingInternalKey { tenant } => {
-                write!(f, "tenant {tenant:?}: missing internal signing key — internal tokens can't be minted for this tenant")
+            StartupWarning::MissingInternalKey { tenant, version } => {
+                write!(f, "tenant {tenant:?}: missing internal signing key generation {version} — internal tokens can't be minted for this tenant")
             }
-            StartupWarning::InvalidInternalKey { tenant, error } => {
+            StartupWarning::InvalidInternalKey {
+                tenant,
+                version,
+                error,
+            } => {
                 write!(
                     f,
-                    "tenant {tenant:?}: invalid internal signing key ({error})"
+                    "tenant {tenant:?}: invalid internal signing key generation {version} ({error})"
                 )
             }
             StartupWarning::MissingIdentityHashKey { tenant, version } => {
@@ -265,20 +284,22 @@ pub async fn build_state(
     let mut host_index = IndexMap::new();
 
     for (tenant_slug, tenant_config) in bundle.tenants {
-        let session_keys = load_optional_key(
+        let session_keys = EcKeyGenerations::new(load_ec_key_generations(
             &secrets,
-            &session_key_name(&tenant_slug),
             &tenant_slug,
+            &tenant_config.session_key_generations,
+            session_key_name_for_version,
             &mut warnings,
             KeyPurpose::Session,
-        );
-        let internal_keys = load_optional_key(
+        ));
+        let internal_keys = EcKeyGenerations::new(load_ec_key_generations(
             &secrets,
-            &internal_key_name(&tenant_slug),
             &tenant_slug,
+            &tenant_config.internal_key_generations,
+            internal_key_name_for_version,
             &mut warnings,
             KeyPurpose::Internal,
-        );
+        ));
 
         let mut identity_hash_generations = Vec::new();
         for generation in &tenant_config.identity_hash_key_generations {
@@ -417,42 +438,60 @@ enum KeyPurpose {
     Internal,
 }
 
-fn load_optional_key(
+/// ADR 0088: loads every in-window generation of a session/internal key. An absent/empty
+/// `generations` list (the common case — a tenant that has never rotated) is treated exactly
+/// as if `[{version: 1}]` had been declared, since `name_for_version` already resolves version 1
+/// to the legacy unversioned secret name every tenant already has.
+fn load_ec_key_generations(
     secrets: &RawSecrets,
-    name: &str,
     tenant_slug: &str,
+    generations: &[KeyGeneration],
+    name_for_version: fn(&str, u32) -> String,
     warnings: &mut Vec<StartupWarning>,
     purpose: KeyPurpose,
-) -> Option<Arc<EcKeyPair>> {
-    match secrets.get(name) {
-        Ok(bytes) => match EcKeyPair::from_pem_bytes(bytes) {
-            Ok(key) => Some(Arc::new(key)),
-            Err(e) => {
-                warnings.push(match purpose {
+) -> Vec<(u32, Arc<EcKeyPair>)> {
+    let implicit_v1 = [KeyGeneration {
+        version: 1,
+        effective_from: None,
+    }];
+    let generations = if generations.is_empty() {
+        &implicit_v1[..]
+    } else {
+        generations
+    };
+
+    let mut loaded = Vec::new();
+    for generation in generations {
+        let name = name_for_version(tenant_slug, generation.version);
+        match secrets.get(&name) {
+            Ok(bytes) => match EcKeyPair::from_pem_bytes(bytes) {
+                Ok(key) => loaded.push((generation.version, Arc::new(key))),
+                Err(e) => warnings.push(match purpose {
                     KeyPurpose::Session => StartupWarning::InvalidSessionKey {
                         tenant: tenant_slug.to_string(),
+                        version: generation.version,
                         error: e.to_string(),
                     },
                     KeyPurpose::Internal => StartupWarning::InvalidInternalKey {
                         tenant: tenant_slug.to_string(),
+                        version: generation.version,
                         error: e.to_string(),
                     },
-                });
-                None
-            }
-        },
-        Err(_) => {
-            warnings.push(match purpose {
+                }),
+            },
+            Err(_) => warnings.push(match purpose {
                 KeyPurpose::Session => StartupWarning::MissingSessionKey {
                     tenant: tenant_slug.to_string(),
+                    version: generation.version,
                 },
                 KeyPurpose::Internal => StartupWarning::MissingInternalKey {
                     tenant: tenant_slug.to_string(),
+                    version: generation.version,
                 },
-            });
-            None
+            }),
         }
     }
+    loaded
 }
 
 #[cfg(test)]

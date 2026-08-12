@@ -210,7 +210,7 @@ pub async fn callback_handler(
         tracing::info!(tenant = %tenant.slug, application = %application.slug, "signup completed (analytics dispatch deferred, see TESTING.md)");
     }
 
-    let Some(session_key) = &tenant.session_keys else {
+    let Some(session_key) = tenant.session_keys.current() else {
         tracing::error!(tenant = %tenant.slug, "no session signing key configured");
         return internal_error_with_cookies(expiring_cookies);
     };

@@ -169,4 +169,30 @@ mod tests {
             Err(SessionJwtError::UnknownKid)
         ));
     }
+
+    #[test]
+    fn verifies_against_a_previous_generation_key_during_rotation_overlap() {
+        // ADR 0088: a cookie signed before rotation must still verify once the tenant's
+        // current key has moved on, as long as the old key is still in the candidate list.
+        let previous_key = test_key();
+        let current_key = test_key();
+        let token = sign_session(
+            &previous_key,
+            SignSessionParams {
+                email: "user@example.com",
+                idp: "google",
+                identity_hash: "hash123",
+                issuer: "authstar",
+                audience: "acme",
+                expires_in: "168h",
+            },
+        )
+        .unwrap();
+
+        // Current key listed first, matching EcKeyGenerations::all()'s current-first order --
+        // verify_session must still find the match by kid, not by list position.
+        let claims =
+            verify_session(&token, &[&current_key, &previous_key], "authstar", "acme").unwrap();
+        assert_eq!(claims.sub, "user@example.com");
+    }
 }

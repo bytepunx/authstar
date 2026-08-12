@@ -30,6 +30,7 @@ use crate::enricher::{EnrichmentContext, EnrichmentOutcome};
 use crate::exempt::is_exempt;
 use crate::jwt::internal::{allow_claims, degraded_claims, sign_internal, BaselineIdentity};
 use crate::jwt::session::verify_session;
+use crate::keys::EcKeyPair;
 use crate::return_url::is_safe_return_url;
 use crate::state::{ApplicationRuntime, HostResolutionError, PortcullisState, TenantRuntime};
 
@@ -127,7 +128,7 @@ async fn handle_enrichment_outcome(
 
     match outcome {
         EnrichmentOutcome::Allow(allow) => {
-            let Some(internal_key) = &tenant.internal_keys else {
+            let Some(internal_key) = tenant.internal_keys.current() else {
                 // Can't sign anything for this tenant — a portcullis-side misconfiguration, not
                 // a client-facing category from Story 010/015. Exempt routes still get through
                 // (anonymously, matching "never worse off than an anonymous visitor" — ADR
@@ -172,7 +173,7 @@ async fn handle_enrichment_outcome(
         EnrichmentOutcome::Unreachable(err) => {
             tracing::debug!(tenant = %tenant.slug, application = %application.slug, error = %err, "enrichment unreachable, failing open");
             // Fail-open is this pass's only implemented policy — see enricher.rs's module doc.
-            let Some(internal_key) = &tenant.internal_keys else {
+            let Some(internal_key) = tenant.internal_keys.current() else {
                 return if exempt {
                     forward_without_token(tenant, application, req, next).await
                 } else {
@@ -214,10 +215,16 @@ fn try_verify_session(
     headers: &HeaderMap,
 ) -> Option<crate::jwt::session::SessionClaims> {
     let cookie_value = read_cookie_from_headers(headers, SESSION_COOKIE_NAME)?;
-    let key = tenant.session_keys.as_ref()?;
+    if tenant.session_keys.is_empty() {
+        return None;
+    }
+    // Every in-window generation (ADR 0088/Story 009's overlap window) -- a cookie signed
+    // before a rotation must still verify against the now-retired key until it naturally
+    // expires, `kid`-selected among all of them by `verify_session` itself.
+    let keys: Vec<&EcKeyPair> = tenant.session_keys.all().map(|k| k.as_ref()).collect();
     match verify_session(
         &cookie_value,
-        &[key],
+        &keys,
         &tenant.jwt.issuer,
         &tenant.jwt.audience,
     ) {

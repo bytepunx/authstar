@@ -107,6 +107,39 @@ impl EcKeyPair {
     }
 }
 
+/// One tenant's ordered set of session/internal key generations, current first (ADR 0088) —
+/// the shape `gate.rs` needs to verify against every in-window key and `jwks_handler` needs to
+/// publish every in-window internal key. Mirrors `identity_hash::IdentityHashKeys`'s shape,
+/// applied to `EcKeyPair` instead of raw HMAC key bytes.
+pub struct EcKeyGenerations {
+    /// `(version, key)`, ordered current-generation first (highest version first).
+    generations: Vec<(u32, std::sync::Arc<EcKeyPair>)>,
+}
+
+impl EcKeyGenerations {
+    pub fn new(mut generations: Vec<(u32, std::sync::Arc<EcKeyPair>)>) -> Self {
+        generations.sort_by_key(|(version, _)| std::cmp::Reverse(*version));
+        Self { generations }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.generations.is_empty()
+    }
+
+    /// The current (highest-version) generation's key, if any — the only one ever used for
+    /// *signing* (a fresh session cookie or internal token always signs under the newest key).
+    pub fn current(&self) -> Option<&std::sync::Arc<EcKeyPair>> {
+        self.generations.first().map(|(_, k)| k)
+    }
+
+    /// Every generation's key, current first — used for *verifying* a session JWT (any in-window
+    /// key must still validate a cookie signed under it) and for serving every in-window
+    /// internal-key generation on the JWKS endpoint.
+    pub fn all(&self) -> impl Iterator<Item = &std::sync::Arc<EcKeyPair>> {
+        self.generations.iter().map(|(_, k)| k)
+    }
+}
+
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Jwk {
     pub kty: &'static str,
@@ -252,5 +285,35 @@ mod tests {
         assert_eq!(jwk.crv, "P-256");
         assert_eq!(jwk.usage, "sig");
         assert_eq!(jwk.alg, "ES256");
+    }
+
+    fn keypair() -> std::sync::Arc<EcKeyPair> {
+        std::sync::Arc::new(
+            EcKeyPair::from_pem_bytes(generate_test_pkcs8_pem().as_bytes()).unwrap(),
+        )
+    }
+
+    #[test]
+    fn ec_key_generations_current_is_the_highest_version_regardless_of_insertion_order() {
+        let (v1, v2, v3) = (keypair(), keypair(), keypair());
+        let generations =
+            EcKeyGenerations::new(vec![(2, v2.clone()), (1, v1.clone()), (3, v3.clone())]);
+        assert_eq!(generations.current().unwrap().kid, v3.kid);
+    }
+
+    #[test]
+    fn ec_key_generations_all_returns_every_generation_current_first() {
+        let (v1, v2) = (keypair(), keypair());
+        let generations = EcKeyGenerations::new(vec![(1, v1.clone()), (2, v2.clone())]);
+        let kids: Vec<&str> = generations.all().map(|k| k.kid.as_str()).collect();
+        assert_eq!(kids, vec![v2.kid.as_str(), v1.kid.as_str()]);
+    }
+
+    #[test]
+    fn ec_key_generations_empty_has_no_current() {
+        let generations = EcKeyGenerations::new(Vec::new());
+        assert!(generations.is_empty());
+        assert!(generations.current().is_none());
+        assert_eq!(generations.all().count(), 0);
     }
 }

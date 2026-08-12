@@ -69,7 +69,20 @@ pub struct TenantConfig {
     /// the one with the highest `version`. Retention window (count of generations kept) must be
     /// enough to cover `cookie.max_age` — validated at startup, see `validate.rs`.
     #[serde(default)]
-    pub identity_hash_key_generations: Vec<IdentityHashKeyGeneration>,
+    pub identity_hash_key_generations: Vec<KeyGeneration>,
+    /// Named key generations for the session-JWT signing keypair (ADR 0088), same shape as
+    /// `identity_hash_key_generations` above. Absent/empty means "only the implicit version 1,
+    /// at the legacy unversioned secret name" — no tenant needs to populate this until it
+    /// actually rotates for the first time (`authstar_config::secrets::session_key_name_for_version`).
+    /// Retention must cover `cookie.max_age`, same reasoning as the identity-hash case.
+    #[serde(default)]
+    pub session_key_generations: Vec<KeyGeneration>,
+    /// Named key generations for the internal-JWT signing keypair (ADR 0088), same
+    /// implicit-version-1 convention as `session_key_generations` above
+    /// (`internal_key_name_for_version`). Retention only needs to cover the internal token's own
+    /// short TTL plus a safety margin, not `cookie.max_age` — see ADR 0088.
+    #[serde(default)]
+    pub internal_key_generations: Vec<KeyGeneration>,
     pub applications: IndexMap<String, ApplicationConfig>,
 }
 
@@ -127,9 +140,12 @@ pub struct BrandingConfig {
     pub primary_color: Option<String>,
 }
 
+/// One named key generation — `{version, effectiveFrom}`, shared shape across the
+/// identity-hash, session, and internal key rotation mechanisms (ADR 0028/0088). Current
+/// generation is always the one with the highest `version`.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct IdentityHashKeyGeneration {
+pub struct KeyGeneration {
     pub version: u32,
     #[serde(default)]
     pub effective_from: Option<String>,

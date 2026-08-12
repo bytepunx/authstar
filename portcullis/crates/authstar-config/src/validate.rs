@@ -3,7 +3,7 @@
 //! posture — but see [`validate_bundle`]'s doc comment for how failures are scoped per-tenant,
 //! matching Story 004's per-tenant discovery-failure isolation.
 
-use crate::bundle::Bundle;
+use crate::bundle::{Bundle, KeyGeneration};
 
 #[derive(Debug, thiserror::Error, PartialEq, Eq)]
 pub enum ValidationError {
@@ -16,6 +16,16 @@ pub enum ValidationError {
         tenant: String,
         generations: usize,
         max_age: u64,
+    },
+    #[error(
+        "tenant {tenant:?}: {purpose} key generation {version} is declared more than once — \
+         each version must appear at most once, whichever entry the bundle producer intended \
+         is ambiguous"
+    )]
+    DuplicateKeyGeneration {
+        tenant: String,
+        purpose: &'static str,
+        version: u32,
     },
     #[error("tenant {tenant:?} has no applications configured")]
     NoApplications { tenant: String },
@@ -65,6 +75,31 @@ pub fn validate_bundle(bundle: &Bundle) -> Vec<ValidationError> {
             });
         }
 
+        // ADR 0088: session/internal key generations are populated by tower's rotate-keys
+        // producer, not hand-authored — unlike identity-hash-key's "zero generations" case
+        // above, there's no meaningful "too few generations" failure mode to check here (an
+        // absent/empty list always resolves to the implicit version-1-at-the-legacy-name
+        // generation, never zero). What *can* go wrong structurally is the producer emitting
+        // the same version twice, which would make "which entry is current" ambiguous.
+        push_duplicate_version_errors(
+            &mut errors,
+            tenant_slug,
+            "identity hash",
+            &tenant.identity_hash_key_generations,
+        );
+        push_duplicate_version_errors(
+            &mut errors,
+            tenant_slug,
+            "session",
+            &tenant.session_key_generations,
+        );
+        push_duplicate_version_errors(
+            &mut errors,
+            tenant_slug,
+            "internal",
+            &tenant.internal_key_generations,
+        );
+
         if tenant.applications.is_empty() {
             errors.push(ValidationError::NoApplications {
                 tenant: tenant_slug.clone(),
@@ -98,4 +133,107 @@ pub fn validate_bundle(bundle: &Bundle) -> Vec<ValidationError> {
     }
 
     errors
+}
+
+fn push_duplicate_version_errors(
+    errors: &mut Vec<ValidationError>,
+    tenant_slug: &str,
+    purpose: &'static str,
+    generations: &[KeyGeneration],
+) {
+    let mut seen_versions: Vec<u32> = Vec::new();
+    for generation in generations {
+        if seen_versions.contains(&generation.version) {
+            errors.push(ValidationError::DuplicateKeyGeneration {
+                tenant: tenant_slug.to_string(),
+                purpose,
+                version: generation.version,
+            });
+        } else {
+            seen_versions.push(generation.version);
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn minimal_bundle(extra_tenant_fields: serde_json::Value) -> Bundle {
+        let mut tenant = serde_json::json!({
+            "cookie": { "domain": "acme.test", "maxAge": 604800 },
+            "jwt": { "issuer": "authstar", "audience": "acme", "expiresIn": "168h" },
+            "identityHashKeyGenerations": [{ "version": 1 }],
+            "applications": {
+                "app": {
+                    "hosts": ["app.acme.test"],
+                    "server": { "publicUrl": "http://app.acme.test" },
+                    "upstream": { "base": "http://upstream.invalid" },
+                }
+            }
+        });
+        for (key, value) in extra_tenant_fields.as_object().unwrap() {
+            tenant[key] = value.clone();
+        }
+        let bundle_json = serde_json::json!({ "tenants": { "acme": tenant } });
+        serde_json::from_value(bundle_json).unwrap()
+    }
+
+    #[test]
+    fn no_generations_declared_is_not_an_error_for_session_or_internal_keys() {
+        let bundle = minimal_bundle(serde_json::json!({}));
+        let errors = validate_bundle(&bundle);
+        assert!(
+            !errors.iter().any(|e| matches!(
+                e,
+                ValidationError::DuplicateKeyGeneration { .. }
+                    | ValidationError::InsufficientKeyRetention { .. }
+            )),
+            "expected no key-generation errors, got: {errors:?}"
+        );
+    }
+
+    #[test]
+    fn duplicate_session_key_version_is_an_error() {
+        let bundle = minimal_bundle(serde_json::json!({
+            "sessionKeyGenerations": [{ "version": 1 }, { "version": 2 }, { "version": 2 }],
+        }));
+        let errors = validate_bundle(&bundle);
+        assert!(errors.iter().any(|e| matches!(
+            e,
+            ValidationError::DuplicateKeyGeneration {
+                purpose: "session",
+                version: 2,
+                ..
+            }
+        )));
+    }
+
+    #[test]
+    fn duplicate_internal_key_version_is_an_error() {
+        let bundle = minimal_bundle(serde_json::json!({
+            "internalKeyGenerations": [{ "version": 3 }, { "version": 3 }],
+        }));
+        let errors = validate_bundle(&bundle);
+        assert!(errors.iter().any(|e| matches!(
+            e,
+            ValidationError::DuplicateKeyGeneration {
+                purpose: "internal",
+                version: 3,
+                ..
+            }
+        )));
+    }
+
+    #[test]
+    fn unique_versions_across_all_three_purposes_is_not_an_error() {
+        let bundle = minimal_bundle(serde_json::json!({
+            "sessionKeyGenerations": [{ "version": 1 }, { "version": 2 }],
+            "internalKeyGenerations": [{ "version": 1 }, { "version": 2 }, { "version": 3 }],
+        }));
+        let errors = validate_bundle(&bundle);
+        assert!(!errors
+            .iter()
+            .any(|e| matches!(e, ValidationError::DuplicateKeyGeneration { .. })));
+    }
 }

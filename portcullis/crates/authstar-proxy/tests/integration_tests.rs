@@ -10,6 +10,7 @@ use authstar_config::bundle::{CookieConfig, TenantJwtConfig, TenantStatus, Upstr
 use authstar_middleware::context::ForwardContext;
 use authstar_middleware::enricher::{ClaimsEnricher, EnrichmentContext, EnrichmentOutcome};
 use authstar_middleware::identity_hash::IdentityHashKeys;
+use authstar_middleware::keys::EcKeyGenerations;
 use authstar_middleware::state::{ApplicationRuntime, PortcullisState, TenantRuntime};
 use authstar_proxy::proxy::proxy_handler;
 use axum::async_trait;
@@ -66,8 +67,8 @@ fn test_tenant(application: ApplicationRuntime) -> TenantRuntime {
             expires_in: "168h".to_string(),
         },
         branding: None,
-        session_keys: None,
-        internal_keys: None,
+        session_keys: EcKeyGenerations::new(vec![]),
+        internal_keys: EcKeyGenerations::new(vec![]),
         identity_hash_keys: IdentityHashKeys::new(vec![]),
         providers: IndexMap::new(),
         provider_client_secrets: IndexMap::new(),

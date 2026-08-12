@@ -11,7 +11,7 @@ use std::sync::Arc;
 
 use authstar_config::bundle::Bundle;
 use authstar_config::RawSecrets;
-use authstar_middleware::enricher::{ClaimsEnricher, TowerClaimsEnricher};
+use authstar_middleware::enricher::{ClaimsEnricher, TowerClaimsEnricher, UnreachableEnricher};
 use authstar_middleware::gate::auth_gate;
 use authstar_middleware::router::{apply_auth_gate, apply_cors, oauth_routes};
 use authstar_middleware::state::{build_state, PortcullisState};
@@ -902,6 +902,161 @@ async fn jwks_endpoint_is_404_for_unknown_host() {
         .unwrap();
     let response = harness.app.oneshot(req).await.unwrap();
     assert_eq!(response.status(), StatusCode::NOT_FOUND);
+}
+
+/// Minimal state with two generations declared for both session and internal keys (ADR 0088) --
+/// no providers configured, so `build_state`'s OIDC discovery has nothing to do and no wiremock
+/// server is needed. Returns the app plus the four raw PEM keys so a test can sign a token under
+/// whichever generation it needs directly, bypassing portcullis's own sign_session/sign_internal.
+async fn build_rotated_keys_harness() -> (Router, String, String, String, String) {
+    let session_key_v1 = generate_pem_key();
+    let session_key_v2 = generate_pem_key();
+    let internal_key_v1 = generate_pem_key();
+    let internal_key_v2 = generate_pem_key();
+
+    let bundle_json = json!({
+        "tenants": {
+            "acme": {
+                "status": "active",
+                "cookie": {
+                    "domain": "app.acme.test",
+                    "path": "/",
+                    "maxAge": 604800,
+                    "httpOnly": true,
+                    "secure": false,
+                },
+                "jwt": {
+                    "issuer": "authstar",
+                    "audience": "acme",
+                    "expiresIn": "168h",
+                },
+                "identityHashKeyGenerations": [{ "version": 1 }],
+                "sessionKeyGenerations": [{ "version": 1 }, { "version": 2 }],
+                "internalKeyGenerations": [{ "version": 1 }, { "version": 2 }],
+                "applications": {
+                    "app": {
+                        "hosts": ["app.acme.test"],
+                        "server": { "publicUrl": "http://app.acme.test" },
+                        "upstream": { "base": "http://upstream.invalid", "routes": {}, "timeout": 30 },
+                        "exempt": [],
+                    }
+                }
+            }
+        },
+        "secrets": {
+            "tenant-acme-session-key": b64(&session_key_v1),
+            "tenant-acme-session-key-2": b64(&session_key_v2),
+            "tenant-acme-internal-key": b64(&internal_key_v1),
+            "tenant-acme-internal-key-2": b64(&internal_key_v2),
+            "tenant-acme-identity-hash-key-1": b64("identity-hash-key-material"),
+        }
+    });
+
+    let config: Bundle = serde_json::from_value(bundle_json.clone()).unwrap();
+    let secrets = RawSecrets::from_bundle_json(&bundle_json).unwrap();
+    let http_client = reqwest::Client::new();
+    let (state, warnings) = build_state(
+        config,
+        secrets,
+        http_client.clone(),
+        http_client,
+        Arc::new(UnreachableEnricher),
+        "http://tower.invalid".to_string(),
+    )
+    .await;
+    assert!(
+        warnings.is_empty(),
+        "expected no startup warnings, got: {:?}",
+        warnings.iter().map(|w| w.to_string()).collect::<Vec<_>>()
+    );
+
+    let app = build_app(Arc::new(state));
+    (
+        app,
+        session_key_v1,
+        session_key_v2,
+        internal_key_v1,
+        internal_key_v2,
+    )
+}
+
+#[tokio::test]
+async fn jwks_serves_both_internal_key_generations_during_rotation_overlap() {
+    let (app, _sk1, _sk2, ik1, ik2) = build_rotated_keys_harness().await;
+    let v1_kid = authstar_middleware::keys::EcKeyPair::from_pem_bytes(ik1.as_bytes())
+        .unwrap()
+        .kid;
+    let v2_kid = authstar_middleware::keys::EcKeyPair::from_pem_bytes(ik2.as_bytes())
+        .unwrap()
+        .kid;
+
+    let req = Request::builder()
+        .uri("/.well-known/jwks.json")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = body_string(response).await;
+    let parsed: serde_json::Value = serde_json::from_str(&body).unwrap();
+    let kids: Vec<String> = parsed["keys"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|k| k["kid"].as_str().unwrap().to_string())
+        .collect();
+    assert_eq!(
+        kids.len(),
+        2,
+        "expected both generations in the keys array, got: {kids:?}"
+    );
+    assert!(
+        kids.contains(&v1_kid),
+        "previous generation missing from JWKS during overlap"
+    );
+    assert!(
+        kids.contains(&v2_kid),
+        "current generation missing from JWKS"
+    );
+}
+
+#[tokio::test]
+async fn session_cookie_signed_under_previous_generation_still_authenticates_during_overlap() {
+    let (app, sk1, _sk2, _ik1, _ik2) = build_rotated_keys_harness().await;
+
+    // Sign a session JWT directly under the *previous* generation's raw key -- simulating a
+    // cookie that was issued before rotation happened, now arriving after the tenant's current
+    // key has moved on to version 2.
+    let key = authstar_middleware::keys::EcKeyPair::from_pem_bytes(sk1.as_bytes()).unwrap();
+    let token = authstar_middleware::jwt::session::sign_session(
+        &key,
+        authstar_middleware::jwt::session::SignSessionParams {
+            email: "admin@example.com",
+            idp: "dex",
+            identity_hash: "abc123",
+            issuer: "authstar",
+            audience: "acme",
+            expires_in: "168h",
+        },
+    )
+    .unwrap();
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, format!("jwt={token}"))
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+
+    // No enricher configured (UnreachableEnricher) -> fails open with a degraded internal token
+    // rather than redirecting to login -- which only happens at all if session verification
+    // itself succeeded. A still-unauthenticated request would instead get a 302 redirect.
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-internal-token-present").unwrap(),
+        "true"
+    );
 }
 
 #[tokio::test]

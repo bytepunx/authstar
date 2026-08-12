@@ -36,12 +36,15 @@ pub async fn jwks_handler(
     // (matching gate.rs's own handling of the same condition) -- an empty `keys` array would
     // silently look like "this tenant has no signing key at all" to a JWKS consumer rather than
     // "something is wrong," so this is a 503, not a 200 with nothing in it.
-    let Some(internal_key) = &tenant.internal_keys else {
+    if tenant.internal_keys.is_empty() {
         return service_unavailable();
-    };
+    }
 
+    // Every in-window generation (ADR 0088), not just the current one -- a token signed just
+    // before a rotation can still be outstanding, and its verifier needs the old key's entry to
+    // still be here until it naturally expires.
     Json(JwksResponse {
-        keys: vec![internal_key.to_jwk()],
+        keys: tenant.internal_keys.all().map(|key| key.to_jwk()).collect(),
     })
     .into_response()
 }
