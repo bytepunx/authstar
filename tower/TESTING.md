@@ -266,6 +266,53 @@ that in-memory adapter. `applications.spec.ts`'s list tests use dedicated, not-r
 tenant slugs to avoid it; worth remembering for any future spec file that calls `consequent.find()`
 with criteria values also used by other tests in the same file.
 
+**`roleDefinition` (ADR 0047, tower Story 001) is now implemented** — `src/actors/
+role_definition_actor.ts` plus `src/routes/role-definitions.ts`: `POST`/`GET`
+(list+detail)/`PATCH`/`DELETE /tenants/:tenantSlug/role-definitions[...]`, gated by
+`roles:manage` on every write. Built as the next link in ADR 0047's dependency chain after
+applications (above) — keep's future reference cache needs a real role catalog to consume/backfill
+from, same reasoning. Key points:
+
+- **Composite key is purely positional, no static tags** (`{tenant}:{name}` tenant-wide,
+  `{tenant}:{appSlug}:{name}` application-scoped) — ADR 0047's own 2026-08-05 correction, applied
+  directly rather than the ADR's original (superseded) `{tenant}:{scope}:{name}` shape. `GET`/
+  `PATCH`/`DELETE`'s `{id}` route param **is** this key, URL-encoded (ADR 0051's clarification) —
+  fastify's router decodes path segments automatically, so `request.params.id` is already the
+  plain key string, no extra decoding needed. Tested directly:
+  `role-definitions.spec.ts`'s detail/patch/delete tests all pass `encodeURIComponent('acme:admin')`
+  in the URL and assert the round trip resolves correctly.
+- **The composite key is itself the uniqueness constraint, checked race-free with no parent-actor
+  coordination** — unlike `application` (needs a sibling-slug check against every *other*
+  application under the same tenant, requiring `tenant`'s own single-writer queue),
+  `roleDefinition`'s own single-writer-per-actor queue on this exact key already serializes
+  concurrent creates of the *same* key. `create`'s `doesNotExist` guard (same `{when, then}` +
+  reject-fallback pattern as `application`'s `suspend`/`delete`) rejects a duplicate name+scope
+  with 409, whether the existing definition is active or retired — a retired name isn't reusable,
+  same "stable historical reference" reasoning ADR 0082 already applied to `inviteCode`.
+- **Creating an application-scoped role definition (`scope: {application}`) validates the
+  referenced application exists and is active** (ADR 0047: "tower validates the referenced
+  application exists at that moment") — a direct `consequent.fetch('application',
+  '{tenant}:{appSlug}')` check, same bar `applications.ts`'s own `exposedProviders` validation
+  already applies to provider references. Application validity is checked only at definition
+  time, never re-checked downstream, per the ADR's own stated reasoning (granting a role
+  transitively implies its definition was already valid).
+- **`scope` is deliberately not in the actor's `searchableBy`** — it's `'tenant' | {application}`,
+  not a flat scalar the default in-memory/Postgres search adapters can compare directly. The list
+  route fetches by `tenant` alone (`consequent.find('roleDefinition', {tenant})`) and filters by
+  `scope`/`status` in application code, the same approach `applications.ts`'s list route already
+  takes for its own `status`/`_admin` filtering.
+- Every write that creates or retires a role definition publishes the matching
+  `roleDefinition.<created|retired>` event (ADR 0047's own outbound-event requirement) —
+  `{tenant, name, scope, status}`. `PATCH`'s `description`-only edits publish nothing — not a
+  lifecycle transition, no consumer needs to know about it.
+- **Deliberately not wired into any role-*granting* write path** — `POST
+  /accounts/{accountId}/roles`, and role lists on invite/inviteCode creation, are the write paths
+  ADR 0047 says should validate against this catalog, but none of them exist as routes in this
+  repo yet (`POST /accounts/{accountId}/roles` was never built by any prior task; invite/inviteCode
+  creation is Story 007's own still-pending scope — see "Code-based invites" below). This task's
+  actual driver is keep's reference cache needing a real source of truth, not a retrofit of
+  call sites that don't exist yet — see `role-definitions.ts`'s own header comment.
+
 **Deliberately deferred** (documented here, matching every other authstar service's own scope
 notes, rather than left unstated):
 
