@@ -98,7 +98,8 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     const body = request.body as { scope: Scope, grantedRoles?: GrantedRole[], seatLimit?: number | null, expiresAt: string }
 
     const grantedRoles = body.grantedRoles ?? []
-    const validation = app.roleCache.validateAll(grantedRoles)
+    await app.roleBackfill.ensureFresh(tenantSlug)
+    const validation = app.roleCache.validateAll(tenantSlug, grantedRoles)
     if (!validation.valid) {
       return reply.code(400).send({ error: 'grantedRoles references an unknown or inactive application/role', invalid: validation.invalid })
     }

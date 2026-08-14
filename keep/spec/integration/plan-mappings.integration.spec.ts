@@ -67,7 +67,7 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
       consequent,
       stripeClients: createFakeStripeClientFactory(stripeState),
       stripeConfig,
-      roleCache: createRoleReferenceCache({ 'demo-app': ['member', 'admin'] }),
+      roleCache: createRoleReferenceCache({ acme: { 'demo-app': ['member', 'admin'] } }),
       entitlements: createInMemoryEntitlementPublisher(),
       authstarGetKey: jwt.getKey,
     })

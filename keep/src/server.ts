@@ -8,8 +8,19 @@ import buildApp from './lib/build-app.js'
 import { createStripeClientFactory } from './lib/stripe-client.js'
 import { createSignetStripeConfigStore } from './lib/signet-stripe-config-store.js'
 import { createRoleReferenceCache } from './lib/role-reference-cache.js'
+import { startRoleReferenceConsumer } from './lib/role-reference-consumer.js'
+import { createTowerReferenceClient, createRoleReferenceBackfill } from './lib/role-reference-backfill.js'
 import { createAmqpEntitlementPublisher, ENTITLEMENT_EXCHANGE } from './lib/amqp-entitlement-publisher.js'
 import { createInMemorySequenceProvider } from './lib/entitlement-publisher.js'
+
+// ADR 0047's periodic safety-net re-run interval for the role-reference
+// backfill (`role-reference-backfill.ts`'s `refreshAll`) -- re-checks every
+// tenant already backfilled at least once, catching a missed RabbitMQ
+// delivery. Not configurable via signet -- this is an operational tuning
+// knob, not tenant-facing config, same posture as this codebase's other
+// fixed intervals (none exist yet to compare against, but matches
+// `waitForRestart`'s own fixed-constant polling interval below).
+const ROLE_REFERENCE_REFRESH_INTERVAL_MS = 5 * 60_000
 
 // Production entrypoint. Follows the exact fetch-once/watch/restart-lock
 // pattern tower's own `src/server.ts` establishes for this codebase (itself
@@ -126,14 +137,33 @@ async function main(): Promise<void> {
   const stripeClients = createStripeClientFactory()
   const stripeConfig = createSignetStripeConfigStore({ address: adminAddress, token: signetAdminToken, initialSecrets: secrets })
 
-  // The tower-sourced role reference cache (ADR 0047) needs a startup
-  // backfill against tower plus a periodic re-run to stay fresh -- that
-  // poller is out of scope for this pilot slice (TESTING.md: "no running
-  // tower to poll in these tests," and no keep story specifies the
-  // mechanism yet). Boots with an empty snapshot rather than blocking
-  // startup on unbuilt work; every `grantedRoles` validation this cache
-  // backs will reject until a real poller is built and wired in here.
-  const roleCache = createRoleReferenceCache({})
+  // ADR 0047's role reference cache -- now real, not the always-empty
+  // stub this used to boot with. Kept current two ways: a live RabbitMQ
+  // consumer on tower's `application.*`/`roleDefinition.*` events (below),
+  // and a per-tenant backfill against tower's own list endpoints
+  // (`role-reference-backfill.ts`'s own header comment explains why this
+  // is per-tenant-on-first-touch rather than one eager, whole-installation
+  // sweep -- tower has no endpoint to enumerate every tenant).
+  const towerBaseUrl = (bundle.towerBaseUrl as string | undefined) ?? secrets.towerBaseUrl
+  if (!towerBaseUrl) throw new Error('signet bundle missing towerBaseUrl')
+  const roleCache = createRoleReferenceCache()
+  const roleBackfill = createRoleReferenceBackfill(roleCache, createTowerReferenceClient(towerBaseUrl))
+
+  const roleReferenceQueue = await amqpChannel.assertQueue('keep.role-reference', { durable: true })
+  await amqpChannel.bindQueue(roleReferenceQueue.queue, ENTITLEMENT_EXCHANGE, 'application.#')
+  await amqpChannel.bindQueue(roleReferenceQueue.queue, ENTITLEMENT_EXCHANGE, 'roleDefinition.#')
+  await startRoleReferenceConsumer(amqpChannel, roleReferenceQueue.queue, roleCache)
+
+  // ADR 0047's "periodically re-run as a safety net" -- `unref()` so this
+  // timer never keeps the process alive on its own, cleared explicitly on
+  // shutdown below regardless.
+  const roleReferenceRefreshTimer = setInterval(() => {
+    roleBackfill.refreshAll().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('role reference cache periodic refresh failed', err)
+    })
+  }, ROLE_REFERENCE_REFRESH_INTERVAL_MS)
+  roleReferenceRefreshTimer.unref()
 
   // ADR 0089's tenant-JWKS resolution needs keep's own copy of `baseDomain`
   // -- same bundle field name tower's `ProvisioningConfig.baseDomain`
@@ -145,6 +175,7 @@ async function main(): Promise<void> {
     stripeClients,
     stripeConfig,
     roleCache,
+    roleBackfill,
     entitlements,
     sequences,
     baseDomain,
@@ -176,6 +207,7 @@ async function main(): Promise<void> {
     }),
   ])
 
+  clearInterval(roleReferenceRefreshTimer)
   await pgAdapters.close()
   await amqpChannel.close()
   await amqpConnection.close()

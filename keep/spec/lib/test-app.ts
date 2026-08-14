@@ -17,10 +17,12 @@ import { createInternalJwtFixture, bearer, type InternalTokenOverrides } from '.
 
 // A reasonably permissive default role reference snapshot -- most tests
 // don't care about role validation specifics and can grant roles under
-// 'demo-app'; tests that specifically exercise the ADR 0047 validation path
-// build their own narrower snapshot.
+// 'acme'/'demo-app'; tests that specifically exercise the ADR 0047
+// validation path build their own narrower snapshot. Nested by tenant
+// (`role-reference-cache.ts`'s real shape, ADR 0047) -- was a flat
+// `application -> roles` map before the cache became tenant-scoped.
 const defaultRoleSnapshot: RoleReferenceSnapshot = {
-  'demo-app': ['member', 'admin', 'billing-admin'],
+  acme: { 'demo-app': ['member', 'admin', 'billing-admin'] },
 }
 
 export interface TestApp {

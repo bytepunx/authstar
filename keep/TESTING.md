@@ -80,11 +80,8 @@ pass added on top:**
   0079) — needs portcullis's own `Host`-resolved application context to cross-check the
   credential against; the shared handler both ingress paths call
   (`POST /tenants/{tenantSlug}/usage-records`) *is* implemented and tested directly.
-- The `grantedRoles` reference cache's tower-polling backfill (`src/lib/role-reference-cache.ts`)
-  — still an injectable interface with in-memory implementations only; `src/server.ts` (see
-  below) boots it with an empty snapshot rather than block on this unbuilt poller, so every
-  `grantedRoles` validation rejects in a real deployment until it's built. No keep story
-  specifies the polling mechanism yet.
+- ~~The `grantedRoles` reference cache's tower-polling backfill~~ — **now implemented**, see its
+  own section below.
 - Entitlement sequence numbers (`SequenceProvider`) are in-memory only — correct within one
   process's lifetime (what every test needs), not durable across a restart. A real deployment
   needs this backed by something that survives one (a dedicated actor, a Postgres counter table)
@@ -186,6 +183,62 @@ across every route (that would mostly duplicate the same assertion tower's own S
 already demonstrate) -- a representative case is covered per distinct grant (`billing:manage`,
 `billing:read`, `applications:manage`) including the missing-token, wrong-grant, and
 degraded-token cases, in `stripe-config.spec.ts`/`billing-reads.spec.ts`/`usage.spec.ts`.
+
+## The `grantedRoles` reference cache (ADR 0047) is now implemented
+
+`src/lib/role-reference-cache.ts` is no longer a fixed, injectable snapshot -- it's a real,
+tenant-scoped, mutable cache (`upsertApplication`/`upsertRoleDefinition`), kept current two ways:
+
+- **`src/lib/role-reference-consumer.ts`** — a RabbitMQ consumer on tower's
+  `application.<created|hosts-changed|suspended|deleted>`/`roleDefinition.<created|retired>`
+  events, keep's first consumer of any kind (it only ever *published* to RabbitMQ before this
+  pass). Bound to a new `keep.role-reference` queue on the same `authstar` topic exchange
+  (`ENTITLEMENT_EXCHANGE`, confirmed the same exchange name tower's own publisher asserts) keep's
+  entitlement publisher already uses -- `assertExchange` is idempotent, so whichever service
+  boots first creates it. Both event families carry their current `status` directly in every
+  payload (not just
+  the specific transition), so the consumer never switches on the routing key's exact suffix --
+  it just upserts whatever `status` says, uniformly, for every message on either family. Mirrors
+  tower's own `entitlement-consumer.ts` `ChannelLike` convention exactly (fake-channel tests, no
+  real broker) — `spec/behavior/role-reference-consumer.spec.ts`.
+- **`src/lib/role-reference-backfill.ts`** — catches up on state that predates keep's own
+  uptime (a fresh queue binding never sees RabbitMQ messages published before it existed).
+  **A deliberate, documented deviation from ADR 0047's literal "one-time startup, across
+  everything" framing**: tower has no endpoint that lists every tenant on the installation (only
+  per-tenant lookups), so an eager whole-installation sweep at boot isn't buildable against
+  tower's actual current API surface. What's implemented instead is **per-tenant,
+  on-first-touch**: `ensureFresh(tenant)` is called from `plan-mappings.ts`/`trials.ts`/
+  `coupons.ts` right before validating `grantedRoles`, backfills that tenant only the first time
+  in the process's lifetime, and is a no-op afterward (the live consumer above keeps it current).
+  `refreshAll()` (wired into `server.ts` on a 5-minute interval) is the ADR's own "periodic
+  re-run as a safety net," re-checking every tenant already known — guards against a missed
+  RabbitMQ delivery, not against never having backfilled. A failed backfill attempt never marks
+  the tenant done, so the next request for it retries automatically; in the meantime, validation
+  against an empty/stale cache fails closed, the same safe default this cache always had (it used
+  to boot permanently empty — now it's only *transiently* empty, once, per tenant, in the worst
+  case). See that file's own header comment for the full reasoning. Uses global `fetch` (Node
+  22+, already this repo's engine floor) against a new required `towerBaseUrl` signet bundle
+  field — no new HTTP client dependency. Tested via an injected `TowerReferenceClient` fake, no
+  real HTTP and no `fetch` mocking — `spec/behavior/role-reference-backfill.spec.ts`.
+- **`spec/behavior/plan-mappings-role-backfill-wiring.spec.ts`** — proves the route-level wiring
+  itself (not just the cache/consumer/backfill modules in isolation): builds the app directly
+  with a real, non-no-op `RoleReferenceBackfill` and asserts a role invalid before `ensureFresh`
+  runs is accepted once it does, that the request's own tenant (not a hardcoded one) is passed,
+  and that PATCH only triggers it when `grantedRoles` is actually in the body.
+- **`spec/behavior/role-reference-cache.spec.ts`** — the cache's own unit-level contract
+  (tenant isolation, application-inactive invalidates every role under it, `validateAll` reports
+  every invalid entry not just the first), previously only exercised indirectly.
+
+**A necessary breaking change to `RoleReferenceCache`'s own shape**, worth calling out since it
+touched every existing caller: `isValid`/`validateAll` now take a `tenant` as their first
+argument (ADR 0047 requires the cache be tenant-scoped; the old signature had no way to express
+that). Updated at all four call sites (`plan-mappings.ts` x2, `trials.ts`, `coupons.ts`) and in
+every test that constructs a snapshot directly (`spec/lib/test-app.ts`'s `defaultRoleSnapshot`,
+both `spec/integration/*.integration.spec.ts` files) — the snapshot shape itself is now nested
+one level deeper (`{tenant: {application: [roles]}}`, was `{application: [roles]}`). `buildApp()`
+falls back to a no-op `RoleReferenceBackfill` (`createNoopRoleReferenceBackfill`) when none is
+injected, so every pre-existing test that pre-seeds `roleCache` directly and never touches
+`roleBackfill` needed zero changes beyond the tenant-scoping above.
 
 ## Six real gotchas this pilot found — worth knowing before writing more services' tests
 

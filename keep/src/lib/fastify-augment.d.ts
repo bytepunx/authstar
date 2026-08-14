@@ -2,6 +2,7 @@ import type { ConsequentApi } from './consequent-types.js'
 import type { StripeClientFactory } from './stripe-client.js'
 import type { StripeConfigStore } from './stripe-config.js'
 import type { RoleReferenceCache } from './role-reference-cache.js'
+import type { RoleReferenceBackfill } from './role-reference-backfill.js'
 import type { EntitlementPublisher, SequenceProvider } from './entitlement-publisher.js'
 
 declare module 'fastify' {
@@ -10,6 +11,7 @@ declare module 'fastify' {
     stripeClients: StripeClientFactory
     stripeConfig: StripeConfigStore
     roleCache: RoleReferenceCache
+    roleBackfill: RoleReferenceBackfill
     entitlements: EntitlementPublisher
     sequences: SequenceProvider
   }

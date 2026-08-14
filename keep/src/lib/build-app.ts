@@ -4,6 +4,8 @@ import type { ConsequentApi } from './consequent-types.js'
 import type { StripeClientFactory } from './stripe-client.js'
 import type { StripeConfigStore } from './stripe-config.js'
 import type { RoleReferenceCache } from './role-reference-cache.js'
+import type { RoleReferenceBackfill } from './role-reference-backfill.js'
+import { createNoopRoleReferenceBackfill } from './role-reference-backfill.js'
 import type { EntitlementPublisher, SequenceProvider } from './entitlement-publisher.js'
 import { createInMemorySequenceProvider } from './entitlement-publisher.js'
 import registerPlanMappingRoutes from '../routes/plan-mappings.js'
@@ -20,6 +22,11 @@ export interface BuildAppOptions {
   stripeClients: StripeClientFactory
   stripeConfig: StripeConfigStore
   roleCache: RoleReferenceCache
+  // ADR 0047's per-tenant startup/on-first-touch backfill against tower --
+  // defaults to a no-op so every existing test (which pre-seeds `roleCache`
+  // directly and has no tower to poll) keeps working unchanged; `server.ts`
+  // supplies the real one.
+  roleBackfill?: RoleReferenceBackfill
   entitlements: EntitlementPublisher
   sequences?: SequenceProvider
   logger?: boolean
@@ -74,6 +81,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('stripeClients', options.stripeClients)
   app.decorate('stripeConfig', options.stripeConfig)
   app.decorate('roleCache', options.roleCache)
+  app.decorate('roleBackfill', options.roleBackfill ?? createNoopRoleReferenceBackfill())
   app.decorate('entitlements', options.entitlements)
   app.decorate('sequences', options.sequences ?? createInMemorySequenceProvider())
 
