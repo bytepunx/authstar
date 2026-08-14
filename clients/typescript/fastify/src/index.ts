@@ -2,6 +2,8 @@ export { default as authstarFastifyPlugin, type AuthstarFastifyOptions } from '.
 export {
   staticKeyProvider,
   jwksKeyProvider,
+  perTenantJwksKeyProvider,
+  type PerTenantJwksKeyProviderOptions,
   AuthstarJwtError,
   type AuthstarJwtErrorReason,
   type InternalClaims,
