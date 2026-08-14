@@ -63,8 +63,15 @@ export function mapMessageToRow(routingKey: string, payload: Record<string, unkn
     latencyMs: isRequestEvent ? num(payload.latencyMs) : null,
 
     // The raw JSON body -- lookout's allowlist defines the shape per
-    // client event type, not this schema (ADR 0085).
-    clientPayload: isClientEvent ? JSON.stringify(payload) : null,
+    // client event type, not this schema (ADR 0085). `payload.payload`,
+    // not `payload` itself: lookout's own wire message nests the client's
+    // data under a `payload` key alongside `tenant`/`application`/
+    // `eventType`/etc. (lookout/src/routes/events.ts, `{...body, eventId,
+    // timestamp}`) -- stringifying the whole message here would duplicate
+    // those already-columned fields a second time inside the JSON blob and
+    // break ADR 0085's "query clientPayload.<field> directly" assumption
+    // (it would actually be clientPayload.payload.<field>).
+    clientPayload: isClientEvent && payload.payload !== undefined ? JSON.stringify(payload.payload) : null,
 
     // Assigned at ingestion by lookout; generated here only as a defensive
     // fallback for a message that somehow arrives without one -- `eventId`

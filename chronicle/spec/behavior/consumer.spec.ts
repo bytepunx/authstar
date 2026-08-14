@@ -74,7 +74,33 @@ describe('analytics message handler -- mapping, batching, ack/nack', () => {
     expect(row.status).toBeNull()
   })
 
-  it('strips the "analytics." prefix, and namespaces client events under client.<type>', async () => {
+  it('strips the "analytics." prefix, namespaces client events under client.<type>, and stores only the nested payload sub-object', async () => {
+    const clickhouse = new InMemoryClickHouseClient()
+    const channel = new FakeChannel()
+    const handler = createAnalyticsMessageHandler({ clickhouse, channel, logger: silentLogger, batchMaxSize: 1, batchMaxWaitMs: 5_000 })
+
+    // Real lookout wire shape (lookout/src/routes/events.ts: `{...body,
+    // eventId, timestamp}`) -- the client's own data is nested under
+    // `payload`, alongside tenant/application/eventType/etc., not flat at
+    // the top level.
+    handler.handle('analytics.client.pageview', {
+      tenant: 'acme',
+      application: 'app1',
+      timestamp: '2026-08-01T12:00:00.000Z',
+      payload: { page: '/pricing' },
+    }, fakeMessage())
+    await new Promise((resolve) => setImmediate(resolve))
+
+    const row = clickhouse.allRows()[0]
+    expect(row.eventType).toBe('client.pageview')
+    // Only the nested payload, not the whole envelope -- tenant/application/
+    // timestamp are already their own columns and shouldn't be duplicated
+    // inside the JSON blob too (ADR 0085's `clientPayload.<field>` query
+    // assumption depends on this).
+    expect(row.clientPayload).toBe(JSON.stringify({ page: '/pricing' }))
+  })
+
+  it('stores null clientPayload for a client event with no payload sub-object', async () => {
     const clickhouse = new InMemoryClickHouseClient()
     const channel = new FakeChannel()
     const handler = createAnalyticsMessageHandler({ clickhouse, channel, logger: silentLogger, batchMaxSize: 1, batchMaxWaitMs: 5_000 })
@@ -83,18 +109,10 @@ describe('analytics message handler -- mapping, batching, ack/nack', () => {
       tenant: 'acme',
       application: 'app1',
       timestamp: '2026-08-01T12:00:00.000Z',
-      page: '/pricing',
     }, fakeMessage())
     await new Promise((resolve) => setImmediate(resolve))
 
-    const row = clickhouse.allRows()[0]
-    expect(row.eventType).toBe('client.pageview')
-    expect(row.clientPayload).toBe(JSON.stringify({
-      tenant: 'acme',
-      application: 'app1',
-      timestamp: '2026-08-01T12:00:00.000Z',
-      page: '/pricing',
-    }))
+    expect(clickhouse.allRows()[0].clientPayload).toBeNull()
   })
 
   it('drops (acks, does not insert) a message missing a required always-present field', async () => {
