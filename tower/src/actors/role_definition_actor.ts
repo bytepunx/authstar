@@ -16,11 +16,21 @@
 // The composite key **is** the uniqueness constraint (ADR 0047: "validation
 // is a direct fetch(), not a find()/search") -- unlike `application` (which
 // needs a sibling-slug-uniqueness check against every *other* application
-// under the same tenant, requiring `tenant`'s own single-writer queue),
-// `roleDefinition`'s own single-writer-per-actor queue on this exact key is
-// already sufficient to make "does this name/scope already exist" race-free
-// with no parent-actor coordination needed -- see `doesNotExist`'s guard
-// below.
+// under the same tenant), no parent-actor coordination is needed here: a
+// single `fetch()` against this exact key is enough to know "does this
+// name/scope already exist" -- see `doesNotExist`'s guard below.
+//
+// **That guard alone is not race-free against concurrent creates**,
+// despite operating on a single actor id -- confirmed directly against
+// `consequent`'s own `dispatch.js`/`manager.js`: `handle()` fetches this
+// actor's current state *before* entering its per-actor command queue, so
+// two concurrent `handle()` calls for the same key can each see the same
+// pre-write (nonexistent) state and both pass this guard, each then
+// independently persisting its own `roleDefinition.created` event onto the
+// same actor id. `routes/role-definitions.ts`'s own `roleDefinitionMutex`
+// (see `src/lib/mutex.ts`) is what actually closes this, serializing
+// concurrent creates for the same key at the route layer before either
+// ever reaches this command.
 export interface RoleDefinitionState {
   tenant: string
   name: string

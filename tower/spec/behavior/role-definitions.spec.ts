@@ -135,6 +135,24 @@ describe('role-definitions -- API contract', () => {
       expect(response.statusCode).toBe(409)
     })
 
+    it('rejects a duplicate name+scope even under truly concurrent requests -- exactly one of N wins (mutex regression)', async () => {
+      await createTenant('acme')
+
+      const responses = await Promise.all(
+        Array.from({ length: 10 }, () => app.inject({
+          method: 'POST',
+          url: '/tenants/acme/role-definitions',
+          headers,
+          payload: { name: 'admin', scope: 'tenant' },
+        })),
+      )
+
+      const created = responses.filter((r) => r.statusCode === 201)
+      const conflicts = responses.filter((r) => r.statusCode === 409)
+      expect(created).toHaveLength(1)
+      expect(conflicts).toHaveLength(9)
+    })
+
     it('allows the same name under tenant scope and an application scope simultaneously (different keys)', async () => {
       await createTenant('acme')
       await createApplication('acme', 'billing')

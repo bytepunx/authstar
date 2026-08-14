@@ -3,6 +3,7 @@ import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
 import type { RoleDefinitionState } from '../actors/role_definition_actor.js'
 import { requirePermission } from '../lib/permissions.js'
+import { createKeyedMutex } from '../lib/mutex.js'
 
 // Per design/decisions/0047-application-and-role-slug-validation.md and
 // design/stories/tower/001-actor-definitions.md's `roleDefinition` section.
@@ -128,6 +129,13 @@ function toResponse(state: RoleDefinitionState) {
   }
 }
 
+// See `src/lib/mutex.ts`'s own header comment for why this exists: closes
+// a real concurrent-duplicate-key race `consequent`'s own per-actor queue
+// does not, by itself, prevent -- `roleDefinition.create`'s `doesNotExist`
+// guard depends on a fetch step two concurrent `handle()` calls on the
+// same key can both see stale, before either has persisted.
+const roleDefinitionMutex = createKeyedMutex()
+
 const roleDefinitionsRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.get(
     '/tenants/:tenantSlug/role-definitions',
@@ -178,12 +186,16 @@ const roleDefinitionsRoutes: FastifyPluginAsync = async function (app: FastifyIn
       }
 
       const key = keyFor(tenantSlug, body.name, body.scope)
-      const results = await app.consequent.handle(key, 'roleDefinition.create', {
+      // Serialized per key -- `consequent`'s own per-actor queue doesn't
+      // cover the `getOrCreate` fetch the `doesNotExist` guard depends on
+      // (see `mutex.ts`'s header comment); without this, two concurrent
+      // creates for the same name+scope could both pass the guard.
+      const results = await roleDefinitionMutex.runExclusive(key, () => app.consequent.handle(key, 'roleDefinition.create', {
         tenant: tenantSlug,
         name: body.name,
         scope: body.scope,
         description: body.description ?? '',
-      })
+      }))
       const rejection = results.find((r) => r?.rejected)
       if (rejection) {
         return reply.code(409).send({ error: rejection.reason?.message })

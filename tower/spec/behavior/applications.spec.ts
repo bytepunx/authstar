@@ -125,6 +125,27 @@ describe('applications -- API contract', () => {
       expect(response.statusCode).toBe(409)
     })
 
+    it('rejects a duplicate slug even under truly concurrent requests -- exactly one of N wins (mutex regression)', async () => {
+      await createTenant('acme')
+
+      const responses = await Promise.all(
+        Array.from({ length: 10 }, () => app.inject({
+          method: 'POST',
+          url: '/tenants/acme/applications',
+          headers,
+          payload: { slug: 'billing', name: 'Billing' },
+        })),
+      )
+
+      const created = responses.filter((r) => r.statusCode === 201)
+      const conflicts = responses.filter((r) => r.statusCode === 409)
+      expect(created).toHaveLength(1)
+      expect(conflicts).toHaveLength(9)
+
+      const tenant = await consequent.fetch('tenant', 'acme')
+      expect((tenant!.state as { applications: unknown[] }).applications).toHaveLength(1)
+    })
+
     it('allows the same slug across two different tenants', async () => {
       await createTenant('acme')
       await createTenant('other')

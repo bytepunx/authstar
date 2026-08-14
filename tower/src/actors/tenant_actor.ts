@@ -141,10 +141,22 @@ function rejectSuspend() {
 // `routes/applications.ts`'s general creation route, Story 004 wants a real
 // rejection ("Rejects if slug already exists under this tenant... checked
 // against tenant.applications at command-handling time") rather than a
-// silent no-op -- `consequent`'s single-writer-per-actor queue on `tenant`
-// is exactly what makes checking `tenant.applications` here race-free
-// against concurrent creates, so the check belongs on this command, not as
-// a pre-check in the route (which would have a TOCTOU window).
+// silent no-op, so the check belongs on this command rather than only as a
+// pre-check in the route.
+//
+// **Correction**: this guard alone is *not* actually race-free against
+// concurrent creates, despite `consequent`'s per-actor command queue --
+// confirmed directly against `dispatch.js`/`manager.js`, not assumed:
+// `handle()` fetches+replays this actor's current state *before* entering
+// the queue, so two concurrent `handle()` calls for the same tenant can
+// each see the same pre-write `tenant.applications` and both pass this
+// guard. Reproduced directly (10 concurrent duplicate-slug calls, all
+// "succeeded"). `routes/applications.ts`'s own `appMutex` (see
+// `src/lib/mutex.ts`) is what actually closes this, by serializing
+// concurrent requests for the same tenant at the route layer before either
+// ever reaches this command -- this guard is real defense-in-depth for a
+// caller that bypasses the route (or a future one), not the sole
+// correctness mechanism it was originally described as.
 function slugNotTaken(tenant: TenantState, command: AddApplicationCommand) {
   return !tenant.applications.some((a) => a.slug === command.slug)
 }

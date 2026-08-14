@@ -313,6 +313,38 @@ from, same reasoning. Key points:
   actual driver is keep's reference cache needing a real source of truth, not a retrofit of
   call sites that don't exist yet — see `role-definitions.ts`'s own header comment.
 
+**A real concurrency gap found and fixed while building the two features above: `consequent`'s
+per-actor command queue does NOT, by itself, make concurrent duplicate-creation checks
+race-free.** Both `application`'s and `roleDefinition`'s "does this already exist" guards were
+originally documented as race-free on the strength of that queue — checked directly against
+`consequent`'s own `dispatch.js`/`manager.js` (not assumed) and reproduced directly (10 concurrent
+duplicate-slug/duplicate-name-and-scope requests, all "succeeding," none rejected) before either
+comment was corrected. Root cause: `handle()` calls `manager.getOrCreate(type, id)` — a fresh
+fetch-and-replay-events read — *before* entering the queue; only the subsequent `apply()`/
+`processCommand` step is queued, and it operates on whichever already-fetched `instance` object
+that specific `handle()` call captured. Two concurrent `handle()` calls on the same id can each
+fetch the same pre-write state, each pass a "does this already exist" guard, and each persist
+independently — `storeEvents` in both `consequent`'s in-memory default adapter and
+`consequent-postgres` (checked directly: a plain unconditional `INSERT`, no expected-version/
+optimistic-concurrency check) accepts both writes with no conflict. Fixed with a new
+`src/lib/mutex.ts` (`createKeyedMutex`, a plain in-process per-key promise-chain), used by
+`applications.ts`'s `appMutex` (keyed by `tenantSlug`, wrapping the duplicate-slug re-check +
+create + `tenant.add-application` sequence — the duplicate check is re-read *inside* the lock,
+not reused from a pre-lock fetch, since another request could have written in the meantime) and
+`role-definitions.ts`'s `roleDefinitionMutex` (keyed by the composite role-definition key,
+wrapping just the `roleDefinition.create` call). Sufficient for the realistic threat model (one
+tower replica handling concurrent requests for the same tenant/key) but **not** a fix for a
+genuinely distributed race across multiple tower replicas — that would need real DB-level
+optimistic concurrency control, which `consequent-postgres` doesn't provide at all, and isn't
+invented here; a documented residual gap, not a silently overclaimed guarantee (see `mutex.ts`'s
+own header comment). Verified with a real regression test in each spec file — 10 concurrent
+requests for the same slug/name+scope, asserting exactly one 201 and nine 409s, not just that
+sequential calls behave — `applications.spec.ts`/`role-definitions.spec.ts`. The same finding
+was independently rediscovered building keep's durable `SequenceProvider` (ADR 0047's sibling
+task) — see keep's own TESTING.md/`consequent-sequence-provider.ts` for that write-up; worth
+knowing before any future actor design leans on "the per-actor queue makes this race-free"
+without checking it the way this pass did.
+
 **Deliberately deferred** (documented here, matching every other authstar service's own scope
 notes, rather than left unstated):
 

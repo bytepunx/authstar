@@ -3,6 +3,7 @@ import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
 import type { ProviderState } from '../actors/provider_actor.js'
 import { requirePermission } from '../lib/permissions.js'
+import { createKeyedMutex } from '../lib/mutex.js'
 
 // Per design/stories/tower/004-applications-and-providers.md (Applications
 // half only -- Providers CRUD is a separate, ADR-0047-unrelated surface,
@@ -144,6 +145,11 @@ async function exposedProvidersValid(app: FastifyInstance, tenantSlug: string, e
   return true
 }
 
+// See `src/lib/mutex.ts`'s own header comment for why this exists: closes
+// a real concurrent-duplicate-slug race `consequent`'s own per-actor queue
+// does not, by itself, prevent.
+const appMutex = createKeyedMutex()
+
 const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   // Per ADR 0051's screen design: `_admin` is excluded from this list
   // entirely, not just filtered -- it's system-managed, exposing it here
@@ -201,11 +207,6 @@ const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInsta
       if (body.slug === '_admin') {
         return reply.code(400).send({ error: '"_admin" is a reserved slug' })
       }
-      // Friendly fast-path only -- the actual, race-free rejection happens
-      // against `tenant`'s own single-writer queue below.
-      if (tenant.applications.some((a) => a.slug === body.slug)) {
-        return reply.code(409).send({ error: 'an application with this slug already exists for this tenant' })
-      }
 
       const hosts = body.hosts ?? []
       if (!publicUrlHostValid(hosts, body.publicUrl)) {
@@ -215,24 +216,43 @@ const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInsta
         return reply.code(400).send({ error: 'exposedProviders must reference existing, active providers for this tenant' })
       }
 
-      const appKey = appKeyFor(tenantSlug, body.slug)
-      const existingApp = await app.consequent.fetch('application', appKey)
-      const existingAppState = existingApp?.state as unknown as ApplicationState | undefined
-      if (!existingAppState?.createdAt) {
-        await app.consequent.handle(appKey, 'application.create', {
-          tenant: tenantSlug,
-          slug: body.slug,
-          name: body.name,
-          hosts,
-          publicUrl: body.publicUrl ?? '',
-          exposedProviders: body.exposedProviders ?? [],
-        })
-      }
+      // Everything from here down runs inside `appMutex` -- the
+      // duplicate-slug check is re-read fresh *inside* the lock (not
+      // reusing the `tenant` fetched above, which may already be stale by
+      // the time this request's turn comes up) since `consequent`'s own
+      // per-actor queue doesn't serialize the fetch step that check
+      // depends on (see `mutex.ts`'s header comment).
+      const outcome = await appMutex.runExclusive(tenantSlug, async () => {
+        const current = await fetchTenant(app, tenantSlug)
+        if (current.applications.some((a) => a.slug === body.slug)) {
+          return { rejected: true as const, status: 409, error: 'an application with this slug already exists for this tenant' }
+        }
 
-      const results = await app.consequent.handle(tenantSlug, 'tenant.add-application', { slug: body.slug, name: body.name })
-      const rejection = results.find((r) => r?.rejected)
-      if (rejection) {
-        return reply.code(409).send({ error: rejection.reason?.message })
+        const appKey = appKeyFor(tenantSlug, body.slug)
+        const existingApp = await app.consequent.fetch('application', appKey)
+        const existingAppState = existingApp?.state as unknown as ApplicationState | undefined
+        if (!existingAppState?.createdAt) {
+          await app.consequent.handle(appKey, 'application.create', {
+            tenant: tenantSlug,
+            slug: body.slug,
+            name: body.name,
+            hosts,
+            publicUrl: body.publicUrl ?? '',
+            exposedProviders: body.exposedProviders ?? [],
+          })
+        }
+
+        const results = await app.consequent.handle(tenantSlug, 'tenant.add-application', { slug: body.slug, name: body.name })
+        const rejection = results.find((r) => r?.rejected)
+        if (rejection) {
+          return { rejected: true as const, status: 409, error: rejection.reason?.message }
+        }
+
+        return { rejected: false as const }
+      })
+
+      if (outcome.rejected) {
+        return reply.code(outcome.status).send({ error: outcome.error })
       }
 
       await app.publisher.publish('application.created', {
