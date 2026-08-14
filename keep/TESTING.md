@@ -82,10 +82,8 @@ pass added on top:**
   (`POST /tenants/{tenantSlug}/usage-records`) *is* implemented and tested directly.
 - ~~The `grantedRoles` reference cache's tower-polling backfill~~ — **now implemented**, see its
   own section below.
-- Entitlement sequence numbers (`SequenceProvider`) are in-memory only — correct within one
-  process's lifetime (what every test needs), not durable across a restart. A real deployment
-  needs this backed by something that survives one (a dedicated actor, a Postgres counter table)
-  — no keep story specifies the mechanism yet, so nothing to build against.
+- ~~Entitlement sequence numbers (`SequenceProvider`) are in-memory only~~ — **now durable**, see
+  its own section below.
 - The periodic plan-mapping pricing re-sync job (Story 003) — the `syncPricing` actor command
   exists and is exercised implicitly by nothing yet; the actual `CronJob`-style scheduler isn't
   built.
@@ -147,11 +145,8 @@ above:**
 - **`signet-stripe-config-store.ts`'s real `SyncBundle` RPC** — real request shape, real
   streaming, real auth, but never exercised against a live signet server (no fake signet server
   in this repo to test against) — same gap tower's own `signet-admin.ts` has.
-- **The `grantedRoles` reference cache poller and `SequenceProvider` durability** — both listed
-  above as already-deferred from the original pilot slice; `src/server.ts` wires them exactly as
-  they exist today (empty snapshot, in-memory counters) rather than building the missing pieces,
-  since no keep story specifies either mechanism yet and this pass's scope was the two gaps
-  named at the top of this section.
+- ~~The `grantedRoles` reference cache poller and `SequenceProvider` durability~~ — **both now
+  implemented**, see their own sections below.
 
 ## Permission enforcement middleware (Story 007) is now implemented
 
@@ -239,6 +234,49 @@ one level deeper (`{tenant: {application: [roles]}}`, was `{application: [roles]
 falls back to a no-op `RoleReferenceBackfill` (`createNoopRoleReferenceBackfill`) when none is
 injected, so every pre-existing test that pre-seeds `roleCache` directly and never touches
 `roleBackfill` needed zero changes beyond the tenant-scoping above.
+
+## `SequenceProvider` durability is now implemented
+
+`entitlement-publisher.ts`'s `SequenceProvider.next()` is now backed by a real, durable
+`entitlementSequence` consequent actor (`src/actors/entitlement_sequence_actor.ts`,
+`src/lib/consequent-sequence-provider.ts`'s `createConsequentSequenceProvider`) — was in-memory
+only, resetting to zero on every restart. `next` became `async` (was synchronous), rippling
+through `await` at all 7 call sites (`plan-mappings.ts` x1, `trials.ts` x3, `webhooks.ts` x3,
+`usage.ts` x1); `createInMemorySequenceProvider` (still used by every existing test) keeps its
+synchronous internals but now returns a resolved promise, so no test needed to change beyond
+adding `await`.
+
+**A real concurrency bug found and fixed while building this, worth flagging beyond keep --
+tower independently rediscovered the identical root cause building ADR 0047's applications/
+role-definitions routes (see tower's own TESTING.md), so this is evidently a `consequent`-wide
+characteristic, not a one-off**: `consequent`'s per-actor command queue does NOT, by itself,
+serialize concurrent `handle()` calls into a correct fetch-modify-write cycle. Checked directly
+against `consequent`'s own `dispatch.js`/`manager.js`, not assumed: `handle()` calls
+`manager.getOrCreate(type, id)` -- a fresh fetch-and-replay-events read -- *before* entering its
+queue; only the later `apply()`/`processCommand` step is queued, and it operates on whichever
+already-fetched `instance` object that specific `handle()` call captured. Reproduced directly:
+firing 10 concurrent `next()` calls for the same (tenant, scope) key, before any fix, all 10
+returned `1` -- every one of them fetched the same pre-write `value: 0`, computed `0 + 1`, and
+persisted independently, with `consequent`'s in-memory event store's `storeEvents` (a plain
+unconditional append, no expected-version check) accepting all 10 with no conflict. Fixed with a
+plain in-process, per-key promise-chain mutex built directly into
+`createConsequentSequenceProvider` (no new dependency) -- concurrent `next()` calls for the same
+key now serialize through it before any of them reach `consequent.handle()`. Sufficient for the
+realistic threat model (one keep process handling concurrent requests for the same tenant/scope)
+but explicitly **not** a fix for a genuinely distributed race across multiple keep replicas --
+that would need real DB-level optimistic concurrency control, which `consequent-postgres`
+doesn't provide at all (checked directly: `storeEvent` is a plain `INSERT`, no version check),
+and isn't invented here. Accepted as tolerable specifically for entitlement sequence numbers:
+ADR 0031's own consumer-side gap detection already treats a gap as "maybe missed a message,
+re-fetch to be sure," not a fatal error -- a rare cross-replica double-issued number degrades to
+that same already-tolerated case. See `consequent-sequence-provider.ts`'s own header comment for
+the full write-up.
+
+Test coverage: `spec/behavior/consequent-sequence-provider.spec.ts` -- monotonic increment, one
+counter per (tenant, scope) with real isolation across tenants/scopes, a direct read of the
+actor's own persisted state (proving real durability, not just interface behavior), and the
+concurrency regression itself (10 concurrent `next()` calls for the same key resolving to
+`[1..10]` with no duplicates, not the pre-fix all-`1`s).
 
 ## Six real gotchas this pilot found — worth knowing before writing more services' tests
 

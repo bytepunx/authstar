@@ -121,7 +121,7 @@ const usageRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     const allForMeter = await app.consequent.find('usageRecord', searchCriteria({ tenant: tenantSlug, application: body.application, meter: body.meter }))
     const periodUsage = allForMeter.reduce((sum, i) => sum + ((i.state as unknown as UsageRecordState).quantity ?? 0), 0)
 
-    const sequence = app.sequences.next(tenantSlug, { tenant: tenantSlug })
+    const sequence = await app.sequences.next(tenantSlug, { tenant: tenantSlug })
     await app.entitlements.publish({
       type: 'entitlement.usage-updated',
       tenant: tenantSlug,

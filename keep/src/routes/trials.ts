@@ -117,7 +117,7 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     // `entitlement.trial-granted` -- one per role (Story 004, same
     // discrete-event family as `role-granted`, ADR 0031).
     for (const role of grantedRoles) {
-      const sequence = app.sequences.next(tenantSlug, body.scope)
+      const sequence = await app.sequences.next(tenantSlug, body.scope)
       await app.entitlements.publish({
         type: 'entitlement.trial-granted',
         tenant: tenantSlug,
@@ -158,7 +158,7 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     const rejection = results.find((r) => r?.rejected)
     if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
 
-    const sequence = app.sequences.next(tenantSlug, current.scope)
+    const sequence = await app.sequences.next(tenantSlug, current.scope)
     await app.entitlements.publish({
       type: 'entitlement.trial-extended',
       tenant: tenantSlug,
@@ -181,7 +181,7 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
 
     for (const role of current.grantedRoles) {
-      const sequence = app.sequences.next(tenantSlug, current.scope)
+      const sequence = await app.sequences.next(tenantSlug, current.scope)
       await app.entitlements.publish({
         type: 'entitlement.role-revoked',
         tenant: tenantSlug,

@@ -132,7 +132,7 @@ function diffRoles(previous: GrantedRole[], next: GrantedRole[]): { granted: Gra
 
 async function publishRoleEvents(app: FastifyInstance, tenant: string, scope: Scope, roles: GrantedRole[], eventType: 'entitlement.role-granted' | 'entitlement.role-revoked') {
   for (const role of roles) {
-    const sequence = app.sequences.next(tenant, scope)
+    const sequence = await app.sequences.next(tenant, scope)
     await app.entitlements.publish({
       type: eventType,
       tenant,
@@ -145,7 +145,7 @@ async function publishRoleEvents(app: FastifyInstance, tenant: string, scope: Sc
 
 async function publishSeatLimitIfSet(app: FastifyInstance, tenant: string, scope: Scope, seatLimit: number | null) {
   if (seatLimit === null || !('tenant' in scope)) return
-  const sequence = app.sequences.next(tenant, scope)
+  const sequence = await app.sequences.next(tenant, scope)
   await app.entitlements.publish({
     type: 'entitlement.seat-limit-changed',
     tenant,
@@ -184,7 +184,7 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
     await app.consequent.handle(trial.id, 'trial.convert', {})
   }
 
-  const sequence = app.sequences.next(tenant, scope)
+  const sequence = await app.sequences.next(tenant, scope)
   await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence })
 
   if (mapping) {

@@ -11,7 +11,7 @@ import { createRoleReferenceCache } from './lib/role-reference-cache.js'
 import { startRoleReferenceConsumer } from './lib/role-reference-consumer.js'
 import { createTowerReferenceClient, createRoleReferenceBackfill } from './lib/role-reference-backfill.js'
 import { createAmqpEntitlementPublisher, ENTITLEMENT_EXCHANGE } from './lib/amqp-entitlement-publisher.js'
-import { createInMemorySequenceProvider } from './lib/entitlement-publisher.js'
+import { createConsequentSequenceProvider } from './lib/consequent-sequence-provider.js'
 
 // ADR 0047's periodic safety-net re-run interval for the role-reference
 // backfill (`role-reference-backfill.ts`'s `refreshAll`) -- re-checks every
@@ -126,13 +126,10 @@ async function main(): Promise<void> {
   await amqpChannel.assertExchange(ENTITLEMENT_EXCHANGE, 'topic', { durable: true })
 
   const entitlements = createAmqpEntitlementPublisher(amqpChannel, ENTITLEMENT_EXCHANGE)
-  // In-memory only -- `entitlement-publisher.ts`'s own `SequenceProvider`
-  // doc comment and TESTING.md both flag this as not durable across a
-  // restart; no keep story specifies the backing mechanism yet (a
-  // dedicated `entitlementSequence` actor, or a Postgres counter table),
-  // so nothing to wire here beyond what already exists. Left as a
-  // documented follow-up, not silently glossed over.
-  const sequences = createInMemorySequenceProvider()
+  // Durable, backed by the `entitlementSequence` consequent actor --
+  // survives a restart (was in-memory-only, resetting to zero on every
+  // one). See `consequent-sequence-provider.ts`'s own header comment.
+  const sequences = createConsequentSequenceProvider(consequent)
 
   const stripeClients = createStripeClientFactory()
   const stripeConfig = createSignetStripeConfigStore({ address: adminAddress, token: signetAdminToken, initialSecrets: secrets })

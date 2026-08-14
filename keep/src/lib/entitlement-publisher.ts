@@ -88,23 +88,25 @@ export interface EntitlementPublisher {
 // type (Story 002) -- since ADR 0031's ordering-defense tooling assumes a
 // single sequence space a consumer can detect gaps against.
 //
-// In-memory only in this pilot slice -- not durable across a process
-// restart. A real deployment needs this backed by something that survives a
-// restart (e.g. a dedicated `entitlementSequence` consequent actor, or a
-// Postgres counter table); left as a follow-up, noted in TESTING.md, since
-// no keep story specifies the backing mechanism yet.
+// `next` is async (was a synchronous in-memory counter) since the real
+// implementation (`consequent-sequence-provider.ts`) is now backed by a
+// durable `entitlementSequence` consequent actor, surviving a restart --
+// see that file's own header comment. `createInMemorySequenceProvider`
+// below stays synchronous internally but returns a resolved promise; every
+// existing test that only needs "some SequenceProvider, no real durability
+// concern" keeps using it unchanged.
 export interface SequenceProvider {
-  next(tenant: string, scope: EntitlementScope): number
+  next(tenant: string, scope: EntitlementScope): Promise<number>
 }
 
-function scopeKey(scope: EntitlementScope): string {
+export function scopeKey(scope: EntitlementScope): string {
   return 'account' in scope ? `account:${scope.account}` : `tenant:${scope.tenant}`
 }
 
 export function createInMemorySequenceProvider(): SequenceProvider {
   const counters = new Map<string, number>()
   return {
-    next(tenant: string, scope: EntitlementScope): number {
+    async next(tenant: string, scope: EntitlementScope): Promise<number> {
       const key = `${tenant}:${scopeKey(scope)}`
       const value = (counters.get(key) ?? 0) + 1
       counters.set(key, value)
