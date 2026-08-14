@@ -10,9 +10,11 @@ import buildTestApp, { type TestApp } from '../lib/test-app.js'
 
 describe('plan mappings -- API contract', () => {
   let t: TestApp
+  let headers: { authorization: string }
 
   beforeEach(async () => {
     t = await buildTestApp()
+    headers = await t.headers({ permissions: ['billing:manage'] })
     t.stripeState.prices.set('price_basic', { unitAmount: 1000, currency: 'usd', interval: 'month' })
     t.stripeState.prices.set('price_yearly', { unitAmount: 10000, currency: 'usd', interval: 'year' })
     await t.stripeConfig.set('acme', { secretKey: 'sk_test_acme', webhookSecret: 'whsec_acme' })
@@ -27,6 +29,7 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'member' }] },
       })
 
@@ -43,6 +46,7 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'nonexistent-role' }] },
       })
 
@@ -53,6 +57,7 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_does_not_exist', name: 'Ghost' },
       })
 
@@ -63,6 +68,7 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic', unitAmount: 9999 },
       })
 
@@ -75,6 +81,7 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/unconfigured/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic' },
       })
 
@@ -87,6 +94,7 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name },
       })
       return response.json()
@@ -95,9 +103,9 @@ describe('plan mappings -- API contract', () => {
     it('defaults to active-only, excluding retired mappings', async () => {
       const active = await createMapping('Active Plan')
       const retired = await createMapping('Retired Plan')
-      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${retired.id}` })
+      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${retired.id}`, headers })
 
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings', headers })
       const body = response.json()
 
       expect(body.map((m: { id: string }) => m.id)).toEqual([active.id])
@@ -106,9 +114,9 @@ describe('plan mappings -- API contract', () => {
     it('includes retired mappings when status=all is passed', async () => {
       const active = await createMapping('Active Plan')
       const retired = await createMapping('Retired Plan')
-      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${retired.id}` })
+      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${retired.id}`, headers })
 
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings?status=all' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings?status=all', headers })
       const ids = response.json().map((m: { id: string }) => m.id).sort()
 
       expect(ids).toEqual([active.id, retired.id].sort())
@@ -119,17 +127,18 @@ describe('plan mappings -- API contract', () => {
       await t.app.inject({
         method: 'POST',
         url: '/tenants/other/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Other Plan' },
       })
 
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings', headers })
       expect(response.json()).toHaveLength(1)
     })
   })
 
   describe('GET /tenants/:tenantSlug/plan-mappings/:id', () => {
     it('returns 404 for an id that was never created', async () => {
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings/nonexistent' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings/nonexistent', headers })
       expect(response.statusCode).toBe(404)
     })
 
@@ -137,11 +146,12 @@ describe('plan mappings -- API contract', () => {
       const created = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic' },
       })
       const { id } = created.json()
 
-      const response = await t.app.inject({ method: 'GET', url: `/tenants/other/plan-mappings/${id}` })
+      const response = await t.app.inject({ method: 'GET', url: `/tenants/other/plan-mappings/${id}`, headers })
       expect(response.statusCode).toBe(404)
     })
   })
@@ -151,6 +161,7 @@ describe('plan mappings -- API contract', () => {
       const created = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic' },
       })
       const { id } = created.json()
@@ -158,6 +169,7 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({
         method: 'PATCH',
         url: `/tenants/acme/plan-mappings/${id}`,
+        headers,
         payload: { name: 'Basic Plus', seatLimit: 10, meter: 'api-calls' },
       })
 
@@ -172,6 +184,7 @@ describe('plan mappings -- API contract', () => {
       const created = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic' },
       })
       const { id } = created.json()
@@ -179,6 +192,7 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({
         method: 'PATCH',
         url: `/tenants/acme/plan-mappings/${id}`,
+        headers,
         payload: { grantedRoles: [{ application: 'unknown-app', role: 'member' }] },
       })
 
@@ -191,11 +205,12 @@ describe('plan mappings -- API contract', () => {
       const created = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic' },
       })
       const { id } = created.json()
 
-      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}` })
+      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}`, headers })
 
       expect(response.statusCode).toBe(200)
       expect(response.json().status).toBe('retired')
@@ -205,12 +220,13 @@ describe('plan mappings -- API contract', () => {
       const created = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers,
         payload: { stripePriceId: 'price_basic', name: 'Basic' },
       })
       const { id } = created.json()
-      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}` })
+      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}`, headers })
 
-      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}` })
+      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}`, headers })
       expect(response.statusCode).toBe(409)
     })
   })

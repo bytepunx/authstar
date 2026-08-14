@@ -9,6 +9,7 @@ import { createInMemoryStripeConfigStore } from '../../src/lib/stripe-config.js'
 import { createRoleReferenceCache } from '../../src/lib/role-reference-cache.js'
 import { createInMemorySequenceProvider } from '../../src/lib/entitlement-publisher.js'
 import { createAmqpEntitlementPublisher, ENTITLEMENT_EXCHANGE } from '../../src/lib/amqp-entitlement-publisher.js'
+import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
 
 // Integration tier: a real RabbitMQ (testcontainers), proving keep's
 // `AmqpEntitlementPublisher` actually lands a message tower's own
@@ -35,6 +36,7 @@ describe('entitlement publishing -- real RabbitMQ', () => {
   let publisherChannel: Channel
   let consumerConnection: ChannelModel
   let consumerChannel: Channel
+  let manageHeaders: { authorization: string }
 
   beforeAll(async () => {
     container = await new RabbitMQContainer('rabbitmq:3.13-management-alpine').start()
@@ -55,6 +57,9 @@ describe('entitlement publishing -- real RabbitMQ', () => {
     const stripeConfig = createInMemoryStripeConfigStore()
     await stripeConfig.set('acme', { secretKey: 'sk_test_acme', webhookSecret: 'whsec_acme' })
 
+    const jwt = await createInternalJwtFixture()
+    manageHeaders = bearer(await jwt.signToken({ permissions: ['billing:manage'] }))
+
     app = await buildApp({
       consequent,
       stripeClients: createFakeStripeClientFactory(stripeState),
@@ -62,6 +67,7 @@ describe('entitlement publishing -- real RabbitMQ', () => {
       roleCache: createRoleReferenceCache({ 'demo-app': ['member', 'admin'] }),
       entitlements,
       sequences: createInMemorySequenceProvider(),
+      authstarGetKey: jwt.getKey,
     })
 
     // A separate connection standing in for tower's real consumer -- proves
@@ -124,6 +130,7 @@ describe('entitlement publishing -- real RabbitMQ', () => {
     await app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'member' }] },
     })
 

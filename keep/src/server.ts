@@ -135,6 +135,11 @@ async function main(): Promise<void> {
   // backs will reject until a real poller is built and wired in here.
   const roleCache = createRoleReferenceCache({})
 
+  // ADR 0089's tenant-JWKS resolution needs keep's own copy of `baseDomain`
+  // -- same bundle field name tower's `ProvisioningConfig.baseDomain`
+  // reads, same fallback.
+  const baseDomain = (bundle.baseDomain as string | undefined) ?? 'authstar.app'
+
   const app = await buildApp({
     consequent,
     stripeClients,
@@ -142,6 +147,7 @@ async function main(): Promise<void> {
     roleCache,
     entitlements,
     sequences,
+    baseDomain,
     logger: true,
   })
 

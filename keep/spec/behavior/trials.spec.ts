@@ -5,9 +5,11 @@ import buildTestApp, { type TestApp } from '../lib/test-app.js'
 
 describe('trials -- API contract', () => {
   let t: TestApp
+  let headers: { authorization: string }
 
   beforeEach(async () => {
     t = await buildTestApp()
+    headers = await t.headers({ permissions: ['billing:manage'] })
   })
 
   afterEach(async () => {
@@ -19,6 +21,7 @@ describe('trials -- API contract', () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/trials',
+        headers,
         payload: {
           scope: { account: 'acct_1' },
           grantedRoles: [{ application: 'demo-app', role: 'member' }, { application: 'demo-app', role: 'admin' }],
@@ -39,6 +42,7 @@ describe('trials -- API contract', () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/trials',
+        headers,
         payload: { scope: { account: 'acct_2' }, grantedRoles: [{ application: 'ghost-app', role: 'member' }], expiresAt: '2026-12-31T00:00:00.000Z' },
       })
       expect(response.statusCode).toBe(400)
@@ -48,17 +52,17 @@ describe('trials -- API contract', () => {
   describe('GET /tenants/:tenantSlug/trials', () => {
     it('filters by status', async () => {
       const active = (await t.app.inject({
-        method: 'POST', url: '/tenants/acme/trials', payload: { scope: { account: 'a1' }, expiresAt: '2026-12-31T00:00:00.000Z' },
+        method: 'POST', url: '/tenants/acme/trials', headers, payload: { scope: { account: 'a1' }, expiresAt: '2026-12-31T00:00:00.000Z' },
       })).json()
       const toExpire = (await t.app.inject({
-        method: 'POST', url: '/tenants/acme/trials', payload: { scope: { account: 'a2' }, expiresAt: '2026-12-31T00:00:00.000Z' },
+        method: 'POST', url: '/tenants/acme/trials', headers, payload: { scope: { account: 'a2' }, expiresAt: '2026-12-31T00:00:00.000Z' },
       })).json()
-      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/trials/${toExpire.id}` })
+      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/trials/${toExpire.id}`, headers })
 
-      const activeOnly = await t.app.inject({ method: 'GET', url: '/tenants/acme/trials?status=active' })
+      const activeOnly = await t.app.inject({ method: 'GET', url: '/tenants/acme/trials?status=active', headers })
       expect(activeOnly.json().map((tr: { id: string }) => tr.id)).toEqual([active.id])
 
-      const expiredOnly = await t.app.inject({ method: 'GET', url: '/tenants/acme/trials?status=expired' })
+      const expiredOnly = await t.app.inject({ method: 'GET', url: '/tenants/acme/trials?status=expired', headers })
       expect(expiredOnly.json().map((tr: { id: string }) => tr.id)).toEqual([toExpire.id])
     })
   })
@@ -66,12 +70,13 @@ describe('trials -- API contract', () => {
   describe('PATCH /tenants/:tenantSlug/trials/:id -- extend or reissue', () => {
     it('appends an extension entry and updates expiresAt, publishing entitlement.trial-extended', async () => {
       const created = (await t.app.inject({
-        method: 'POST', url: '/tenants/acme/trials', payload: { scope: { account: 'a3' }, expiresAt: '2026-06-01T00:00:00.000Z' },
+        method: 'POST', url: '/tenants/acme/trials', headers, payload: { scope: { account: 'a3' }, expiresAt: '2026-06-01T00:00:00.000Z' },
       })).json()
 
       const response = await t.app.inject({
         method: 'PATCH',
         url: `/tenants/acme/trials/${created.id}`,
+        headers,
         payload: { expiresAt: '2026-09-01T00:00:00.000Z' },
       })
 
@@ -86,11 +91,11 @@ describe('trials -- API contract', () => {
 
     it('extend and reissue are the same operation -- a second PATCH appends a second extension entry', async () => {
       const created = (await t.app.inject({
-        method: 'POST', url: '/tenants/acme/trials', payload: { scope: { account: 'a4' }, expiresAt: '2026-06-01T00:00:00.000Z' },
+        method: 'POST', url: '/tenants/acme/trials', headers, payload: { scope: { account: 'a4' }, expiresAt: '2026-06-01T00:00:00.000Z' },
       })).json()
 
-      await t.app.inject({ method: 'PATCH', url: `/tenants/acme/trials/${created.id}`, payload: { expiresAt: '2026-07-01T00:00:00.000Z' } })
-      const second = await t.app.inject({ method: 'PATCH', url: `/tenants/acme/trials/${created.id}`, payload: { expiresAt: '2026-08-01T00:00:00.000Z' } })
+      await t.app.inject({ method: 'PATCH', url: `/tenants/acme/trials/${created.id}`, headers, payload: { expiresAt: '2026-07-01T00:00:00.000Z' } })
+      const second = await t.app.inject({ method: 'PATCH', url: `/tenants/acme/trials/${created.id}`, headers, payload: { expiresAt: '2026-08-01T00:00:00.000Z' } })
 
       expect(second.json().extensions).toHaveLength(2)
     })
@@ -101,11 +106,12 @@ describe('trials -- API contract', () => {
       const created = (await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/trials',
+        headers,
         payload: { scope: { account: 'a5' }, grantedRoles: [{ application: 'demo-app', role: 'member' }], expiresAt: '2026-06-01T00:00:00.000Z' },
       })).json()
       t.publisher.published.length = 0
 
-      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/trials/${created.id}` })
+      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/trials/${created.id}`, headers })
       expect(response.statusCode).toBe(200)
       expect(response.json().status).toBe('expired')
 
@@ -115,11 +121,11 @@ describe('trials -- API contract', () => {
 
     it('rejects revoking an already-expired trial (409, not a silent no-op)', async () => {
       const created = (await t.app.inject({
-        method: 'POST', url: '/tenants/acme/trials', payload: { scope: { account: 'a6' }, expiresAt: '2026-06-01T00:00:00.000Z' },
+        method: 'POST', url: '/tenants/acme/trials', headers, payload: { scope: { account: 'a6' }, expiresAt: '2026-06-01T00:00:00.000Z' },
       })).json()
-      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/trials/${created.id}` })
+      await t.app.inject({ method: 'DELETE', url: `/tenants/acme/trials/${created.id}`, headers })
 
-      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/trials/${created.id}` })
+      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/trials/${created.id}`, headers })
       expect(response.statusCode).toBe(409)
     })
   })

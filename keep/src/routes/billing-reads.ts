@@ -6,6 +6,7 @@ import type { RefundState } from '../actors/refund_actor.js'
 import type { DisputeState } from '../actors/dispute_actor.js'
 import type { PlanMappingState } from '../actors/plan_mapping_actor.js'
 import { scopesEqual } from '../lib/scope.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/keep/003-plan-mappings-checkout-and-billing-reads.md
 // ("Read-only billing surfaces"). `customer`/`subscription`/`refund`/
@@ -36,7 +37,7 @@ function toResponse<T extends { createdAt: string }>(state: T) {
 }
 
 const billingReadRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.get('/tenants/:tenantSlug/customer', { schema: { params: tenantParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/customer', { schema: { params: tenantParamsSchema }, preHandler: requirePermission('billing:read') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const instances = await app.consequent.find('customer', searchCriteria({ tenant: tenantSlug }))
     const customer = instances.map((i) => i.state as unknown as CustomerState).find((c) => scopesEqual(c.scope, { tenant: tenantSlug }))
@@ -44,7 +45,7 @@ const billingReadRoutes: FastifyPluginAsync = async function (app: FastifyInstan
     return toResponse(customer)
   })
 
-  app.get('/tenants/:tenantSlug/accounts/:accountId/customer', { schema: { params: accountParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/accounts/:accountId/customer', { schema: { params: accountParamsSchema }, preHandler: requirePermission('billing:read') }, async (request, reply) => {
     const { tenantSlug, accountId } = request.params as { tenantSlug: string, accountId: string }
     const instances = await app.consequent.find('customer', searchCriteria({ tenant: tenantSlug }))
     const customer = instances.map((i) => i.state as unknown as CustomerState).find((c) => scopesEqual(c.scope, { account: accountId }))
@@ -52,13 +53,13 @@ const billingReadRoutes: FastifyPluginAsync = async function (app: FastifyInstan
     return toResponse(customer)
   })
 
-  app.get('/tenants/:tenantSlug/subscriptions', { schema: { params: tenantParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/subscriptions', { schema: { params: tenantParamsSchema }, preHandler: requirePermission('billing:read') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const instances = await app.consequent.find('subscription', searchCriteria({ tenant: tenantSlug }))
     return instances.map((i) => i.state as unknown as SubscriptionState).filter((s) => s.createdAt).map(toResponse)
   })
 
-  app.get('/tenants/:tenantSlug/subscriptions/:id', { schema: { params: idParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/subscriptions/:id', { schema: { params: idParamsSchema }, preHandler: requirePermission('billing:read') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const instance = await app.consequent.fetch('subscription', id)
     const state = instance!.state as unknown as SubscriptionState
@@ -66,13 +67,13 @@ const billingReadRoutes: FastifyPluginAsync = async function (app: FastifyInstan
     return toResponse(state)
   })
 
-  app.get('/tenants/:tenantSlug/refunds', { schema: { params: tenantParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/refunds', { schema: { params: tenantParamsSchema }, preHandler: requirePermission('billing:read') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const instances = await app.consequent.find('refund', searchCriteria({ tenant: tenantSlug }))
     return instances.map((i) => i.state as unknown as RefundState).filter((r) => r.createdAt).map(toResponse)
   })
 
-  app.get('/tenants/:tenantSlug/disputes', { schema: { params: tenantParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/disputes', { schema: { params: tenantParamsSchema }, preHandler: requirePermission('billing:read') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const instances = await app.consequent.find('dispute', searchCriteria({ tenant: tenantSlug }))
     return instances.map((i) => i.state as unknown as DisputeState).filter((d) => d.createdAt).map(toResponse)
@@ -83,7 +84,7 @@ const billingReadRoutes: FastifyPluginAsync = async function (app: FastifyInstan
   // Stripe call on read, the entire reason the pricing cache exists (Story
   // 003, ADR 0060). A yearly-interval plan's `unitAmount` is normalized to
   // a monthly figure (/12) so mixed-interval plans sum into one MRR number.
-  app.get('/tenants/:tenantSlug/revenue-summary', { schema: { params: tenantParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/revenue-summary', { schema: { params: tenantParamsSchema }, preHandler: requirePermission('billing:read') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const [subscriptionInstances, mappingInstances] = await Promise.all([
       app.consequent.find('subscription', searchCriteria({ tenant: tenantSlug })),

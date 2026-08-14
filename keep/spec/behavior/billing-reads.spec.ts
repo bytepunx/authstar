@@ -20,12 +20,13 @@ describe('billing read surfaces -- API contract', () => {
 
   describe('GET /tenants/:tenantSlug/customer', () => {
     it('returns the tenant-scoped customer, 404 if none exists', async () => {
-      const missing = await t.app.inject({ method: 'GET', url: '/tenants/acme/customer' })
+      const headers = await t.headers({ permissions: ['billing:read'] })
+      const missing = await t.app.inject({ method: 'GET', url: '/tenants/acme/customer', headers })
       expect(missing.statusCode).toBe(404)
 
       await t.consequent.handle('cust_1', 'customer.create', { id: 'cust_1', tenant: 'acme', scope: { tenant: 'acme' }, stripeCustomerId: 'cus_1' })
 
-      const found = await t.app.inject({ method: 'GET', url: '/tenants/acme/customer' })
+      const found = await t.app.inject({ method: 'GET', url: '/tenants/acme/customer', headers })
       expect(found.statusCode).toBe(200)
       expect(found.json().stripeCustomerId).toBe('cus_1')
     })
@@ -33,19 +34,21 @@ describe('billing read surfaces -- API contract', () => {
 
   describe('GET /tenants/:tenantSlug/accounts/:accountId/customer', () => {
     it('returns the account-scoped customer', async () => {
+      const headers = await t.headers({ permissions: ['billing:read'] })
       await t.consequent.handle('cust_2', 'customer.create', { id: 'cust_2', tenant: 'acme', scope: { account: 'acct_1' }, stripeCustomerId: 'cus_2' })
 
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/accounts/acct_1/customer' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/accounts/acct_1/customer', headers })
       expect(response.statusCode).toBe(200)
       expect(response.json().stripeCustomerId).toBe('cus_2')
 
-      const wrongAccount = await t.app.inject({ method: 'GET', url: '/tenants/acme/accounts/nonexistent/customer' })
+      const wrongAccount = await t.app.inject({ method: 'GET', url: '/tenants/acme/accounts/nonexistent/customer', headers })
       expect(wrongAccount.statusCode).toBe(404)
     })
   })
 
   describe('GET /tenants/:tenantSlug/subscriptions', () => {
     it('lists subscriptions for the tenant only', async () => {
+      const headers = await t.headers({ permissions: ['billing:read'] })
       await t.consequent.handle('sub_1', 'subscription.create', {
         stripeSubscriptionId: 'sub_1', tenant: 'acme', scope: { account: 'acct_1' },
         stripePriceId: 'price_1', status: 'active', currentPeriodEnd: '2026-01-01T00:00:00.000Z',
@@ -55,7 +58,7 @@ describe('billing read surfaces -- API contract', () => {
         stripePriceId: 'price_1', status: 'active', currentPeriodEnd: '2026-01-01T00:00:00.000Z',
       })
 
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions', headers })
       const body = response.json()
       expect(body).toHaveLength(1)
       expect(body[0].stripeSubscriptionId).toBe('sub_1')
@@ -64,18 +67,20 @@ describe('billing read surfaces -- API contract', () => {
 
   describe('GET /tenants/:tenantSlug/subscriptions/:id', () => {
     it('returns 404 for a cross-tenant subscription id (404, not 403)', async () => {
+      const headers = await t.headers({ permissions: ['billing:read'] })
       await t.consequent.handle('sub_3', 'subscription.create', {
         stripeSubscriptionId: 'sub_3', tenant: 'acme', scope: { account: 'acct_1' },
         stripePriceId: 'price_1', status: 'active', currentPeriodEnd: '2026-01-01T00:00:00.000Z',
       })
 
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/other/subscriptions/sub_3' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/other/subscriptions/sub_3', headers })
       expect(response.statusCode).toBe(404)
     })
   })
 
   describe('GET /tenants/:tenantSlug/refunds and /disputes', () => {
     it('lists refunds and disputes, read-only, scoped to the tenant', async () => {
+      const headers = await t.headers({ permissions: ['billing:read'] })
       await t.consequent.handle('re_1', 'refund.create', {
         stripeRefundId: 're_1', tenant: 'acme', scope: { tenant: 'acme' },
         stripeChargeId: 'ch_1', amount: 500, currency: 'usd', reason: 'requested_by_customer', refundedAt: '2026-01-01T00:00:00.000Z',
@@ -85,10 +90,10 @@ describe('billing read surfaces -- API contract', () => {
         stripeChargeId: 'ch_2', amount: 750, currency: 'usd', reason: 'fraudulent',
       })
 
-      const refunds = await t.app.inject({ method: 'GET', url: '/tenants/acme/refunds' })
+      const refunds = await t.app.inject({ method: 'GET', url: '/tenants/acme/refunds', headers })
       expect(refunds.json()).toHaveLength(1)
 
-      const disputes = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes' })
+      const disputes = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers })
       expect(disputes.json()).toHaveLength(1)
       expect(disputes.json()[0].status).toBe('needs_response')
     })
@@ -96,15 +101,17 @@ describe('billing read surfaces -- API contract', () => {
 
   describe('GET /tenants/:tenantSlug/revenue-summary', () => {
     it('computes MRR from active subscriptions using cached plan-mapping pricing, normalizing yearly to monthly', async () => {
+      const manageHeaders = await t.headers({ permissions: ['billing:manage'] })
+      const readHeaders = await t.headers({ permissions: ['billing:read'] })
       t.stripeState.prices.set('price_monthly', { unitAmount: 1000, currency: 'usd', interval: 'month' })
       t.stripeState.prices.set('price_yearly', { unitAmount: 12000, currency: 'usd', interval: 'year' })
       await t.stripeConfig.set('acme', { secretKey: 'sk_test', webhookSecret: 'whsec_test' })
 
       const monthly = (await t.app.inject({
-        method: 'POST', url: '/tenants/acme/plan-mappings', payload: { stripePriceId: 'price_monthly', name: 'Monthly' },
+        method: 'POST', url: '/tenants/acme/plan-mappings', headers: manageHeaders, payload: { stripePriceId: 'price_monthly', name: 'Monthly' },
       })).json()
       const yearly = (await t.app.inject({
-        method: 'POST', url: '/tenants/acme/plan-mappings', payload: { stripePriceId: 'price_yearly', name: 'Yearly' },
+        method: 'POST', url: '/tenants/acme/plan-mappings', headers: manageHeaders, payload: { stripePriceId: 'price_yearly', name: 'Yearly' },
       })).json()
 
       await t.consequent.handle('sub_a', 'subscription.create', {
@@ -120,7 +127,7 @@ describe('billing read surfaces -- API contract', () => {
         stripePriceId: monthly.stripePriceId, status: 'canceled', currentPeriodEnd: '2026-01-01T00:00:00.000Z',
       })
 
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/revenue-summary' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/revenue-summary', headers: readHeaders })
       expect(response.statusCode).toBe(200)
       const body = response.json()
 
@@ -130,5 +137,16 @@ describe('billing read surfaces -- API contract', () => {
       expect(body.activeCount).toBe(2)
       expect(body.byStatus).toEqual({ active: 2, canceled: 1 })
     })
+  })
+
+  it('rejects with 403 for billing:manage alone -- these reads need billing:read specifically (Story 007)', async () => {
+    const headers = await t.headers({ permissions: ['billing:manage'] })
+    const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/customer', headers })
+    expect(response.statusCode).toBe(403)
+  })
+
+  it('rejects with 403 when no bearer token is presented', async () => {
+    const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions' })
+    expect(response.statusCode).toBe(403)
   })
 })

@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { searchCriteria } from '../lib/consequent-types.js'
 import type { CouponState, GrantedRole } from '../actors/coupon_actor.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/keep/004-trials-and-coupons.md ("Coupons"). `{code}`
 // in the URL is the bare code -- constructed into the full
@@ -73,7 +74,7 @@ function toResponse(state: CouponState) {
 }
 
 const couponRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/tenants/:tenantSlug/coupons', { schema: { params: tenantParamsSchema, body: createBodySchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/coupons', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const body = request.body as {
       code: string
@@ -110,20 +111,20 @@ const couponRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return reply.code(201).send(toResponse(created))
   })
 
-  app.get('/tenants/:tenantSlug/coupons', { schema: { params: tenantParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/coupons', { schema: { params: tenantParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const instances = await app.consequent.find('coupon', searchCriteria({ tenant: tenantSlug }))
     return instances.map((i) => i.state as unknown as CouponState).filter(exists).map(toResponse)
   })
 
-  app.get('/tenants/:tenantSlug/coupons/:code', { schema: { params: codeParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/coupons/:code', { schema: { params: codeParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, code } = request.params as { tenantSlug: string, code: string }
     const state = await fetchCoupon(app, couponKey(tenantSlug, code))
     if (!exists(state)) return reply.code(404).send()
     return toResponse(state)
   })
 
-  app.patch('/tenants/:tenantSlug/coupons/:code', { schema: { params: codeParamsSchema, body: patchBodySchema } }, async (request, reply) => {
+  app.patch('/tenants/:tenantSlug/coupons/:code', { schema: { params: codeParamsSchema, body: patchBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, code } = request.params as { tenantSlug: string, code: string }
     const key = couponKey(tenantSlug, code)
     const current = await fetchCoupon(app, key)
@@ -137,7 +138,7 @@ const couponRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return toResponse(updated)
   })
 
-  app.delete('/tenants/:tenantSlug/coupons/:code', { schema: { params: codeParamsSchema } }, async (request, reply) => {
+  app.delete('/tenants/:tenantSlug/coupons/:code', { schema: { params: codeParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, code } = request.params as { tenantSlug: string, code: string }
     const key = couponKey(tenantSlug, code)
     const current = await fetchCoupon(app, key)

@@ -6,6 +6,7 @@ import { createFakeStripeClientFactory, createFakeStripeState, type FakeStripeSt
 import { createInMemoryStripeConfigStore, type StripeConfigStore } from '../../src/lib/stripe-config.js'
 import { createRoleReferenceCache, type RoleReferenceSnapshot } from '../../src/lib/role-reference-cache.js'
 import { createInMemoryEntitlementPublisher, createInMemorySequenceProvider, type EntitlementEvent } from '../../src/lib/entitlement-publisher.js'
+import { createInternalJwtFixture, bearer, type InternalTokenOverrides } from './internal-jwt.js'
 
 // One place every behavior/e2e spec builds its app from -- same in-memory
 // `consequent` instance, same fake Stripe/role-cache/entitlement-publisher
@@ -28,6 +29,10 @@ export interface TestApp {
   stripeState: FakeStripeState
   stripeConfig: StripeConfigStore
   publisher: { published: EntitlementEvent[] }
+  // Story 007's internal-JWT bearer headers -- `headers()` with no
+  // `permissions` override signs a token with none (useful for the 403
+  // case); pass the grant(s) a given route needs.
+  headers(overrides?: InternalTokenOverrides): Promise<{ authorization: string }>
 }
 
 export default async function buildTestApp(roleSnapshot: RoleReferenceSnapshot = defaultRoleSnapshot): Promise<TestApp> {
@@ -36,6 +41,7 @@ export default async function buildTestApp(roleSnapshot: RoleReferenceSnapshot =
   const stripeConfig = createInMemoryStripeConfigStore()
   const roleCache = createRoleReferenceCache(roleSnapshot)
   const publisher = createInMemoryEntitlementPublisher()
+  const jwt = await createInternalJwtFixture()
 
   const app = await buildApp({
     consequent,
@@ -44,7 +50,15 @@ export default async function buildTestApp(roleSnapshot: RoleReferenceSnapshot =
     roleCache,
     entitlements: publisher,
     sequences: createInMemorySequenceProvider(),
+    authstarGetKey: jwt.getKey,
   })
 
-  return { app, consequent, stripeState, stripeConfig, publisher }
+  return {
+    app,
+    consequent,
+    stripeState,
+    stripeConfig,
+    publisher,
+    headers: async (overrides) => bearer(await jwt.signToken(overrides)),
+  }
 }

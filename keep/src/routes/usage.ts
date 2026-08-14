@@ -5,6 +5,7 @@ import type { UsageReportingCredentialState } from '../actors/usage_reporting_cr
 import type { PlanMappingState } from '../actors/plan_mapping_actor.js'
 import generateId from '../lib/ids.js'
 import { generateSecret, hashSecret } from '../lib/hash.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/keep/005-usage-records-and-credentials.md.
 //
@@ -15,6 +16,22 @@ import { generateSecret, hashSecret } from '../lib/hash.js'
 // `POST /tenants/{tenantSlug}/usage-records` (the shared handler both
 // ingress paths ultimately call) is implemented and tested directly here.
 // See TESTING.md.
+//
+// Permission gates (Story 007): deliberately **not** applied to `POST
+// .../usage-records` -- Story 005 is explicit that this route has "two
+// distinct callers, two distinct auth mechanisms" (portcullis's
+// synchronous, internal-JWT-*derived-context* path, and keep's own
+// credential-verified batched path), neither of which carries a
+// tenant-admin's `permissions` grants at all; `requirePermission` doesn't
+// apply here, not merely omitted. The two admin-facing `GET` reads use
+// `billing:manage` per Story 007's table. Usage-credential issue/list/
+// revoke use `applications:manage`, **not** `billing:manage` despite Story
+// 007's own table row grouping them together -- Story 005's own text is
+// explicit and reasoned ("not a billing permission, since this is squarely
+// application-level operational config, the same category as hosts/
+// upstream/CORS on the tower side," ADR 0079) and takes precedence here as
+// the more specific, more detailed source; Story 007's table has a bug on
+// this one row, flagged rather than silently propagated.
 
 const tenantParamsSchema = {
   type: 'object',
@@ -121,7 +138,7 @@ const usageRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return reply.code(201).send({ ...toResponse(state), periodUsage })
   })
 
-  app.get('/tenants/:tenantSlug/usage-records', { schema: { params: tenantParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/usage-records', { schema: { params: tenantParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const { meter, application } = request.query as { meter?: string, application?: string }
     const filters: Record<string, unknown> = { tenant: tenantSlug }
@@ -131,7 +148,7 @@ const usageRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return instances.map((i) => i.state as unknown as UsageRecordState).filter((r) => r.createdAt).map(toResponse)
   })
 
-  app.get('/tenants/:tenantSlug/usage-records/:id', { schema: { params: idParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/usage-records/:id', { schema: { params: idParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const key = id.includes(':') ? id : usageKey(tenantSlug, id)
     const instance = await app.consequent.fetch('usageRecord', key)
@@ -140,7 +157,7 @@ const usageRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return toResponse(state)
   })
 
-  app.post('/tenants/:tenantSlug/applications/:appSlug/usage-credentials', { schema: { params: appParamsSchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/applications/:appSlug/usage-credentials', { schema: { params: appParamsSchema }, preHandler: requirePermission('applications:manage') }, async (request, reply) => {
     const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
     const secret = generateSecret()
     const credentialId = generateId()
@@ -154,7 +171,7 @@ const usageRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return reply.code(201).send({ credentialId, secret })
   })
 
-  app.get('/tenants/:tenantSlug/applications/:appSlug/usage-credentials', { schema: { params: appParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/applications/:appSlug/usage-credentials', { schema: { params: appParamsSchema }, preHandler: requirePermission('applications:manage') }, async (request) => {
     const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
     const instances = await app.consequent.find('usageReportingCredential', searchCriteria({ tenant: tenantSlug, application: appSlug }))
     return instances
@@ -163,7 +180,7 @@ const usageRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
       .map((c) => ({ credentialId: c.credentialId, status: c.status, createdAt: c.createdAt }))
   })
 
-  app.delete('/tenants/:tenantSlug/applications/:appSlug/usage-credentials/:credentialId', { schema: { params: credentialParamsSchema } }, async (request, reply) => {
+  app.delete('/tenants/:tenantSlug/applications/:appSlug/usage-credentials/:credentialId', { schema: { params: credentialParamsSchema }, preHandler: requirePermission('applications:manage') }, async (request, reply) => {
     const { tenantSlug, appSlug, credentialId } = request.params as { tenantSlug: string, appSlug: string, credentialId: string }
     const instance = await app.consequent.fetch('usageReportingCredential', credentialId)
     const state = instance!.state as unknown as UsageReportingCredentialState

@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from 'fastify'
+import { authstarFastifyPlugin, perTenantJwksKeyProvider, type JWTVerifyGetKey } from '@bytepunx/authstar-fastify'
 import type { ConsequentApi } from './consequent-types.js'
 import type { StripeClientFactory } from './stripe-client.js'
 import type { StripeConfigStore } from './stripe-config.js'
@@ -22,6 +23,14 @@ export interface BuildAppOptions {
   entitlements: EntitlementPublisher
   sequences?: SequenceProvider
   logger?: boolean
+  // Story 007's internal-JWT verification key -- keep has no Host to
+  // resolve a tenant from itself (one shared deployment for every tenant,
+  // ADR 0089), so this defaults to `perTenantJwksKeyProvider(baseDomain)`,
+  // which reads the tenant hint off the token's own protected header
+  // instead. Tests override with a `staticKeyProvider` fixture pinned to a
+  // locally-generated keypair, so they never make a real JWKS fetch.
+  baseDomain?: string
+  authstarGetKey?: JWTVerifyGetKey
 }
 
 // A single place to assemble the fastify instance so behavior/e2e/integration
@@ -67,6 +76,16 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('roleCache', options.roleCache)
   app.decorate('entitlements', options.entitlements)
   app.decorate('sequences', options.sequences ?? createInMemorySequenceProvider())
+
+  const authstarGetKey = options.authstarGetKey ?? perTenantJwksKeyProvider(options.baseDomain ?? 'authstar.test')
+  // `required: false` -- same posture as tower's own build-app.ts:
+  // `requirePermission` decides every failure mode as one generic 403, not
+  // this plugin's default 401. `POST /tenants/:tenantSlug/usage-records`
+  // (routes/usage.ts) is deliberately untouched by this plugin's
+  // `request.authstar` -- its two real callers (portcullis's synchronous
+  // usage path, keep's own not-yet-implemented credential-verified batched
+  // path) never carry a tenant-admin's internal JWT at all (Story 005).
+  await app.register(authstarFastifyPlugin, { getKeyForRequest: () => authstarGetKey, required: false })
 
   await app.register(registerPlanMappingRoutes)
   await app.register(registerCheckoutSessionRoutes)

@@ -13,9 +13,13 @@ function stripeEventPayload(type: string, object: Record<string, unknown>) {
 
 describe('stripe webhook handling -- API contract', () => {
   let t: TestApp
+  let readHeaders: { authorization: string }
+  let manageHeaders: { authorization: string }
 
   beforeEach(async () => {
     t = await buildTestApp()
+    readHeaders = await t.headers({ permissions: ['billing:read'] })
+    manageHeaders = await t.headers({ permissions: ['billing:manage'] })
     await t.stripeConfig.set('acme', { secretKey: 'sk_test_acme', webhookSecret: 'whsec_acme' })
     t.stripeState.prices.set('price_basic', { unitAmount: 1000, currency: 'usd', interval: 'month' })
     t.stripeState.prices.set('price_pro', { unitAmount: 5000, currency: 'usd', interval: 'month' })
@@ -23,6 +27,7 @@ describe('stripe webhook handling -- API contract', () => {
     await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'member' }], seatLimit: 5 },
     })
   })
@@ -82,12 +87,12 @@ describe('stripe webhook handling -- API contract', () => {
       }))
       expect(response.statusCode).toBe(200)
 
-      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_1' })
+      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_1', headers: readHeaders })
       expect(sub.statusCode).toBe(200)
       expect(sub.json().status).toBe('active')
       expect(sub.json().stripePriceId).toBe('price_basic')
 
-      const customer = await t.app.inject({ method: 'GET', url: '/tenants/acme/accounts/acct_1/customer' })
+      const customer = await t.app.inject({ method: 'GET', url: '/tenants/acme/accounts/acct_1/customer', headers: readHeaders })
       expect(customer.statusCode).toBe(200)
       expect(customer.json().stripeCustomerId).toBe('cus_1')
 
@@ -133,7 +138,7 @@ describe('stripe webhook handling -- API contract', () => {
       await post(payload)
       await post(payload)
 
-      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions' })
+      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions', headers: readHeaders })
       expect(list.json().filter((s: { stripeSubscriptionId: string }) => s.stripeSubscriptionId === 'sub_2')).toHaveLength(1)
     })
 
@@ -141,6 +146,7 @@ describe('stripe webhook handling -- API contract', () => {
       const trial = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/trials',
+        headers: manageHeaders,
         payload: { scope: { account: 'acct_3' }, expiresAt: new Date(Date.now() + 86_400_000).toISOString() },
       })
       const trialId = trial.json().id
@@ -154,7 +160,7 @@ describe('stripe webhook handling -- API contract', () => {
         metadata: { scope: JSON.stringify({ account: 'acct_3' }) },
       }))
 
-      const updatedTrial = await t.app.inject({ method: 'GET', url: `/tenants/acme/trials/${trialId}` })
+      const updatedTrial = await t.app.inject({ method: 'GET', url: `/tenants/acme/trials/${trialId}`, headers: manageHeaders })
       expect(updatedTrial.json().status).toBe('converted')
     })
   })
@@ -177,7 +183,7 @@ describe('stripe webhook handling -- API contract', () => {
       }))
       expect(response.statusCode).toBe(200)
 
-      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_cs_1' })
+      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_cs_1', headers: readHeaders })
       expect(sub.statusCode).toBe(200)
       expect(sub.json().stripePriceId).toBe('price_basic')
     })
@@ -188,6 +194,7 @@ describe('stripe webhook handling -- API contract', () => {
       await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
+        headers: manageHeaders,
         payload: { stripePriceId: 'price_pro', name: 'Pro', grantedRoles: [{ application: 'demo-app', role: 'admin' }] },
       })
 
@@ -216,7 +223,7 @@ describe('stripe webhook handling -- API contract', () => {
       expect(revoked).toHaveLength(1)
       expect((revoked[0] as { role: { name: string } }).role.name).toBe('member')
 
-      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_4' })
+      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_4', headers: readHeaders })
       expect(sub.json().stripePriceId).toBe('price_pro')
     })
   })
@@ -242,7 +249,7 @@ describe('stripe webhook handling -- API contract', () => {
       }))
       expect(response.statusCode).toBe(200)
 
-      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_5' })
+      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_5', headers: readHeaders })
       expect(sub.json().status).toBe('canceled')
 
       const revoked = t.publisher.published.filter((e) => e.type === 'entitlement.role-revoked')
@@ -260,7 +267,7 @@ describe('stripe webhook handling -- API contract', () => {
       }))
       expect(response.statusCode).toBe(200)
 
-      const refunds = await t.app.inject({ method: 'GET', url: '/tenants/acme/refunds' })
+      const refunds = await t.app.inject({ method: 'GET', url: '/tenants/acme/refunds', headers: readHeaders })
       expect(refunds.json()).toHaveLength(1)
       expect(refunds.json()[0].stripeRefundId).toBe('re_1')
       expect(refunds.json()[0].amount).toBe(500)
@@ -292,7 +299,7 @@ describe('stripe webhook handling -- API contract', () => {
       }))
       expect(created.statusCode).toBe(200)
 
-      const dispute = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes' })
+      const dispute = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
       expect(dispute.json()[0].status).toBe('needs_response')
       expect(t.publisher.published.filter((e) => e.type === 'entitlement.role-revoked')).toHaveLength(1)
 
@@ -307,7 +314,7 @@ describe('stripe webhook handling -- API contract', () => {
       }))
       expect(closed.statusCode).toBe(200)
 
-      const disputeAfter = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes' })
+      const disputeAfter = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
       expect(disputeAfter.json()[0].status).toBe('won')
       expect(t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')).toHaveLength(1)
     })
@@ -334,7 +341,7 @@ describe('stripe webhook handling -- API contract', () => {
         metadata: { scope: JSON.stringify({ tenant: 'acme' }) },
       }))
 
-      const dispute = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes' })
+      const dispute = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
       expect(dispute.json().find((d: { stripeDisputeId: string }) => d.stripeDisputeId === 'dp_2').status).toBe('lost')
       expect(t.publisher.published).toHaveLength(0)
     })

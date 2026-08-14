@@ -3,6 +3,7 @@ import { searchCriteria } from '../lib/consequent-types.js'
 import type { PlanMappingState } from '../actors/plan_mapping_actor.js'
 import type { CustomerState } from '../actors/customer_actor.js'
 import { scopesEqual, type Scope } from '../lib/scope.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/keep/003-plan-mappings-checkout-and-billing-reads.md
 // ("Checkout Sessions"). Resolves the matching `customer` record (Story
@@ -54,7 +55,7 @@ async function findExistingCustomer(app: FastifyInstance, tenantSlug: string, sc
 }
 
 const checkoutSessionRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/tenants/:tenantSlug/checkout-sessions', { schema: { params: tenantParamsSchema, body: createBodySchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/checkout-sessions', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const body = request.body as { planMappingId: string, scope: Scope, customerEmail?: string, successUrl: string, cancelUrl: string }
 

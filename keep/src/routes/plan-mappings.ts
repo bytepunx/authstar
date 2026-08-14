@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { searchCriteria } from '../lib/consequent-types.js'
 import type { PlanMappingState, GrantedRole } from '../actors/plan_mapping_actor.js'
 import generateId from '../lib/ids.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/keep/003-plan-mappings-checkout-and-billing-reads.md.
 
@@ -80,7 +81,7 @@ function toResponse(state: PlanMappingState) {
 }
 
 const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/tenants/:tenantSlug/plan-mappings', { schema: { params: tenantParamsSchema, body: createBodySchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/plan-mappings', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const body = request.body as {
       stripePriceId: string
@@ -131,7 +132,7 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
     return reply.code(201).send(toResponse(created))
   })
 
-  app.get('/tenants/:tenantSlug/plan-mappings', { schema: { params: tenantParamsSchema, querystring: listQuerySchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/plan-mappings', { schema: { params: tenantParamsSchema, querystring: listQuerySchema }, preHandler: requirePermission('billing:manage') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const { status } = request.query as { status?: 'active' | 'retired' | 'all' }
 
@@ -144,7 +145,7 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
     return filtered.map(toResponse)
   })
 
-  app.get('/tenants/:tenantSlug/plan-mappings/:id', { schema: { params: idParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/plan-mappings/:id', { schema: { params: idParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const state = await fetchMapping(app, id)
     if (!exists(state) || state.tenant !== tenantSlug) {
@@ -153,7 +154,7 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
     return toResponse(state)
   })
 
-  app.patch('/tenants/:tenantSlug/plan-mappings/:id', { schema: { params: idParamsSchema, body: updateBodySchema } }, async (request, reply) => {
+  app.patch('/tenants/:tenantSlug/plan-mappings/:id', { schema: { params: idParamsSchema, body: updateBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const body = request.body as { name?: string, seatLimit?: number | null, grantedRoles?: GrantedRole[], meter?: string | null }
 
@@ -184,7 +185,7 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
     return toResponse(updated)
   })
 
-  app.delete('/tenants/:tenantSlug/plan-mappings/:id', { schema: { params: idParamsSchema } }, async (request, reply) => {
+  app.delete('/tenants/:tenantSlug/plan-mappings/:id', { schema: { params: idParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const current = await fetchMapping(app, id)
     if (!exists(current) || current.tenant !== tenantSlug) {

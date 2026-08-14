@@ -11,6 +11,7 @@ import { createFakeStripeClientFactory, createFakeStripeState } from '../lib/fak
 import { createInMemoryStripeConfigStore } from '../../src/lib/stripe-config.js'
 import { createRoleReferenceCache } from '../../src/lib/role-reference-cache.js'
 import { createInMemoryEntitlementPublisher } from '../../src/lib/entitlement-publisher.js'
+import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
 
 // Integration tier: `consequent`'s real `consequent-postgres` adapters
 // against a real, disposable Postgres (testcontainers) -- proves keep's
@@ -39,6 +40,8 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
   let app: FastifyInstance
   let consequent: ConsequentApi
   let pgAdapters: ReturnType<typeof initializePostgresAdapters>
+  let manageHeaders: { authorization: string }
+  let readHeaders: { authorization: string }
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16').start()
@@ -56,12 +59,17 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
     const stripeConfig = createInMemoryStripeConfigStore()
     await stripeConfig.set('acme', { secretKey: 'sk_test_acme', webhookSecret: 'whsec_acme' })
 
+    const jwt = await createInternalJwtFixture()
+    manageHeaders = bearer(await jwt.signToken({ permissions: ['billing:manage'] }))
+    readHeaders = bearer(await jwt.signToken({ permissions: ['billing:read'] }))
+
     app = await buildApp({
       consequent,
       stripeClients: createFakeStripeClientFactory(stripeState),
       stripeConfig,
       roleCache: createRoleReferenceCache({ 'demo-app': ['member', 'admin'] }),
       entitlements: createInMemoryEntitlementPublisher(),
+      authstarGetKey: jwt.getKey,
     })
   }, 60_000) // container pull + start can genuinely take a while on a cold cache
 
@@ -80,12 +88,13 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
     const create = await app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'member' }] },
     })
     expect(create.statusCode).toBe(201)
     const id = create.json().id
 
-    const fetched = await app.inject({ method: 'GET', url: `/tenants/acme/plan-mappings/${id}` })
+    const fetched = await app.inject({ method: 'GET', url: `/tenants/acme/plan-mappings/${id}`, headers: manageHeaders })
     expect(fetched.statusCode).toBe(200)
     expect(fetched.json().name).toBe('Basic')
     expect(fetched.json().unitAmount).toBe(1200)
@@ -95,15 +104,16 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
     const create = await app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_basic', name: 'Retire Me' },
     })
     const id = create.json().id
 
-    const retire = await app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}` })
+    const retire = await app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}`, headers: manageHeaders })
     expect(retire.statusCode).toBe(200)
     expect(retire.json().status).toBe('retired')
 
-    const fetched = await app.inject({ method: 'GET', url: `/tenants/acme/plan-mappings/${id}` })
+    const fetched = await app.inject({ method: 'GET', url: `/tenants/acme/plan-mappings/${id}`, headers: manageHeaders })
     expect(fetched.statusCode).toBe(200)
     expect(fetched.json().status).toBe('retired')
   })
@@ -112,6 +122,7 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
     const active = await app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_basic', name: 'Still Active' },
     })
     const activeId = active.json().id
@@ -119,18 +130,19 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
     const retired = await app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_basic', name: 'To Retire' },
     })
     const retiredId = retired.json().id
-    await app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${retiredId}` })
+    await app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${retiredId}`, headers: manageHeaders })
 
-    const activeOnly = await app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings' })
+    const activeOnly = await app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings', headers: manageHeaders })
     expect(activeOnly.statusCode).toBe(200)
     const activeIds = activeOnly.json().map((m: { id: string }) => m.id)
     expect(activeIds).toContain(activeId)
     expect(activeIds).not.toContain(retiredId)
 
-    const all = await app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings?status=all' })
+    const all = await app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings?status=all', headers: manageHeaders })
     const allIds = all.json().map((m: { id: string }) => m.id)
     expect(allIds).toEqual(expect.arrayContaining([activeId, retiredId]))
   })
@@ -163,13 +175,13 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
     })
     expect(webhook.statusCode).toBe(200)
 
-    const subscription = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_pg_1' })
+    const subscription = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_pg_1', headers: readHeaders })
     expect(subscription.statusCode).toBe(200)
     expect(subscription.json().stripePriceId).toBe('price_basic')
 
     // The `customer` record's own read route is `find()`-backed (there's
     // no direct-by-id route -- customer is looked up by scope).
-    const customer = await app.inject({ method: 'GET', url: '/tenants/acme/accounts/acct_pg_1/customer' })
+    const customer = await app.inject({ method: 'GET', url: '/tenants/acme/accounts/acct_pg_1/customer', headers: readHeaders })
     expect(customer.statusCode).toBe(200)
     expect(customer.json().stripeCustomerId).toBe('cus_pg_1')
   })

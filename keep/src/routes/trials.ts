@@ -3,6 +3,7 @@ import { searchCriteria } from '../lib/consequent-types.js'
 import type { TrialState, GrantedRole } from '../actors/trial_actor.js'
 import type { Scope } from '../lib/scope.js'
 import generateId from '../lib/ids.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/keep/004-trials-and-coupons.md ("Trials").
 // Conversion (trial -> converted) is a side effect of Story 002's webhook
@@ -92,7 +93,7 @@ function toResponse(state: TrialState) {
 }
 
 const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/tenants/:tenantSlug/trials', { schema: { params: tenantParamsSchema, body: createBodySchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/trials', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const body = request.body as { scope: Scope, grantedRoles?: GrantedRole[], seatLimit?: number | null, expiresAt: string }
 
@@ -129,7 +130,7 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return reply.code(201).send(toResponse(created))
   })
 
-  app.get('/tenants/:tenantSlug/trials', { schema: { params: tenantParamsSchema, querystring: listQuerySchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/trials', { schema: { params: tenantParamsSchema, querystring: listQuerySchema }, preHandler: requirePermission('billing:manage') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const { status } = request.query as { status?: 'active' | 'converted' | 'expired' }
     const instances = await app.consequent.find('trial', searchCriteria({ tenant: tenantSlug }))
@@ -138,14 +139,14 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return filtered.map(toResponse)
   })
 
-  app.get('/tenants/:tenantSlug/trials/:id', { schema: { params: idParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/trials/:id', { schema: { params: idParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const state = await fetchTrial(app, id)
     if (!exists(state) || state.tenant !== tenantSlug) return reply.code(404).send()
     return toResponse(state)
   })
 
-  app.patch('/tenants/:tenantSlug/trials/:id', { schema: { params: idParamsSchema, body: patchBodySchema } }, async (request, reply) => {
+  app.patch('/tenants/:tenantSlug/trials/:id', { schema: { params: idParamsSchema, body: patchBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const body = request.body as { expiresAt: string }
 
@@ -169,7 +170,7 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return toResponse(updated)
   })
 
-  app.delete('/tenants/:tenantSlug/trials/:id', { schema: { params: idParamsSchema } }, async (request, reply) => {
+  app.delete('/tenants/:tenantSlug/trials/:id', { schema: { params: idParamsSchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const current = await fetchTrial(app, id)
     if (!exists(current) || current.tenant !== tenantSlug) return reply.code(404).send()

@@ -6,9 +6,11 @@ import buildTestApp, { type TestApp } from '../lib/test-app.js'
 
 describe('checkout sessions -- API contract', () => {
   let t: TestApp
+  let headers: { authorization: string }
 
   beforeEach(async () => {
     t = await buildTestApp()
+    headers = await t.headers({ permissions: ['billing:manage'] })
     await t.stripeConfig.set('acme', { secretKey: 'sk_test_acme', webhookSecret: 'whsec_acme' })
     t.stripeState.prices.set('price_basic', { unitAmount: 1000, currency: 'usd', interval: 'month' })
   })
@@ -21,6 +23,7 @@ describe('checkout sessions -- API contract', () => {
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers,
       payload: { stripePriceId: 'price_basic', name: 'Basic' },
     })
     return response.json()
@@ -32,6 +35,7 @@ describe('checkout sessions -- API contract', () => {
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/checkout-sessions',
+      headers,
       payload: {
         planMappingId: mapping.id,
         scope: { account: 'acct_1' },
@@ -64,6 +68,7 @@ describe('checkout sessions -- API contract', () => {
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/checkout-sessions',
+      headers,
       payload: {
         planMappingId: mapping.id,
         scope: { account: 'acct_2' },
@@ -80,6 +85,7 @@ describe('checkout sessions -- API contract', () => {
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/checkout-sessions',
+      headers,
       payload: {
         planMappingId: 'nonexistent',
         scope: { account: 'acct_3' },
@@ -92,11 +98,12 @@ describe('checkout sessions -- API contract', () => {
 
   it('returns 409 for a retired plan mapping', async () => {
     const mapping = await createMapping()
-    await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${mapping.id}` })
+    await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${mapping.id}`, headers })
 
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/checkout-sessions',
+      headers,
       payload: {
         planMappingId: mapping.id,
         scope: { account: 'acct_4' },
@@ -113,6 +120,7 @@ describe('checkout sessions -- API contract', () => {
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/checkout-sessions',
+      headers,
       payload: {
         planMappingId: mapping.id,
         scope: { account: 'acct_5', tenant: 'acme' },

@@ -17,10 +17,14 @@ function stripeEventPayload(type: string, object: Record<string, unknown>) {
 describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () => {
   let t: TestApp
   let app: FastifyInstance
+  let manageHeaders: { authorization: string }
+  let readHeaders: { authorization: string }
 
   beforeEach(async () => {
     t = await buildTestApp()
     app = t.app
+    manageHeaders = await t.headers({ permissions: ['billing:manage'] })
+    readHeaders = await t.headers({ permissions: ['billing:read'] })
   })
 
   afterEach(async () => {
@@ -42,6 +46,7 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     const config = await app.inject({
       method: 'PATCH',
       url: '/tenants/acme/stripe-config',
+      headers: manageHeaders,
       payload: { secretKey: 'sk_live_acme', webhookSecret: 'whsec_acme' },
     })
     expect(config.statusCode).toBe(200)
@@ -53,11 +58,13 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     const basic = await app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'member' }] },
     })
     const pro = await app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_pro', name: 'Pro', grantedRoles: [{ application: 'demo-app', role: 'member' }, { application: 'demo-app', role: 'admin' }] },
     })
     expect(basic.statusCode).toBe(201)
@@ -67,6 +74,7 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     const checkout = await app.inject({
       method: 'POST',
       url: '/tenants/acme/checkout-sessions',
+      headers: manageHeaders,
       payload: {
         planMappingId: basic.json().id,
         scope: { account: 'acct_1' },
@@ -89,11 +97,11 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     }))
     expect(created.statusCode).toBe(200)
 
-    const afterCreate = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_1' })
+    const afterCreate = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_1', headers: readHeaders })
     expect(afterCreate.json().status).toBe('active')
     expect(afterCreate.json().stripePriceId).toBe('price_basic')
 
-    const customer = await app.inject({ method: 'GET', url: '/tenants/acme/accounts/acct_1/customer' })
+    const customer = await app.inject({ method: 'GET', url: '/tenants/acme/accounts/acct_1/customer', headers: readHeaders })
     expect(customer.statusCode).toBe(200)
     expect(customer.json().stripeCustomerId).toBe('cus_e2e_1')
 
@@ -102,6 +110,7 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     const secondCheckout = await app.inject({
       method: 'POST',
       url: '/tenants/acme/checkout-sessions',
+      headers: manageHeaders,
       payload: {
         planMappingId: pro.json().id,
         scope: { account: 'acct_1' },
@@ -122,7 +131,7 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     }))
     expect(updated.statusCode).toBe(200)
 
-    const afterUpgrade = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_1' })
+    const afterUpgrade = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_1', headers: readHeaders })
     expect(afterUpgrade.json().stripePriceId).toBe('price_pro')
 
     // Only the *delta* role (admin) was granted -- member was already
@@ -142,7 +151,7 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     }))
     expect(deleted.statusCode).toBe(200)
 
-    const final = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_1' })
+    const final = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_1', headers: readHeaders })
     expect(final.json().status).toBe('canceled')
 
     const revokedRoleNames = t.publisher.published
@@ -152,7 +161,7 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     expect(revokedRoleNames).toEqual(['admin', 'member'])
 
     // 7. Revenue summary reflects the canceled status, zero MRR.
-    const revenue = await app.inject({ method: 'GET', url: '/tenants/acme/revenue-summary' })
+    const revenue = await app.inject({ method: 'GET', url: '/tenants/acme/revenue-summary', headers: readHeaders })
     expect(revenue.json().activeCount).toBe(0)
     expect(revenue.json().byStatus.canceled).toBe(1)
   })

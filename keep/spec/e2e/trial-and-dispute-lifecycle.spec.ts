@@ -15,12 +15,16 @@ function stripeEventPayload(type: string, object: Record<string, unknown>) {
 describe('trial conversion then dispute -- end to end', () => {
   let t: TestApp
   let app: FastifyInstance
+  let manageHeaders: { authorization: string }
+  let readHeaders: { authorization: string }
 
   beforeEach(async () => {
     t = await buildTestApp()
     app = t.app
     await t.stripeConfig.set('acme', { secretKey: 'sk_test_acme', webhookSecret: 'whsec_acme' })
     t.stripeState.prices.set('price_basic', { unitAmount: 1500, currency: 'usd', interval: 'month' })
+    manageHeaders = await t.headers({ permissions: ['billing:manage'] })
+    readHeaders = await t.headers({ permissions: ['billing:read'] })
   })
 
   afterEach(async () => {
@@ -40,6 +44,7 @@ describe('trial conversion then dispute -- end to end', () => {
     const mapping = await app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'member' }] },
     })
     expect(mapping.statusCode).toBe(201)
@@ -48,6 +53,7 @@ describe('trial conversion then dispute -- end to end', () => {
     const trial = await app.inject({
       method: 'POST',
       url: '/tenants/acme/trials',
+      headers: manageHeaders,
       payload: {
         scope: { account: 'acct_trial' },
         grantedRoles: [{ application: 'demo-app', role: 'member' }],
@@ -61,6 +67,7 @@ describe('trial conversion then dispute -- end to end', () => {
     const extended = await app.inject({
       method: 'PATCH',
       url: `/tenants/acme/trials/${trialId}`,
+      headers: manageHeaders,
       payload: { expiresAt: '2026-10-01T00:00:00.000Z' },
     })
     expect(extended.statusCode).toBe(200)
@@ -77,13 +84,13 @@ describe('trial conversion then dispute -- end to end', () => {
     }))
     expect(created.statusCode).toBe(200)
 
-    const trialAfterConvert = await app.inject({ method: 'GET', url: `/tenants/acme/trials/${trialId}` })
+    const trialAfterConvert = await app.inject({ method: 'GET', url: `/tenants/acme/trials/${trialId}`, headers: manageHeaders })
     expect(trialAfterConvert.json().status).toBe('converted')
 
     // A converted trial can no longer be extended or revoked -- both
     // commands are guarded to `status === 'active'` only.
     const rejectedExtend = await app.inject({
-      method: 'PATCH', url: `/tenants/acme/trials/${trialId}`, payload: { expiresAt: '2026-11-01T00:00:00.000Z' },
+      method: 'PATCH', url: `/tenants/acme/trials/${trialId}`, headers: manageHeaders, payload: { expiresAt: '2026-11-01T00:00:00.000Z' },
     })
     expect(rejectedExtend.statusCode).toBe(409)
 
@@ -99,7 +106,7 @@ describe('trial conversion then dispute -- end to end', () => {
     }))
     expect(disputeCreated.statusCode).toBe(200)
 
-    const disputesAfterCreate = await app.inject({ method: 'GET', url: '/tenants/acme/disputes' })
+    const disputesAfterCreate = await app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
     expect(disputesAfterCreate.json()).toHaveLength(1)
     expect(disputesAfterCreate.json()[0].status).toBe('needs_response')
     expect(t.publisher.published.filter((e) => e.type === 'entitlement.role-revoked')).toHaveLength(1)
@@ -115,7 +122,7 @@ describe('trial conversion then dispute -- end to end', () => {
     }))
     expect(disputeWon.statusCode).toBe(200)
 
-    const disputesAfterWon = await app.inject({ method: 'GET', url: '/tenants/acme/disputes' })
+    const disputesAfterWon = await app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
     expect(disputesAfterWon.json()[0].status).toBe('won')
     expect(t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')).toHaveLength(2) // conversion grant + restore grant
 
@@ -125,7 +132,7 @@ describe('trial conversion then dispute -- end to end', () => {
     // subscription record itself still being intact and unaffected by the
     // dispute (no automatic entitlement change from a dispute alone beyond
     // the explicit degrade/restore, ADR 0077).
-    const subscription = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_trial_1' })
+    const subscription = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_trial_1', headers: readHeaders })
     expect(subscription.json().status).toBe('active')
   })
 })

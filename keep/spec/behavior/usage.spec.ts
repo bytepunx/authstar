@@ -5,14 +5,17 @@ import buildTestApp, { type TestApp } from '../lib/test-app.js'
 
 describe('usage records and credentials -- API contract', () => {
   let t: TestApp
+  let manageHeaders: { authorization: string }
 
   beforeEach(async () => {
     t = await buildTestApp()
+    manageHeaders = await t.headers({ permissions: ['billing:manage'] })
     await t.stripeConfig.set('acme', { secretKey: 'sk_test', webhookSecret: 'whsec_test' })
     t.stripeState.prices.set('price_metered', { unitAmount: 0, currency: 'usd', interval: 'month' })
     await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
       payload: { stripePriceId: 'price_metered', name: 'Metered', meter: 'api-calls' },
     })
   })
@@ -61,7 +64,7 @@ describe('usage records and credentials -- API contract', () => {
       expect(first.statusCode).toBe(201)
       expect(second.statusCode).toBe(200)
 
-      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/usage-records' })
+      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/usage-records', headers: manageHeaders })
       expect(list.json()).toHaveLength(1)
 
       // Only one entitlement.usage-updated publish -- the redelivery never
@@ -94,7 +97,7 @@ describe('usage records and credentials -- API contract', () => {
         payload: { application: 'app-b', accountId: 'acct_1', meter: 'api-calls', quantity: 1, idempotencyKey: 'x2' },
       })
 
-      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/usage-records?application=app-a' })
+      const response = await t.app.inject({ method: 'GET', url: '/tenants/acme/usage-records?application=app-a', headers: manageHeaders })
       expect(response.json()).toHaveLength(1)
       expect(response.json()[0].application).toBe('app-a')
     })
@@ -102,34 +105,42 @@ describe('usage records and credentials -- API contract', () => {
 
   describe('usage-reporting credentials', () => {
     it('issues a credential, returning the secret once, never again on list', async () => {
-      const issued = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials' })
+      const headers = await t.headers({ permissions: ['applications:manage'] })
+      const issued = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials', headers })
       expect(issued.statusCode).toBe(201)
       expect(issued.json().secret).toBeTruthy()
 
-      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/applications/demo-app/usage-credentials' })
+      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/applications/demo-app/usage-credentials', headers })
       expect(list.json()).toHaveLength(1)
       expect(list.json()[0].secret).toBeUndefined()
       expect(list.json()[0].credentialId).toBe(issued.json().credentialId)
     })
 
     it('supports multiple concurrent credentials -- revoking one leaves the other valid', async () => {
-      const first = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials' })
-      const second = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials' })
+      const headers = await t.headers({ permissions: ['applications:manage'] })
+      const first = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials', headers })
+      const second = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials', headers })
 
-      const revoke = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/applications/demo-app/usage-credentials/${first.json().credentialId}` })
+      const revoke = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/applications/demo-app/usage-credentials/${first.json().credentialId}`, headers })
       expect(revoke.statusCode).toBe(204)
 
-      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/applications/demo-app/usage-credentials' })
+      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/applications/demo-app/usage-credentials', headers })
       const statuses = Object.fromEntries(list.json().map((c: { credentialId: string, status: string }) => [c.credentialId, c.status]))
       expect(statuses[first.json().credentialId]).toBe('revoked')
       expect(statuses[second.json().credentialId]).toBe('active')
     })
 
     it('rejects revoking a credential for the wrong application (404)', async () => {
-      const issued = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials' })
+      const headers = await t.headers({ permissions: ['applications:manage'] })
+      const issued = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials', headers })
 
-      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/applications/other-app/usage-credentials/${issued.json().credentialId}` })
+      const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/applications/other-app/usage-credentials/${issued.json().credentialId}`, headers })
       expect(response.statusCode).toBe(404)
+    })
+
+    it('rejects with 403 for billing:manage alone -- credential issuance needs applications:manage, a deliberately distinct grant (Story 005, not Story 007\'s own table -- see usage.ts)', async () => {
+      const response = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials', headers: manageHeaders })
+      expect(response.statusCode).toBe(403)
     })
   })
 })

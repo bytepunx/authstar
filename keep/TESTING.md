@@ -92,20 +92,14 @@ pass added on top:**
 - The periodic plan-mapping pricing re-sync job (Story 003) — the `syncPricing` actor command
   exists and is exercised implicitly by nothing yet; the actual `CronJob`-style scheduler isn't
   built.
-- **Full RBAC/permission enforcement** — no route in this codebase checks a caller's
-  `permissions` grants before allowing a write or a sensitive read; `jose` is a listed
-  dependency and is never imported anywhere in `src/`. Every one of this repo's own story
-  acceptance criteria opens with "gated by `billing:manage`"/`billing:read`/`activity:read`, but
-  nothing gates on them yet. Same gap tower's own TESTING.md already names for itself — worth
-  naming here too rather than leaving it implicit. Now has its own story (Story 007 —
-  Permission Enforcement Middleware), blocked on `@bytepunx/authstar-fastify` actually being
-  published to npm before it can start.
+- ~~Full RBAC/permission enforcement~~ — **now implemented**, see its own section below.
 
 ## Scope covered by the amqplib/server.ts pass
 
 Closes the two gaps the original pilot slice explicitly left open: real RabbitMQ publishing and
-a real production entrypoint. All 3 tiers still pass, now 74 tests total (65 behavior, 2 e2e, 7
-integration — up from 3, see below).
+a real production entrypoint. All 3 tiers still pass (74 tests: 65 behavior, 2 e2e, 7
+integration — up from 3, see below); Story 007's permission-enforcement pass on top of this
+brings behavior to 71, for 80 total (see its own section below).
 
 - **`src/lib/amqp-entitlement-publisher.ts`** — the real `amqplib`-backed
   `createAmqpEntitlementPublisher`, publishing onto the exact same durable topic exchange
@@ -161,6 +155,37 @@ above:**
   they exist today (empty snapshot, in-memory counters) rather than building the missing pieces,
   since no keep story specifies either mechanism yet and this pass's scope was the two gaps
   named at the top of this section.
+
+## Permission enforcement middleware (Story 007) is now implemented
+
+`src/lib/permissions.ts`'s `requirePermission(grant)` is a route `preHandler`, identical
+mechanism to tower's own Story 014 (no keep-specific self-action exemption -- ADR 0070 is a
+tower-only concept, keep has no account/identity model of its own). Verification runs through
+`@bytepunx/authstar-fastify` (published to npm, unblocking this), registered globally in
+`build-app.ts` with `required: false` so `requirePermission` decides every failure mode as one
+generic 403. Tenant resolution for JWKS is ADR 0089's `perTenantJwksKeyProvider`, reading the
+tenant hint off the internal JWT's own protected header; the default `authstarGetKey` in
+`build-app.ts` uses a new `baseDomain` field on `BuildAppOptions` (`src/server.ts` sources it
+from the signet bundle, same field name/fallback as tower's `ProvisioningConfig.baseDomain`).
+
+Applied per this repo's own story 007's route table, with one correction found implementing it
+(not a silent guess -- see `src/routes/usage.ts`'s own header comment): usage-credential
+issue/list/revoke are gated by `applications:manage`, **not** `billing:manage` as story 007's
+table originally (incorrectly) grouped them -- Story 005's own text is explicit and reasoned
+("not a billing permission, since this is squarely application-level operational config," ADR
+0079) and takes precedence as the more specific source. The design repo's Story 007 has been
+corrected to match. `POST /tenants/{tenantSlug}/usage-records` is deliberately **not** gated by
+`requirePermission` at all -- its two real callers (portcullis's synchronous usage path, keep's
+own not-yet-implemented credential-verified batched path) never carry a tenant-admin's internal
+JWT (Story 005's "two distinct callers, two distinct auth mechanisms").
+
+Test coverage: `spec/lib/internal-jwt.ts` mints locally-signed tokens against a throwaway
+keypair (no real JWKS fetch in tests); `spec/lib/test-app.ts`'s `buildTestApp()` wires it in and
+exposes a `headers()` helper every behavior/e2e spec now uses. 403 coverage isn't exhaustive
+across every route (that would mostly duplicate the same assertion tower's own Story 014 tests
+already demonstrate) -- a representative case is covered per distinct grant (`billing:manage`,
+`billing:read`, `applications:manage`) including the missing-token, wrong-grant, and
+degraded-token cases, in `stripe-config.spec.ts`/`billing-reads.spec.ts`/`usage.spec.ts`.
 
 ## Six real gotchas this pilot found — worth knowing before writing more services' tests
 
