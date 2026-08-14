@@ -1,0 +1,87 @@
+# Periodic plan-mapping pricing re-sync (design/stories/keep/003-plan-
+# mappings-checkout-and-billing-reads.md's "Periodic pricing re-sync"
+# section): "the same operational shape as ADR 0012's provisioner CronJob"
+# -- confirmed against kluster's own rabbitmq-provisioner CronJob
+# (kluster-lib/profile/authstar.go's rabbitmqProvisionerCronJobManifest) and
+# matched here: same spec.schedule/spec.timeZone shape, same
+# restartPolicy: OnFailure choice and reasoning (below).
+#
+# Unlike the RabbitMQ provisioner (a standalone image with its own narrow
+# ServiceAccount, since it needs Kubernetes API access to create Secrets/
+# CRDs directly), this CronJob reuses keep's own image, ServiceAccount, and
+# signet identity (`serviceAccountName: keep`, the same SIGNET_* env vars
+# 11-keep.yaml's Deployment already sets) -- no separate identity to
+# provision. It touches signet (its own bundle, ADR 0052's self-scoped
+# admin token), Postgres (via consequent-postgres, same as keep's server),
+# and Stripe -- never the Kubernetes API -- so keep's existing RBAC is
+# already sufficient.
+#
+# The container command overrides the image's default `CMD ["node",
+# "dist/server.js"]` to run `dist/sync-pricing.js` instead (compiled from
+# src/sync-pricing.ts, part of the same build -- no second image to build
+# or version).
+#
+# restartPolicy: OnFailure, not the more common Never: SPIRE's
+# controller-manager registers a workload's SPIFFE identity per *Pod*, and
+# that registration needs a few seconds to propagate to the node-local
+# SPIRE agent this pod dials over the CSI socket. With restartPolicy:
+# Never, each retry gets an entirely new Pod object and re-hits the same
+# fresh-registration race; OnFailure restarts the failed container in
+# place, inside the same already-registered Pod -- same reasoning and same
+# fix kluster's own rabbitmq-provisioner CronJob already carries.
+#
+# Schedule/timeZone are not (yet) exposed as any kind of per-deployment
+# config -- there's no Helm chart or templating layer anywhere in this
+# workspace for any authstar service (confirmed directly, not assumed);
+# every manifest in this directory is plain, applied-as-is YAML. Matches
+# this repo's own established convention, not a gap specific to this file.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: keep-pricing-sync
+  namespace: authstar
+spec:
+  # Daily, one hour after the RabbitMQ credential rotation CronJob's 3 AM
+  # slot (kluster-lib/profile/authstar.go's rabbitmqRotateSchedule) --
+  # avoids the two scheduled jobs contending for cluster resources at the
+  # exact same moment, though neither is resource-heavy enough for this to
+  # be load-bearing.
+  schedule: "0 4 * * *"
+  timeZone: "America/New_York"
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      template:
+        metadata:
+          labels:
+            app: keep-pricing-sync
+        spec:
+          serviceAccountName: keep
+          restartPolicy: OnFailure
+          imagePullSecrets:
+            - name: dockerhub-pull
+          containers:
+            - name: keep-pricing-sync
+              image: arobson/authstar-keep:latest
+              imagePullPolicy: Always
+              command: ["node", "dist/sync-pricing.js"]
+              env:
+                - name: SIGNET_NAMESPACE
+                  value: authstar
+                - name: SIGNET_ADDR
+                  value: signet.signet.svc.cluster.local:8443
+                - name: SIGNET_ADMIN_ADDR
+                  value: signet.signet.svc.cluster.local:8444
+                - name: SIGNET_TRUST_DOMAIN
+                  value: authstar.cluster.local
+                - name: SPIFFE_ENDPOINT_SOCKET
+                  value: unix:///run/spire/sockets/spire-agent.sock
+              volumeMounts:
+                - name: spiffe
+                  mountPath: /run/spire/sockets
+                  readOnly: true
+          volumes:
+            - name: spiffe
+              csi:
+                driver: csi.spiffe.io
+                readOnly: true

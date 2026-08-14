@@ -41,6 +41,11 @@ manifests/
   15-steward.yaml
   16-web.yaml
   17-portcullis.yaml
+  11-keep-pricing-sync-cronjob.yaml
+                          daily CronJob re-syncing plan-mapping pricing from
+                          Stripe (design/stories/keep/003's "Periodic
+                          pricing re-sync") -- reuses keep's own image/
+                          ServiceAccount, no separate identity
 scripts/
   lib.sh                  shared constants/helpers (cluster name, trust
                            domain, the shared "authstar" signet namespace)
