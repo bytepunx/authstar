@@ -41,8 +41,13 @@ same generic-403 posture. No herald-specific exemption beyond the route table be
 | Sending config read/write | `sending-config:manage` | [005](005-webhooks-config-rotation-and-activity.md) (ADR 0049) |
 | Operator key rotation, activity feed | operator bearer token, not a `permissions` grant | [005](005-webhooks-config-rotation-and-activity.md) — same mechanism as tower Story 013, not this story's concern |
 
-The public suppression-create endpoint (`reason: "manual"` only per the current code) and the
-SES/SNS webhook are both excluded — neither is a tenant-admin-authenticated call.
+The SES/SNS webhook is excluded — it's not a tenant-admin-authenticated call. `POST
+/tenants/{tenantSlug}/suppressions` (`reason: "manual"` only per the current code) is **not**
+excluded, despite an earlier draft of this table saying so — it's the admin/support-initiated
+"please stop emailing me entirely" action (Story 004's own framing), gated by
+`suppressions:manage` the same as the rest of that route family. `reason` is restricted to
+`"manual"` precisely because `"hard-bounce"`/`"complaint"` are reserved for the SES/SNS webhook
+path, not because this route itself is public.
 
 ## Not Covered Here
 
