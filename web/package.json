@@ -25,6 +25,7 @@
     "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
+    "@bytepunx/authstar-core": "^0.2.0",
     "@sveltejs/adapter-node": "^5.5.7",
     "jose": "^6.2.8"
   },
@@ -32,6 +33,7 @@
     "@playwright/test": "^1.62.1",
     "@sveltejs/kit": "^2.70.2",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
+    "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/svelte": "^5.4.2",
     "@types/node": "^26.1.2",
@@ -42,7 +44,6 @@
     "svelte": "^5.56.8",
     "svelte-check": "^4.1.0",
     "tailwindcss": "^4.3.3",
-    "@tailwindcss/vite": "^4.3.3",
     "tsx": "^4.19.0",
     "typescript": "^5.9.3",
     "vite": "^8.2.1",

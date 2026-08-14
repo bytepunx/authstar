@@ -10,10 +10,13 @@ import { InvalidInternalJwtError, verifyInternalJwt } from '../../src/lib/server
 // match portcullis's actual InternalClaims struct (jwt/internal.rs) --
 // camelCase `enrichmentStatus`, no separate `email` claim (`sub` is the
 // email) -- not an earlier, unverified assumption about the wire shape.
+// `tenant` lives on the protected *header*, not the payload (ADR 0089) --
+// `verifyInternalJwt` (from @bytepunx/authstar-core) sources
+// `session.tenantSlug` from there, verified, never from a request header.
 
 describe('verifyInternalJwt', () => {
 	let getKey: JWTVerifyGetKey
-	let sign: (claims: Record<string, unknown>) => Promise<string>
+	let sign: (claims: Record<string, unknown>, header?: Record<string, unknown>) => Promise<string>
 
 	beforeAll(async () => {
 		const { publicKey, privateKey } = await generateKeyPair('ES256')
@@ -21,9 +24,9 @@ describe('verifyInternalJwt', () => {
 		jwk.kid = 'test-key'
 		jwk.alg = 'ES256'
 		getKey = createLocalJWKSet({ keys: [jwk] })
-		sign = (claims) =>
+		sign = (claims, header = {}) =>
 			new SignJWT(claims)
-				.setProtectedHeader({ alg: 'ES256', kid: 'test-key' })
+				.setProtectedHeader({ alg: 'ES256', kid: 'test-key', tenant: 'acme', ...header })
 				.setExpirationTime('60s')
 				.sign(privateKey)
 	})
@@ -31,13 +34,15 @@ describe('verifyInternalJwt', () => {
 	it('decodes an "ok" token into a full session', async () => {
 		const token = await sign({
 			sub: 'admin@acme.example.com',
+			idp: 'dex',
+			identityHash: 'abc123',
 			accountId: 'account_1',
 			roles: ['admin'],
 			permissions: ['applications:manage', 'billing:read'],
 			enrichmentStatus: 'ok',
 		})
 
-		const session = await verifyInternalJwt(token, getKey, 'acme')
+		const session = await verifyInternalJwt(token, getKey)
 
 		expect(session.sub).toBe('admin@acme.example.com')
 		expect(session.accountId).toBe('account_1')
@@ -46,15 +51,26 @@ describe('verifyInternalJwt', () => {
 		expect(session.enrichmentStatus).toBe('ok')
 	})
 
+	it('sources tenantSlug from the token\'s own protected header, not any request header', async () => {
+		const token = await sign(
+			{ sub: 'admin@other.example.com', idp: 'dex', identityHash: 'xyz789', enrichmentStatus: 'ok' },
+			{ tenant: 'other-tenant' },
+		)
+		const session = await verifyInternalJwt(token, getKey)
+		expect(session.tenantSlug).toBe('other-tenant')
+	})
+
 	it('derives email from sub -- portcullis has no separate email claim', async () => {
-		const token = await sign({ sub: 'admin@acme.example.com', enrichmentStatus: 'ok' })
-		const session = await verifyInternalJwt(token, getKey, 'acme')
+		const token = await sign({ sub: 'admin@acme.example.com', idp: 'dex', identityHash: 'abc123', enrichmentStatus: 'ok' })
+		const session = await verifyInternalJwt(token, getKey)
 		expect(session.email).toBe('admin@acme.example.com')
 	})
 
 	it('collapses a "degraded" token to empty roles/permissions, never fabricating grants', async () => {
 		const token = await sign({
 			sub: 'admin@acme.example.com',
+			idp: 'dex',
+			identityHash: 'abc123',
 			// A degraded token from portcullis's own fail-open path never
 			// carries accountId/roles/permissions in the first place, but even
 			// if one somehow did, this app must not trust them.
@@ -63,7 +79,7 @@ describe('verifyInternalJwt', () => {
 			enrichmentStatus: 'degraded',
 		})
 
-		const session = await verifyInternalJwt(token, getKey, 'acme')
+		const session = await verifyInternalJwt(token, getKey)
 
 		expect(session.enrichmentStatus).toBe('degraded')
 		expect(session.permissions).toEqual([])
@@ -71,32 +87,53 @@ describe('verifyInternalJwt', () => {
 		expect(session.accountId).toBe('')
 	})
 
-	it('does not trust a token that merely spells the enrichment claim wrong (regression: this used to read enrichment_status and silently treat every token as "ok")', async () => {
+	it('rejects a token that merely spells the enrichment claim wrong, rather than silently treating it as "ok" (regression: this used to read enrichment_status and default to "ok")', async () => {
 		const token = await sign({
 			sub: 'admin@acme.example.com',
+			idp: 'dex',
+			identityHash: 'abc123',
 			accountId: 'account_1',
 			permissions: ['applications:manage'],
 			enrichment_status: 'degraded', // wrong casing on purpose
 		})
 
-		const session = await verifyInternalJwt(token, getKey, 'acme')
-
-		// A real portcullis-issued degraded token never carries permissions in
-		// the first place, so this exact input can't occur for real -- but the
-		// point of the test is that the *wrong-cased* field is inert, not read.
-		expect(session.enrichmentStatus).toBe('ok')
+		// @bytepunx/authstar-core requires the correctly-cased claim outright
+		// (missing-claim) rather than defaulting an absent/malformed one to
+		// "ok" the way this app's old hand-rolled parsing used to -- a
+		// stricter, fail-closed posture than the original regression test
+		// checked for, but the same underlying guarantee: a wrong-cased field
+		// is never silently read as if it granted "ok"/full trust.
+		await expect(verifyInternalJwt(token, getKey)).rejects.toBeInstanceOf(InvalidInternalJwtError)
 	})
 
-	it('defaults enrichmentStatus to "ok" when absent (baseline identity-only claims never omit it in practice, but this must not crash if it does)', async () => {
-		const token = await sign({ sub: 'idp:google:abc' })
-		const session = await verifyInternalJwt(token, getKey, 'acme')
-		expect(session.enrichmentStatus).toBe('ok')
-		expect(session.permissions).toEqual([])
+	it('rejects a token with no enrichmentStatus claim at all, rather than defaulting to "ok" (a real portcullis-issued token never omits this required field)', async () => {
+		const token = await sign({ sub: 'idp:google:abc', idp: 'dex', identityHash: 'abc123' })
+		await expect(verifyInternalJwt(token, getKey)).rejects.toBeInstanceOf(InvalidInternalJwtError)
 	})
 
 	it('rejects a token missing the required sub claim', async () => {
-		const token = await sign({ accountId: 'account_1' })
-		await expect(verifyInternalJwt(token, getKey, 'acme')).rejects.toBeInstanceOf(InvalidInternalJwtError)
+		const token = await sign({ idp: 'dex', identityHash: 'abc123', accountId: 'account_1' })
+		await expect(verifyInternalJwt(token, getKey)).rejects.toBeInstanceOf(InvalidInternalJwtError)
+	})
+
+	it('rejects a token missing the required idp/identityHash claims', async () => {
+		const token = await sign({ sub: 'admin@acme.example.com' })
+		await expect(verifyInternalJwt(token, getKey)).rejects.toBeInstanceOf(InvalidInternalJwtError)
+	})
+
+	it('rejects a token whose header is missing the tenant hint', async () => {
+		const { publicKey, privateKey } = await generateKeyPair('ES256')
+		const jwk = (await exportJWK(publicKey)) as JWK
+		jwk.kid = 'no-tenant-key'
+		jwk.alg = 'ES256'
+		const noTenantGetKey = createLocalJWKSet({ keys: [jwk] })
+
+		const missingTenant = await new SignJWT({ sub: 'admin@acme.example.com', idp: 'dex', identityHash: 'abc123' })
+			.setProtectedHeader({ alg: 'ES256', kid: 'no-tenant-key' })
+			.setExpirationTime('60s')
+			.sign(privateKey)
+
+		await expect(verifyInternalJwt(missingTenant, noTenantGetKey)).rejects.toBeInstanceOf(InvalidInternalJwtError)
 	})
 
 	it('rejects an expired token', async () => {
@@ -105,23 +142,23 @@ describe('verifyInternalJwt', () => {
 		jwk.kid = 'expired-key'
 		jwk.alg = 'ES256'
 		const expiredGetKey = createLocalJWKSet({ keys: [jwk] })
-		const expiredToken = await new SignJWT({ sub: 'idp:google:abc' })
-			.setProtectedHeader({ alg: 'ES256', kid: 'expired-key' })
+		const expiredToken = await new SignJWT({ sub: 'idp:google:abc', idp: 'dex', identityHash: 'abc123' })
+			.setProtectedHeader({ alg: 'ES256', kid: 'expired-key', tenant: 'acme' })
 			.setExpirationTime(Math.floor(Date.now() / 1000) - 10)
 			.sign(privateKey)
 
-		await expect(verifyInternalJwt(expiredToken, expiredGetKey, 'acme')).rejects.toBeInstanceOf(
+		await expect(verifyInternalJwt(expiredToken, expiredGetKey)).rejects.toBeInstanceOf(
 			InvalidInternalJwtError,
 		)
 	})
 
 	it('rejects a token signed by a key not in the JWKS', async () => {
 		const { privateKey: otherPrivateKey } = await generateKeyPair('ES256')
-		const forged = await new SignJWT({ sub: 'idp:google:abc' })
-			.setProtectedHeader({ alg: 'ES256', kid: 'test-key' })
+		const forged = await new SignJWT({ sub: 'idp:google:abc', idp: 'dex', identityHash: 'abc123' })
+			.setProtectedHeader({ alg: 'ES256', kid: 'test-key', tenant: 'acme' })
 			.setExpirationTime('60s')
 			.sign(otherPrivateKey)
 
-		await expect(verifyInternalJwt(forged, getKey, 'acme')).rejects.toBeInstanceOf(InvalidInternalJwtError)
+		await expect(verifyInternalJwt(forged, getKey)).rejects.toBeInstanceOf(InvalidInternalJwtError)
 	})
 })

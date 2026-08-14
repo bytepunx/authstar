@@ -121,12 +121,16 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 
 		// Test-only: mint a real internal JWT signed by this fixture's key,
 		// so e2e/ specs can drive the real admin app as an authenticated
-		// account without real signet/portcullis in front of it.
+		// account without real signet/portcullis in front of it. `tenant`
+		// (ADR 0089) is pulled off the request body and set on the protected
+		// *header*, not the payload -- the same place portcullis's real
+		// sign_internal puts it, and where web's own verifyInternalJwt (via
+		// @bytepunx/authstar-core) reads it back from after verification.
 		if (req.method === 'POST' && url.pathname === '/__sign') {
-			const claims = await readJsonBody(req)
+			const { tenant, ...claims } = await readJsonBody(req)
 			const { privateKey } = await getKeyPair()
 			const token = await new SignJWT(claims)
-				.setProtectedHeader({ alg: 'ES256', kid: INTERNAL_JWT_KID })
+				.setProtectedHeader({ alg: 'ES256', kid: INTERNAL_JWT_KID, tenant: tenant ?? 'acme' })
 				.setExpirationTime('5m')
 				.sign(privateKey)
 			send(res, 200, { token })

@@ -116,11 +116,12 @@ Three flows, matching this task's own framing:
 There's no real signet/portcullis in this test environment, so `e2e/fixtures/auth.ts` mints a
 **real, cryptographically valid** internal JWT: the fake backend generates an ES256 keypair at
 startup, publishes it at `GET /__jwks` (which the admin server's `INTERNAL_JWT_JWKS_URL` points
-at), and signs arbitrary claims on request via `POST /__sign`. `authenticateAs()` calls that, then
-attaches the resulting `Authorization: Bearer` + a `x-authstar-tenant` header (this repo's own
-documented header-name assumption, see `hooks.server.ts`) to the browser context via
-`setExtraHTTPHeaders` before navigating — so the *real* `hooks.server.ts`/`verifyInternalJwt`
-code path runs, not a bypassed one.
+at), and signs arbitrary claims on request via `POST /__sign`, which also sets `tenant` on the
+token's own protected header (ADR 0089) — the same place a real portcullis puts it.
+`authenticateAs()` calls that, then attaches the resulting `Authorization: Bearer` header to the
+browser context via `setExtraHTTPHeaders` before navigating — so the *real*
+`hooks.server.ts`/`verifyInternalJwt` code path runs, not a bypassed one. There used to also be an
+`x-authstar-tenant` header set here; see "ADR 0089" below for why that's gone.
 
 ### A real bug this pass found
 
@@ -157,6 +158,10 @@ real server code, real (if fake-backed) tests in every applicable tier, not stub
 - `e2e/`: **10 tests**, 4 files
 - **Total: 68 tests, all passing.** `npm run build`, `npm run build:widgets`, `npm run
   typecheck`, and `npm run check` (svelte-check) are all clean.
+- **Updated by the ADR 0089 tenant-resolution fix**: `spec/behavior/` is now 46 tests (5 new,
+  covering the token-header tenant hint and the stricter `sub`/`idp`/`identityHash`/
+  `enrichmentStatus` validation `@bytepunx/authstar-core` enforces that this app's old hand-rolled
+  parsing didn't) — 73 tests total, all three tiers plus e2e still green.
 
 ---
 
@@ -191,16 +196,22 @@ real server code, real (if fake-backed) tests in every applicable tier, not stub
 none exists yet in this design repo at the header-name level):**
 
 - The internal-JWT header itself (`Authorization: Bearer`, portcullis Story 010) is spec'd and
-  followed exactly. The **tenant-slug header** (`x-authstar-tenant`, read in `hooks.server.ts`)
-  and the **hosted-page branding/provider headers** (`x-authstar-tenant-branding`,
+  followed exactly. The **hosted-page branding/provider headers** (`x-authstar-tenant-branding`,
   `x-authstar-providers`, read in `(hosted)/oauth2/select/+page.server.ts`) are this repo's own
-  reasonable defaults — ADR 0066 says portcullis "attaches [them] directly to the proxied request
-  as headers" but no story in this repo names the literal header strings. Both are called out
-  in-code where they're read, not asserted as settled.
-- **Real signet-backed JWKS resolution** (per-tenant ES256 internal-token keys, rotated, per
-  portcullis Story 010) is not wired — `hooks.server.ts` accepts an `INTERNAL_JWT_JWKS_URL` env
-  var pointing at *any* JWKS endpoint. Production wiring depends on `@bytepunx/signet-client`
-  integration this pass didn't build (see `tech-stack.md`'s cross-cutting signet section).
+  reasonable default — ADR 0066 says portcullis "attaches [them] directly to the proxied request
+  as headers" but no story in this repo names the literal header strings. Called out in-code
+  where it's read, not asserted as settled.
+- **ADR 0089: tenant resolution for JWKS — now fixed, was a real bug, not just a gap.** This app
+  used to read a `x-authstar-tenant` request header to know which tenant's session to build --
+  ADR 0089 confirmed directly that nothing on portcullis's real reverse-proxy path ever sets
+  this; it was never wired to anything real. `hooks.server.ts`/`jwt.ts` now use
+  `@bytepunx/authstar-core`'s `verifyInternalJwt`/`perTenantJwksKeyProvider`: the internal JWT
+  carries its own tenant hint on its protected header (set by portcullis at mint time), read
+  *before* verification to resolve `https://admin.<tenant-slug>.<baseDomain>/.well-known/
+  jwks.json` (portcullis's real JWKS route, ADR 0086/0087) and *again*, from the verified claims,
+  to build `Session.tenantSlug` — never from a request header. Configured via
+  `AUTHSTAR_BASE_DOMAIN`. `INTERNAL_JWT_JWKS_URL`, if set, still overrides with one fixed JWKS
+  URL (`jwksKeyProvider`) — what e2e/dev point at a fixture server, see `playwright.config.ts`.
 - **CORS on the public signup page**: tower's own CORS configuration for `signup.{baseDomain}`
   (Story 010) is entirely tower's own concern; this repo's `PUBLIC_TOWER_BASE_URL` env var and
   the fake backend's permissive `access-control-allow-origin: *` (fixture-only) are what let the
