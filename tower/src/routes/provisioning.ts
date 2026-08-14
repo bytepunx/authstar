@@ -1,10 +1,11 @@
-import { createHash, randomBytes, generateKeyPairSync } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
 import type { ProviderState } from '../actors/provider_actor.js'
 import type { InviteState } from '../actors/invite_actor.js'
 import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypto.js'
+import { randomEcPrivateKeyPem, randomSecret } from '../lib/tenant-keys.js'
 
 // Per design/stories/tower/012-tenant-creation-and-provisioning.md and ADR
 // 0067 -- the full provisioning sequence: validate slug -> create `tenant`
@@ -65,33 +66,6 @@ interface CreateTenantBody {
   name: string
   adminEmail: string
   adminHost?: string
-}
-
-// Opaque secret bytes -- correct for identity-hash-key (an HMAC-SHA256 key,
-// any byte string works, see portcullis's identity_hash.rs) and
-// contact-hash-pepper (tower's own, never parsed by anyone else as a key
-// of any particular shape).
-function randomSecret(): string {
-  return randomBytes(32).toString('base64url')
-}
-
-// A PEM-encoded P-256 (secp256r1/prime256v1) EC private key, PKCS8 shape --
-// required for session-key and internal-key specifically. Portcullis's
-// `EcKeyPair::from_pem_bytes` (authstar-middleware/src/keys.rs) parses
-// these with `jsonwebtoken`'s ES256 `EncodingKey::from_ec_pem`, which
-// needs real EC key material, not opaque random bytes -- confirmed by
-// reading portcullis's own source, not assumed. Using `randomSecret()`
-// here instead would silently break every ES256-signed session/internal
-// JWT for the tenant the moment a real portcullis instance tried to load
-// it, found only by cross-checking against portcullis's real code, not
-// caught by either service's own single-service test suite.
-function randomEcPrivateKeyPem(): string {
-  const { privateKey } = generateKeyPairSync('ec', {
-    namedCurve: 'prime256v1',
-    privateKeyEncoding: { type: 'pkcs8', format: 'pem' },
-    publicKeyEncoding: { type: 'spki', format: 'pem' },
-  })
-  return privateKey as unknown as string
 }
 
 async function fetchState<T>(app: FastifyInstance, type: string, id: string): Promise<T | null> {

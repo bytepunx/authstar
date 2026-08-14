@@ -1,3 +1,4 @@
+import type { adminv1 } from '@bytepunx/signet-client'
 import type { SignetAdmin } from '../../src/lib/signet-admin.js'
 import type { Publisher } from '../../src/lib/publisher.js'
 
@@ -8,14 +9,20 @@ import type { Publisher } from '../../src/lib/publisher.js'
 
 export interface SpySignetAdmin extends SignetAdmin {
   calls: Array<{ targetService: 'tower' | 'portcullis', key: string, value: string }>
+  patchCalls: Array<{ targetService: 'tower' | 'portcullis', operations: adminv1.JsonPatchOperation[] }>
 }
 
 export function createSpySignetAdmin(): SpySignetAdmin {
   const calls: SpySignetAdmin['calls'] = []
+  const patchCalls: SpySignetAdmin['patchCalls'] = []
   return {
     calls,
+    patchCalls,
     async pushSecret(targetService, key, value) {
       calls.push({ targetService, key, value })
+    },
+    async patchConfig(targetService, operations) {
+      patchCalls.push({ targetService, operations })
     },
   }
 }

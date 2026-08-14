@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib'
-import { gitOpsClient, type GitOpsServiceClient } from '@bytepunx/signet-client'
+import { gitOpsClient, type GitOpsServiceClient, type adminv1 } from '@bytepunx/signet-client'
 
 // ADR 0067's tenant-provisioning flow needs tower to push four secrets
 // (session signing key, internal signing key, `identity-hash-key`
@@ -10,6 +10,15 @@ import { gitOpsClient, type GitOpsServiceClient } from '@bytepunx/signet-client'
 // fake, exactly like `ContactStore`/`Publisher`.
 export interface SignetAdmin {
   pushSecret(targetService: 'tower' | 'portcullis', key: string, value: string): Promise<void>
+  /**
+   * Atomically applies a JSON Patch (RFC 6902, bytepunx/signet-client's
+   * jsonPatch* helpers build the individual operations) to targetService's
+   * plain config document (ADR 0088's key-rotation producer, bytepunx/signet#38)
+   * -- unlike pushSecret/SyncBundle, this never reads or replaces the whole
+   * document, only the paths the caller names. Fails if no config document
+   * exists yet for targetService (signet's own PatchServiceConfig contract).
+   */
+  patchConfig(targetService: 'tower' | 'portcullis', operations: adminv1.JsonPatchOperation[]): Promise<void>
 }
 
 export interface SignetAdminOptions {
@@ -90,6 +99,14 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
         void opts.namespace
       })
     },
+    patchConfig(targetService, operations) {
+      return new Promise<void>((resolve, reject) => {
+        client.patchServiceConfig(
+          { namespace: opts.namespace, service: targetService, operations },
+          (err) => (err ? reject(err) : resolve()),
+        )
+      })
+    },
   }
 }
 
@@ -98,5 +115,6 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
 export function createNoopSignetAdmin(): SignetAdmin {
   return {
     async pushSecret() {},
+    async patchConfig() {},
   }
 }
