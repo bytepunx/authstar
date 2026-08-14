@@ -2,12 +2,14 @@ import type { APIRequestContext, BrowserContext } from '@playwright/test'
 import { FAKE_BACKEND_URL } from './urls'
 
 export interface FakeSessionClaims {
+	// The user's email -- portcullis has no separate email claim, `sub` is
+	// it verbatim (jwt/{session,internal}.rs). No `email` field here for the
+	// same reason.
 	sub?: string
 	accountId?: string
 	roles?: string[]
 	permissions?: string[]
-	enrichment_status?: 'ok' | 'degraded'
-	email?: string
+	enrichmentStatus?: 'ok' | 'degraded'
 }
 
 /**
@@ -27,10 +29,10 @@ export async function authenticateAs(
 ): Promise<void> {
 	const response = await request.post(`${FAKE_BACKEND_URL}/__sign`, {
 		data: {
-			sub: 'idp:google:e2e-user',
+			sub: 'e2e-user@acme.example.com',
 			accountId: 'account_e2e',
 			roles: ['admin'],
-			enrichment_status: 'ok',
+			enrichmentStatus: 'ok',
 			...claims,
 		},
 	})
