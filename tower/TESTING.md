@@ -37,7 +37,7 @@ so every tier runs against the same compiled artifact the real server loads, not
 - Needs Docker running locally / in CI. `beforeAll`'s own timeout should be generous (60s+) —
   container pull + start can genuinely take a while on a cold image cache.
 
-## Five real bugs this pilot found — worth knowing before writing more services' tests
+## Six real bugs this pilot found — worth knowing before writing more services' tests
 
 1. **`consequent`'s loader only finds compiled `*_actor.js` files** — pointing it at `src/actors`
    (TypeScript source) silently loads zero actors (`Object.keys(actors) === []`), which then
@@ -85,6 +85,22 @@ so every tier runs against the same compiled artifact the real server loads, not
    actor (`identifiedBy: 'identityHash'`) will hit this exact ceiling against real Postgres. Not
    fixed here (portcullis's hash encoding is out of this task's scope) — flagged for whoever
    picks up the live cross-service integration work next.
+6. **`consequent@2.0.1` had a real read-after-write race between `handle()` resolving and its
+   own search-index update actually being visible to a subsequent `find()`** — `spec/
+   integration/provisioning.integration.spec.ts`'s `enrich` tests failed intermittently
+   (~50% of runs) with a 403 that made no sense given the account being enriched had just been
+   created and was demonstrably `active`: `/identities/resolve` creates the `identity` actor via
+   `handle()`, and `/enrich` immediately looks it up via `find('identity', ...)` — if `handle()`
+   resolves before its own search-adapter write actually lands, that `find()` can still miss it.
+   Confirmed via bisection this was **not** a Story 005 regression (reproduced identically with
+   Story 005's diff fully reverted) and traced to the exact dependency version: tower's installed
+   `consequent` was still `2.0.1`, missing two fix commits already sitting unpublished in
+   upstream (`await the search index update before resolving handle()`,
+   `await search adapter's find() result instead of assuming it's synchronous`) alongside the
+   real `getEventStream`/`getActorStream` fixes this pass needed for Story 010 anyway. Bumping to
+   `consequent@^2.0.6` (and `consequent-postgres@^2.0.6`, which fixed a related concurrent-
+   `CREATE TABLE IF NOT EXISTS` race in the same pass) made this integration test pass
+   consistently across 5+ repeated runs where it previously failed roughly half the time.
 
 ## Scope covered by this pass (tower's four target cross-service flows)
 
