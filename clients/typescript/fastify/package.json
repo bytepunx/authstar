@@ -1,6 +1,6 @@
 {
   "name": "@bytepunx/authstar-fastify",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fastify plugin that verifies authstar portcullis's internal JWT and decorates the request with the caller's identity",
   "repository": {
     "type": "git",
