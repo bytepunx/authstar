@@ -51,7 +51,8 @@ SES/SNS webhook are both excluded — neither is a tenant-admin-authenticated ca
 
 ## Notes
 
-- Same `@bytepunx/authstar-fastify` not-yet-published prerequisite as tower Story 014.
+- `@bytepunx/authstar-fastify` is published to npm (same resolution as tower Story 014's
+  identical prerequisite).
 - Separate from, and does not resolve, the real-signet-key-distribution gap for herald's
   payload-encryption public key (ADR 0025) — that's about publishers encrypting *to* herald,
   unrelated to admins authenticating *against* herald.

@@ -45,10 +45,9 @@ tenant-scoped tree, where `permissions` is the actual authorization boundary (AD
       (health checks, `/enrich`, `/identities/resolve` — already SPIFFE-mTLS-only) need none at
       all.
 - [ ] Extracts the internal JWT from `Authorization: Bearer` and verifies it with
-      `@bytepunx/authstar-fastify` (already built, tested, and CI-green in
-      `bytepunx/authstar-clients` — **not yet published to npm**, which blocks actually
-      installing it; see Notes) rather than hand-rolling verification a second time in this
-      repo. Portcullis attaches this header on every proxied, authenticated request (Story
+      `@bytepunx/authstar-fastify` (published to npm, see Notes) rather than hand-rolling
+      verification a second time in this repo. Portcullis attaches this header on every
+      proxied, authenticated request (Story
       010); a request reaching tower with no such header, or one that fails verification, is
       treated identically to a missing grant — a 403, not a 401, matching this design's existing
       posture of not distinguishing "no session" from "wrong permission" this deep in the stack.
@@ -123,8 +122,8 @@ by SPIFFE mTLS alone, neither by a `permissions` grant.
 
 ## Notes
 
-- `@bytepunx/authstar-core`/`@bytepunx/authstar-fastify` (from `bytepunx/authstar-clients`)
-  exist, are tested, and are CI-green as of this writing, but are **not yet published to npm**
-  — publishing them (mirroring the `@bytepunx/signet-client` publish-on-release-please-merge
-  flow already established) is a real prerequisite to wiring this up, not just an implementation
-  detail.
+- `@bytepunx/authstar-core`/`@bytepunx/authstar-fastify` (from `bytepunx/authstar-clients`) are
+  published to npm (mirroring the `@bytepunx/signet-client` publish-on-release-please-merge flow
+  already established) — the once-real npm-publish prerequisite this story was blocked on is
+  resolved; tower's own `src/lib/permissions.ts`/`build-app.ts` now depend on the published
+  package directly.

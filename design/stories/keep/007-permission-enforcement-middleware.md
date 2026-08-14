@@ -45,7 +45,8 @@ one keep-specific point:
 | Customer/subscriptions/refunds/disputes read | `billing:read` | [003](../keep/003-plan-mappings-checkout-and-billing-reads.md) |
 | Revenue summary | `billing:read` | [003](../keep/003-plan-mappings-checkout-and-billing-reads.md) (ADR 0060, deliberately distinct from `billing:manage`) |
 | Trials/coupons CRUD | `billing:manage` | [004](../keep/004-trials-and-coupons.md) |
-| Usage-records read, usage-credentials issue/revoke | `billing:manage` | [005](../keep/005-usage-records-and-credentials.md) |
+| Usage-records read | `billing:manage` | [005](../keep/005-usage-records-and-credentials.md) |
+| Usage-credentials issue/list/revoke | `applications:manage` | [005](../keep/005-usage-records-and-credentials.md) (**not** `billing:manage` — 005's own text: "not a billing permission, since this is squarely application-level operational config," ADR 0079; this row previously (incorrectly) grouped it with the usage-records row above, a bug caught implementing this story, not a deliberate correction of 005) |
 | Activity feed | `activity:read` | [006](../keep/006-self-service-config-and-activity.md) |
 
 `GET /me/subscription` (Story 006) is deliberately **not** in this table — same reasoning as
@@ -55,4 +56,6 @@ scheme, not by anything on the internal JWT.
 
 ## Notes
 
-- Same `@bytepunx/authstar-fastify` not-yet-published prerequisite as tower Story 014.
+- `@bytepunx/authstar-fastify` is published to npm (same resolution as tower Story 014's
+  identical prerequisite) — keep's own `src/lib/permissions.ts`/`build-app.ts` depend on the
+  published package directly.
