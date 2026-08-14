@@ -92,6 +92,14 @@ pass added on top:**
 - The periodic plan-mapping pricing re-sync job (Story 003) — the `syncPricing` actor command
   exists and is exercised implicitly by nothing yet; the actual `CronJob`-style scheduler isn't
   built.
+- **Full RBAC/permission enforcement** — no route in this codebase checks a caller's
+  `permissions` grants before allowing a write or a sensitive read; `jose` is a listed
+  dependency and is never imported anywhere in `src/`. Every one of this repo's own story
+  acceptance criteria opens with "gated by `billing:manage`"/`billing:read`/`activity:read`, but
+  nothing gates on them yet. Same gap tower's own TESTING.md already names for itself — worth
+  naming here too rather than leaving it implicit. Now has its own story (Story 007 —
+  Permission Enforcement Middleware), blocked on `@bytepunx/authstar-fastify` actually being
+  published to npm before it can start.
 
 ## Scope covered by the amqplib/server.ts pass
 
