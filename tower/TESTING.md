@@ -159,8 +159,10 @@ notes, rather than left unstated):
   `POST /identities/resolve`'s `redeem.type` schema only accepts `"invite"`.
 - **Full RBAC/permission enforcement** — no route in this codebase (old or new) checks a
   caller's `permissions` grants before allowing a write; `contacts:read`/`contacts:erase`/etc.
-  are modeled on the `account`/`invite` actors' state but nothing gates on them yet. Story 005's
-  permission-checking middleware is a separate, larger piece of work.
+  are modeled on the `account`/`invite` actors' state but nothing gates on them yet. Now has its
+  own story (Story 014 — Permission Enforcement Middleware) rather than being folded into
+  another route's story — it's a separate, larger piece of work, and blocked on
+  `@bytepunx/authstar-fastify` actually being published to npm before it can start.
 - **The operator route-tree reuse pattern (Story 013 / ADR 0030)** — `POST /tenants`'s operator
   check is a single shared bearer-token header comparison, not the full `/operator/...` route
   tree, `X-Operator-Actor` threading, or cross-tenant search/activity/stuck-erasure views (ADR
