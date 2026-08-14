@@ -10,7 +10,8 @@
 [ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
 [ADR 0070](../../decisions/0070-self-service-identity-linking.md),
 [ADR 0086](../../decisions/0086-jwks-endpoint-for-internal-jwt-verification.md),
-[ADR 0087](../../decisions/0087-jwks-response-includes-pem-alongside-jwk-point.md).
+[ADR 0087](../../decisions/0087-jwks-response-includes-pem-alongside-jwk-point.md),
+[ADR 0089](../../decisions/0089-internal-jwt-carries-its-own-tenant-hint.md).
 **Depends on:** [Story 002](002-claims-enrichment-endpoint.md)'s `permissions` field on the
 internal JWT (only real as of `bytepunx/authstar-portcullis` commit `a16ffad` — every route
 story written before that landed assumed the claim would eventually exist, not that it already
@@ -69,27 +70,17 @@ tenant-scoped tree, where `permissions` is the actual authorization boundary (AD
 
 ---
 
-## Open question this story does not resolve — flagged, not silently assumed
+## Tenant resolution for JWKS — resolved by ADR 0089, was open when this story was first written
 
-**How does a request reaching tower even know which tenant's JWKS to verify against?**
-Portcullis resolves tenant by `Host` (ADR 0002) and portcullis's own JWKS endpoint is
-`Host`-scoped the same way (ADR 0086). Tower is not reached by a tenant's own branded host —
-it's one shared deployment (`tower.authstar.svc.cluster.local` or equivalent), reached the same
-way regardless of which tenant a request is for. Something has to carry the tenant slug on the
-proxied request so tower can construct `https://<tenant-host>/.well-known/jwks.json` (or
-however it's meant to look it up) per request.
-
-`web`'s own code already assumes a `x-authstar-tenant` header for exactly this purpose (see
-`web/src/lib/server/hooks.server.ts`'s own comment: *"this repo's own documented header-name
-assumption"*) — but a full search of this design repo turns up **zero** ADRs or stories that
-actually specify that header, who sets it (presumably portcullis, forwarding the tenant it
-already resolved from `Host`), or its exact name/shape. `web` invented it locally rather than
-finding it specified anywhere.
-
-This needs a decision — almost certainly a short ADR — before this story's JWKS-resolution step
-can be implemented for real, rather than every service (web already, tower/keep/herald next)
-independently guessing the same header name and hoping they agree. Tracked as a prerequisite,
-not resolved here.
+**How does a request reaching tower even know which tenant's JWKS to verify against?** Was an
+open question, flagged here rather than silently assumed, until
+[ADR 0089](../../decisions/0089-internal-jwt-carries-its-own-tenant-hint.md) settled it: the
+internal JWT's own header carries a `tenant` field, set by portcullis at sign time (it already
+knows the tenant, having resolved it from `Host`). `@bytepunx/authstar-core`'s
+`perTenantJwksKeyProvider` reads it and constructs
+`https://admin.<tenant-slug>.<baseDomain>/.well-known/jwks.json` — no forwarded header, no new
+trust channel. This story's `preHandler` should use that key provider directly; nothing further
+to resolve here.
 
 ---
 
@@ -125,7 +116,7 @@ by SPIFFE mTLS alone, neither by a `permissions` grant.
 
 - The operator bearer-token mechanism ([Story 013](013-operator-api.md)) — already real,
   unrelated to this story.
-- The tenant-JWKS-resolution question above — a real prerequisite, not resolved by this story.
+- Tenant resolution for JWKS — resolved by ADR 0089, see above, not re-derived here.
 - `keep` and `herald` need the identical mechanism applied to their own routes — covered by
   their own stories ([keep Story 007](../keep/007-permission-enforcement-middleware.md),
   [herald Story 006](../herald/006-permission-enforcement-middleware.md)), not repeated here.

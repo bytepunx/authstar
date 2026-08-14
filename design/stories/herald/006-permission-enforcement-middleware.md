@@ -7,10 +7,10 @@
 [ADR 0034](../../decisions/0034-herald-api-surface.md),
 [ADR 0049](../../decisions/0049-web-admin-information-architecture.md),
 [ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md).
+[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md),
+[ADR 0089](../../decisions/0089-internal-jwt-carries-its-own-tenant-hint.md).
 **Depends on:** [tower Story 014](../tower/014-permission-enforcement-middleware.md) — same
-mechanism, same open prerequisite question (tenant-JWKS resolution for a non-Host-routed
-backend service), not re-derived here.
+mechanism, not re-derived here.
 
 ---
 
@@ -46,8 +46,6 @@ SES/SNS webhook are both excluded — neither is a tenant-admin-authenticated ca
 
 ## Not Covered Here
 
-- The tenant-JWKS-resolution prerequisite — see tower Story 014, identical open question, not
-  re-derived here.
 - The operator-scoped routes in Story 005 — bearer-token gated the same way tower's operator
   tree is, not this story's mechanism.
 
