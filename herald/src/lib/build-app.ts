@@ -5,6 +5,8 @@ import { PayloadKeyring } from './payload-crypto.js'
 import { UnsubscribeKeyring } from './unsubscribe-token.js'
 import { CredentialStore } from './credential-store.js'
 import type { SendAdapter } from './send-worker.js'
+import type { SignetAdmin } from './signet-admin.js'
+import { createNoopSignetAdmin } from './signet-admin.js'
 import registerCommunicationTypeRoutes from '../routes/communication-types.js'
 import registerTemplateRoutes from '../routes/templates.js'
 import registerCommunicationRoutes from '../routes/communications.js'
@@ -12,6 +14,7 @@ import registerOptOutRoutes from '../routes/opt-outs.js'
 import registerSuppressionRoutes from '../routes/suppressions.js'
 import registerSendingConfigRoutes from '../routes/sending-config.js'
 import registerUnsubscribeRoutes from '../routes/unsubscribe.js'
+import registerOperatorRotateKeysRoutes from '../routes/operator-rotate-keys.js'
 
 export interface BuildAppOptions {
   consequent: ConsequentApi
@@ -30,6 +33,13 @@ export interface BuildAppOptions {
   // locally-generated keypair, so they never make a real JWKS fetch.
   baseDomain?: string
   authstarGetKey?: JWTVerifyGetKey
+  // ADR 0081's key-rotation route needs both of these -- signetAdmin to
+  // actually push rotated key material, operatorToken to gate the route
+  // the same way every other operator route in this system is gated
+  // (ADR 0021/0045). Both default to inert stand-ins so every existing
+  // test/behavior app keeps working unchanged.
+  signetAdmin?: SignetAdmin
+  operatorToken?: string
 }
 
 const failClosedAdapter: SendAdapter = {
@@ -60,6 +70,8 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('payloadKeyring', payloadKeyring)
   app.decorate('unsubscribeKeyring', unsubscribeKeyring)
   app.decorate('credentialStore', credentialStore)
+  app.decorate('signetAdmin', options.signetAdmin ?? createNoopSignetAdmin())
+  app.decorate('operatorToken', options.operatorToken ?? '')
   app.decorate('sendWorkerDeps', {
     consequent: options.consequent,
     payloadKeyring,
@@ -83,6 +95,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   await app.register(registerSuppressionRoutes)
   await app.register(registerSendingConfigRoutes)
   await app.register(registerUnsubscribeRoutes)
+  await app.register(registerOperatorRotateKeysRoutes)
 
   return app
 }

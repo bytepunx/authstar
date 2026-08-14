@@ -89,6 +89,14 @@ export class PayloadKeyring {
     return this.generations.get(version)
   }
 
+  // Every generation still held, current-first (ADR 0081) -- the rotation
+  // route persists this full set back to signet after each `rotate()`
+  // call, not just the newest generation, so a restart doesn't strand
+  // already-sent `communication`s under a generation herald no longer has.
+  allGenerations(): PayloadKeyGeneration[] {
+    return [...this.generations.values()].sort((a, b) => b.version - a.version)
+  }
+
   // Retention-sweep pruning (ADR 0029/0081) piggybacks on the last
   // referencing `communication`'s payload purge -- not implemented here
   // (no scheduled sweep in this slice), but exposed so a future sweep can

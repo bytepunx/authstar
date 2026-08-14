@@ -60,6 +60,16 @@ export class UnsubscribeKeyring {
     return this.generations.get(version)
   }
 
+  // Every generation still held, current-first (ADR 0081) -- the rotation
+  // route persists this full set back to signet after each `rotate()`
+  // call, so a restart doesn't invalidate an unsubscribe link mailed out
+  // under an old, still-unpruned generation.
+  allGenerations(): Array<{ version: number, key: Buffer }> {
+    return [...this.generations.entries()]
+      .map(([version, key]) => ({ version, key }))
+      .sort((a, b) => b.version - a.version)
+  }
+
   // Manual pruning of a specific old generation is a separate, explicit,
   // risk-accepting operator action (Story 001) -- never a byproduct of
   // routine rotation, so this is never called automatically.

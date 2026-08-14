@@ -116,30 +116,60 @@ left uncovered" for why that path itself has no test coverage.
   `sendingConfig.webhookSecret` signature-verification story and SNS's notification format; the
   `communication.markBounced`/`recordComplaint` actor commands it would call *are* implemented and
   unit-testable, but the route itself isn't built.
-- **Operator key rotation** (`POST /operator/rotate-keys`, Story 005) — no bearer-token operator
-  auth middleware exists anywhere in this codebase (matches tower's own pilot scope). The
-  `PayloadKeyring`/`UnsubscribeKeyring` classes' own `rotate()`/`prune()` methods are real and
-  usable, just not wired to an HTTP route.
+- ~~Operator key rotation~~ (`POST /operator/rotate-keys`) — **now implemented**, see its own
+  section below (ADR 0081).
 - **Activity feed** (`GET /tenants/{tenantSlug}/activity`, Story 005) — mirrors tower Story 010's
   event-stream construction; not implemented.
-- **Real signet integration, partial as of this pass** — `src/server.ts` now fetches
-  `dbConnectionString`/`rabbitmqUrl` from a real signet bundle (`dialWorkload` +
-  `GetServiceBundle`, identical pattern to tower's own `server.ts`), and *can* seed
+- **Real signet integration, now closes the loop for the two key secrets.** `src/server.ts`
+  fetches `dbConnectionString`/`rabbitmqUrl` from a real signet bundle (`dialWorkload` +
+  `GetServiceBundle`, identical pattern to tower's own `server.ts`), and seeds
   `PayloadKeyring`/`UnsubscribeKeyring` from bundle secrets (`payloadKeyGenerations`/
-  `unsubscribeKeyGenerations`) if present. **But no ADR names herald's actual bundle schema for
-  those two secrets** — nothing populates them in any environment today, so in practice
-  `server.ts` always falls through to generating an ephemeral keypair/HMAC key at boot (loudly
-  logged when it does). This is a real, not-fully-closed gap: a production herald restarting today
-  would still orphan every `communication.encryptedPayload` written under the previous boot's
-  keypair, exactly the failure mode the additive `PayloadKeyring`/`UnsubscribeKeyring` constructor
-  changes in this pass were meant to make possible to *avoid* once the bundle schema exists — the
-  schema itself is the missing piece, not the keyring code. `src/lib/credential-store.ts` (tenant
-  `credential`/`webhookSecret`) is unchanged, still an in-process stand-in — out of scope for this
-  pass (not part of the signet material `server.ts` was asked to source; see ADR 0032's own
-  "signet secret, never persisted in herald's own event log" for what its real story would need).
-  None of `server.ts`'s own signet/Postgres/RabbitMQ wiring has test coverage (no live
-  `kluster`-provisioned cluster was exercised against it) — same scope note tower's own
-  `server.ts` carries, for the same reason (see that file's header comment).
+  `unsubscribeKeyGenerations`) when present. Those two secrets now have a real producer —
+  `POST /operator/rotate-keys` (below) pushes them on every rotation, including the first-ever
+  call for a fresh installation — closing the "nothing populates them" gap this note used to
+  describe. `src/lib/credential-store.ts` (tenant `credential`/`webhookSecret`) is unchanged,
+  still an in-process stand-in — out of scope for this pass (not part of the signet material
+  `server.ts` was asked to source; see ADR 0032's own "signet secret, never persisted in
+  herald's own event log" for what its real story would need). None of `server.ts`'s own
+  signet/Postgres/RabbitMQ wiring has test coverage (no live `kluster`-provisioned cluster was
+  exercised against it) — same scope note tower's own `server.ts` carries, for the same reason
+  (see that file's header comment).
+
+## Operator key rotation (ADR 0081) is now implemented, closing ADR 0025's key-distribution gap
+
+`POST /operator/rotate-keys` (`src/routes/operator-rotate-keys.ts`), gated by the same shared
+operator bearer token every other operator route in this system uses (`isOperatorRequest`, ADR
+0021/0045, extended to herald for the first time by ADR 0081). `{ keys:
+('payload-encryption' | 'unsubscribe-signing')[] }`, each rotated and pushed independently (a
+per-key failure is reported, not rolled back — `207` if some succeeded, `502` if none did, `200`
+otherwise, same posture as tower's own `rotate-keys.ts`).
+
+- **`payload-encryption`**: `payloadKeyring.rotate()`, then the *full* generation set (every
+  version still held, not just the new one) is persisted back to herald's own bundle as
+  `payloadKeyGenerations` — so a restart never strands an already-encrypted `communication`.
+  Separately, only the *current* public key + version is pushed to `tower`'s bundle as
+  `heraldPayloadPublicKey` (ADR 0025's actual distribution mechanism, wired for the first time).
+  `keep`/`portcullis` are named as future publishers by ADR 0025 but don't publish anything
+  through this path yet (confirmed directly against their own `src/`), so nothing is pushed to
+  them until one does.
+- **`unsubscribe-signing`**: `unsubscribeKeyring.rotate()`, full generation set persisted to
+  herald's own bundle as `unsubscribeKeyGenerations` — no cross-service distribution, only
+  herald itself ever signs or verifies these tokens.
+- The first-ever call for a fresh installation *is* the initial distribution — ADR 0081 doesn't
+  describe a separate bootstrap mechanism, just "triggered again rather than only at herald's
+  own initial deploy," so this route is both.
+
+Tested in `spec/behavior/operator-rotate-keys.spec.ts` against a `SpySignetAdmin` fixture
+(`spec/lib/fakes.ts`, same "fake the interface, not the transport" convention as
+tower's/keep's own): operator-token enforcement, correct per-target-service routing, PEM/
+base64 round-tripping (a key pushed here can actually seed a working `PayloadKeyring`/
+`UnsubscribeKeyring`), partial-failure reporting, and schema validation. Tower's own
+consumption side (`loadHeraldPayloadKey` in its `server.ts`) is covered by that repo's own
+`herald-payload-crypto.spec.ts` plus this repo's proof that what gets pushed is genuinely
+loadable — not a live cross-repo integration test, same tier boundary this project draws
+everywhere else (each service's own signet-bundle wiring has no test coverage, only the
+library code it depends on does). 8 new tests (`operator-rotate-keys.spec.ts`) -- 115 tests
+total, up from 107.
 - **Real RabbitMQ/amqplib wiring — now built.** `src/lib/build-comms-consumer.ts` and
   `src/lib/build-contact-lifecycle-consumer.ts` connect via real `amqplib`, assert a durable topic
   exchange (`authstar`) and durable queues, and bind the routing keys each consumer cares about

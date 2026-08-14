@@ -10,6 +10,7 @@ import buildContactLifecycleConsumer, { type Consumer as ContactLifecycleConsume
 import { createAmqpPublisher } from './lib/publisher.js'
 import { PayloadKeyring, type PersistedPayloadKeyGeneration } from './lib/payload-crypto.js'
 import { UnsubscribeKeyring, type PersistedUnsubscribeKeyGeneration } from './lib/unsubscribe-token.js'
+import { createSignetAdmin } from './lib/signet-admin.js'
 
 // Production entrypoint. Follows the exact fetch-once/watch/restart-lock
 // pattern tower's own `src/server.ts` established for this stack (signet
@@ -99,6 +100,7 @@ async function main(): Promise<void> {
   const service = process.env.SIGNET_SERVICE ?? 'herald'
   const address = requireEnv('SIGNET_ADDR')
   const trustDomain = requireEnv('SIGNET_TRUST_DOMAIN')
+  const adminAddress = process.env.SIGNET_ADMIN_ADDR ?? address
 
   const controller = new AbortController()
   const onSignal = () => controller.abort(new Error('shutdown signal received'))
@@ -127,6 +129,12 @@ async function main(): Promise<void> {
   const rabbitmqUrl = (bundle.rabbitmqUrl as string | undefined) ?? secrets.rabbitmqUrl
   if (!dbConnectionString) throw new Error('signet bundle missing dbConnectionString')
   if (!rabbitmqUrl) throw new Error('signet bundle missing rabbitmqUrl')
+  // ADR 0081: herald's own narrow, self-bundle-scoped GitOpsService admin
+  // token, and the shared operator-token value (ADR 0021/0045) -- same
+  // delivery pattern tower's own tokens use, herald just receives both
+  // for the first time here.
+  const signetAdminToken = secrets.signetAdminToken ?? requireEnv('SIGNET_ADMIN_TOKEN')
+  const operatorToken = secrets.operatorToken ?? ''
 
   // eslint-disable-next-line no-console
   const bootLog = (msg: string) => console.warn(msg)
@@ -168,11 +176,15 @@ async function main(): Promise<void> {
   // baseDomain` reads, same fallback.
   const baseDomain = (bundle.baseDomain as string | undefined) ?? 'authstar.app'
 
+  const signetAdmin = createSignetAdmin({ address: adminAddress, token: signetAdminToken, namespace })
+
   const app = await buildApp({
     consequent,
     payloadKeyring,
     unsubscribeKeyring,
     baseDomain,
+    signetAdmin,
+    operatorToken,
     logger: true,
   })
 
