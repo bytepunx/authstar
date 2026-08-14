@@ -5,6 +5,7 @@ import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import { uniqueSlug } from '../lib/unique.js'
 import { UnsubscribeKeyring, issueToken } from '../../src/lib/unsubscribe-token.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // Behavior tier: design/stories/herald/001-actor-definitions.md's
 // "Unsubscribe Token" section.
@@ -13,11 +14,19 @@ describe('unsubscribe -- API contract', () => {
   let app: FastifyInstance
   let consequent: ConsequentApi
   let unsubscribeKeyring: UnsubscribeKeyring
+  let jwt: InternalJwtFixture
+  // Only the opt-outs GET calls below (used to verify the unsubscribe
+  // flow's side effect) go through `requirePermission` -- `/unsubscribe`
+  // itself is a public, token-authenticated route, never gated by this
+  // middleware, so it deliberately gets no headers anywhere in this file.
+  let optOutsHeaders: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
     unsubscribeKeyring = new UnsubscribeKeyring()
-    app = await buildApp({ consequent, unsubscribeKeyring })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, unsubscribeKeyring, authstarGetKey: jwt.getKey })
+    optOutsHeaders = bearer(await jwt.signToken({ permissions: ['opt-outs:manage'] }))
   })
 
   afterEach(async () => {
@@ -34,7 +43,7 @@ describe('unsubscribe -- API contract', () => {
       expect(response.statusCode).toBe(200)
       expect(response.json().confirmed).toBe(false)
 
-      const optOuts = await app.inject({ method: 'GET', url: `/tenants/${tenant}/opt-outs/${contactId}` })
+      const optOuts = await app.inject({ headers: optOutsHeaders, method: 'GET', url: `/tenants/${tenant}/opt-outs/${contactId}` })
       expect(optOuts.json().optedOutCategories).toEqual([])
     })
 
@@ -54,7 +63,7 @@ describe('unsubscribe -- API contract', () => {
       expect(response.statusCode).toBe(200)
       expect(response.json().confirmed).toBe(true)
 
-      const optOuts = await app.inject({ method: 'GET', url: `/tenants/${tenant}/opt-outs/${contactId}` })
+      const optOuts = await app.inject({ headers: optOutsHeaders, method: 'GET', url: `/tenants/${tenant}/opt-outs/${contactId}` })
       expect(optOuts.json().optedOutCategories).toEqual(['newsletter'])
     })
 

@@ -1,7 +1,9 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { OptOutState } from '../actors/opt_out_actor.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/herald/004-communication-history-opt-outs-and-suppressions.md.
+// Gated by `opt-outs:manage` (Story 006).
 
 async function fetchOptOut(app: FastifyInstance, contactId: string): Promise<OptOutState> {
   const instance = await app.consequent.fetch('optOut', contactId)
@@ -28,7 +30,7 @@ const categoryBodySchema = {
 } as const
 
 const optOutRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.get('/tenants/:tenantSlug/opt-outs/:contactId', { schema: { params: contactParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/opt-outs/:contactId', { schema: { params: contactParamsSchema }, preHandler: requirePermission('opt-outs:manage') }, async (request) => {
     const { contactId } = request.params as { tenantSlug: string, contactId: string }
     const state = await fetchOptOut(app, contactId)
     // Never created -- a contact with no opt-outs at all is a normal,
@@ -39,7 +41,7 @@ const optOutRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   // The admin/support-side entry point ("a recipient called and asked to
   // be removed") -- the self-service path is the public /unsubscribe flow,
   // not this route (Story 002/004).
-  app.post('/tenants/:tenantSlug/opt-outs/:contactId/categories', { schema: { params: contactParamsSchema, body: categoryBodySchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/opt-outs/:contactId/categories', { schema: { params: contactParamsSchema, body: categoryBodySchema }, preHandler: requirePermission('opt-outs:manage') }, async (request, reply) => {
     const { tenantSlug, contactId } = request.params as { tenantSlug: string, contactId: string }
     const { category } = request.body as { category: string }
 
@@ -55,7 +57,7 @@ const optOutRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
 
   // A real DELETE, not a soft alias -- collection-membership removal, not
   // a lifecycle status change (ADR 0053, Story 004).
-  app.delete('/tenants/:tenantSlug/opt-outs/:contactId/categories/:category', { schema: { params: categoryParamsSchema } }, async (request, reply) => {
+  app.delete('/tenants/:tenantSlug/opt-outs/:contactId/categories/:category', { schema: { params: categoryParamsSchema }, preHandler: requirePermission('opt-outs:manage') }, async (request, reply) => {
     const { contactId, category } = request.params as { tenantSlug: string, contactId: string, category: string }
 
     const current = await fetchOptOut(app, contactId)

@@ -1,11 +1,9 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { CommunicationTypeState } from '../actors/communication_type_actor.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/herald/003-communication-types-and-templates.md.
-// Permission gating (`communication-types:manage`, portcullis-attached JWT
-// claims) is out of scope for this slice -- same posture tower's own pilot
-// took for its tenant routes; no auth middleware exists anywhere in this
-// codebase yet.
+// Gated by `communication-types:manage` (Story 006).
 
 async function fetchType(app: FastifyInstance, tenantSlug: string, type: string): Promise<CommunicationTypeState> {
   const instance = await app.consequent.fetch('communicationType', `${tenantSlug}:${type}`)
@@ -61,7 +59,7 @@ const listQuerySchema = {
 } as const
 
 const communicationTypeRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/tenants/:tenantSlug/communication-types', { schema: { params: tenantParamsSchema, body: createBodySchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/communication-types', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('communication-types:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const body = request.body as { type: string, category?: 'transactional' | 'marketing', retentionDays?: number }
 
@@ -80,7 +78,7 @@ const communicationTypeRoutes: FastifyPluginAsync = async function (app: Fastify
     return reply.code(201).send(state)
   })
 
-  app.get('/tenants/:tenantSlug/communication-types', { schema: { params: tenantParamsSchema, querystring: listQuerySchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/communication-types', { schema: { params: tenantParamsSchema, querystring: listQuerySchema }, preHandler: requirePermission('communication-types:manage') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const { includeDeprecated } = request.query as { includeDeprecated?: boolean }
 
@@ -96,7 +94,7 @@ const communicationTypeRoutes: FastifyPluginAsync = async function (app: Fastify
     return instances.map((i) => i.state)
   })
 
-  app.get('/tenants/:tenantSlug/communication-types/:type', { schema: { params: typeParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/communication-types/:type', { schema: { params: typeParamsSchema }, preHandler: requirePermission('communication-types:manage') }, async (request, reply) => {
     const { tenantSlug, type } = request.params as { tenantSlug: string, type: string }
     const state = await fetchType(app, tenantSlug, type)
     if (!exists(state)) {
@@ -105,7 +103,7 @@ const communicationTypeRoutes: FastifyPluginAsync = async function (app: Fastify
     return state
   })
 
-  app.patch('/tenants/:tenantSlug/communication-types/:type', { schema: { params: typeParamsSchema, body: patchBodySchema } }, async (request, reply) => {
+  app.patch('/tenants/:tenantSlug/communication-types/:type', { schema: { params: typeParamsSchema, body: patchBodySchema }, preHandler: requirePermission('communication-types:manage') }, async (request, reply) => {
     const { tenantSlug, type } = request.params as { tenantSlug: string, type: string }
     const body = request.body as { category?: 'transactional' | 'marketing', retentionDays?: number, status?: 'deprecated' }
 
@@ -140,7 +138,7 @@ const communicationTypeRoutes: FastifyPluginAsync = async function (app: Fastify
   // DELETE is an alias for PATCH { status: "deprecated" } (ADR 0053, Story
   // 003) -- historical `communication` records referencing this type stay
   // meaningful, never orphaned.
-  app.delete('/tenants/:tenantSlug/communication-types/:type', { schema: { params: typeParamsSchema } }, async (request, reply) => {
+  app.delete('/tenants/:tenantSlug/communication-types/:type', { schema: { params: typeParamsSchema }, preHandler: requirePermission('communication-types:manage') }, async (request, reply) => {
     const { tenantSlug, type } = request.params as { tenantSlug: string, type: string }
 
     const current = await fetchType(app, tenantSlug, type)

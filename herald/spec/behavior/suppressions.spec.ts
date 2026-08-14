@@ -4,6 +4,7 @@ import buildApp from '../../src/lib/build-app.js'
 import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import { uniqueSlug } from '../lib/unique.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // Behavior tier: design/stories/herald/004-communication-history-opt-outs-and-suppressions.md's
 // suppression routes.
@@ -11,10 +12,14 @@ import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 describe('suppressions -- API contract', () => {
   let app: FastifyInstance
   let consequent: ConsequentApi
+  let jwt: InternalJwtFixture
+  let headers: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
-    app = await buildApp({ consequent })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, authstarGetKey: jwt.getKey })
+    headers = bearer(await jwt.signToken({ permissions: ['suppressions:manage'] }))
   })
 
   afterEach(async () => {
@@ -26,6 +31,7 @@ describe('suppressions -- API contract', () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
       const response = await app.inject({
+        headers,
         method: 'POST',
         url: `/tenants/${tenant}/suppressions`,
         payload: { contactId, reason: 'manual' },
@@ -39,7 +45,7 @@ describe('suppressions -- API contract', () => {
     it('defaults reason to "manual" when omitted', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      const response = await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
+      const response = await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
       expect(response.json().reason).toBe('manual')
     })
 
@@ -47,6 +53,7 @@ describe('suppressions -- API contract', () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
       const response = await app.inject({
+        headers,
         method: 'POST',
         url: `/tenants/${tenant}/suppressions`,
         payload: { contactId, reason: 'hard-bounce' },
@@ -57,8 +64,8 @@ describe('suppressions -- API contract', () => {
     it('rejects creating a suppression for an already-suppressed contact (409)', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
-      const response = await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
+      const response = await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
       expect(response.statusCode).toBe(409)
     })
   })
@@ -68,22 +75,22 @@ describe('suppressions -- API contract', () => {
       const tenant = uniqueSlug('acme')
       const contactA = uniqueSlug('contact-a')
       const contactB = uniqueSlug('contact-b')
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId: contactA } })
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId: contactB } })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId: contactA } })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId: contactB } })
 
-      const response = await app.inject({ method: 'GET', url: `/tenants/${tenant}/suppressions` })
+      const response = await app.inject({ headers, method: 'GET', url: `/tenants/${tenant}/suppressions` })
       expect(response.json()).toHaveLength(2)
     })
 
     it('filters by reason', async () => {
       const tenant = uniqueSlug('acme')
       const contactA = uniqueSlug('contact-a')
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId: contactA, reason: 'manual' } })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId: contactA, reason: 'manual' } })
 
-      const response = await app.inject({ method: 'GET', url: `/tenants/${tenant}/suppressions?reason=manual` })
+      const response = await app.inject({ headers, method: 'GET', url: `/tenants/${tenant}/suppressions?reason=manual` })
       expect(response.json()).toHaveLength(1)
 
-      const noneMatch = await app.inject({ method: 'GET', url: `/tenants/${tenant}/suppressions?reason=complaint` })
+      const noneMatch = await app.inject({ headers, method: 'GET', url: `/tenants/${tenant}/suppressions?reason=complaint` })
       expect(noneMatch.json()).toHaveLength(0)
     })
   })
@@ -92,30 +99,46 @@ describe('suppressions -- API contract', () => {
     it('removes the suppression outright -- real DELETE', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
 
-      const response = await app.inject({ method: 'DELETE', url: `/tenants/${tenant}/suppressions/${contactId}` })
+      const response = await app.inject({ headers, method: 'DELETE', url: `/tenants/${tenant}/suppressions/${contactId}` })
       expect(response.statusCode).toBe(204)
 
-      const list = await app.inject({ method: 'GET', url: `/tenants/${tenant}/suppressions` })
+      const list = await app.inject({ headers, method: 'GET', url: `/tenants/${tenant}/suppressions` })
       expect(list.json()).toHaveLength(0)
     })
 
     it('a suppression can be re-created after removal (no lingering "already suppressed" state)', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
-      await app.inject({ method: 'DELETE', url: `/tenants/${tenant}/suppressions/${contactId}` })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
+      await app.inject({ headers, method: 'DELETE', url: `/tenants/${tenant}/suppressions/${contactId}` })
 
-      const response = await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
+      const response = await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
       expect(response.statusCode).toBe(201)
     })
 
     it('returns 404 for a contact that was never suppressed', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      const response = await app.inject({ method: 'DELETE', url: `/tenants/${tenant}/suppressions/${contactId}` })
+      const response = await app.inject({ headers, method: 'DELETE', url: `/tenants/${tenant}/suppressions/${contactId}` })
       expect(response.statusCode).toBe(404)
     })
+  })
+
+  it('rejects POST with 403 when no bearer token is presented -- this is an admin/support action, not a public endpoint (Story 006, corrected)', async () => {
+    const tenant = uniqueSlug('acme')
+    const contactId = uniqueSlug('contact')
+    const response = await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId, reason: 'manual' } })
+    expect(response.statusCode).toBe(403)
+  })
+
+  it('rejects with 403 when no bearer token is presented for GET/DELETE too', async () => {
+    const tenant = uniqueSlug('acme')
+    const list = await app.inject({ method: 'GET', url: `/tenants/${tenant}/suppressions` })
+    expect(list.statusCode).toBe(403)
+
+    const remove = await app.inject({ method: 'DELETE', url: `/tenants/${tenant}/suppressions/nonexistent` })
+    expect(remove.statusCode).toBe(403)
   })
 })

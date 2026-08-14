@@ -2,11 +2,14 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { nextId } from '../lib/flakes.js'
 import { validateTemplateSyntax } from '../lib/mustache-render.js'
 import { listTenantTemplates, nextTenantVersion } from '../lib/template-lookup.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/herald/003-communication-types-and-templates.md.
 // No edit, no delete, ever -- creating always produces a new version; the
 // highest version number is implicitly current, no separate "activate"
-// step.
+// step. Gated by `communication-types:manage` -- same grant as
+// communication-types.ts, part of the same "types/templates CRUD" family
+// (Story 006).
 
 const typeParamsSchema = {
   type: 'object',
@@ -31,7 +34,7 @@ const createBodySchema = {
 } as const
 
 const templateRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/tenants/:tenantSlug/communication-types/:type/templates', { schema: { params: typeParamsSchema, body: createBodySchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/communication-types/:type/templates', { schema: { params: typeParamsSchema, body: createBodySchema }, preHandler: requirePermission('communication-types:manage') }, async (request, reply) => {
     const { tenantSlug, type } = request.params as { tenantSlug: string, type: string }
     const body = request.body as { subjectTemplate: string, bodyTemplate: string }
 
@@ -64,12 +67,12 @@ const templateRoutes: FastifyPluginAsync = async function (app: FastifyInstance)
     return reply.code(201).send(instance!.state)
   })
 
-  app.get('/tenants/:tenantSlug/communication-types/:type/templates', { schema: { params: typeParamsSchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/communication-types/:type/templates', { schema: { params: typeParamsSchema }, preHandler: requirePermission('communication-types:manage') }, async (request) => {
     const { tenantSlug, type } = request.params as { tenantSlug: string, type: string }
     return listTenantTemplates(app.consequent, tenantSlug, type)
   })
 
-  app.get('/tenants/:tenantSlug/communication-types/:type/templates/:version', { schema: { params: versionParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/communication-types/:type/templates/:version', { schema: { params: versionParamsSchema }, preHandler: requirePermission('communication-types:manage') }, async (request, reply) => {
     const { tenantSlug, type, version } = request.params as { tenantSlug: string, type: string, version: number }
     const versions = await listTenantTemplates(app.consequent, tenantSlug, type)
     const found = versions.find((v) => v.version === Number(version))

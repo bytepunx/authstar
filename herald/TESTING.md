@@ -153,8 +153,7 @@ left uncovered" for why that path itself has no test coverage.
   a schedule is implemented and tested directly (and, as of this pass, also called from
   `contact-lifecycle-consumer.ts`'s erasure path); no cron/scheduler wiring exists to call it
   periodically for ordinary retention (ADR 0029), only in response to a `contact.purged` event.
-- **Auth/permission gating** (`communication-types:manage`, `sending-config:manage`, etc.) — no
-  JWT/permission middleware exists anywhere in this codebase, matching tower's own pilot.
+- ~~Auth/permission gating~~ — **now implemented**, see its own section below.
 - **Contact lifecycle sync — now built**, with one real limitation. `src/lib/
   contact-lifecycle-consumer.ts` consumes both `contact.purged` and `herald.contact.migrated`,
   behind the same fake-`ChannelLike`-then-real-broker two-tier coverage as `comms-consumer.ts`.
@@ -172,6 +171,40 @@ left uncovered" for why that path itself has no test coverage.
   ADR 0026 explicitly generalized the purge message) — genuinely untestable end-to-end against a
   real producer until tower builds that route. Not a gap in this pass's own work; a gap in what
   tower has actually shipped, same honest scoping this platform uses elsewhere.
+
+## Permission enforcement middleware (Story 006) is now implemented
+
+`src/lib/permissions.ts`'s `requirePermission(grant)` is a route `preHandler`, identical
+mechanism to tower's own Story 014 (no herald-specific exemption — ADR 0070 is a tower-only
+concept, herald has no account/identity model of its own). Verification runs through
+`@bytepunx/authstar-fastify` (published to npm, unblocking this), registered globally in
+`build-app.ts` with `required: false` so `requirePermission` decides every failure mode as one
+generic 403. Tenant resolution for JWKS is ADR 0089's `perTenantJwksKeyProvider`, reading the
+tenant hint off the internal JWT's own protected header; the default `authstarGetKey` in
+`build-app.ts` uses a new `baseDomain` field on `BuildAppOptions` (`src/server.ts` sources it
+from the signet bundle, same field name/fallback as tower's `ProvisioningConfig.baseDomain`).
+
+Applied per this repo's own Story 006 route table, with one correction found implementing it
+against the real routes (not a silent guess — see `src/routes/suppressions.ts`'s own header
+comment, and the matching design-repo fix): `POST /tenants/{tenantSlug}/suppressions` is gated
+by `suppressions:manage` like the rest of that route family, despite Story 006's table
+originally excluding it as "the public suppression-create endpoint" — there was never a separate
+public route; this file's own pre-existing comment and Story 004's own framing both already
+described it as the admin/support-initiated action it actually is. `communications.ts`'s manual-
+retry `PATCH` route is gated by `communications:read` — the only grant ADR 0051's closed
+vocabulary defines for this resource family, since no separate `communications:manage` exists.
+`/unsubscribe` (routes/unsubscribe.ts) is deliberately **not** gated at all — a public,
+token-authenticated self-service flow, never a tenant-admin's internal JWT.
+
+Test coverage: `spec/lib/internal-jwt.ts` mints locally-signed tokens against a throwaway
+keypair (no real JWKS fetch in tests); every behavior/e2e/integration spec that touches a
+now-gated route builds its own `createInternalJwtFixture()` and passes `authstarGetKey` to
+`buildApp()`, following this repo's existing per-file (not shared-helper) app-building
+convention. 107 tests total across all three tiers, up from 102 before this pass (five new
+403-coverage tests, no existing test count changed). Representative
+403 coverage (missing token, wrong grant, degraded token) in `sending-config.spec.ts` and
+`suppressions.spec.ts` (the latter specifically covering the corrected POST route), rather than
+duplicating the same assertion on every route.
 
 ## Three real bugs tower's pilot already found — still true here
 

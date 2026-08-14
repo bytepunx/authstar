@@ -1,9 +1,17 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { SuppressionState } from '../actors/suppression_actor.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/herald/004-communication-history-opt-outs-and-suppressions.md.
-// Gated by `suppressions:manage` in production -- no auth middleware exists
-// in this slice yet, same posture as every other route here.
+// Gated by `suppressions:manage` -- every route here, POST included: this
+// is the admin/support-initiated "please stop emailing me entirely" action
+// (Story 004's own framing, `reason` restricted to "manual" precisely
+// because "hard-bounce"/"complaint" are reserved for the SES/SNS webhook
+// path), not a public unauthenticated endpoint. Story 006's own route
+// table originally (incorrectly) excluded this POST as "the public
+// suppression-create endpoint" -- there is no such separate public route
+// anywhere in this codebase; fixed in the design repo to match this file's
+// own pre-existing comment and Story 004's actual framing.
 
 async function fetchSuppression(app: FastifyInstance, contactId: string): Promise<SuppressionState> {
   const instance = await app.consequent.fetch('suppression', contactId)
@@ -50,7 +58,7 @@ const createBodySchema = {
 } as const
 
 const suppressionRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.get('/tenants/:tenantSlug/suppressions', { schema: { params: tenantParamsSchema, querystring: listQuerySchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/suppressions', { schema: { params: tenantParamsSchema, querystring: listQuerySchema }, preHandler: requirePermission('suppressions:manage') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const query = request.query as { reason?: string, since?: string, until?: string }
 
@@ -67,7 +75,7 @@ const suppressionRoutes: FastifyPluginAsync = async function (app: FastifyInstan
     return states
   })
 
-  app.post('/tenants/:tenantSlug/suppressions', { schema: { params: tenantParamsSchema, body: createBodySchema } }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/suppressions', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('suppressions:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const { contactId, reason } = request.body as { contactId: string, reason?: 'manual' }
 
@@ -84,7 +92,7 @@ const suppressionRoutes: FastifyPluginAsync = async function (app: FastifyInstan
   // Removes the row outright -- a bounce was transient-but-misclassified,
   // or a complaint was mistaken. Real DELETE, same reasoning as opt-out
   // category removal (Story 004).
-  app.delete('/tenants/:tenantSlug/suppressions/:contactId', { schema: { params: contactParamsSchema } }, async (request, reply) => {
+  app.delete('/tenants/:tenantSlug/suppressions/:contactId', { schema: { params: contactParamsSchema }, preHandler: requirePermission('suppressions:manage') }, async (request, reply) => {
     const { contactId } = request.params as { tenantSlug: string, contactId: string }
 
     const current = await fetchSuppression(app, contactId)

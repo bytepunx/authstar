@@ -4,6 +4,7 @@ import { decryptPayload, deserializeEnvelope } from '../lib/payload-crypto.js'
 import { render } from '../lib/mustache-render.js'
 import { resolvePinnedTemplate } from '../lib/template-lookup.js'
 import { processCommunication } from '../lib/send-worker.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/herald/004-communication-history-opt-outs-and-suppressions.md
 // and the manual-retry route from
@@ -84,7 +85,7 @@ const patchBodySchema = {
 } as const
 
 const communicationRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.get('/tenants/:tenantSlug/communications', { schema: { params: tenantParamsSchema, querystring: listQuerySchema } }, async (request) => {
+  app.get('/tenants/:tenantSlug/communications', { schema: { params: tenantParamsSchema, querystring: listQuerySchema }, preHandler: requirePermission('communications:read') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const query = request.query as { contactId?: string, type?: string, status?: string, since?: string, until?: string, limit?: number, cursor?: string }
 
@@ -115,7 +116,7 @@ const communicationRoutes: FastifyPluginAsync = async function (app: FastifyInst
     return { items: page.map(toSummary), nextCursor }
   })
 
-  app.get('/tenants/:tenantSlug/communications/:id', { schema: { params: idParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/communications/:id', { schema: { params: idParamsSchema }, preHandler: requirePermission('communications:read') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const state = await fetchCommunication(app, tenantSlug, id)
     if (!exists(state)) {
@@ -125,10 +126,13 @@ const communicationRoutes: FastifyPluginAsync = async function (app: FastifyInst
   })
 
   // On-demand decrypt + render (Story 004) -- real PII exposure, narrowly
-  // permissioned in production (not enforced in this slice, no auth
-  // middleware exists yet). Reconstructs exactly what was actually sent,
-  // using the template version pinned on the record, not the current one.
-  app.get('/tenants/:tenantSlug/communications/:id/render', { schema: { params: idParamsSchema } }, async (request, reply) => {
+  // permissioned in production. Reconstructs exactly what was actually
+  // sent, using the template version pinned on the record, not the
+  // current one. Gated by `communications:read` -- the only grant ADR
+  // 0051's closed vocabulary defines for this resource family; there is
+  // no separate, stricter "read the actual content" grant, despite the
+  // real-PII-exposure sensitivity this route's own comment calls out.
+  app.get('/tenants/:tenantSlug/communications/:id/render', { schema: { params: idParamsSchema }, preHandler: requirePermission('communications:read') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
     const state = await fetchCommunication(app, tenantSlug, id)
     if (!exists(state)) {
@@ -165,8 +169,12 @@ const communicationRoutes: FastifyPluginAsync = async function (app: FastifyInst
   // this story's route group is complete (Story 004). Runs through the
   // identical suppression/opt-out -> render -> dispatch sequence -- a
   // manually retried send to a since-suppressed contact still gets
-  // suppressed, not force-sent.
-  app.patch('/tenants/:tenantSlug/communications/:id', { schema: { params: idParamsSchema, body: patchBodySchema } }, async (request, reply) => {
+  // suppressed, not force-sent. Gated by `communications:read` -- neither
+  // Story 002 nor Story 006's own table names a distinct grant for this
+  // write action, and ADR 0051's closed permission vocabulary has no
+  // `communications:manage`; flagged here rather than inventing a new
+  // grant this design doesn't otherwise define.
+  app.patch('/tenants/:tenantSlug/communications/:id', { schema: { params: idParamsSchema, body: patchBodySchema }, preHandler: requirePermission('communications:read') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
 
     const current = await fetchCommunication(app, tenantSlug, id)

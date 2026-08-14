@@ -1,9 +1,10 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { SendingConfigState } from '../actors/sending_config_actor.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/herald/005-webhooks-config-rotation-and-activity.md.
-// Gated by `sending-config:manage` in production -- no auth middleware in
-// this slice. `credential`/`webhookSecret` are accepted here and handed to
+// Gated by `sending-config:manage` (Story 006). `credential`/`webhookSecret`
+// are accepted here and handed to
 // `credentialStore` (see src/lib/credential-store.ts for why that's an
 // in-process stand-in, not real signet integration) -- never persisted on
 // the `sendingConfig` actor's own state, never returned by GET.
@@ -33,7 +34,7 @@ const patchBodySchema = {
 } as const
 
 const sendingConfigRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.get('/tenants/:tenantSlug/sending-config', { schema: { params: tenantParamsSchema } }, async (request, reply) => {
+  app.get('/tenants/:tenantSlug/sending-config', { schema: { params: tenantParamsSchema }, preHandler: requirePermission('sending-config:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const instance = await app.consequent.fetch('sendingConfig', tenantSlug)
     const state = instance!.state as unknown as SendingConfigState
@@ -44,7 +45,7 @@ const sendingConfigRoutes: FastifyPluginAsync = async function (app: FastifyInst
     return state
   })
 
-  app.patch('/tenants/:tenantSlug/sending-config', { schema: { params: tenantParamsSchema, body: patchBodySchema } }, async (request) => {
+  app.patch('/tenants/:tenantSlug/sending-config', { schema: { params: tenantParamsSchema, body: patchBodySchema }, preHandler: requirePermission('sending-config:manage') }, async (request) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const body = request.body as {
       provider?: 'smtp' | 'ses' | 'sendgrid'

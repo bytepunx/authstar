@@ -8,6 +8,7 @@ import { FakeSendAdapter } from '../lib/fake-send-adapter.js'
 import { PayloadKeyring } from '../../src/lib/payload-crypto.js'
 import { startCommsConsumer, type ChannelLike, type ConsumedMessage } from '../../src/lib/comms-consumer.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // End-to-end tier: the full RabbitMQ-shaped ingestion path (Story 002),
 // simulated behind a fake `ChannelLike` (no real broker -- per this
@@ -59,12 +60,18 @@ describe('comms ingestion -> send -> history, end to end', () => {
   let payloadKeyring: PayloadKeyring
   let adapter: FakeSendAdapter
   let channel: FakeChannel
+  let jwt: InternalJwtFixture
+  let manageHeaders: { authorization: string }
+  let readHeaders: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
     payloadKeyring = new PayloadKeyring()
     adapter = new FakeSendAdapter([{ success: true, providerMessageId: 'provider-msg-1' }])
-    app = await buildApp({ consequent, payloadKeyring, adapterFor: () => adapter })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, payloadKeyring, adapterFor: () => adapter, authstarGetKey: jwt.getKey })
+    manageHeaders = bearer(await jwt.signToken({ permissions: ['communication-types:manage'] }))
+    readHeaders = bearer(await jwt.signToken({ permissions: ['communications:read'] }))
     channel = new FakeChannel()
     await startCommsConsumer(channel, 'comms.queue', app.sendWorkerDeps)
   })
@@ -82,8 +89,9 @@ describe('comms ingestion -> send -> history, end to end', () => {
     // Setup a publisher would have already done (communication type +
     // template exist ahead of time) -- via the real HTTP routes, since
     // those exist in this slice.
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
     await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types/${type}/templates`,
       payload: { subjectTemplate: 'Welcome {{name}}', bodyTemplate: 'Hi {{name}}, enjoy!' },
@@ -102,11 +110,11 @@ describe('comms ingestion -> send -> history, end to end', () => {
     expect(adapter.sent).toHaveLength(1)
     expect(adapter.sent[0].subject).toBe('Welcome Grace')
 
-    const detail = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}` })
+    const detail = await app.inject({ headers: readHeaders, method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}` })
     expect(detail.statusCode).toBe(200)
     expect(detail.json().status).toBe('sent')
 
-    const rendered = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}/render` })
+    const rendered = await app.inject({ headers: readHeaders, method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}/render` })
     expect(rendered.json().body).toBe('Hi Grace, enjoy!')
   })
 
@@ -116,8 +124,8 @@ describe('comms ingestion -> send -> history, end to end', () => {
     const idempotencyKey = uniqueSlug('idem')
     const contactId = uniqueSlug('contact')
 
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types/${type}/templates`, payload: { subjectTemplate: 'Hi {{name}}', bodyTemplate: 'Body' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types/${type}/templates`, payload: { subjectTemplate: 'Hi {{name}}', bodyTemplate: 'Body' } })
 
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'x@example.com', { name: 'Ada' })
     const message = { idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional', type, title: 'x', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email' }

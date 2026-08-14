@@ -8,6 +8,7 @@ import { FakeSendAdapter } from '../lib/fake-send-adapter.js'
 import { PayloadKeyring } from '../../src/lib/payload-crypto.js'
 import { processCommunication } from '../../src/lib/send-worker.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // End-to-end tier: Story 003's "editing a template creates a new version,
 // the pinned version on a `communication` stays what it was at creation
@@ -21,12 +22,18 @@ describe('template versioning -- edits never retroactively change a pinned send'
   let consequent: ConsequentApi
   let payloadKeyring: PayloadKeyring
   let adapter: FakeSendAdapter
+  let jwt: InternalJwtFixture
+  let manageHeaders: { authorization: string }
+  let readHeaders: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
     payloadKeyring = new PayloadKeyring()
     adapter = new FakeSendAdapter([{ success: true, providerMessageId: 'msg-1' }])
-    app = await buildApp({ consequent, payloadKeyring, adapterFor: () => adapter })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, payloadKeyring, adapterFor: () => adapter, authstarGetKey: jwt.getKey })
+    manageHeaders = bearer(await jwt.signToken({ permissions: ['communication-types:manage'] }))
+    readHeaders = bearer(await jwt.signToken({ permissions: ['communications:read'] }))
   })
 
   afterEach(async () => {
@@ -38,9 +45,10 @@ describe('template versioning -- edits never retroactively change a pinned send'
     const type = uniqueSlug('invite-sent')
     const contactId = uniqueSlug('contact')
 
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
 
     const v1 = await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types/${type}/templates`,
       payload: { subjectTemplate: 'v1 subject {{name}}', bodyTemplate: 'v1 body {{name}}' },
@@ -56,6 +64,7 @@ describe('template versioning -- edits never retroactively change a pinned send'
 
     // Publish v2 *after* the communication was already queued against v1.
     const v2 = await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types/${type}/templates`,
       payload: { subjectTemplate: 'v2 subject {{name}}', bodyTemplate: 'v2 body {{name}}' },
@@ -69,7 +78,7 @@ describe('template versioning -- edits never retroactively change a pinned send'
 
     // A render of the historical record independently confirms the same
     // thing through the read-side route, not just the worker's own dispatch.
-    const rendered = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}/render` })
+    const rendered = await app.inject({ headers: readHeaders, method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}/render` })
     expect(rendered.json().subject).toBe('v1 subject Ada')
   })
 
@@ -88,8 +97,9 @@ describe('template versioning -- edits never retroactively change a pinned send'
       subjectTemplate: 'Global subject', bodyTemplate: 'Global body',
     })
 
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
     await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types/${type}/templates`,
       payload: { subjectTemplate: 'Tenant subject', bodyTemplate: 'Tenant body' },

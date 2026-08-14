@@ -8,6 +8,7 @@ import { FakeSendAdapter } from '../lib/fake-send-adapter.js'
 import { PayloadKeyring } from '../../src/lib/payload-crypto.js'
 import { processCommunication } from '../../src/lib/send-worker.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // End-to-end tier: a realistic sequence spanning marketing send -> click
 // unsubscribe -> a later send for the same category is suppressed, and
@@ -20,12 +21,22 @@ describe('unsubscribe and suppression, end to end', () => {
   let consequent: ConsequentApi
   let payloadKeyring: PayloadKeyring
   let adapter: FakeSendAdapter
+  let jwt: InternalJwtFixture
+  let manageHeaders: { authorization: string }
+  let readHeaders: { authorization: string }
+  let optOutsHeaders: { authorization: string }
+  let suppressionsHeaders: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
     payloadKeyring = new PayloadKeyring()
     adapter = new FakeSendAdapter([{ success: true, providerMessageId: 'msg-1' }])
-    app = await buildApp({ consequent, payloadKeyring, adapterFor: () => adapter })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, payloadKeyring, adapterFor: () => adapter, authstarGetKey: jwt.getKey })
+    manageHeaders = bearer(await jwt.signToken({ permissions: ['communication-types:manage'] }))
+    readHeaders = bearer(await jwt.signToken({ permissions: ['communications:read'] }))
+    optOutsHeaders = bearer(await jwt.signToken({ permissions: ['opt-outs:manage'] }))
+    suppressionsHeaders = bearer(await jwt.signToken({ permissions: ['suppressions:manage'] }))
   })
 
   afterEach(async () => {
@@ -33,8 +44,8 @@ describe('unsubscribe and suppression, end to end', () => {
   })
 
   async function seedMarketingCommunication(tenant: string, type: string, contactId: string, idempotencyKey: string) {
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type, category: 'marketing' } })
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types/${type}/templates`, payload: { subjectTemplate: 'Sale!', bodyTemplate: 'Big sale, {{name}}' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type, category: 'marketing' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types/${type}/templates`, payload: { subjectTemplate: 'Sale!', bodyTemplate: 'Big sale, {{name}}' } })
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'shopper@example.com', { name: 'Sam' })
     await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'marketing', type,
@@ -65,7 +76,7 @@ describe('unsubscribe and suppression, end to end', () => {
     expect(unsub.statusCode).toBe(200)
     expect(unsub.json().confirmed).toBe(true)
 
-    const optOuts = await app.inject({ method: 'GET', url: `/tenants/${tenant}/opt-outs/${contactId}` })
+    const optOuts = await app.inject({ headers: optOutsHeaders, method: 'GET', url: `/tenants/${tenant}/opt-outs/${contactId}` })
     expect(optOuts.json().optedOutCategories).toEqual([type])
 
     const secondKey = uniqueSlug('idem-2')
@@ -74,7 +85,7 @@ describe('unsubscribe and suppression, end to end', () => {
     expect(secondOutcome).toBe('suppressed')
     expect(adapter.sent).toHaveLength(1) // still just the one real send from before
 
-    const history = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communications/${secondKey}` })
+    const history = await app.inject({ headers: readHeaders, method: 'GET', url: `/tenants/${tenant}/communications/${secondKey}` })
     expect(history.json().status).toBe('suppressed')
   })
 
@@ -84,8 +95,8 @@ describe('unsubscribe and suppression, end to end', () => {
     const contactId = uniqueSlug('contact')
     const idempotencyKey = uniqueSlug('idem')
 
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types/${type}/templates`, payload: { subjectTemplate: 'Hi', bodyTemplate: 'Body' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types/${type}/templates`, payload: { subjectTemplate: 'Hi', bodyTemplate: 'Body' } })
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'x@example.com', { name: 'X' })
     await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional', type,
@@ -96,13 +107,13 @@ describe('unsubscribe and suppression, end to end', () => {
     app.sendWorkerDeps.adapterFor = () => adapter
     expect(await processCommunication(app.sendWorkerDeps, tenant, idempotencyKey)).toBe('failed')
 
-    const suppress = await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId, reason: 'manual' } })
+    const suppress = await app.inject({ headers: suppressionsHeaders, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId, reason: 'manual' } })
     expect(suppress.statusCode).toBe(201)
 
     adapter = new FakeSendAdapter([{ success: true, providerMessageId: 'should-not-be-used' }])
     app.sendWorkerDeps.adapterFor = () => adapter
 
-    const retry = await app.inject({ method: 'PATCH', url: `/tenants/${tenant}/communications/${idempotencyKey}`, payload: { status: 'pending' } })
+    const retry = await app.inject({ headers: readHeaders, method: 'PATCH', url: `/tenants/${tenant}/communications/${idempotencyKey}`, payload: { status: 'pending' } })
     expect(retry.statusCode).toBe(200)
     expect(retry.json().status).toBe('suppressed')
     expect(adapter.sent).toHaveLength(0)

@@ -4,6 +4,7 @@ import buildApp from '../../src/lib/build-app.js'
 import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import { uniqueSlug } from '../lib/unique.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // Behavior tier: design/stories/herald/004-communication-history-opt-outs-and-suppressions.md's
 // opt-out routes.
@@ -11,10 +12,14 @@ import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 describe('opt-outs -- API contract', () => {
   let app: FastifyInstance
   let consequent: ConsequentApi
+  let jwt: InternalJwtFixture
+  let headers: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
-    app = await buildApp({ consequent })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, authstarGetKey: jwt.getKey })
+    headers = bearer(await jwt.signToken({ permissions: ['opt-outs:manage'] }))
   })
 
   afterEach(async () => {
@@ -25,7 +30,7 @@ describe('opt-outs -- API contract', () => {
     it('returns an empty list for a contact with no opt-outs -- not a 404', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      const response = await app.inject({ method: 'GET', url: `/tenants/${tenant}/opt-outs/${contactId}` })
+      const response = await app.inject({ headers, method: 'GET', url: `/tenants/${tenant}/opt-outs/${contactId}` })
       expect(response.statusCode).toBe(200)
       expect(response.json().optedOutCategories).toEqual([])
     })
@@ -36,6 +41,7 @@ describe('opt-outs -- API contract', () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
       const response = await app.inject({
+        headers,
         method: 'POST',
         url: `/tenants/${tenant}/opt-outs/${contactId}/categories`,
         payload: { category: 'newsletter' },
@@ -47,8 +53,8 @@ describe('opt-outs -- API contract', () => {
     it('adding the same category twice is idempotent, not an error', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'newsletter' } })
-      const response = await app.inject({ method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'newsletter' } })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'newsletter' } })
+      const response = await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'newsletter' } })
       expect(response.statusCode).toBe(200)
       expect(response.json().optedOutCategories).toEqual(['newsletter'])
     })
@@ -56,8 +62,8 @@ describe('opt-outs -- API contract', () => {
     it('accumulates multiple distinct categories', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'newsletter' } })
-      const response = await app.inject({ method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'promotions' } })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'newsletter' } })
+      const response = await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'promotions' } })
       expect(response.json().optedOutCategories.sort()).toEqual(['newsletter', 'promotions'])
     })
   })
@@ -66,9 +72,9 @@ describe('opt-outs -- API contract', () => {
     it('removes a category -- real deletion, not a status flip', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      await app.inject({ method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'newsletter' } })
+      await app.inject({ headers, method: 'POST', url: `/tenants/${tenant}/opt-outs/${contactId}/categories`, payload: { category: 'newsletter' } })
 
-      const response = await app.inject({ method: 'DELETE', url: `/tenants/${tenant}/opt-outs/${contactId}/categories/newsletter` })
+      const response = await app.inject({ headers, method: 'DELETE', url: `/tenants/${tenant}/opt-outs/${contactId}/categories/newsletter` })
       expect(response.statusCode).toBe(200)
       expect(response.json().optedOutCategories).toEqual([])
     })
@@ -76,7 +82,7 @@ describe('opt-outs -- API contract', () => {
     it('returns 404 for a contact with no opt-out record at all', async () => {
       const tenant = uniqueSlug('acme')
       const contactId = uniqueSlug('contact')
-      const response = await app.inject({ method: 'DELETE', url: `/tenants/${tenant}/opt-outs/${contactId}/categories/newsletter` })
+      const response = await app.inject({ headers, method: 'DELETE', url: `/tenants/${tenant}/opt-outs/${contactId}/categories/newsletter` })
       expect(response.statusCode).toBe(404)
     })
   })

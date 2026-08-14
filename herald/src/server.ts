@@ -163,10 +163,16 @@ async function main(): Promise<void> {
   // fails closed with a clear error rather than silently pretending to
   // send, and retries/dead-lettering behave exactly as they would for any
   // other permanent send failure.
+  // ADR 0089's tenant-JWKS resolution needs herald's own copy of
+  // `baseDomain` -- same bundle field name tower's `ProvisioningConfig.
+  // baseDomain` reads, same fallback.
+  const baseDomain = (bundle.baseDomain as string | undefined) ?? 'authstar.app'
+
   const app = await buildApp({
     consequent,
     payloadKeyring,
     unsubscribeKeyring,
+    baseDomain,
     logger: true,
   })
 

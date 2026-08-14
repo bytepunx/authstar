@@ -12,6 +12,7 @@ import { processCommunication } from '../../src/lib/send-worker.js'
 import { uniqueSlug } from '../lib/unique.js'
 import type { FastifyInstance } from 'fastify'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // Integration tier: `consequent`'s real `consequent-postgres` adapters
 // against a real, disposable Postgres (testcontainers) -- proves the
@@ -64,6 +65,10 @@ describe('herald -- real Postgres', () => {
   let pgAdapters: ReturnType<typeof initializePostgresAdapters>
   let payloadKeyring: PayloadKeyring
   let adapter: FakeSendAdapter
+  let jwt: InternalJwtFixture
+  let manageHeaders: { authorization: string }
+  let readHeaders: { authorization: string }
+  let suppressionsHeaders: { authorization: string }
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16').start()
@@ -77,7 +82,11 @@ describe('herald -- real Postgres', () => {
     })
     payloadKeyring = new PayloadKeyring()
     adapter = new FakeSendAdapter([{ success: true, providerMessageId: 'pg-msg-1' }])
-    app = await buildApp({ consequent, payloadKeyring, adapterFor: () => adapter })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, payloadKeyring, adapterFor: () => adapter, authstarGetKey: jwt.getKey })
+    manageHeaders = bearer(await jwt.signToken({ permissions: ['communication-types:manage'] }))
+    readHeaders = bearer(await jwt.signToken({ permissions: ['communications:read'] }))
+    suppressionsHeaders = bearer(await jwt.signToken({ permissions: ['suppressions:manage'] }))
   }, 60_000) // container pull + start can genuinely take a while on a cold cache
 
   afterAll(async () => {
@@ -93,22 +102,23 @@ describe('herald -- real Postgres', () => {
   it('persists a created communication type across a fresh fetch -- proves the write actually landed in Postgres, not just in-process memory', async () => {
     const tenant = uniqueSlug('acme')
     const response = await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types`,
       payload: { type: 'invite-sent', category: 'transactional' },
     })
     expect(response.statusCode).toBe(201)
 
-    const fetched = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communication-types/invite-sent` })
+    const fetched = await app.inject({ headers: manageHeaders, method: 'GET', url: `/tenants/${tenant}/communication-types/invite-sent` })
     expect(fetched.statusCode).toBe(200)
     expect(fetched.json().tenant).toBe(tenant)
   })
 
   it('rejects a duplicate communication type against the real store, same as the in-memory tier', async () => {
     const tenant = uniqueSlug('acme')
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
 
-    const dup = await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
+    const dup = await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
     expect(dup.statusCode).toBe(409)
   })
 
@@ -117,13 +127,14 @@ describe('herald -- real Postgres', () => {
     const contactId = uniqueSlug('contact')
     const idempotencyKey = uniqueSlug('idem')
 
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
     await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types/invite-sent/templates`,
       payload: { subjectTemplate: 'Hi', bodyTemplate: 'Body' },
     })
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
+    await app.inject({ headers: suppressionsHeaders, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
 
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'x@example.com', {})
     await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
@@ -148,24 +159,25 @@ describe('herald -- real Postgres', () => {
 
   it('lists communication types filtered by status against the real search adapter', async () => {
     const tenant = uniqueSlug('acme')
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'active-one' } })
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'deprecated-one' } })
-    await app.inject({ method: 'DELETE', url: `/tenants/${tenant}/communication-types/deprecated-one` })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'active-one' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'deprecated-one' } })
+    await app.inject({ headers: manageHeaders, method: 'DELETE', url: `/tenants/${tenant}/communication-types/deprecated-one` })
 
-    const activeOnly = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communication-types` })
+    const activeOnly = await app.inject({ headers: manageHeaders, method: 'GET', url: `/tenants/${tenant}/communication-types` })
     const body = activeOnly.json()
     expect(body).toHaveLength(1)
     expect(body[0].type).toBe('active-one')
 
-    const withDeprecated = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communication-types?includeDeprecated=true` })
+    const withDeprecated = await app.inject({ headers: manageHeaders, method: 'GET', url: `/tenants/${tenant}/communication-types?includeDeprecated=true` })
     expect(withDeprecated.json()).toHaveLength(2)
   })
 
   it('creates successive template versions against the real store', async () => {
     const tenant = uniqueSlug('acme')
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
 
     const v1 = await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types/invite-sent/templates`,
       payload: { subjectTemplate: 'v1', bodyTemplate: 'v1 body' },
@@ -176,13 +188,14 @@ describe('herald -- real Postgres', () => {
     // next version -- with `find()` always returning `[]`, this second
     // create also computes version 1 instead of 2.
     const v2 = await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types/invite-sent/templates`,
       payload: { subjectTemplate: 'v2', bodyTemplate: 'v2 body' },
     })
     expect(v2.json().version).toBe(2)
 
-    const list = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communication-types/invite-sent/templates` })
+    const list = await app.inject({ headers: manageHeaders, method: 'GET', url: `/tenants/${tenant}/communication-types/invite-sent/templates` })
     expect(list.json()).toHaveLength(2)
     expect(list.json()[0].version).toBe(2) // newest first
   })
@@ -192,8 +205,9 @@ describe('herald -- real Postgres', () => {
     const contactId = uniqueSlug('contact')
     const idempotencyKey = uniqueSlug('idem')
 
-    await app.inject({ method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
     await app.inject({
+      headers: manageHeaders,
       method: 'POST',
       url: `/tenants/${tenant}/communication-types/invite-sent/templates`,
       payload: { subjectTemplate: 'Hi {{name}}', bodyTemplate: 'Welcome {{name}}' },
@@ -211,7 +225,7 @@ describe('herald -- real Postgres', () => {
     const outcome = await processCommunication(app.sendWorkerDeps, tenant, idempotencyKey)
     expect(outcome).toBe('sent')
 
-    const detail = await app.inject({ method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}` })
+    const detail = await app.inject({ headers: readHeaders, method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}` })
     expect(detail.statusCode).toBe(200)
     expect(detail.json().status).toBe('sent')
     expect(detail.json().providerMessageId).toBe('pg-msg-1')
