@@ -84,9 +84,8 @@ pass added on top:**
   own section below.
 - ~~Entitlement sequence numbers (`SequenceProvider`) are in-memory only~~ — **now durable**, see
   its own section below.
-- The periodic plan-mapping pricing re-sync job (Story 003) — the `syncPricing` actor command
-  exists and is exercised implicitly by nothing yet; the actual `CronJob`-style scheduler isn't
-  built.
+- ~~The periodic plan-mapping pricing re-sync job~~ — **now implemented**, see its own section
+  below.
 - ~~Full RBAC/permission enforcement~~ — **now implemented**, see its own section below.
 
 ## Scope covered by the amqplib/server.ts pass
@@ -277,6 +276,67 @@ counter per (tenant, scope) with real isolation across tenants/scopes, a direct 
 actor's own persisted state (proving real durability, not just interface behavior), and the
 concurrency regression itself (10 concurrent `next()` calls for the same key resolving to
 `[1..10]` with no duplicates, not the pre-fix all-`1`s).
+
+## The periodic plan-mapping pricing re-sync job (Story 003) is now implemented
+
+Two pieces, matching this design's own established split between "testable core logic" and
+"real-infrastructure entrypoint with no test coverage of its own" (the same split every other
+authstar service's own entrypoint already follows):
+
+- **`src/lib/pricing-sync.ts`**'s `syncAllPlanMappingPricing(consequent, stripeClients,
+  stripeConfig, log?)` — the real, tested sweep. Finds every `active` `planMapping`
+  (`consequent.find('planMapping', searchCriteria({status: 'active'}))` — a retired mapping is
+  never touched, since it can't accept new subscribers and a stale cached price on it is
+  historical, not live), resolves each one's tenant's Stripe config, re-fetches its price, and
+  issues the pre-existing (previously never-called) `planMapping.syncPricing` command if
+  `unitAmount`/`currency`/`interval` has drifted. A per-mapping failure (bad Stripe key, deleted
+  price, transient network error) is collected into the result, not thrown — one tenant's broken
+  configuration never aborts the sweep for every other tenant. No separate "list every tenant"
+  mechanism needed (unlike `role-reference-backfill.ts`'s own documented gap) — the set of
+  tenants to check falls straight out of which tenants own an active `planMapping` in the first
+  place. Tested directly against the in-memory `consequent`/fake Stripe client/in-memory
+  `StripeConfigStore` this repo's other specs already use —
+  `spec/behavior/pricing-sync.spec.ts`: drift detection (`unitAmount` alone, and separately
+  `currency`/`interval`), no-op when nothing changed, retired mappings skipped, per-mapping error
+  isolation (one bad price doesn't block a good one), a tenant with no Stripe config recorded as
+  an error rather than thrown, multi-tenant independence, and a no-op against zero active
+  mappings.
+- **`src/sync-pricing.ts`** — the standalone CronJob entrypoint. Mirrors `src/server.ts`'s exact
+  startup sequence (`dialWorkload` → `getServiceBundle` → decode secrets →
+  `initializePostgresAdapters`/`initializeConsequent` → `createStripeClientFactory()` →
+  `createSignetStripeConfigStore(...)`) but skips the Fastify/RabbitMQ/role-cache/
+  `waitForRestart` machinery entirely — there's nothing long-lived here for a signet bundle
+  change to interrupt. Calls `syncAllPlanMappingPricing` once, logs the result (and every
+  per-mapping error to stderr), closes the Postgres/workload handles, and calls `process.exit`
+  explicitly (0 if no errors, 1 if any — a Kubernetes-level "did this firing succeed" signal, not
+  silently reporting success regardless of what happened underneath). Compiles into the exact
+  same `dist/` output `src/server.ts` does — no second image to build/version. **No test coverage
+  of its own**, same scope note every other authstar service's real entrypoint carries (signet/
+  Postgres/Stripe wiring only exercised for real through the injectable interfaces
+  `pricing-sync.ts`'s own tests fake, or this repo's Postgres integration tier).
+
+**The Kubernetes wiring** — `~/git/authstar/integration/manifests/11-keep-pricing-sync-
+cronjob.yaml` (a sibling repo to this one) — confirmed directly against kluster's own
+`rabbitmqProvisionerCronJobManifest`/`rabbitmqProvisionerPodSpec` (`kluster-lib/profile/
+authstar.go`) before writing, not assumed: **no Helm chart exists anywhere in this workspace**
+for any authstar service — every deployment manifest, this new one included, is plain, applied-
+as-is Kubernetes YAML (`kubectl apply -f`), picked up automatically by `integration/scripts/
+deploy.sh`'s existing `manifests/1[0-7]-*.yaml` glob, no script changes needed. Reuses keep's own
+image, `serviceAccountName: keep`, and signet identity — unlike the RabbitMQ credential
+provisioner (which needs a separate narrow ServiceAccount with Kubernetes RBAC to create Secrets/
+CRDs directly), this job never touches the Kubernetes API, only signet/Postgres/Stripe, so
+keep's existing RBAC already covers it. The container `command` overrides the image's default
+`CMD ["node", "dist/server.js"]` to run `dist/sync-pricing.js` instead — no Dockerfile change,
+no second image. `restartPolicy: OnFailure` carries the exact same reasoning (and is corrected
+directly from) kluster's own CronJob: SPIRE registers a Pod's SPIFFE identity per-Pod, and a
+`restartPolicy: Never` retry would get a brand-new Pod that re-hits the same fresh-registration
+race every time; `OnFailure` retries in place, inside the already-registered Pod. **Schedule is
+a plain hardcoded `"0 4 * * *"`/`"America/New_York"`** (one hour after the RabbitMQ rotation
+job's own 3 AM slot, avoiding — not because it's load-bearing — the two jobs contending for
+resources at the same instant) — not exposed as configuration, matching every other manifest in
+that directory. **Not live-validated against a real cluster in this pass**, same scope note as
+every other manifest/entrypoint in this design; `kubectl apply --dry-run=client` confirms it's
+schema-valid.
 
 ## Six real gotchas this pilot found — worth knowing before writing more services' tests
 
