@@ -185,25 +185,30 @@ const provisioningRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     }
 
     // Step 6: publish for herald to send -- redelivery-safe by construction
-    // (herald keys its `communication` actor by `idempotencyKey`). Shape
-    // matches herald's real `IngestMessage` contract (ADR 0025's amended,
-    // encrypted payload envelope) exactly -- confirmed against herald's own
-    // `src/lib/ingest.ts`, not assumed from ADR prose alone. `templateData`
-    // (tenantName/token/adminHost) is encrypted with herald's public key
-    // before it ever goes on the wire; nothing but herald can read it.
-    //
-    // Two gaps this doesn't close, flagged rather than silently assumed
-    // away: (1) `heraldPayloadKey` is a throwaway ephemeral key by default
-    // (see herald-payload-crypto.ts) until real signet-based public-key
-    // distribution exists -- a real deployment must inject herald's actual
-    // current public key here. (2) `templateVersion: 1` assumes an
-    // 'invite-sent' template already exists in herald for this tenant at
-    // version 1; nothing in this provisioning flow actually creates one
-    // (herald's own template-provisioning is a separate, unbuilt piece) --
-    // until that exists, herald's ingest will accept this message but the
-    // send itself will fail with "no template found," same failure mode
-    // documented in herald's own template-lookup.ts.
-    const envelope = encryptForHerald(app.heraldPayloadKey, { tenantName: body.name, token, adminHost })
+    // (herald keys its `communication` actor by `idempotencyKey`). Outer
+    // envelope shape matches herald's real `IngestMessage` contract (ADR
+    // 0025's amended, encrypted payload envelope) exactly -- confirmed
+    // against herald's own `src/lib/ingest.ts`. The *encrypted* payload
+    // itself is `{ to, templateData }` -- confirmed against herald's real
+    // `send-worker.ts` (`decrypted.to`/`decrypted.templateData`), not the
+    // flat `{ tenantName, token, adminHost }` this route used to send,
+    // which send-worker couldn't have actually rendered from (a real,
+    // previously-shipped bug, not just an assumption gap). `templateData`
+    // nests `tenant.name` rather than a flat `tenantName` to match ADR
+    // 0078's own templateData convention (`{ tenant: { name, branding },
+    // application: {...}, ...type-specific fields }`) -- `branding`/
+    // `application` are omitted here since neither exists yet at this
+    // bootstrap moment (no tenant branding configured, `_admin` has none
+    // of its own), a template referencing them just renders empty per
+    // Story 003's own "no syntax validation" posture, not an error.
+    // `heraldPayloadKey` is a throwaway ephemeral key by default (see
+    // herald-payload-crypto.ts) until ADR 0081's real signet-based
+    // key-rotation route has pushed herald's actual public key at least
+    // once for this installation (see server.ts's `loadHeraldPayloadKey`).
+    const envelope = encryptForHerald(app.heraldPayloadKey, {
+      to: body.adminEmail,
+      templateData: { tenant: { name: body.name }, token, adminHost },
+    })
     await app.publisher.publish('comms.transactional.invite-sent', {
       idempotencyKey: `invite:${token}:sent`,
       tenant: body.slug,

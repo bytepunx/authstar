@@ -138,7 +138,7 @@ interop script this time, since PKCS8 is a well-defined, unambiguous standard (u
 bespoke encrypted-envelope format above) and portcullis's own test suite already exercises
 `from_pem_bytes` against standard PKCS8 PEM fixtures.
 
-Two gaps this fix did not originally close, flagged rather than silently assumed away -- one is
+Two gaps this fix did not originally close, flagged rather than silently assumed away -- both
 now resolved, see below:
 1. ~~No real signet-based public-key distribution exists yet~~ — **now wired**. `server.ts`'s
    `loadHeraldPayloadKey` reads `heraldPayloadPublicKey` (`{version, publicKeyPem}`) from
@@ -146,12 +146,26 @@ now resolved, see below:
    `heraldKeyFromPem`, falling back to `createEphemeralHeraldKey` (loudly logged) only until
    herald's `POST /operator/rotate-keys` (ADR 0081, herald's own repo) has pushed that secret
    at least once for a given installation — see herald's own TESTING.md for the producer side.
-2. **No herald template exists for `invite-sent` at the point tower publishes this event** —
-   `templateVersion: 1` is an assumption, not something this provisioning flow actually
-   provisions. Nothing here calls herald to create the template. Until that exists, herald's
-   ingest will accept the message structurally but the send itself will fail (herald's own
-   `template-lookup.ts` reports "no template found") — a second, separate gap from the shape
-   mismatch this pass fixed.
+2. ~~No herald template exists for `invite-sent` at the point tower publishes this event~~ —
+   **now resolved on herald's side** (`seedBuiltInTemplates`, herald's own repo/TESTING.md) — a
+   global-default `invite-sent` template is seeded once at herald's boot, per Story 003's own
+   "seeding built-in templates is an operational/deployment concern, not an API route." Nothing
+   changed in this repo for that half; see the encrypted-payload shape fix directly below,
+   found while confirming the two repos actually agree end to end.
+
+**A real, previously-shipped bug found while closing the gap above: the encrypted payload's
+inner shape didn't match what herald's send-worker actually reads.** This route encrypted a flat
+`{ tenantName, token, adminHost }` object — but herald's real `send-worker.ts` reads
+`decrypted.to`/`decrypted.templateData` (confirmed directly against that file, not assumed), a
+shape this flat object could never have satisfied. Every real first-admin invite would have
+failed at send time even after the missing-template gap above was closed. Fixed to `{ to:
+body.adminEmail, templateData: { tenant: { name: body.name }, token, adminHost } }` — nesting
+`tenant.name` to match ADR 0078's own `templateData` convention. `spec/behavior/
+provisioning.spec.ts` now injects a real (non-ephemeral) keypair via `buildApp`'s
+`heraldPayloadKey` option specifically so the test can decrypt the published envelope and assert
+its actual contents, not just its structural shape — the same class of proof
+`herald-payload-crypto.spec.ts` already established for the envelope format itself, extended
+here to the payload it actually carries.
 
 **Permission enforcement middleware (Story 014) is now implemented** — `src/lib/permissions.ts`'s
 `requirePermission(grant)` is a route `preHandler`, applied to every write/sensitive-read route

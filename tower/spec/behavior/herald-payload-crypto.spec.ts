@@ -26,7 +26,11 @@ describe('encryptForHerald', () => {
     const { publicKey, privateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 })
     const key: HeraldPayloadKey = { version: 3, publicKey }
 
-    const payload = { tenantName: 'Acme', token: 'abc123', adminHost: 'admin.acme.authstar.test' }
+    // `{ to, templateData }` -- the shape herald's real send-worker.ts
+    // actually decrypts and reads (`decrypted.to`/`decrypted.templateData`),
+    // confirmed directly against that file, not the flat shape this repo's
+    // own provisioning.ts used to send before that mismatch was found.
+    const payload = { to: 'admin@acme.test', templateData: { tenant: { name: 'Acme' }, token: 'abc123', adminHost: 'admin.acme.authstar.test' } }
     const envelope = encryptForHerald(key, payload)
 
     expect(envelope.keyVersion).toBe(3)

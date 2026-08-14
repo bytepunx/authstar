@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createPrivateKey } from 'node:crypto'
+import { createPrivateKey, constants, generateKeyPairSync, privateDecrypt, createDecipheriv } from 'node:crypto'
 import type { FastifyInstance } from 'fastify'
 import buildApp from '../../src/lib/build-app.js'
 import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
@@ -7,6 +7,22 @@ import { createSpyPublisher, createSpySignetAdmin } from '../lib/fakes.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import type { ProvisioningConfig } from '../../src/routes/provisioning.js'
 import type { TenantState } from '../../src/actors/tenant_actor.js'
+import type { EncryptedEnvelope } from '../../src/lib/herald-payload-crypto.js'
+
+// Decrypts exactly the way herald's own `payload-crypto.ts#decryptPayload`
+// does (RSA-OAEP-SHA256-wrapped AES-256-GCM) -- same standalone-reimplementation
+// convention `herald-payload-crypto.spec.ts` uses to prove the wire format is
+// genuinely decryptable, not just structurally present.
+function decryptLikeHerald(privateKey: ReturnType<typeof generateKeyPairSync>['privateKey'], envelope: EncryptedEnvelope): unknown {
+  const aesKey = privateDecrypt(
+    { key: privateKey, oaepHash: 'sha256', padding: constants.RSA_PKCS1_OAEP_PADDING },
+    Buffer.from(envelope.wrappedKey, 'base64'),
+  )
+  const decipher = createDecipheriv('aes-256-gcm', aesKey, Buffer.from(envelope.iv, 'base64'))
+  decipher.setAuthTag(Buffer.from(envelope.authTag, 'base64'))
+  const plaintext = Buffer.concat([decipher.update(Buffer.from(envelope.ciphertext, 'base64')), decipher.final()])
+  return JSON.parse(plaintext.toString('utf8'))
+}
 
 // Behavior tier for Story 012 / ADR 0067's `POST /tenants` provisioning
 // flow. `signetAdmin`/`publisher` are spy fakes (see spec/lib/fakes.ts) --
@@ -27,8 +43,16 @@ async function buildProvisioningApp(config: ProvisioningConfig = provisioningCon
   const consequent = await buildInMemoryConsequent()
   const signetAdmin = createSpySignetAdmin()
   const publisher = createSpyPublisher()
-  const app = await buildApp({ consequent, signetAdmin, publisher, provisioningConfig: config })
-  return { app, consequent, signetAdmin, publisher }
+  // A real keypair, private half retained here (never by `app` itself
+  // beyond signing) -- `createEphemeralHeraldKey`'s own default discards
+  // the private key immediately, which would make the invite-sent
+  // envelope this test needs to decrypt permanently unreadable.
+  const { publicKey, privateKey: heraldPrivateKey } = generateKeyPairSync('rsa', { modulusLength: 2048 })
+  const app = await buildApp({
+    consequent, signetAdmin, publisher, provisioningConfig: config,
+    heraldPayloadKey: { version: 1, publicKey },
+  })
+  return { app, consequent, signetAdmin, publisher, heraldPrivateKey }
 }
 
 describe('POST /tenants -- provisioning', () => {
@@ -36,9 +60,10 @@ describe('POST /tenants -- provisioning', () => {
   let consequent: ConsequentApi
   let signetAdmin: ReturnType<typeof createSpySignetAdmin>
   let publisher: ReturnType<typeof createSpyPublisher>
+  let heraldPrivateKey: ReturnType<typeof generateKeyPairSync>['privateKey']
 
   beforeEach(async () => {
-    ;({ app, consequent, signetAdmin, publisher } = await buildProvisioningApp())
+    ;({ app, consequent, signetAdmin, publisher, heraldPrivateKey } = await buildProvisioningApp())
   })
 
   afterEach(async () => {
@@ -163,17 +188,28 @@ describe('POST /tenants -- provisioning', () => {
     expect(payload.templateVersion).toBe(1)
     expect(payload.channel).toBe('email')
     expect(typeof payload.payloadKeyVersion).toBe('number')
-    // The template data itself (tenantName/adminHost, folded into the
-    // encrypted envelope) never appears in plaintext anywhere else in the
-    // published message -- the whole point of the envelope. (The invite
-    // token legitimately does appear elsewhere, in `idempotencyKey` --
-    // that's intentional message-routing metadata, not a leak of the
-    // encrypted payload.) Recipient addressing goes through `contactId`,
-    // not a `to` field (herald resolves the contact's email itself).
+    // The template data itself (adminHost/token/tenant name, folded into
+    // the encrypted envelope) never appears in plaintext anywhere else in
+    // the published message -- the whole point of the envelope. (The
+    // invite token legitimately does appear elsewhere, in
+    // `idempotencyKey` -- that's intentional message-routing metadata,
+    // not a leak of the encrypted payload.)
     const { encryptedPayload, ...restOfMessage } = payload
     expect(JSON.stringify(restOfMessage)).not.toContain('admin.acme.authstar.test')
-    const envelope = JSON.parse(encryptedPayload)
+    const envelope = JSON.parse(encryptedPayload) as EncryptedEnvelope
     expect(Object.keys(envelope).sort()).toEqual(['authTag', 'ciphertext', 'iv', 'keyVersion', 'wrappedKey'])
+
+    // Genuinely decryptable, and in the exact shape herald's real
+    // send-worker.ts actually reads (`decrypted.to`/`decrypted.templateData`)
+    // -- not the flat `{ tenantName, token, adminHost }` shape this route
+    // used to send, which send-worker could never have rendered from.
+    const decrypted = decryptLikeHerald(heraldPrivateKey, envelope) as { to: string, templateData: Record<string, unknown> }
+    expect(decrypted.to).toBe('admin@acme.test')
+    expect(decrypted.templateData).toEqual({
+      tenant: { name: 'Acme' },
+      token: expect.any(String),
+      adminHost: 'admin.acme.authstar.test',
+    })
   })
 
   it('retrying the same request is idempotent -- no duplicate secret pushes or actor re-creation', async () => {
