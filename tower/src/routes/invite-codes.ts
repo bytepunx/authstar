@@ -1,11 +1,11 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { InviteCodeState } from '../actors/invite_code_actor.js'
-import type { RoleDefinitionState } from '../actors/role_definition_actor.js'
 import type { AccountState, PermissionGrant } from '../actors/account_actor.js'
 import { requirePermission } from '../lib/permissions.js'
 import { createKeyedMutex } from '../lib/mutex.js'
 import { searchCriteria } from '../lib/consequent-types.js'
+import { rolesValid, type Scope } from '../lib/role-definition-lookup.js'
 
 // Per design/stories/tower/007-invites-and-invite-codes.md. `inviteCode`
 // built from scratch this pass -- see `actors/invite_code_actor.ts`'s own
@@ -79,8 +79,6 @@ const patchBodySchema = {
   properties: { status: { type: 'string', enum: ['revoked'] } },
 } as const
 
-type Scope = 'tenant' | { application: string }
-
 // See `src/lib/mutex.ts`'s own header comment for why this exists: closes
 // a real concurrent-duplicate-key race `consequent`'s own per-actor queue
 // does not, by itself, prevent -- same reasoning `role-definitions.ts`'s
@@ -89,24 +87,6 @@ const inviteCodeMutex = createKeyedMutex()
 
 function inviteCodeKey(tenantSlug: string, code: string): string {
   return `${tenantSlug}:${code}`
-}
-
-function roleDefinitionKey(tenantSlug: string, name: string, scope: Scope): string {
-  return scope === 'tenant' ? `${tenantSlug}:${name}` : `${tenantSlug}:${scope.application}:${name}`
-}
-
-async function activeRoleDefinitionExists(app: FastifyInstance, tenantSlug: string, name: string, scope: Scope): Promise<boolean> {
-  const instance = await app.consequent.fetch('roleDefinition', roleDefinitionKey(tenantSlug, name, scope))
-  const state = instance?.state as unknown as RoleDefinitionState | undefined
-  return Boolean(state?.createdAt) && state?.status === 'active'
-}
-
-async function rolesValid(app: FastifyInstance, tenantSlug: string, roles: Array<{ name: string, scope: Scope }> | undefined): Promise<boolean> {
-  if (!roles || roles.length === 0) return true
-  for (const role of roles) {
-    if (!(await activeRoleDefinitionExists(app, tenantSlug, role.name, role.scope))) return false
-  }
-  return true
 }
 
 async function fetchTenant(app: FastifyInstance, tenantSlug: string): Promise<TenantState> {

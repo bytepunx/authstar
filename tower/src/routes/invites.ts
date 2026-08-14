@@ -3,11 +3,11 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { InviteState } from '../actors/invite_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
-import type { RoleDefinitionState } from '../actors/role_definition_actor.js'
 import type { PermissionGrant } from '../actors/account_actor.js'
 import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypto.js'
 import { requirePermission } from '../lib/permissions.js'
 import { searchCriteria } from '../lib/consequent-types.js'
+import { rolesValid, type Scope } from '../lib/role-definition-lookup.js'
 
 // Per design/stories/tower/007-invites-and-invite-codes.md. The
 // general-purpose, admin-facing counterpart to `routes/provisioning.ts`'s
@@ -112,26 +112,6 @@ const patchBodySchema = {
   required: ['status'],
   properties: { status: { type: 'string', enum: ['revoked'] } },
 } as const
-
-type Scope = 'tenant' | { application: string }
-
-function roleDefinitionKey(tenantSlug: string, name: string, scope: Scope): string {
-  return scope === 'tenant' ? `${tenantSlug}:${name}` : `${tenantSlug}:${scope.application}:${name}`
-}
-
-async function activeRoleDefinitionExists(app: FastifyInstance, tenantSlug: string, name: string, scope: Scope): Promise<boolean> {
-  const instance = await app.consequent.fetch('roleDefinition', roleDefinitionKey(tenantSlug, name, scope))
-  const state = instance?.state as unknown as RoleDefinitionState | undefined
-  return Boolean(state?.createdAt) && state?.status === 'active'
-}
-
-async function rolesValid(app: FastifyInstance, tenantSlug: string, roles: Array<{ name: string, scope: Scope }> | undefined): Promise<boolean> {
-  if (!roles || roles.length === 0) return true
-  for (const role of roles) {
-    if (!(await activeRoleDefinitionExists(app, tenantSlug, role.name, role.scope))) return false
-  }
-  return true
-}
 
 async function fetchTenant(app: FastifyInstance, tenantSlug: string): Promise<TenantState> {
   const instance = await app.consequent.fetch('tenant', tenantSlug)

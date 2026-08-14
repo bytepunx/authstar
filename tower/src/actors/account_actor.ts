@@ -77,6 +77,10 @@ interface GrantPermissionCommand {
   permission: PermissionGrant
 }
 
+interface RevokePermissionCommand {
+  permission: { grant: string, scope: 'tenant' | { application: string } }
+}
+
 interface UpdateUsageCommand {
   application: string
   meter: string
@@ -88,10 +92,20 @@ interface ChangeEmailCommand {
   contactId: string
 }
 
+function scopeKey(scope: 'tenant' | { application: string }): string {
+  return typeof scope === 'string' ? scope : `application:${scope.application}`
+}
+
 function sameRole(a: RoleGrant, b: RoleGrant): boolean {
-  const scopeA = typeof a.scope === 'string' ? a.scope : `application:${a.scope.application}`
-  const scopeB = typeof b.scope === 'string' ? b.scope : `application:${b.scope.application}`
-  return a.name === b.name && scopeA === scopeB
+  return a.name === b.name && scopeKey(a.scope) === scopeKey(b.scope)
+}
+
+// Story 005: "scope disambiguated... if the same grant exists at more than
+// one scope" -- i.e. `(grant, scope)` together are the real identity, not
+// `grant` alone. Matches `sameRole`'s own composite-scope equality
+// reasoning exactly.
+function samePermission(a: { grant: string, scope: 'tenant' | { application: string } }, b: { grant: string, scope: 'tenant' | { application: string } }): boolean {
+  return a.grant === b.grant && scopeKey(a.scope) === scopeKey(b.scope)
 }
 
 function create(_account: AccountState, command: CreateCommand) {
@@ -128,6 +142,10 @@ function grantPermission(_account: AccountState, command: GrantPermissionCommand
   return { type: 'account.permission-granted', permission: command.permission }
 }
 
+function revokePermission(_account: AccountState, command: RevokePermissionCommand) {
+  return { type: 'account.permission-revoked', permission: command.permission }
+}
+
 // ADR 0076: repoints `account.contactId` to a new (or reused) contact
 // record -- `contact.email` itself is immutable by design (ADR 0023), an
 // email "change" is always a repoint, never an in-place edit. The route
@@ -159,6 +177,38 @@ function suspend() {
 
 function rejectSuspend() {
   return Promise.reject(new Error('account must be active to be suspended'))
+}
+
+// Story 005: "status: 'active'|'suspended'|'deleted' covers suspend/
+// reactivate/business-offboarding in one route" -- unlike `tenant`'s own
+// PATCH (deliberately restricted to active -> suspended only, ADR 0062),
+// `account` status is fully bidirectional through this single route: an
+// admin can reactivate a suspended (or previously business-deleted, i.e.
+// un-delete) account, same as they can suspend or delete an active one.
+// `status: 'deleted'` is a business status only (offboarding) -- entirely
+// distinct from GDPR erasure, which acts on `contact`, never this actor.
+function isNotActive(account: AccountState) {
+  return account.status !== 'active'
+}
+
+function activate() {
+  return { type: 'account.activated' }
+}
+
+function rejectActivate() {
+  return Promise.reject(new Error('account is already active'))
+}
+
+function isNotDeleted(account: AccountState) {
+  return account.status !== 'deleted'
+}
+
+function del() {
+  return { type: 'account.deleted' }
+}
+
+function rejectDelete() {
+  return Promise.reject(new Error('account is already deleted'))
 }
 
 function created(account: AccountState, event: CreateCommand) {
@@ -203,12 +253,20 @@ function trialRoleGranted(account: AccountState, event: { role: RoleGrant, trial
   }
 }
 
-// First-write-wins on a duplicate `grant` string -- a redelivered/repeated
-// grant of the same permission is a silent no-op, never a duplicate array
-// entry, matching `roleGranted`'s own idempotent-merge convention.
+// First-write-wins on a duplicate `(grant, scope)` pair -- a redelivered/
+// repeated grant is a silent no-op, never a duplicate array entry, matching
+// `roleGranted`'s own idempotent-merge convention. Keyed on `(grant,
+// scope)` together, not `grant` alone -- Story 005: the same grant string
+// can exist at more than one scope simultaneously (see `samePermission`).
 function permissionGranted(account: AccountState, event: { permission: PermissionGrant }) {
-  if (account.permissions.some((p) => p.grant === event.permission.grant)) return
+  if (account.permissions.some((p) => samePermission(p, event.permission))) return
   account.permissions = [...account.permissions, event.permission]
+}
+
+// Idempotent -- a no-op if the matching `(grant, scope)` is already absent
+// (e.g. a redelivered revoke arriving after another already processed it).
+function permissionRevoked(account: AccountState, event: { permission: { grant: string, scope: 'tenant' | { application: string } } }) {
+  account.permissions = account.permissions.filter((p) => !samePermission(p, event.permission))
 }
 
 function usageUpdated(account: AccountState, event: UpdateUsageCommand) {
@@ -228,6 +286,14 @@ function usageUpdated(account: AccountState, event: UpdateUsageCommand) {
 
 function suspended(account: AccountState) {
   account.status = 'suspended'
+}
+
+function activated(account: AccountState) {
+  account.status = 'active'
+}
+
+function deleted(account: AccountState) {
+  account.status = 'deleted'
 }
 
 // Naturally idempotent -- redelivering the same `contact-changed` event
@@ -265,11 +331,20 @@ export default function accountActor() {
       'revoke-role': revokeRole,
       'grant-trial-role': grantTrialRole,
       'grant-permission': grantPermission,
+      'revoke-permission': revokePermission,
       'update-usage': updateUsage,
       'change-email': changeEmail,
       suspend: [
         { when: isActive, then: suspend },
         rejectSuspend,
+      ],
+      activate: [
+        { when: isNotActive, then: activate },
+        rejectActivate,
+      ],
+      delete: [
+        { when: isNotDeleted, then: del },
+        rejectDelete,
       ],
     },
     events: {
@@ -278,9 +353,12 @@ export default function accountActor() {
       'role-revoked': roleRevoked,
       'trial-role-granted': trialRoleGranted,
       'permission-granted': permissionGranted,
+      'permission-revoked': permissionRevoked,
       'usage-updated': usageUpdated,
       'contact-changed': contactChanged,
       suspended,
+      activated,
+      deleted,
     },
   }
 }
