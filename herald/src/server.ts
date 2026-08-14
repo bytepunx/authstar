@@ -11,6 +11,7 @@ import { createAmqpPublisher } from './lib/publisher.js'
 import { PayloadKeyring, type PersistedPayloadKeyGeneration } from './lib/payload-crypto.js'
 import { UnsubscribeKeyring, type PersistedUnsubscribeKeyGeneration } from './lib/unsubscribe-token.js'
 import { createSignetAdmin } from './lib/signet-admin.js'
+import { seedBuiltInTemplates } from './lib/seed-templates.js'
 
 // Production entrypoint. Follows the exact fetch-once/watch/restart-lock
 // pattern tower's own `src/server.ts` established for this stack (signet
@@ -152,6 +153,11 @@ async function main(): Promise<void> {
     searchAdapter: pgAdapters.search as never,
     logging: { level: 'info' },
   })
+
+  // Story 003's own "operational/deployment concern, not an API route" --
+  // idempotent across restarts, see seed-templates.ts's own header.
+  // eslint-disable-next-line no-console
+  await seedBuiltInTemplates(consequent, (msg) => console.log(msg))
 
   // A dedicated connection/channel for herald's own outbound publishing
   // (`contact.purge.acknowledged`, ADR 0026) -- kept separate from the two

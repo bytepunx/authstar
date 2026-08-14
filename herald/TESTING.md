@@ -236,6 +236,35 @@ convention. 107 tests total across all three tiers, up from 102 before this pass
 `suppressions.spec.ts` (the latter specifically covering the corrected POST route), rather than
 duplicating the same assertion on every route.
 
+## Built-in global-default templates are now seeded, closing the "invite-sent has no template" gap
+
+Story 003's own "Not Covered Here" note names this precisely: "Seeding the built-in
+global-default templates herald ships with — an operational/deployment concern, not an API
+route." `src/lib/seed-templates.ts`'s `seedBuiltInTemplates`, called once from `server.ts` at
+boot (not through any HTTP route — Story 003 explicitly forbids a tenant-scoped `POST
+.../templates` call from ever creating a `tenant: null` template), creates the `invite-sent`
+global-default template at a fixed, deterministic `templateId` (not `nextId()`'s random flake)
+so repeated boots/restarts never create a duplicate or bump its version. This closes the
+concrete failure mode both tower's and this repo's own comments used to name: tower's `POST
+/tenants` provisioning flow publishes a `comms.transactional.invite-sent` message pinned to
+`templateVersion: 1`, and until now nothing had ever created that template, so herald's
+`send-worker.ts` would fail every real first-admin invite with "no template found."
+
+Also fixed alongside this (found by direct comparison, not assumed): tower's provisioning flow
+was encrypting a flat `{ tenantName, token, adminHost }` payload, but herald's real
+`send-worker.ts` reads `decrypted.to`/`decrypted.templateData` — a shape send-worker could never
+have actually rendered from. Tower's own fix nests the fields correctly (`{ to, templateData:
+{ tenant: { name }, token, adminHost } }`, matching ADR 0078's `templateData` convention); this
+repo's own built-in template is written against that corrected shape, and
+`spec/behavior/seed-templates.spec.ts`'s last test proves the two actually agree end to end —
+rendering the seeded template against the *exact* `templateData` tower's real route sends,
+byte for byte, not a hand-picked example that happens to work.
+
+Tested in `spec/behavior/seed-templates.spec.ts`: creation, idempotency across repeated calls,
+resolution as the global-default fallback (Story 003's own two-tier lookup, already built and
+tested independently of this seed), mustache syntax validity, and the cross-repo-shape render
+proof above. 5 new tests — 120 total, up from 115.
+
 ## Three real bugs tower's pilot already found — still true here
 
 1. **`consequent`'s loader only finds compiled `*_actor.js` files** — point `actors` config at
