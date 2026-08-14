@@ -47,8 +47,18 @@ describe('POST /api/tenants/:slug/rotate-keys', () => {
     expect(response.status).toBe(400)
   })
 
-  it('rotates independently selected keys and forwards them to tower', async () => {
-    const { fetchImpl, calls } = capturingFakeFetch({ status: 200, body: { rotated: ['session', 'identity-hash'] } })
+  it('rotates independently selected keys and forwards tower\'s real response shape', async () => {
+    // Matches tower's actual response (tower/src/routes/rotate-keys.ts): each
+    // rotated key reports its own generation, plus a `failed` array for
+    // partial-failure reporting -- not a bare array of key names.
+    const towerResponse = {
+      rotated: [
+        { key: 'session', version: 1723600000, effectiveFrom: '2026-08-14T00:00:00.000Z' },
+        { key: 'identity-hash', version: 1723600000, effectiveFrom: '2026-08-14T00:00:00.000Z' },
+      ],
+      failed: [],
+    }
+    const { fetchImpl, calls } = capturingFakeFetch({ status: 200, body: towerResponse })
     const event = fakeEvent({
       method: 'POST',
       path: '/api/tenants/acme/rotate-keys',
@@ -60,7 +70,7 @@ describe('POST /api/tenants/:slug/rotate-keys', () => {
     const response = await rotateKeys(event as any)
     expect(calls[0].url).toContain('/operator/tenants/acme/rotate-keys')
     expect(JSON.parse(calls[0].init?.body as string)).toEqual({ keys: ['session', 'identity-hash'] })
-    const body = (await readJson(response)) as { rotated: string[] }
-    expect(body.rotated).toEqual(['session', 'identity-hash'])
+    const body = (await readJson(response)) as typeof towerResponse
+    expect(body).toEqual(towerResponse)
   })
 })

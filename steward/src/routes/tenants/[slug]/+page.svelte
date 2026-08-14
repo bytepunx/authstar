@@ -237,12 +237,19 @@
   {/if}
 
   {#if rotateResult}
-    <p class="confirmation">
-      Rotated: {rotateResult.rotated.join(', ')}.
-      {#if rotateResult.rotated.includes('identity-hash')}
-        Old identity-hash generations remain valid until their retention window elapses.
-      {/if}
-    </p>
+    {#if rotateResult.rotated.length > 0}
+      <p class="confirmation">
+        Rotated: {rotateResult.rotated.map((r) => r.key).join(', ')}.
+        {#if rotateResult.rotated.some((r) => r.key === 'identity-hash')}
+          Old identity-hash generations remain valid until their retention window elapses.
+        {/if}
+      </p>
+    {/if}
+    {#if rotateResult.failed.length > 0}
+      <p class="error" role="alert">
+        Failed to rotate: {rotateResult.failed.map((f) => `${f.key} (${f.error})`).join(', ')}.
+      </p>
+    {/if}
   {/if}
 </section>
 

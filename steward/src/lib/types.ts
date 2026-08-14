@@ -70,8 +70,24 @@ export interface RotateTenantKeysRequest {
   keys: TenantRotationKey[]
 }
 
+// Matches tower's actual response shape (tower/src/routes/rotate-keys.ts)
+// -- each rotated key reports its own new generation, and rotation is
+// per-key independent, so a partial failure (one key rotated, another
+// failed) is a real, representable outcome, not just success-or-nothing.
+export interface RotatedKeyGeneration {
+  key: TenantRotationKey
+  version: number
+  effectiveFrom: string
+}
+
+export interface TenantKeyRotationFailure {
+  key: TenantRotationKey
+  error: string
+}
+
 export interface RotateTenantKeysResponse {
-  rotated: TenantRotationKey[]
+  rotated: RotatedKeyGeneration[]
+  failed: TenantKeyRotationFailure[]
 }
 
 export interface RotateHeraldKeysRequest {
