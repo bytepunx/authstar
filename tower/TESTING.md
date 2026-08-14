@@ -138,12 +138,14 @@ interop script this time, since PKCS8 is a well-defined, unambiguous standard (u
 bespoke encrypted-envelope format above) and portcullis's own test suite already exercises
 `from_pem_bytes` against standard PKCS8 PEM fixtures.
 
-Two gaps this fix does *not* close, flagged rather than silently assumed away:
-1. **No real signet-based public-key distribution exists yet** (ADR 0025 names this as a required
-   piece: "every publisher needs the public key distributed via signet"). `heraldPayloadKey`
-   defaults to a throwaway ephemeral keypair (`createEphemeralHeraldKey`) — real deployment must
-   inject herald's actual current public key via `BuildAppOptions`/`server.ts`, and doesn't yet.
-   `server.ts` logs a loud warning on every boot until this is wired.
+Two gaps this fix did not originally close, flagged rather than silently assumed away -- one is
+now resolved, see below:
+1. ~~No real signet-based public-key distribution exists yet~~ — **now wired**. `server.ts`'s
+   `loadHeraldPayloadKey` reads `heraldPayloadPublicKey` (`{version, publicKeyPem}`) from
+   tower's own signet bundle secrets and builds a real `HeraldPayloadKey` via
+   `heraldKeyFromPem`, falling back to `createEphemeralHeraldKey` (loudly logged) only until
+   herald's `POST /operator/rotate-keys` (ADR 0081, herald's own repo) has pushed that secret
+   at least once for a given installation — see herald's own TESTING.md for the producer side.
 2. **No herald template exists for `invite-sent` at the point tower publishes this event** —
    `templateVersion: 1` is an assumption, not something this provisioning flow actually
    provisions. Nothing here calls herald to create the template. Until that exists, herald's

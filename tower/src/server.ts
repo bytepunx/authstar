@@ -12,6 +12,7 @@ import { createAmqpPublisher } from './lib/publisher.js'
 import { createIdGenerator } from './lib/ids.js'
 import { startEntitlementConsumer } from './lib/entitlement-consumer.js'
 import { startErasureAckConsumer } from './lib/erasure-ack-consumer.js'
+import { createEphemeralHeraldKey, heraldKeyFromPem, type HeraldPayloadKey } from './lib/herald-payload-crypto.js'
 import type { ProvisioningConfig } from './routes/provisioning.js'
 
 // Production entrypoint. Follows the fetch-once/watch/restart-lock pattern
@@ -49,6 +50,29 @@ function decodeBundleSecrets(bundle: Record<string, unknown> | undefined): Recor
     decoded[key] = Buffer.from(value, 'base64').toString('utf8')
   }
   return decoded
+}
+
+// ADR 0025/0081: herald's own `POST /operator/rotate-keys` pushes its
+// current payload-encryption public key here as `heraldPayloadPublicKey`
+// (`{version, publicKeyPem}`, herald's `signet-admin.ts`/
+// `operator-rotate-keys.ts`) -- the "public key distributed via signet"
+// mechanism ADR 0025 itself named, actually wired for the first time here.
+// Falls back to an ephemeral throwaway key (same as ever) only until
+// herald's rotate-keys route has been called at least once for this
+// installation.
+function loadHeraldPayloadKey(secrets: Record<string, string>, log: (msg: string) => void): HeraldPayloadKey {
+  const raw = secrets.heraldPayloadPublicKey
+  if (!raw) {
+    log('no signet-sourced herald payload-encryption public key configured yet -- using an ephemeral throwaway key; comms.* events published from this process are not decryptable by a real herald instance until herald\'s POST /operator/rotate-keys has been called at least once (ADR 0025/0081)')
+    return createEphemeralHeraldKey()
+  }
+  try {
+    const { version, publicKeyPem } = JSON.parse(raw) as { version: number, publicKeyPem: string }
+    return heraldKeyFromPem(version, publicKeyPem)
+  } catch (err) {
+    log(`heraldPayloadPublicKey in signet bundle was unusable (${(err as Error).message}) -- falling back to an ephemeral throwaway key`)
+    return createEphemeralHeraldKey()
+  }
 }
 
 async function main(): Promise<void> {
@@ -135,6 +159,8 @@ async function main(): Promise<void> {
   const signetAdmin = createSignetAdmin({ address: adminAddress, token: signetAdminToken, namespace })
   const contactStore = createPgContactStore(pgPool, contactHashPepper)
   const ids = createIdGenerator(service)
+  // eslint-disable-next-line no-console
+  const heraldPayloadKey = loadHeraldPayloadKey(secrets, (msg) => console.warn(msg))
 
   const app = await buildApp({
     consequent,
@@ -143,16 +169,9 @@ async function main(): Promise<void> {
     publisher,
     ids,
     provisioningConfig,
+    heraldPayloadKey,
     logger: true,
   })
-
-  // No real signet-sourced herald public key exists yet (ADR 0025's public-
-  // key-distribution gap -- see herald-payload-crypto.ts) -- falls back to
-  // a throwaway ephemeral key, same class of gap herald's own server.ts
-  // documents for its own key material. Every `comms.transactional.*`
-  // event published from this process is encrypted to a key herald cannot
-  // actually decrypt with until that wiring exists.
-  app.log.warn('no signet-sourced herald payload-encryption public key configured -- using an ephemeral throwaway key; comms.* events published from this process are not decryptable by a real herald instance until ADR 0025\'s key distribution is wired')
 
   const port = Number(process.env.PORT ?? 8080)
   await app.listen({ port, host: '0.0.0.0' })
