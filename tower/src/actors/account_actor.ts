@@ -20,6 +20,19 @@ export interface RoleGrant {
   scope: 'tenant' | { application: string }
 }
 
+// Matches `routes/provisioning.ts`'s own `FULL_TENANT_PERMISSIONS` shape
+// exactly (`{grant, scope, maxOutstanding}`) -- previously only that one
+// call site's own inline object literal, never a shared type, since
+// `AccountState.permissions` was `unknown[]` and nothing else read it
+// structurally. Story 007's invite-code `maxOutstanding` enforcement
+// (`routes/invite-codes.ts`) is the first caller that needs to, hence the
+// real type now.
+export interface PermissionGrant {
+  grant: string
+  scope: 'tenant' | { application: string }
+  maxOutstanding: number | null
+}
+
 export interface UsageRecord {
   application: string
   meter: string
@@ -36,7 +49,7 @@ export interface AccountState {
   grantedRoles: RoleGrant[]
   trialRoles: RoleGrant[]
   trialExpiresAt: string | null
-  permissions: unknown[]
+  permissions: PermissionGrant[]
   usage: UsageRecord[]
   createdAt: string
 }
@@ -58,6 +71,10 @@ interface RevokeRoleCommand {
 interface GrantTrialRoleCommand {
   role: RoleGrant
   trialExpiresAt: string
+}
+
+interface GrantPermissionCommand {
+  permission: PermissionGrant
 }
 
 interface UpdateUsageCommand {
@@ -96,6 +113,19 @@ function revokeRole(_account: AccountState, command: RevokeRoleCommand) {
 
 function grantTrialRole(_account: AccountState, command: GrantTrialRoleCommand) {
   return { type: 'account.trial-role-granted', role: command.role, trialExpiresAt: command.trialExpiresAt }
+}
+
+// ADR 0021/0067's elevated-bootstrap case (an operator-issued or
+// first-admin invite carrying `permissions`, Story 007) -- previously
+// never actually applied to the account on acceptance (`invite.permissions`
+// was carried on the invite record but `identities.ts`'s own redemption
+// helper only ever called `account.grant-role`, never anything for
+// `permissions` -- a real gap in Story 007's own "append permissions if
+// present" requirement, closed here). Idempotent by `grant` string, same
+// first-write-wins convention `grant-role`'s own idempotent merge uses --
+// see `permissionGranted` below.
+function grantPermission(_account: AccountState, command: GrantPermissionCommand) {
+  return { type: 'account.permission-granted', permission: command.permission }
 }
 
 // ADR 0076: repoints `account.contactId` to a new (or reused) contact
@@ -173,6 +203,14 @@ function trialRoleGranted(account: AccountState, event: { role: RoleGrant, trial
   }
 }
 
+// First-write-wins on a duplicate `grant` string -- a redelivered/repeated
+// grant of the same permission is a silent no-op, never a duplicate array
+// entry, matching `roleGranted`'s own idempotent-merge convention.
+function permissionGranted(account: AccountState, event: { permission: PermissionGrant }) {
+  if (account.permissions.some((p) => p.grant === event.permission.grant)) return
+  account.permissions = [...account.permissions, event.permission]
+}
+
 function usageUpdated(account: AccountState, event: UpdateUsageCommand) {
   const idx = account.usage.findIndex((u) => u.application === event.application && u.meter === event.meter)
   const record = {
@@ -226,6 +264,7 @@ export default function accountActor() {
       'grant-role': grantRole,
       'revoke-role': revokeRole,
       'grant-trial-role': grantTrialRole,
+      'grant-permission': grantPermission,
       'update-usage': updateUsage,
       'change-email': changeEmail,
       suspend: [
@@ -238,6 +277,7 @@ export default function accountActor() {
       'role-granted': roleGranted,
       'role-revoked': roleRevoked,
       'trial-role-granted': trialRoleGranted,
+      'permission-granted': permissionGranted,
       'usage-updated': usageUpdated,
       'contact-changed': contactChanged,
       suspended,

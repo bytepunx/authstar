@@ -22,6 +22,8 @@ import registerRotateKeysRoutes from '../routes/rotate-keys.js'
 import registerAccountRoutes from '../routes/accounts.js'
 import registerApplicationRoutes from '../routes/applications.js'
 import registerRoleDefinitionRoutes from '../routes/role-definitions.js'
+import registerInviteRoutes from '../routes/invites.js'
+import registerInviteCodeRoutes from '../routes/invite-codes.js'
 
 const defaultProvisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: true,
@@ -105,5 +107,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   await app.register(registerAccountRoutes)
   await app.register(registerApplicationRoutes)
   await app.register(registerRoleDefinitionRoutes)
+  await app.register(registerInviteRoutes)
+  await app.register(registerInviteCodeRoutes)
   return app
 }

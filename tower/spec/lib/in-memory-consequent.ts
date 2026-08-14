@@ -2,6 +2,7 @@ import { fileURLToPath } from 'node:url'
 import path from 'node:path'
 import initialize from 'consequent'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import createFixedInMemorySearchAdapter from './in-memory-search-adapter.js'
 
 // `consequent`'s own actor loader globs for `*_actor.js` specifically
 // (confirmed directly against its source, `src/loader.ts`) -- it has no
@@ -13,12 +14,19 @@ const actorsPath = path.join(
   '../../dist/actors',
 )
 
-// No actorStore/eventStore/searchAdapter passed -- consequent's own
-// `initialize()` falls back to its built-in in-memory default adapters
-// (confirmed directly against its source, `src/index.ts`/`src/default/*`),
-// not a fake we're building ourselves. This is real `consequent` command/
-// event/aggregateFrom behavior, just backed by memory instead of Postgres --
-// exactly what "end-to-end without external dependencies" needs.
+// actorStore/eventStore are left as consequent's own in-memory defaults --
+// real command/event replay behavior, no need to reimplement it.
+//
+// `searchAdapter` is explicitly NOT left as the default, though -- it has
+// a real, confirmed bug (see `in-memory-search-adapter.ts`'s own comment
+// for the full repro, found here building `invite-codes.spec.ts` and
+// already independently found and fixed in herald's own pilot first) that
+// silently drops *other* actors' index entries whenever one shares a
+// searched-on field's value with another and then moves off it. A fresh,
+// correct instance is created per `initialize()` call here instead of
+// reusing consequent's own default (a module-level singleton shared across
+// every `initialize()` call in the process), which also means each test
+// file gets a genuinely isolated search index as a side benefit.
 export default async function buildInMemoryConsequent(): Promise<ConsequentApi> {
-  return initialize({ actors: actorsPath, logging: { level: 'none' } })
+  return initialize({ actors: actorsPath, searchAdapter: createFixedInMemorySearchAdapter(), logging: { level: 'none' } })
 }

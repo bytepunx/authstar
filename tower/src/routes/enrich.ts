@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { IdentityState } from '../actors/identity_actor.js'
 import type { AccountState } from '../actors/account_actor.js'
 import { filterRolesForApplication } from '../lib/roles.js'
+import { searchCriteria } from '../lib/consequent-types.js'
 
 // Per design/stories/tower/002-claims-enrichment-endpoint.md and ADR
 // 0001/0003. Called by portcullis's real Rust client
@@ -48,7 +49,7 @@ function deny(reply: { code: (n: number) => { send: (body: unknown) => unknown }
 }
 
 async function fetchIdentity(app: FastifyInstance, identityHash: string): Promise<IdentityState | null> {
-  const instances = await app.consequent.find('identity', { identityHash })
+  const instances = await app.consequent.find('identity', searchCriteria({ identityHash }))
   const state = instances[0]?.state as unknown as IdentityState | undefined
   if (!state || !state.accountId) return null
   return state

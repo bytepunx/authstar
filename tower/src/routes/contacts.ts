@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { AccountState } from '../actors/account_actor.js'
 import { requirePermission } from '../lib/permissions.js'
+import { searchCriteria } from '../lib/consequent-types.js'
 
 // Per design/stories/tower/008-contacts-erasure-and-export.md and ADR
 // 0026/0040. `contact` lookup is always a direct key computation
@@ -75,7 +76,7 @@ const contactsRoutes: FastifyPluginAsync = async function (app: FastifyInstance)
       const contact = await app.contactStore.findById(contactId)
       if (!contact) return reply.code(404).send()
 
-      const accounts = await app.consequent.find('account', { tenant: tenantSlug, contactId })
+      const accounts = await app.consequent.find('account', searchCriteria({ tenant: tenantSlug, contactId }))
       const accountId = ((accounts[0]?.state as unknown as AccountState | undefined)?.accountId) ?? null
 
       await app.contactStore.remove(contactId)

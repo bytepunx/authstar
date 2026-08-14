@@ -4,22 +4,19 @@ import type { ApplicationState } from '../actors/application_actor.js'
 import type { RoleDefinitionState } from '../actors/role_definition_actor.js'
 import { requirePermission } from '../lib/permissions.js'
 import { createKeyedMutex } from '../lib/mutex.js'
+import { searchCriteria } from '../lib/consequent-types.js'
 
 // Per design/decisions/0047-application-and-role-slug-validation.md and
 // design/stories/tower/001-actor-definitions.md's `roleDefinition` section.
 //
-// Scope note: this file builds the role *catalog* -- creation, listing,
-// retiring -- and the application-existence check ADR 0047 requires at
-// definition time. It deliberately does NOT wire the catalog into any
-// role-*granting* write path (`POST /accounts/{accountId}/roles`, or role
-// lists on invite/inviteCode creation) -- none of those routes exist yet in
-// this repo (`POST /accounts/{accountId}/roles` was never built by any
-// prior task; invite/inviteCode creation is Story 007's own still-pending
-// scope, see TESTING.md). ADR 0047's actual driver for *this* task is
-// keep's reference cache (task tracker's "keep: grantedRoles reference
-// cache poller") needing a real source of truth to consume/backfill from --
-// this file is that source of truth, not a retrofit of every existing
-// role-granting call site (there are none yet to retrofit).
+// Scope note: this file builds the role *catalog* itself -- creation,
+// listing, retiring -- and the application-existence check ADR 0047
+// requires at definition time. `routes/invites.ts`/`routes/invite-codes.ts`
+// (Story 007) now validate their own `roles` arrays against this catalog
+// at creation time, closing that half of ADR 0047's "role-granting write
+// paths validate against the catalog" requirement. `POST /accounts/
+// {accountId}/roles` still doesn't exist as a route in this repo -- the
+// remaining gap, not this file's concern to close.
 
 const tenantParamsSchema = {
   type: 'object',
@@ -147,7 +144,7 @@ const roleDefinitionsRoutes: FastifyPluginAsync = async function (app: FastifyIn
       const tenant = await fetchTenant(app, tenantSlug)
       if (!tenantExists(tenant)) return reply.code(404).send()
 
-      const instances = await app.consequent.find('roleDefinition', { tenant: tenantSlug })
+      const instances = await app.consequent.find('roleDefinition', searchCriteria({ tenant: tenantSlug }))
       const states = instances.map((i) => i.state as unknown as RoleDefinitionState)
       return states
         .filter((s) => !status || s.status === status)

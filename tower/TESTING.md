@@ -180,9 +180,10 @@ distinction between missing/invalid/degraded token and wrong grant). Tenant-JWKS
 header (portcullis sets it at mint time) rather than any forwarded signal — the default
 `authstarGetKey` in `build-app.ts`; tests override it with a `staticKeyProvider` fixture
 (`spec/lib/internal-jwt.ts`) pinned to a locally-generated keypair, so no test makes a real JWKS
-fetch. Providers/roles/invites/activity-feed routes from the story's own route table don't exist as
-code in this repo yet (see "Deliberately deferred" below) — nothing to gate there until those
-routes are built. Applications routes (below) are now real and gated the same way.
+fetch. Providers/activity-feed routes from the story's own route table don't exist as code in
+this repo yet (see "Deliberately deferred" below) — nothing to gate there until those routes are
+built. Applications, role-definitions, invites, and invite-codes routes (below) are now real and
+gated the same way.
 
 **`POST /tenants/:tenantSlug/accounts/:accountId/change-email` (ADR 0076) is now implemented** —
 `src/routes/accounts.ts`, the first route in this repo's own `accounts` family. Deliberately a
@@ -305,13 +306,11 @@ from, same reasoning. Key points:
   `roleDefinition.<created|retired>` event (ADR 0047's own outbound-event requirement) —
   `{tenant, name, scope, status}`. `PATCH`'s `description`-only edits publish nothing — not a
   lifecycle transition, no consumer needs to know about it.
-- **Deliberately not wired into any role-*granting* write path** — `POST
-  /accounts/{accountId}/roles`, and role lists on invite/inviteCode creation, are the write paths
-  ADR 0047 says should validate against this catalog, but none of them exist as routes in this
-  repo yet (`POST /accounts/{accountId}/roles` was never built by any prior task; invite/inviteCode
-  creation is Story 007's own still-pending scope — see "Code-based invites" below). This task's
-  actual driver is keep's reference cache needing a real source of truth, not a retrofit of
-  call sites that don't exist yet — see `role-definitions.ts`'s own header comment.
+- ~~Deliberately not wired into any role-*granting* write path~~ — **`routes/invites.ts`/
+  `routes/invite-codes.ts` now validate their own `roles` arrays against this catalog at creation
+  time** (Story 007, see its own section below). `POST /accounts/{accountId}/roles` still doesn't
+  exist as a route in this repo — the one remaining gap ADR 0047's "role-granting write paths
+  validate against the catalog" requirement doesn't yet cover.
 
 **A real concurrency gap found and fixed while building the two features above: `consequent`'s
 per-actor command queue does NOT, by itself, make concurrent duplicate-creation checks
@@ -345,12 +344,111 @@ task) — see keep's own TESTING.md/`consequent-sequence-provider.ts` for that w
 knowing before any future actor design leans on "the per-actor queue makes this race-free"
 without checking it the way this pass did.
 
+**Story 007 (invites and invite-codes) is now implemented in full** — both halves:
+
+- **`routes/invites.ts`** — the general-purpose, admin-facing counterpart to `routes/
+  provisioning.ts`'s own deterministic first-admin bootstrap invite: `POST`/`GET`
+  (list+detail)/`PATCH`/`DELETE /tenants/:tenantSlug/invites`, gated by `invite:send`. Same
+  `invite` actor, same herald-publish contract (`comms.transactional.invite-sent`, `{to,
+  templateData: {tenant: {name}, token, adminHost}}`, decrypt-proven via the same standalone
+  reimplementation `provisioning.spec.ts` established), a random (`randomBytes(20).toString(
+  'hex')`, 40 hex chars — the same Postgres `character(42)` id-map ceiling tower's own TESTING.md
+  gotcha #5 already flags) token instead of the bootstrap flow's deterministic one, and a
+  caller-chosen `application`/`roles`/`permissions` instead of the fixed elevated set. `roles`
+  validated against an active `roleDefinition` at creation (fail fast, ADR 0047). **Which host
+  the invite-acceptance link points at isn't pinned down anywhere in the story** — this route's
+  own reasonable interpretation (documented in its own header comment): the target application's
+  primary host (`hosts[0]`) when `application` is set, falling back to the tenant admin host
+  (matching the bootstrap flow's own convention) otherwise.
+- **`actors/invite_code_actor.ts`** — `inviteCode`, built from scratch (no prior implementation
+  existed anywhere in this repo). ADR 0082's corrected shape: `identifiedBy: 'key'`,
+  `key = "${tenant}:${code}"`, composite key is the uniqueness constraint (rejects a duplicate in
+  *any* prior status — active, revoked, or expired — same historical-reference-stability
+  reasoning as `roleDefinition`/`provider`). `routes/invite-codes.ts` mirrors `role-
+  definitions.ts`'s own `roleDefinitionMutex` pattern (a new `inviteCodeMutex`) to close the same
+  real concurrency gap documented above — verified with the same 10-concurrent-requests
+  regression test. **No `permissions` field exists on this route's body schema at all** —
+  deliberate per the story's own security reasoning (a publicly shareable code granting
+  elevated tower permissions would be a real privilege-escalation surface), enforced by the
+  schema itself (no property declared, `additionalProperties: false`), not just documented.
+- **`invite:code:issue`'s `maxOutstanding` enforcement** — a real finding, not assumed: ADR
+  0051's catalog lists `maxOutstanding` as a property of the *permission grant itself*
+  (`{grant, scope, maxOutstanding}`, matching `provisioning.ts`'s own pre-existing
+  `FULL_TENANT_PERMISSIONS` shape, now given a real exported `PermissionGrant` type in
+  `account_actor.ts` instead of `unknown[]`) — not a request-body field, and, checked directly
+  against `spec/lib/internal-jwt.ts`'s real fixture shape (matching `@bytepunx/authstar-fastify`'s
+  own `InternalClaims` type), **not present in the internal JWT's `permissions` claim at all**,
+  which is a flat grant-string array with the per-grant metadata already stripped out (portcullis
+  flattens `account.permissions` to grant strings when minting the token — irrelevant to the
+  boolean allow/deny `requirePermission` needs). `routes/invite-codes.ts`'s `POST` handler
+  therefore looks the caller's own `maxOutstanding` up from their `account.permissions` record via
+  `request.authstar.accountId` (also a real token claim) rather than the token itself, then counts
+  their own currently-active invite codes (`inviteCode.searchableBy` already includes `issuedBy`)
+  before allowing another.
+- **`account_actor.ts` gains a `grant-permission` command/`permission-granted` event** (idempotent
+  by `grant` string, same first-write-wins convention `grant-role` already uses) — closes a real
+  gap found while wiring redemption: `invite.permissions` (the elevated-bootstrap case, ADR
+  0021/0067) was carried on the invite record but **never actually applied to the account on
+  acceptance** — `identities.ts`'s own `redeemInvite` helper only ever called `account.grant-role`,
+  never anything for `permissions`, despite Story 007's own text explicitly requiring "append
+  permissions if present." Fixed directly, tested in `identities.spec.ts`.
+- **`POST /identities/resolve`'s `redeem` field now accepts `{type: "inviteCode", code}`
+  alongside the existing `{type: "invite", token}`** (an AJV `oneOf`, each branch with its own
+  `additionalProperties: false` — a top-level `additionalProperties: false` alongside `oneOf`
+  with no sibling `properties` would reject every field unconditionally, the same gotcha keep's
+  own `trials.ts` already documented; avoided the same way). `redeemInviteCode` mirrors
+  `redeemInvite`'s own "mismatch/exhaustion is not an error, login proceeds anyway" posture, with
+  no contact/email match check at all (Story 007: "there's no target to match against") and the
+  permanent-vs-trial branch ADR 0019 specifies (`trialDurationDays` set → `account.grant-trial-
+  role` with a computed expiry; unset → permanent `account.grant-role`).
+- **`invite_actor.ts` gains `revoked`/`expired` to its `status` union and a real `revoke`
+  command/event** (guarded `isPending`, same `{when, then}` + reject-fallback pattern as every
+  other actor's own retire/suspend/delete guard in this codebase) — the prior shape only had
+  `'pending' | 'accepted'`, insufficient for Story 007's `PATCH { status: "revoked" }` + `DELETE`
+  alias requirement.
+- **A real, previously-shipped production bug found and fixed while building this, affecting
+  code far beyond Story 007**: every `consequent.find()` call site in this repo (`applications.ts`,
+  `role-definitions.ts`, `enrich.ts`, `identities.ts`, `contacts.ts`, plus this pass's own new
+  `invites.ts`/`invite-codes.ts`) passed a bare criteria object. `consequent`'s own default
+  in-memory search adapter tolerates that shape, but `consequent-postgres`'s real one (confirmed
+  directly against its `dist/search.js`) calls `criteria.forEach(...)` — it requires an *array* of
+  criteria sets, OR'd together, and throws `criteria.forEach is not a function` against real
+  Postgres otherwise. No existing integration test exercised any of these routes' `find()` calls,
+  so this shipped undetected across two earlier tasks this session (applications/role-definitions)
+  before surfacing here. Fixed everywhere at once: a new `searchCriteria()` helper in
+  `consequent-types.ts` (identical fix, confirmed already applied in `keep`'s own repo first) used
+  at every call site. Verified against real Postgres, not just asserted: `spec/integration/
+  provisioning.integration.spec.ts`'s existing "identity resolution -> enrich" test already
+  exercises `identities.ts`'s `find()` call end to end and passed cleanly after the fix.
+- **A second, related test-infrastructure bug found and fixed the same way**: `consequent`'s
+  default in-memory search adapter has a real, confirmed index-corruption bug (independently
+  found and fixed in herald's own pilot first, ported here rather than rediscovered from
+  scratch) — `removeFromFieldIndex`'s "bucket has exactly one id" branch deletes the *entire*
+  value bucket without checking that the one id present is actually the id being removed. Two
+  actors sharing a searched-on field's value (e.g. two `inviteCode`s both `status: "active"`),
+  then one moves off it (revoked) — the *other*, untouched one silently vanishes from that
+  index bucket. `GET .../invite-codes?status=active` returned zero rows instead of one, caught
+  directly by this pass's own `invite-codes.spec.ts`. This bug is test-only (production's real
+  `consequent-postgres` search adapter is a different, unaffected codebase) — fixed by porting
+  herald's own corrected reimplementation (`spec/lib/in-memory-search-adapter.ts`) into this
+  repo's `spec/lib/in-memory-consequent.ts`, which as a side benefit also gives each test file a
+  genuinely fresh search index instead of reusing consequent's own module-level-singleton
+  default — the same root cause behind this repo's various "use a dedicated, not-reused-
+  elsewhere tenant slug" spec comments (`applications.spec.ts`/`role-definitions.spec.ts`/this
+  pass's own `invites.spec.ts`/`invite-codes.spec.ts`), which stay in place (harmless, still good
+  practice) rather than being retroactively removed.
+
+Tested in `spec/behavior/invites.spec.ts` (14 tests: creation + herald-publish decrypt proof +
+host resolution, role-definition validation, list/filter, detail, revoke, cross-tenant 404, 403
+coverage), `spec/behavior/invite-codes.spec.ts` (19 tests: the above plus duplicate-key rejection,
+the concurrency regression, and the full `maxOutstanding` enforcement matrix), and new cases
+added to `spec/behavior/identities.spec.ts` (the invite-permissions-on-acceptance fix, and a full
+`inviteCode` redemption suite: permanent grant, trial grant with computed expiry, multi-redemption
+counting, revoked/expired/nonexistent-code no-ops).
+
 **Deliberately deferred** (documented here, matching every other authstar service's own scope
 notes, rather than left unstated):
 
-- **Code-based invites** (Story 007's `inviteCode`, multi-redemption trial codes with
-  `maxRedemptions`/`trialDurationDays`) — only token-based invite redemption is implemented.
-  `POST /identities/resolve`'s `redeem.type` schema only accepts `"invite"`.
 - **The operator route-tree reuse pattern (Story 013 / ADR 0030)** — `POST /tenants`'s operator
   check is a single shared bearer-token header comparison, not the full `/operator/...` route
   tree, `X-Operator-Actor` threading, or cross-tenant search/activity/stuck-erasure views (ADR

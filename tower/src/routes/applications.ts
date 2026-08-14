@@ -4,6 +4,7 @@ import type { ApplicationState } from '../actors/application_actor.js'
 import type { ProviderState } from '../actors/provider_actor.js'
 import { requirePermission } from '../lib/permissions.js'
 import { createKeyedMutex } from '../lib/mutex.js'
+import { searchCriteria } from '../lib/consequent-types.js'
 
 // Per design/stories/tower/004-applications-and-providers.md (Applications
 // half only -- Providers CRUD is a separate, ADR-0047-unrelated surface,
@@ -166,7 +167,7 @@ const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInsta
       const tenant = await fetchTenant(app, tenantSlug)
       if (!tenantExists(tenant)) return reply.code(404).send()
 
-      const instances = await app.consequent.find('application', { tenant: tenantSlug })
+      const instances = await app.consequent.find('application', searchCriteria({ tenant: tenantSlug }))
       const states = instances.map((i) => i.state as unknown as ApplicationState)
       return states
         .filter((s) => s.slug !== '_admin')
