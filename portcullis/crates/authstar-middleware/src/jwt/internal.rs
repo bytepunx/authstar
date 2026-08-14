@@ -3,14 +3,15 @@
 //! verify it independently against the tenant's public key, per ADR 0030's "defense in depth" —
 //! out of scope for this crate).
 
-use jsonwebtoken::{encode, Algorithm, Header};
-use serde::Serialize;
+use base64::{engine::general_purpose::URL_SAFE_NO_PAD, Engine};
+use jsonwebtoken::{crypto, Algorithm};
+use serde::{Deserialize, Serialize};
 
 use crate::keys::EcKeyPair;
 
 pub const INTERNAL_TOKEN_TTL_SECS: u64 = 60;
 
-#[derive(Debug, Clone, Serialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InternalClaims {
     /// The user's email address. Same identity as the session cookie's `sub` — present on every
     /// issued internal token, `Allow` or fail-open `degraded` alike (Story 010's "baseline
@@ -23,25 +24,25 @@ pub struct InternalClaims {
     pub identity_hash: String,
     #[serde(rename = "enrichmentStatus")]
     pub enrichment_status: EnrichmentStatus,
-    #[serde(rename = "accountId", skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "accountId", skip_serializing_if = "Option::is_none", default)]
     pub account_id: Option<String>,
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub roles: Vec<String>,
     /// Tenant-wide, unfiltered permissions (ADR 0018/0030) — the closed, authstar-owned
     /// vocabulary tower's own authorization is built on, permanently distinct from the
     /// open, app-owned `roles` vocabulary above (ADR 0069). Always present; empty when
     /// `enrichmentStatus` is "degraded", same as `roles`.
-    #[serde(skip_serializing_if = "Vec::is_empty")]
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub permissions: Vec<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     pub usage: Option<serde_json::Value>,
-    #[serde(skip_serializing_if = "Option::is_none", rename = "isNewAccount")]
+    #[serde(skip_serializing_if = "Option::is_none", rename = "isNewAccount", default)]
     pub is_new_account: Option<bool>,
     pub iat: u64,
     pub exp: u64,
 }
 
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum EnrichmentStatus {
     Ok,
@@ -99,13 +100,42 @@ pub fn degraded_claims(identity: BaselineIdentity) -> InternalClaims {
     }
 }
 
+/// The internal JWT's protected header — `alg`/`typ`/`kid` plus `tenant` (ADR 0089): the tenant
+/// slug portcullis already resolved from `Host` before minting this token, carried as an
+/// unverified hint downstream services use only to select which tenant's JWKS to attempt
+/// verification against (the same principle `kid`-based key selection already relies on — see
+/// the ADR for the full justification). `jsonwebtoken::Header` has no extension point for a
+/// custom field, so this hand-rolls the header/signature the same way `jsonwebtoken::encode`
+/// does internally, using its public `crypto::sign`.
+#[derive(Serialize)]
+struct InternalHeader<'a> {
+    typ: &'static str,
+    alg: Algorithm,
+    kid: &'a str,
+    tenant: &'a str,
+}
+
 pub fn sign_internal(
     key: &EcKeyPair,
     claims: &InternalClaims,
+    tenant: &str,
 ) -> Result<String, jsonwebtoken::errors::Error> {
-    let mut header = Header::new(Algorithm::ES256);
-    header.kid = Some(key.kid.clone());
-    encode(&header, claims, &key.encoding)
+    let header = InternalHeader {
+        typ: "JWT",
+        alg: Algorithm::ES256,
+        kid: &key.kid,
+        tenant,
+    };
+    let encoded_header = b64_encode_json(&header)?;
+    let encoded_claims = b64_encode_json(claims)?;
+    let message = [encoded_header, encoded_claims].join(".");
+    let signature = crypto::sign(message.as_bytes(), &key.encoding, Algorithm::ES256)?;
+    Ok([message, signature].join("."))
+}
+
+fn b64_encode_json<T: Serialize>(value: &T) -> Result<String, jsonwebtoken::errors::Error> {
+    let json = serde_json::to_vec(value).map_err(jsonwebtoken::errors::Error::from)?;
+    Ok(URL_SAFE_NO_PAD.encode(json))
 }
 
 fn now_unix() -> u64 {
@@ -144,5 +174,38 @@ mod tests {
     fn degraded_claims_never_fabricates_permissions() {
         let claims = degraded_claims(identity());
         assert!(claims.permissions.is_empty());
+    }
+
+    #[test]
+    fn sign_internal_carries_tenant_on_the_header_not_the_payload() {
+        let key = crate::test_support::generate_keypair();
+        let claims = degraded_claims(identity());
+        let token = sign_internal(&key, &claims, "acme").expect("sign");
+
+        let header_b64 = token.split('.').next().unwrap();
+        let header_json = URL_SAFE_NO_PAD.decode(header_b64).unwrap();
+        let header: serde_json::Value = serde_json::from_slice(&header_json).unwrap();
+        assert_eq!(header["tenant"], "acme");
+        assert_eq!(header["kid"], key.kid);
+        assert_eq!(header["alg"], "ES256");
+
+        let payload_b64 = token.split('.').nth(1).unwrap();
+        let payload_json = URL_SAFE_NO_PAD.decode(payload_b64).unwrap();
+        let payload: serde_json::Value = serde_json::from_slice(&payload_json).unwrap();
+        assert!(payload.get("tenant").is_none());
+    }
+
+    #[test]
+    fn sign_internal_produces_a_signature_the_holder_key_verifies() {
+        let key = crate::test_support::generate_keypair();
+        let claims = degraded_claims(identity());
+        let token = sign_internal(&key, &claims, "acme").expect("sign");
+
+        let mut validation = jsonwebtoken::Validation::new(Algorithm::ES256);
+        validation.validate_exp = false;
+        validation.required_spec_claims.clear();
+        let decoded = jsonwebtoken::decode::<InternalClaims>(&token, &key.decoding, &validation)
+            .expect("verify");
+        assert_eq!(decoded.claims.sub, "admin@example.com");
     }
 }

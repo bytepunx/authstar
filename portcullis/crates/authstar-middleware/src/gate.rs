@@ -150,7 +150,7 @@ async fn handle_enrichment_outcome(
                 allow.usage,
                 allow.is_new_account,
             );
-            match sign_internal(internal_key, &claims) {
+            match sign_internal(internal_key, &claims, &tenant.slug) {
                 Ok(token) => {
                     req.extensions_mut().insert(ForwardContext {
                         tenant_slug: tenant.slug.clone(),
@@ -181,7 +181,7 @@ async fn handle_enrichment_outcome(
                 };
             };
             let claims = degraded_claims(identity);
-            match sign_internal(internal_key, &claims) {
+            match sign_internal(internal_key, &claims, &tenant.slug) {
                 Ok(token) => {
                     req.extensions_mut().insert(ForwardContext {
                         tenant_slug: tenant.slug.clone(),
