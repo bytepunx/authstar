@@ -67,6 +67,10 @@ interface UpdateUsageCommand {
   periodLimit: number | null
 }
 
+interface ChangeEmailCommand {
+  contactId: string
+}
+
 function sameRole(a: RoleGrant, b: RoleGrant): boolean {
   const scopeA = typeof a.scope === 'string' ? a.scope : `application:${a.scope.application}`
   const scopeB = typeof b.scope === 'string' ? b.scope : `application:${b.scope.application}`
@@ -92,6 +96,17 @@ function revokeRole(_account: AccountState, command: RevokeRoleCommand) {
 
 function grantTrialRole(_account: AccountState, command: GrantTrialRoleCommand) {
   return { type: 'account.trial-role-granted', role: command.role, trialExpiresAt: command.trialExpiresAt }
+}
+
+// ADR 0076: repoints `account.contactId` to a new (or reused) contact
+// record -- `contact.email` itself is immutable by design (ADR 0023), an
+// email "change" is always a repoint, never an in-place edit. The route
+// handler (routes/accounts.ts) is responsible for actually resolving
+// `command.contactId` via `contactStore.upsert` *before* this command
+// runs -- this actor only ever records the repoint, never computes the
+// hash itself (no signet pepper access at this layer).
+function changeEmail(_account: AccountState, command: ChangeEmailCommand) {
+  return { type: 'account.contact-changed', contactId: command.contactId }
 }
 
 function updateUsage(_account: AccountState, command: UpdateUsageCommand) {
@@ -177,6 +192,14 @@ function suspended(account: AccountState) {
   account.status = 'suspended'
 }
 
+// Naturally idempotent -- redelivering the same `contact-changed` event
+// (or the route naturally resolving to the same reused `contactId` on a
+// retried request) just re-sets the same value, not a duplicate-effect
+// bug the way an array-append event handler would need to guard against.
+function contactChanged(account: AccountState, event: { contactId: string }) {
+  account.contactId = event.contactId
+}
+
 export default function accountActor() {
   return {
     actor: {
@@ -204,6 +227,7 @@ export default function accountActor() {
       'revoke-role': revokeRole,
       'grant-trial-role': grantTrialRole,
       'update-usage': updateUsage,
+      'change-email': changeEmail,
       suspend: [
         { when: isActive, then: suspend },
         rejectSuspend,
@@ -215,6 +239,7 @@ export default function accountActor() {
       'role-revoked': roleRevoked,
       'trial-role-granted': trialRoleGranted,
       'usage-updated': usageUpdated,
+      'contact-changed': contactChanged,
       suspended,
     },
   }

@@ -170,6 +170,24 @@ fetch. Applications/providers/accounts/roles/invites/activity-feed routes from t
 route table don't exist as code in this repo yet (see "Deliberately deferred" below) — nothing to
 gate there until those routes are built.
 
+**`POST /tenants/:tenantSlug/accounts/:accountId/change-email` (ADR 0076) is now implemented** —
+`src/routes/accounts.ts`, the first route in this repo's own `accounts` family. Deliberately a
+`POST`, not a `PATCH` (ADR 0076: this repoints `account.contactId` to a different `contact`
+resource, it isn't a field-level edit of the old one). Gated by `accounts:manage`. Resolves the
+new email's `contactId` hash via the existing `contactStore.upsert` (find-or-create, the same
+deterministic lookup invite acceptance already relies on), repoints `account.contactId` via a
+new `account.change-email` command/`contact-changed` event, then publishes
+`herald.contact.migrated` (`{tenant, oldContactId, newContactId}`) — **the first real producer**
+for ADR 0024's carry-forward message; it existed on paper with no caller until now. A no-op
+(no repoint, no publish) when the new email resolves to the account's current contact already,
+rather than publishing a confusing same-id migration event. Tested in
+`spec/behavior/accounts.spec.ts` — 404/cross-tenant, the happy path (repoint + exact publish
+payload), contact reuse (no duplicate `contact` created for an already-known email), the no-op
+case, and the same 403/400 coverage every other gated route gets. Herald's own consumer side
+(`contact-lifecycle-consumer.ts`) was already built against this exact contract in an earlier
+pass, including the ADR 0076 `suppression` carry-forward extension — see herald's own
+TESTING.md; no changes needed there.
+
 **Deliberately deferred** (documented here, matching every other authstar service's own scope
 notes, rather than left unstated):
 
