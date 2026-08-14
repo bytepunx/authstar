@@ -5,6 +5,7 @@ import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import { createSpyPublisher } from '../lib/fakes.js'
 import { startErasureAckConsumer, type ChannelLike, type ConsumedMessage } from '../../src/lib/erasure-ack-consumer.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
 
 // End-to-end tier: tower's producer/tracking role in the erasure cascade
 // (ADR 0026) -- a real person signs up (identity resolution creates
@@ -35,11 +36,16 @@ describe('erasure cascade -- signup, erasure request, downstream acknowledgement
   let app: FastifyInstance
   let consequent: ConsequentApi
   let publisher: ReturnType<typeof createSpyPublisher>
+  let eraseHeaders: { authorization: string }
+  let erasureReadHeaders: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
     publisher = createSpyPublisher()
-    app = await buildApp({ consequent, publisher })
+    const jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, publisher, authstarGetKey: jwt.getKey })
+    eraseHeaders = bearer(await jwt.signToken({ permissions: ['contacts:erase'] }))
+    erasureReadHeaders = bearer(await jwt.signToken({ permissions: ['erasure-requests:read'] }))
   })
 
   afterEach(async () => {
@@ -57,11 +63,11 @@ describe('erasure cascade -- signup, erasure request, downstream acknowledgement
     const contact = await app.contactStore.findByEmail('acme', 'person@acme.test')
     expect(contact).not.toBeNull()
 
-    const erase = await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact!.id}` })
+    const erase = await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact!.id}`, headers: eraseHeaders })
     expect(erase.statusCode).toBe(202)
     expect(publisher.calls[0].payload).toEqual({ tenant: 'acme', contactId: contact!.id, accountId })
 
-    let status = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact!.id}` })
+    let status = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact!.id}`, headers: erasureReadHeaders })
     expect(status.json().status).toBe('pending')
 
     const { channel, deliver } = fakeChannel()
@@ -69,14 +75,14 @@ describe('erasure cascade -- signup, erasure request, downstream acknowledgement
     deliver({ tenant: 'acme', contactId: contact!.id, service: 'herald' })
     await flush()
 
-    status = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact!.id}` })
+    status = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact!.id}`, headers: erasureReadHeaders })
     expect(status.json().status).toBe('pending')
     expect(status.json().acknowledgedBy).toEqual(['herald'])
 
     deliver({ tenant: 'acme', contactId: contact!.id, service: 'keep' })
     await flush()
 
-    status = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact!.id}` })
+    status = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact!.id}`, headers: erasureReadHeaders })
     expect(status.json().status).toBe('completed')
 
     // The account itself is untouched -- still resolvable, contactId now dangles.

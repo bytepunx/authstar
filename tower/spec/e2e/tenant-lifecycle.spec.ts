@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import buildApp from '../../src/lib/build-app.js'
 import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
 
 // End-to-end tier: a full, realistic lifecycle exercised entirely through
 // the HTTP surface (no direct `consequent.handle()` calls except for
@@ -15,10 +16,13 @@ import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 describe('tenant lifecycle -- settings edits, then suspension, end to end', () => {
   let app: FastifyInstance
   let consequent: ConsequentApi
+  let headers: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
-    app = await buildApp({ consequent })
+    const jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, authstarGetKey: jwt.getKey })
+    headers = bearer(await jwt.signToken({ permissions: ['tenant:manage'] }))
     // No POST /tenants route in this pilot slice (tower Story 012's
     // provisioning sequence is a separate, larger story) -- creation goes
     // straight through consequent, exactly as it would from any other
@@ -39,6 +43,7 @@ describe('tenant lifecycle -- settings edits, then suspension, end to end', () =
     const rename = await app.inject({
       method: 'PATCH',
       url: '/tenants/acme',
+      headers,
       payload: { name: 'Acme Corporation' },
     })
     expect(rename.statusCode).toBe(200)
@@ -46,6 +51,7 @@ describe('tenant lifecycle -- settings edits, then suspension, end to end', () =
     const cookieEdit = await app.inject({
       method: 'PATCH',
       url: '/tenants/acme',
+      headers,
       payload: { cookie: { maxAge: 1_209_600, secure: true } },
     })
     expect(cookieEdit.statusCode).toBe(200)
@@ -54,6 +60,7 @@ describe('tenant lifecycle -- settings edits, then suspension, end to end', () =
     const suspend = await app.inject({
       method: 'PATCH',
       url: '/tenants/acme',
+      headers,
       payload: { status: 'suspended' },
     })
     expect(suspend.statusCode).toBe(200)
@@ -65,6 +72,7 @@ describe('tenant lifecycle -- settings edits, then suspension, end to end', () =
     const reSuspend = await app.inject({
       method: 'PATCH',
       url: '/tenants/acme',
+      headers,
       payload: { status: 'suspended' },
     })
     expect(reSuspend.statusCode).toBe(409)
@@ -77,6 +85,7 @@ describe('tenant lifecycle -- settings edits, then suspension, end to end', () =
     const renameWhileSuspended = await app.inject({
       method: 'PATCH',
       url: '/tenants/acme',
+      headers,
       payload: { name: 'Acme Corp (Suspended)' },
     })
     expect(renameWhileSuspended.statusCode).toBe(200)

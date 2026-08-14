@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { TenantState } from '../actors/tenant_actor.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // `consequent.fetch()` resolves the full ActorInstance wrapper
 // (`{ actor, state, ... }`), not the bare state -- confirmed against its
@@ -73,37 +74,41 @@ const tenantRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return toResponse(state)
   })
 
-  app.patch('/tenants/:tenantSlug', { schema: { params: tenantParamsSchema, body: patchBodySchema } }, async (request, reply) => {
-    const { tenantSlug } = request.params as { tenantSlug: string }
-    const body = request.body as { name?: string, cookie?: Record<string, unknown>, status?: 'suspended' }
+  app.patch(
+    '/tenants/:tenantSlug',
+    { schema: { params: tenantParamsSchema, body: patchBodySchema }, preHandler: requirePermission('tenant:manage') },
+    async (request, reply) => {
+      const { tenantSlug } = request.params as { tenantSlug: string }
+      const body = request.body as { name?: string, cookie?: Record<string, unknown>, status?: 'suspended' }
 
-    const current = await fetchTenantState(app, tenantSlug)
-    if (!exists(current)) {
-      return reply.code(404).send()
-    }
-
-    if (body.name !== undefined || body.cookie !== undefined) {
-      const results = await app.consequent.handle(tenantSlug, 'tenant.update', {
-        name: body.name,
-        cookie: body.cookie,
-      })
-      const rejection = results.find((r) => r?.rejected)
-      if (rejection) {
-        return reply.code(409).send({ error: rejection.reason?.message })
+      const current = await fetchTenantState(app, tenantSlug)
+      if (!exists(current)) {
+        return reply.code(404).send()
       }
-    }
 
-    if (body.status === 'suspended') {
-      const results = await app.consequent.handle(tenantSlug, 'tenant.suspend', { status: 'suspended' })
-      const rejection = results.find((r) => r?.rejected)
-      if (rejection) {
-        return reply.code(409).send({ error: rejection.reason?.message })
+      if (body.name !== undefined || body.cookie !== undefined) {
+        const results = await app.consequent.handle(tenantSlug, 'tenant.update', {
+          name: body.name,
+          cookie: body.cookie,
+        })
+        const rejection = results.find((r) => r?.rejected)
+        if (rejection) {
+          return reply.code(409).send({ error: rejection.reason?.message })
+        }
       }
-    }
 
-    const updated = await fetchTenantState(app, tenantSlug)
-    return toResponse(updated)
-  })
+      if (body.status === 'suspended') {
+        const results = await app.consequent.handle(tenantSlug, 'tenant.suspend', { status: 'suspended' })
+        const rejection = results.find((r) => r?.rejected)
+        if (rejection) {
+          return reply.code(409).send({ error: rejection.reason?.message })
+        }
+      }
+
+      const updated = await fetchTenantState(app, tenantSlug)
+      return toResponse(updated)
+    },
+  )
 }
 
 export default tenantRoutes

@@ -3,6 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import buildApp from '../../src/lib/build-app.js'
 import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // Behavior tier: the public HTTP contract (routes/proxy/010-.. onward's own
 // convention applied here to tower) -- request/response shapes, status
@@ -14,10 +15,12 @@ import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 describe('tenant management -- API contract', () => {
   let app: FastifyInstance
   let consequent: ConsequentApi
+  let jwt: InternalJwtFixture
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
-    app = await buildApp({ consequent })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, authstarGetKey: jwt.getKey })
   })
 
   afterEach(async () => {
@@ -58,10 +61,15 @@ describe('tenant management -- API contract', () => {
   })
 
   describe('PATCH /tenants/:tenantSlug', () => {
+    async function manageHeaders() {
+      return bearer(await jwt.signToken({ permissions: ['tenant:manage'] }))
+    }
+
     it('returns 404 for a tenant that was never created', async () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/tenants/nonexistent',
+        headers: await manageHeaders(),
         payload: { name: 'New Name' },
       })
       expect(response.statusCode).toBe(404)
@@ -73,6 +81,7 @@ describe('tenant management -- API contract', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/tenants/acme',
+        headers: await manageHeaders(),
         payload: { name: 'Acme Corp' },
       })
 
@@ -86,6 +95,7 @@ describe('tenant management -- API contract', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/tenants/acme',
+        headers: await manageHeaders(),
         payload: { cookie: { maxAge: 3600 } },
       })
 
@@ -101,6 +111,7 @@ describe('tenant management -- API contract', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/tenants/acme',
+        headers: await manageHeaders(),
         payload: { cookie: { httpOnly: false } },
       })
 
@@ -116,6 +127,7 @@ describe('tenant management -- API contract', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/tenants/acme',
+        headers: await manageHeaders(),
         payload: { status: 'suspended' },
       })
 
@@ -130,6 +142,7 @@ describe('tenant management -- API contract', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: '/tenants/acme',
+        headers: await manageHeaders(),
         payload: { status: 'suspended' },
       })
 
@@ -138,20 +151,61 @@ describe('tenant management -- API contract', () => {
 
     it('rejects "active" and "deleted" as status values at the schema level -- structurally unreachable, not just denied', async () => {
       await createTenant('acme')
+      const headers = await manageHeaders()
 
       const reactivate = await app.inject({
         method: 'PATCH',
         url: '/tenants/acme',
+        headers,
         payload: { status: 'active' },
       })
       const del = await app.inject({
         method: 'PATCH',
         url: '/tenants/acme',
+        headers,
         payload: { status: 'deleted' },
       })
 
       expect(reactivate.statusCode).toBe(400)
       expect(del.statusCode).toBe(400)
+    })
+
+    it('rejects with 403 when no bearer token is presented (Story 014)', async () => {
+      await createTenant('acme')
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/tenants/acme',
+        payload: { name: 'Acme Corp' },
+      })
+
+      expect(response.statusCode).toBe(403)
+    })
+
+    it('rejects with 403 when the token lacks tenant:manage, even if it has other grants', async () => {
+      await createTenant('acme')
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/tenants/acme',
+        headers: bearer(await jwt.signToken({ permissions: ['billing:manage'] })),
+        payload: { name: 'Acme Corp' },
+      })
+
+      expect(response.statusCode).toBe(403)
+    })
+
+    it('rejects with 403 for a degraded token, even if permissions somehow contains the grant', async () => {
+      await createTenant('acme')
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/tenants/acme',
+        headers: bearer(await jwt.signToken({ enrichmentStatus: 'degraded', permissions: ['tenant:manage'] })),
+        payload: { name: 'Acme Corp' },
+      })
+
+      expect(response.statusCode).toBe(403)
     })
   })
 })

@@ -7,6 +7,7 @@ import path from 'node:path'
 import buildApp from '../../src/lib/build-app.js'
 import type { FastifyInstance } from 'fastify'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
 
 // Integration tier: `consequent`'s real `consequent-postgres` adapters
 // against a real, disposable Postgres (testcontainers), proving the actual
@@ -26,6 +27,7 @@ describe('tenant management -- real Postgres', () => {
   let app: FastifyInstance
   let consequent: ConsequentApi
   let pgAdapters: ReturnType<typeof initializePostgresAdapters>
+  let headers: { authorization: string }
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16').start()
@@ -37,7 +39,9 @@ describe('tenant management -- real Postgres', () => {
       searchAdapter: pgAdapters.search,
       logging: { level: 'none' },
     })
-    app = await buildApp({ consequent })
+    const jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, authstarGetKey: jwt.getKey })
+    headers = bearer(await jwt.signToken({ permissions: ['tenant:manage'] }))
   }, 60_000) // container pull + start can genuinely take a while on a cold cache
 
   afterAll(async () => {
@@ -77,6 +81,7 @@ describe('tenant management -- real Postgres', () => {
     const response = await app.inject({
       method: 'PATCH',
       url: '/tenants/acme2',
+      headers,
       payload: { status: 'suspended' },
     })
 

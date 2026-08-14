@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import type { ErasureRequestState } from '../actors/erasure_request_actor.js'
 import { EXPECTED_SERVICES } from '../actors/erasure_request_actor.js'
+import { requirePermission } from '../lib/permissions.js'
 
 // Per ADR 0026/0075: read-only visibility into an erasure request's
 // acknowledgement tracking. `expectedServices` is computed here at read
@@ -20,7 +21,7 @@ const paramsSchema = {
 const erasureRequestsRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.get(
     '/tenants/:tenantSlug/erasure-requests/:contactId',
-    { schema: { params: paramsSchema } },
+    { schema: { params: paramsSchema }, preHandler: requirePermission('erasure-requests:read') },
     async (request, reply) => {
       const { contactId } = request.params as { tenantSlug: string, contactId: string }
       const instance = await app.consequent.fetch('erasureRequest', contactId)

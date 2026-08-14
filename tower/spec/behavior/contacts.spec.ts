@@ -4,6 +4,7 @@ import buildApp from '../../src/lib/build-app.js'
 import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import { createSpyPublisher } from '../lib/fakes.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 
 // Behavior tier for tower's producer/tracking role in the erasure cascade
 // (Story 008, ADR 0026/0040): contact lookup/rename, and the
@@ -15,11 +16,19 @@ describe('contacts + erasure', () => {
   let app: FastifyInstance
   let consequent: ConsequentApi
   let publisher: ReturnType<typeof createSpyPublisher>
+  let jwt: InternalJwtFixture
+  let readHeaders: { authorization: string }
+  let eraseHeaders: { authorization: string }
+  let erasureReadHeaders: { authorization: string }
 
   beforeEach(async () => {
     consequent = await buildInMemoryConsequent()
     publisher = createSpyPublisher()
-    app = await buildApp({ consequent, publisher })
+    jwt = await createInternalJwtFixture()
+    app = await buildApp({ consequent, publisher, authstarGetKey: jwt.getKey })
+    readHeaders = bearer(await jwt.signToken({ permissions: ['contacts:read'] }))
+    eraseHeaders = bearer(await jwt.signToken({ permissions: ['contacts:erase'] }))
+    erasureReadHeaders = bearer(await jwt.signToken({ permissions: ['erasure-requests:read'] }))
   })
 
   afterEach(async () => {
@@ -28,15 +37,21 @@ describe('contacts + erasure', () => {
 
   describe('GET /tenants/:tenantSlug/contacts', () => {
     it('returns 404 for an email with no contact', async () => {
-      const response = await app.inject({ method: 'GET', url: '/tenants/acme/contacts?email=nobody@acme.test' })
+      const response = await app.inject({ method: 'GET', url: '/tenants/acme/contacts?email=nobody@acme.test', headers: readHeaders })
       expect(response.statusCode).toBe(404)
     })
 
     it('looks up a single contact by email, never a list', async () => {
       await app.contactStore.upsert('acme', 'person@acme.test', 'Person')
-      const response = await app.inject({ method: 'GET', url: '/tenants/acme/contacts?email=person@acme.test' })
+      const response = await app.inject({ method: 'GET', url: '/tenants/acme/contacts?email=person@acme.test', headers: readHeaders })
       expect(response.statusCode).toBe(200)
       expect(response.json().name).toBe('Person')
+    })
+
+    it('rejects with 403 without contacts:read (Story 014)', async () => {
+      await app.contactStore.upsert('acme', 'person@acme.test', 'Person')
+      const response = await app.inject({ method: 'GET', url: '/tenants/acme/contacts?email=person@acme.test' })
+      expect(response.statusCode).toBe(403)
     })
   })
 
@@ -46,10 +61,22 @@ describe('contacts + erasure', () => {
       const response = await app.inject({
         method: 'PATCH',
         url: `/tenants/acme/contacts/${contact.id}`,
+        headers: readHeaders,
         payload: { name: 'New Name' },
       })
       expect(response.statusCode).toBe(200)
       expect(response.json().name).toBe('New Name')
+    })
+
+    it('rejects with 403 without contacts:read -- rename is gated by the read grant, not a separate one (Story 008)', async () => {
+      const contact = await app.contactStore.upsert('acme', 'person@acme.test', 'Old Name')
+      const response = await app.inject({
+        method: 'PATCH',
+        url: `/tenants/acme/contacts/${contact.id}`,
+        headers: eraseHeaders,
+        payload: { name: 'New Name' },
+      })
+      expect(response.statusCode).toBe(403)
     })
   })
 
@@ -58,7 +85,7 @@ describe('contacts + erasure', () => {
       const contact = await app.contactStore.upsert('acme', 'person@acme.test')
       await consequent.handle('acct-1', 'account.create', { accountId: 'acct-1', tenant: 'acme', contactId: contact.id })
 
-      const response = await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}` })
+      const response = await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}`, headers: eraseHeaders })
       expect(response.statusCode).toBe(202)
       expect(response.json().status).toBe('pending')
 
@@ -83,22 +110,28 @@ describe('contacts + erasure', () => {
 
     it('publishes accountId: null when no account references the erased contact', async () => {
       const contact = await app.contactStore.upsert('acme', 'orphan@acme.test')
-      await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}` })
+      await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}`, headers: eraseHeaders })
       expect(publisher.calls[0].payload).toMatchObject({ accountId: null })
     })
 
     it('returns 404 for an already-erased (or never-existing) contact', async () => {
-      const response = await app.inject({ method: 'DELETE', url: '/tenants/acme/contacts/nonexistent' })
+      const response = await app.inject({ method: 'DELETE', url: '/tenants/acme/contacts/nonexistent', headers: eraseHeaders })
       expect(response.statusCode).toBe(404)
+    })
+
+    it('rejects with 403 for contacts:read alone -- erasure needs the narrower contacts:erase grant (ADR 0051)', async () => {
+      const contact = await app.contactStore.upsert('acme', 'person@acme.test')
+      const response = await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}`, headers: readHeaders })
+      expect(response.statusCode).toBe(403)
     })
   })
 
   describe('GET /tenants/:tenantSlug/erasure-requests/:contactId', () => {
     it('reports pending status with expectedServices alongside acknowledgedBy', async () => {
       const contact = await app.contactStore.upsert('acme', 'person@acme.test')
-      await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}` })
+      await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}`, headers: eraseHeaders })
 
-      const response = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact.id}` })
+      const response = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact.id}`, headers: erasureReadHeaders })
       expect(response.statusCode).toBe(200)
       const body = response.json()
       expect(body.status).toBe('pending')
@@ -108,16 +141,24 @@ describe('contacts + erasure', () => {
 
     it('flips to completed once every expected service has acknowledged', async () => {
       const contact = await app.contactStore.upsert('acme', 'person@acme.test')
-      await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}` })
+      await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}`, headers: eraseHeaders })
 
       await consequent.handle(contact.id, 'erasureRequest.acknowledge', { service: 'herald' })
-      let response = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact.id}` })
+      let response = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact.id}`, headers: erasureReadHeaders })
       expect(response.json().status).toBe('pending')
 
       await consequent.handle(contact.id, 'erasureRequest.acknowledge', { service: 'keep' })
-      response = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact.id}` })
+      response = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact.id}`, headers: erasureReadHeaders })
       expect(response.json().status).toBe('completed')
       expect(response.json().acknowledgedBy.sort()).toEqual(['herald', 'keep'])
+    })
+
+    it('rejects with 403 without erasure-requests:read -- deliberately distinct from contacts:read/erase (Story 008)', async () => {
+      const contact = await app.contactStore.upsert('acme', 'person@acme.test')
+      await app.inject({ method: 'DELETE', url: `/tenants/acme/contacts/${contact.id}`, headers: eraseHeaders })
+
+      const response = await app.inject({ method: 'GET', url: `/tenants/acme/erasure-requests/${contact.id}`, headers: readHeaders })
+      expect(response.statusCode).toBe(403)
     })
   })
 })

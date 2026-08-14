@@ -151,18 +151,29 @@ Two gaps this fix does *not* close, flagged rather than silently assumed away:
    `template-lookup.ts` reports "no template found") — a second, separate gap from the shape
    mismatch this pass fixed.
 
+**Permission enforcement middleware (Story 014) is now implemented** — `src/lib/permissions.ts`'s
+`requirePermission(grant)` is a route `preHandler`, applied to every write/sensitive-read route
+this codebase currently has: `PATCH /tenants/:tenantSlug` (`tenant:manage`), `GET`/`PATCH
+/tenants/:tenantSlug/contacts...` (`contacts:read`), `DELETE .../contacts/:contactId`
+(`contacts:erase`), `GET .../erasure-requests/:contactId` (`erasure-requests:read`). Verification
+runs through `@bytepunx/authstar-fastify` (now published, unblocking this — see below), registered
+globally in `build-app.ts` with `required: false` so `requirePermission` — not the plugin's own
+default 401 — decides every failure mode as one generic 403 (Story 014's stated posture: no
+distinction between missing/invalid/degraded token and wrong grant). Tenant-JWKS resolution is ADR
+0089's `perTenantJwksKeyProvider`, reading the tenant hint off the internal JWT's own protected
+header (portcullis sets it at mint time) rather than any forwarded signal — the default
+`authstarGetKey` in `build-app.ts`; tests override it with a `staticKeyProvider` fixture
+(`spec/lib/internal-jwt.ts`) pinned to a locally-generated keypair, so no test makes a real JWKS
+fetch. Applications/providers/accounts/roles/invites/activity-feed routes from the story's own
+route table don't exist as code in this repo yet (see "Deliberately deferred" below) — nothing to
+gate there until those routes are built.
+
 **Deliberately deferred** (documented here, matching every other authstar service's own scope
 notes, rather than left unstated):
 
 - **Code-based invites** (Story 007's `inviteCode`, multi-redemption trial codes with
   `maxRedemptions`/`trialDurationDays`) — only token-based invite redemption is implemented.
   `POST /identities/resolve`'s `redeem.type` schema only accepts `"invite"`.
-- **Full RBAC/permission enforcement** — no route in this codebase (old or new) checks a
-  caller's `permissions` grants before allowing a write; `contacts:read`/`contacts:erase`/etc.
-  are modeled on the `account`/`invite` actors' state but nothing gates on them yet. Now has its
-  own story (Story 014 — Permission Enforcement Middleware) rather than being folded into
-  another route's story — it's a separate, larger piece of work, and blocked on
-  `@bytepunx/authstar-fastify` actually being published to npm before it can start.
 - **The operator route-tree reuse pattern (Story 013 / ADR 0030)** — `POST /tenants`'s operator
   check is a single shared bearer-token header comparison, not the full `/operator/...` route
   tree, `X-Operator-Actor` threading, or cross-tenant search/activity/stuck-erasure views (ADR

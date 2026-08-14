@@ -12,6 +12,7 @@ import { createSpyPublisher, createSpySignetAdmin } from '../lib/fakes.js'
 import type { FastifyInstance } from 'fastify'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import type { ProvisioningConfig } from '../../src/routes/provisioning.js'
+import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
 
 // Integration tier: the new actors (application/provider/account/identity/
 // invite/erasureRequest) plus `ContactStore`'s real Postgres implementation
@@ -38,6 +39,7 @@ describe('provisioning + contacts -- real Postgres', () => {
   let consequent: ConsequentApi
   let pgAdapters: ReturnType<typeof initializePostgresAdapters>
   let pool: Pool
+  let eraseHeaders: { authorization: string }
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16').start()
@@ -54,13 +56,16 @@ describe('provisioning + contacts -- real Postgres', () => {
       logging: { level: 'none' },
     })
 
+    const jwt = await createInternalJwtFixture()
     app = await buildApp({
       consequent,
       contactStore: createPgContactStore(pool, 'integration-test-pepper'),
       signetAdmin: createSpySignetAdmin(),
       publisher: createSpyPublisher(),
       provisioningConfig,
+      authstarGetKey: jwt.getKey,
     })
+    eraseHeaders = bearer(await jwt.signToken({ permissions: ['contacts:erase'] }))
   }, 60_000)
 
   afterAll(async () => {
@@ -146,7 +151,7 @@ describe('provisioning + contacts -- real Postgres', () => {
 
   it('erasure: real DELETE of the contact row, plus an erasureRequest actor persisted to Postgres', async () => {
     const contact = await app.contactStore.upsert('acme-pg', 'erase-me@acme-pg.test')
-    const response = await app.inject({ method: 'DELETE', url: `/tenants/acme-pg/contacts/${contact.id}` })
+    const response = await app.inject({ method: 'DELETE', url: `/tenants/acme-pg/contacts/${contact.id}`, headers: eraseHeaders })
     expect(response.statusCode).toBe(202)
 
     const gone = await app.contactStore.findById(contact.id)

@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from 'fastify'
+import { authstarFastifyPlugin, perTenantJwksKeyProvider, type JWTVerifyGetKey } from '@bytepunx/authstar-fastify'
 import type { ConsequentApi } from './consequent-types.js'
 import type { ContactStore } from './contact-store.js'
 import { createInMemoryContactStore } from './contact-store.js'
@@ -45,6 +46,14 @@ export interface BuildAppOptions {
   // throwaway ephemeral key so every existing test keeps working, since
   // nothing decrypts it in this pilot slice's own test tiers.
   heraldPayloadKey?: HeraldPayloadKey
+  // Story 014's internal-JWT verification key. Defaults to
+  // `perTenantJwksKeyProvider(provisioningConfig.baseDomain)` -- the real,
+  // ADR-0089-driven resolution `src/server.ts` also gets by not overriding
+  // this -- since tower has no Host to resolve a tenant from itself. Tests
+  // override with a `staticKeyProvider` fixture (spec/lib/internal-jwt.ts)
+  // pinned to a locally-generated key, so they never make a real JWKS
+  // fetch.
+  authstarGetKey?: JWTVerifyGetKey
 }
 
 // A single place to assemble the fastify instance so behavior/e2e/integration
@@ -70,8 +79,18 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('signetAdmin', options.signetAdmin ?? createNoopSignetAdmin())
   app.decorate('publisher', options.publisher ?? createNoopPublisher())
   app.decorate('ids', options.ids ?? createIdGenerator())
-  app.decorate('provisioningConfig', options.provisioningConfig ?? defaultProvisioningConfig)
+  const provisioningConfig = options.provisioningConfig ?? defaultProvisioningConfig
+  app.decorate('provisioningConfig', provisioningConfig)
   app.decorate('heraldPayloadKey', options.heraldPayloadKey ?? createEphemeralHeraldKey())
+
+  const authstarGetKey = options.authstarGetKey ?? perTenantJwksKeyProvider(provisioningConfig.baseDomain)
+  // `required: false` -- Story 014's own posture is a uniform 403 from
+  // `requirePermission` for every failure mode (missing/invalid/degraded
+  // token, wrong grant alike), not this plugin's default 401. Routes with
+  // no `requirePermission` preHandler (enrich/identities/resolve, gated by
+  // SPIFFE mTLS alone) are simply never touched by `request.authstar` at
+  // all.
+  await app.register(authstarFastifyPlugin, { getKeyForRequest: () => authstarGetKey, required: false })
 
   await app.register(registerTenantRoutes)
   await app.register(registerProvisioningRoutes)
