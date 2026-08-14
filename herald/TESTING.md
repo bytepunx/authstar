@@ -179,10 +179,7 @@ total, up from 107.
   Genuinely proven against a real, disposable broker by
   `spec/integration/rabbitmq.integration.spec.ts` (`@testcontainers/rabbitmq`) — see "What's
   covered" above.
-- **Retention purge scheduled sweep** — the `communication.purgePayload` command it would call on
-  a schedule is implemented and tested directly (and, as of this pass, also called from
-  `contact-lifecycle-consumer.ts`'s erasure path); no cron/scheduler wiring exists to call it
-  periodically for ordinary retention (ADR 0029), only in response to a `contact.purged` event.
+- ~~Retention purge scheduled sweep~~ — **now implemented**, see its own section below.
 - ~~Auth/permission gating~~ — **now implemented**, see its own section below.
 - **Contact lifecycle sync — now built**, with one real limitation. `src/lib/
   contact-lifecycle-consumer.ts` consumes both `contact.purged` and `herald.contact.migrated`,
@@ -264,6 +261,79 @@ Tested in `spec/behavior/seed-templates.spec.ts`: creation, idempotency across r
 resolution as the global-default fallback (Story 003's own two-tier lookup, already built and
 tested independently of this seed), mustache syntax validity, and the cross-repo-shape render
 proof above. 5 new tests — 120 total, up from 115.
+
+## Retention purge scheduled sweep (ADR 0029) is now implemented
+
+Two pieces, matching keep's own identically-shaped pricing-sync job (built the same pass, see
+that repo's own TESTING.md):
+
+- **`src/lib/retention-purge.ts`**'s `purgeExpiredPayloads(consequent, log?, now?)` — the real,
+  tested sweep. Finds every `active` `communicationType`, and for each one finds every
+  `communication` under that type's own `(tenant, type)` pair, then purges any whose payload
+  isn't already cleared and whose `createdAt + retentionDays` deadline has passed. Deliberately
+  does NOT add `createdAt`/`payloadPurgedAt` to `communication`'s `searchableBy` to query "past
+  deadline, not yet purged" directly at the database layer — `consequent`'s default in-memory
+  search adapter never indexes a falsy value at all (confirmed directly against
+  `searchAdapter.js`'s own `addToFieldIndex`: `if (value) {...}`), so a `payloadPurgedAt: null`
+  predicate wouldn't behave consistently across adapters. Filters in plain application code
+  instead, against `{tenant, type}` (both already searchable, both always truthy) — same "derive
+  the scope from what's already there, no new query capability needed" approach keep's own
+  pricing-sync sweep takes. A per-communication failure is collected, not thrown, so one bad
+  record never blocks the rest of the sweep.
+- **`src/purge-retention.ts`** — the standalone CronJob entrypoint, mirroring `src/server.ts`'s
+  signet/Postgres startup sequence minus the fastify/RabbitMQ machinery, running the sweep once
+  and exiting (0 on no errors, 1 otherwise). No test coverage of its own, same scope note every
+  other authstar service's real entrypoint carries.
+- **Kubernetes wiring**: `~/git/authstar/integration/manifests/12-herald-retention-purge-
+  cronjob.yaml` — same shape as keep's own `11-keep-pricing-sync-cronjob.yaml` (confirmed against
+  kluster's `rabbitmqProvisionerCronJobManifest`, not re-derived), reuses herald's own image/
+  ServiceAccount, `command` override to `dist/purge-retention.js`, `restartPolicy: OnFailure` for
+  the same SPIRE per-Pod identity registration reasoning. Picked up automatically by
+  `integration/scripts/deploy.sh`'s existing glob.
+
+**A real, significant, pre-existing bug found and fixed while building this — worth knowing well
+beyond this one feature.** `communication_actor.ts`'s `created` handler (and five other fields on
+the same actor, and this exact pattern across many other actors in tower/keep/herald alike) set a
+timestamp field via `new Date(0).toISOString()` with a comment claiming it's "replaced by
+consequent's own event timestamp on read." **That mechanism does not exist.** Checked directly
+against `consequent`'s own compiled source (`dispatch.js`/`apply.js`/`actors.js`) — grepped for
+any handling of a field named `createdAt` and found none. `state.createdAt` is a plain domain
+field like any other; `consequent` never touches it. A `new Date(0)` placeholder therefore stays
+`1970-01-01T00:00:00.000Z` **forever** — harmless everywhere the field is only ever checked for
+truthiness ("does this actor exist," true throughout this codebase before this pass), but fatal
+for this sweep specifically, the first caller anywhere in this codebase that needs the *actual
+value* for real date math (`createdAt + retentionDays`): every communication looked permanently,
+trivially expired. Found by writing a debug reproduction against the in-memory `consequent`
+directly (not guessed) — see the fix's own comment in `communication_actor.ts` for the full
+reasoning. **Fixed only where it broke**: `communication.createdAt` now gets a real
+`new Date().toISOString()`. The identical placeholder pattern on `communication`'s other five
+timestamp fields (`payloadPurgedAt`, `sentAt`, `lastAttemptAt`, `nextRetryAt`, `complainedAt`),
+and on every other actor's own `createdAt` across tower/keep/herald, is **not** touched — none of
+them currently has any logic depending on the real value, fixing them would be scope far beyond
+this task, and the existing "just needs to be truthy" callers are unaffected either way. Worth
+remembering before any future feature leans on a `createdAt`-style field's *value*, not just its
+presence — check first, the same way this pass did, rather than trusting the comment.
+
+**A related pitfall found the same way, worth flagging for anyone writing more `communication`
+tests**: `communication`'s real business key is `${tenant}:${idempotencyKey}` — computed
+independently by both real callers (`ingest.ts`'s `ingestCommunication`) and the `created` event
+handler itself, **not** whatever id a caller happens to pass to `consequent.handle()`. Passing a
+bare id that doesn't match this composite (e.g. a test creating a communication as if
+`idempotencyKey` alone were the actor id) doesn't error — the actor gets stored under the id you
+passed, but its own `state.key` field silently reports the *different*, correctly-computed
+value. A later `consequent.handle(state.key, ...)` call (exactly what a real caller reading
+`.key` off a `find()` result would naturally do) then resolves to a **different, freshly
+auto-vivified, unrelated actor instance** — since that composite string had never been used as an
+id before — rather than an error. `retention-purge.spec.ts`'s own test helper hit this directly:
+every "purge" appeared to succeed (no rejection, since a fresh instance's `payloadPurgedAt` is
+always `null`) while the *real* record, fetched by the id the test itself used to create it,
+stayed untouched. Fixed by making the test helper compute the same `${tenant}:${idempotencyKey}`
+key `ingest.ts` does, matching the real convention rather than assuming a bare id works.
+
+Tested in `spec/behavior/retention-purge.spec.ts`: past-deadline purge, within-window no-op,
+already-purged skip, per-`communicationType` independent `retentionDays`, deprecated types never
+swept, multi-tenant independence for the same type name, and a no-op against zero communication
+types. 7 new tests.
 
 ## Three real bugs tower's pilot already found — still true here
 

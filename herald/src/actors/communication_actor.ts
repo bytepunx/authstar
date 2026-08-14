@@ -206,7 +206,22 @@ function created(state: CommunicationState, event: CreatedEvent) {
   state.payloadKeyVersion = event.payloadKeyVersion
   state.channel = event.channel
   state.status = 'pending'
-  state.createdAt = new Date(0).toISOString() // replaced by consequent's own event timestamp on read
+  // A real, current timestamp -- NOT the `new Date(0)` epoch placeholder
+  // this codebase's other `created`-handler comments claim "consequent's
+  // own event timestamp on read" replaces. Checked directly against
+  // consequent's own source (dispatch.js/apply.js/actors.js): there is no
+  // such mechanism anywhere -- `state.createdAt` is a plain domain field
+  // like any other, never touched by consequent itself, so a `new Date(0)`
+  // placeholder simply stays `1970-01-01T00:00:00.000Z` forever. That's
+  // harmless everywhere this field is only ever checked for truthiness
+  // ("does this actor exist"), which is every other actor in this
+  // codebase -- but `retention-purge.ts`'s ADR 0029 sweep is the first
+  // caller that needs the actual value for real date math (`createdAt +
+  // retentionDays`), which the epoch placeholder would make permanently,
+  // trivially "expired." Fixed here, the one place that broke on it; the
+  // same false comment/placeholder elsewhere in this codebase is
+  // pre-existing and out of this task's scope -- flagged in TESTING.md.
+  state.createdAt = new Date().toISOString()
   state.sentAt = null
   state.error = null
   state.retryCount = 0
