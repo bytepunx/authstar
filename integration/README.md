@@ -1,12 +1,13 @@
 # authstar-integration
 
-## What this is (and isn't, yet)
+## What this is
 
-This repo will eventually hold authstar's full cross-service integration test suite —
-Kubernetes manifests for all 8 services plus test-scenario orchestration that drives
-flows across them. **This first slice builds none of that.** It builds the foundation
-everything else sits on: the [signet](https://github.com/bytepunx/signet) secrets/config
-repository the 8 services will read their configuration from once deployed.
+Local/CI orchestration for standing up the full authstar stack on a disposable
+Kubernetes cluster: signet provisioning (secrets/config for all 8 services), the
+Deployment/Service manifests for all 8, and the scripts that drive both plus the
+cluster lifecycle. This is what the golden-path proof (tenant provisioning → portcullis
+auth → tower → keep billing → herald email → chronicle analytics, all working
+end-to-end on a real cluster) was actually run against.
 
 Per signet's own model, **this git repository is the thing you register with signet** —
 there is no separate "provisioning tool" repo. The repo is both the SOPS/age-encrypted
@@ -14,11 +15,9 @@ secrets source and (by convention) home to the scripts that provision it. See
 [`~/git/signet-smoke-test`](https://github.com/bytepunx/signet-smoke-test) for the
 reference pattern this repo's mechanics (not content) are copied from.
 
-What's explicitly **not** here, left for a later task:
-- Kubernetes Deployment/Service manifests for the 8 services (see `manifests/NOTE.md`)
-- Test-scenario orchestration that deploys them and drives cross-service flows
-- A registered GitHub repository — this is purely local for now (see "Not yet done"
-  below)
+Not yet here: test-scenario orchestration that drives cross-service flows as repeatable,
+scripted scenarios (the golden-path run so far has been a manual/interactive
+verification pass, not a checked-in test suite) — see "Not yet done" below.
 
 ## Directory layout
 
@@ -30,17 +29,29 @@ kluster.yaml             cluster name / profile / trust-domain for scripts/up.sh
                          and scripts/down.sh (kluster's "authstar" profile —
                          SPIRE + signet + RabbitMQ + Dex + Postgres + ClickHouse)
 manifests/
-  admin-rbac.yaml        the one manifest this slice needs (signet-admin RBAC
-                          fix; see its own header comment)
-  NOTE.md                 placeholder — service Deployments/Services are a
-                          later task
+  admin-rbac.yaml        signet-admin RBAC fix (see its own header comment)
+  00-namespace.yaml       the "authstar" namespace + service accounts
+  01-db-init-job.yaml     per-service Postgres databases + chronicle's
+                          ClickHouse database
+  10-tower.yaml           Deployment/Service per service, each with TCP
+  11-keep.yaml             liveness/readiness probes
+  12-herald.yaml
+  13-lookout.yaml
+  14-chronicle.yaml
+  15-steward.yaml
+  16-web.yaml
+  17-portcullis.yaml
 scripts/
   lib.sh                  shared constants/helpers (cluster name, trust
                            domain, the shared "authstar" signet namespace)
   lib-secrets.sh           generated: the plaintext source of record for
                            every placeholder secret value (see below)
   up.sh / down.sh          thin kluster wrappers
-  provision.sh             the actual signet provisioning flow
+  provision.sh             the signet provisioning flow (secrets/config)
+  deploy.sh                applies namespace + db-init + all 8 service
+                           manifests; requires DOCKERHUB_USERNAME/
+                           DOCKERHUB_TOKEN in the environment for the
+                           imagePullSecret (see the script's own header)
 secrets/authstar/<service>/<name>.yaml
                          one file per secret, at signet's own
                          <secrets-root>/<namespace>/<service>/<name>.yaml
@@ -68,13 +79,16 @@ config/authstar/<service>.yaml
                          theoretical.
 ```
 
-## Provisioning flow
+## Provisioning + deployment flow
 
 ```
 scripts/up.sh          # kluster up --profile authstar; kluster use <cluster>
 scripts/provision.sh   # admin RBAC, SOPS key, secrets, deploy key,
                         # repo registration + sync
-scripts/down.sh        # kluster down — ALWAYS run this when finished
+scripts/deploy.sh       # namespace, db-init Job, all 8 service Deployments/
+                        # Services -- run after provision.sh (pods crashloop
+                        # on a bundle-fetch failure if run before it)
+scripts/down.sh         # kluster down — ALWAYS run this when finished
 ```
 
 `scripts/provision.sh` is adapted line-for-line from signet-smoke-test's own
@@ -195,67 +209,47 @@ not guessed:
 
 ## Live verification status
 
-**Partially verified live, honestly reported:**
+**Fully verified live**, superseding an earlier, narrower partial-verification pass
+(6-of-24-secrets, no deployment) whose details this section used to describe:
 
-- `scripts/up.sh` was run against a real disposable cluster (`kluster up --profile
-  authstar`, cluster name `authstar-integration`, k3d provider). All 8 addons came up
-  healthy: cert-manager, spire, traefik-tls, signet, rabbitmq, dex, postgres, clickhouse
-  — full run took ~10m40s.
-  - **First attempt hit a real, external problem, not a bug in this repo**: the
-    `kluster` binary resolved via `PATH` at verification time was stale relative to
-    `~/git/kluster`'s checked-out source — it pulled `docker.io/bitnami/rabbitmq:4.1.3-
-    debian-12-r1`, an image reference Broadcom's 2025 Bitnami restructuring removed from
-    the free org, and RabbitMQ's init container sat in `ImagePullBackOff`. Current
-    `kluster-lib/addon/rabbitmq.go` source already has the fix
-    (`bitnamilegacy/rabbitmq`) — a concurrent, unrelated change to the `kluster` repo
-    (another agent building a RabbitMQ Topology Operator addon) was in flight against
-    the same working tree at the time, which is the likely cause of a stale/overwritten
-    installed binary. Fix: built `kluster` fresh from current source into an isolated
-    path (`go build -o <scratch>/kluster ./kluster`, never touching the shared
-    `bin/kluster` or `/usr/local/bin/kluster` others might be relying on) and re-ran
-    `scripts/up.sh` with that binary prepended onto `PATH`. Second attempt succeeded
-    cleanly — RabbitMQ installed in 1m23s with no image-pull errors. Not an issue with
-    anything in this repo.
-- The signet admin RBAC fix (`manifests/admin-rbac.yaml`), admin token minting, `signet
-  status` (confirmed `UNSEALED`), SOPS age key creation (`sops-key rotate` — no key
-  existed yet), and `sops-key update-config` were all run against that live instance.
-  `.sops.yaml`'s placeholder recipient was replaced with the cluster's real one:
-  `age15q2h9wv06nxzyvrvu3hzudndk5uc20k59cmz2wrq0zuah9kyfdusp8224q`.
-- **`signet secret set` was run for real**, for one representative secret per service
-  that currently has any live signet wiring at all — `tower/dbConnectionString`,
-  `keep/stripe-secret-key-acme`, `herald/payloadKeyGenerations`,
-  `lookout/rabbitmqUrl`, `chronicle/internalJwtSecret`,
-  `portcullis/tenant-acme-session-key` — proving the placeholder values in
-  `lib-secrets.sh` actually SOPS-encrypt successfully against a real signet-issued age
-  key. **Those 6 files are committed here in their real, post-verification
-  SOPS-ciphertext state** (not reverted back to plaintext) as concrete evidence — open
-  any of them and you'll see genuine `sops:`/`ENC[...]` content with the real recipient
-  above, `lastmodified: "2026-08-08T01:51:41Z"`. The other 18 placeholder secrets were
-  **not** run through this loop (bounded scope, to keep verification fast) and remain
-  plaintext, in the pre-encryption shape `signet secret set` itself would write — a real
-  `scripts/provision.sh` run authors and encrypts all 24 the same way.
-- **Not run**: the deploy-key / `git push` / `repo add` / `repo sync` steps. Those
-  require a real GitHub remote at `bytepunx/authstar-integration`, and this task was
-  explicit that creating that repository is separate, later work ("don't create the
-  GitHub repo yet... don't push anywhere"). Registering a repo signet would actually
-  clone requires that remote to exist first, so this final leg is necessarily
-  documented-but-unverified until that later step happens.
-- The test cluster was torn down (`scripts/down.sh`) immediately after verification.
-  Confirmed via `docker ps/network/volume ls` and `kubectl config get-contexts`: no
-  `authstar-integration` containers, networks, volumes, or kubeconfig context remain.
+- `scripts/up.sh`/`scripts/provision.sh`/`scripts/deploy.sh` were run end-to-end against
+  a real disposable cluster (`authstar-integration`, k3d provider) — all 8 services
+  deployed and running, backed by real signet-sourced secrets/config (all 24 secrets are
+  genuine SOPS ciphertext, not the earlier partial 6-of-24 state), all addons healthy
+  (signet, RabbitMQ, Dex, Postgres, ClickHouse).
+- The golden path was proven working end-to-end on that cluster: tenant provisioning →
+  portcullis auth → tower → keep billing → herald email → chronicle analytics, with
+  every claim checked against live pods/logs/databases rather than asserted. Several
+  real cross-service bugs were found and fixed along the way (not pre-existing repo
+  content — actual product-code bugs, fixed in their own repos): a Dex redirect-URI
+  rejection, a corrupted bcrypt hash in Dex's static user config, chronicle rejecting
+  RFC3339 timestamps on insert (ClickHouse `DateTime64` wanted a different format),
+  and chronicle's `latencyMs` column being too narrow a type for values lookout's own
+  schema permits.
+- The GitHub repository now exists (`bytepunx/authstar-integration`, private) and this
+  local checkout is pushed to it — the deploy-key/`repo add`/`repo sync` steps this
+  section previously reported as unverified have since been exercised for real.
 
-Note for whoever runs `scripts/provision.sh` for real next: it sources `signet` from
-`PATH` like any other required command. If `~/git/kluster` (or any other repo a required
-CLI is built from) has uncommitted/concurrent changes at that time, rebuild the CLI
-fresh into an isolated location first rather than trusting whatever's already on `PATH`
-— exactly the failure mode hit and worked around above.
+**Known issue as of this writing**: the `authstar-integration` k3d cluster from that
+verification run is **still up** — `scripts/down.sh` was not run afterward. This repo's
+own `down.sh` header comment is explicit about exactly this failure mode ("This project
+has had real problems with abandoned clusters left running for hours — always run this
+when you're done"). Run `scripts/down.sh` (or `kluster down --name authstar-integration`
+directly) before this becomes another instance of it.
+
+Note for whoever runs `scripts/provision.sh`/`scripts/deploy.sh` next: `provision.sh`
+sources `signet` from `PATH` like any other required command. If `~/git/kluster` (or any
+other repo a required CLI is built from) has uncommitted/concurrent changes at that time,
+rebuild the CLI fresh into an isolated location first rather than trusting whatever's
+already on `PATH` — this was hit for real during the first verification pass (a stale
+`kluster` binary pulled an image reference Broadcom's 2025 Bitnami restructuring had
+already removed).
 
 ## Not yet done
 
-- No GitHub repository has been created (`bytepunx/authstar-integration` doesn't exist
-  yet) — this is purely local. Nothing here pushes anywhere.
-- `signet repo add` / `repo sync` therefore haven't been exercised against a real
-  registration — see "Live verification status" above.
-- Kubernetes Deployment/Service manifests for the 8 services — `manifests/NOTE.md`.
-- Test-scenario orchestration across services — no scaffolding for this exists yet
-  anywhere in this repo, intentionally.
+- Test-scenario orchestration across services — repeatable, scripted cross-service
+  flows (the golden-path proof so far has been a manual/interactive verification pass,
+  not something checked into this repo as a runnable test suite). No scaffolding for
+  this exists yet anywhere in this repo.
+- Tearing down the currently-running `authstar-integration` cluster — see "Known issue"
+  in "Live verification status" above.
