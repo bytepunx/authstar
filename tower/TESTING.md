@@ -180,9 +180,9 @@ distinction between missing/invalid/degraded token and wrong grant). Tenant-JWKS
 header (portcullis sets it at mint time) rather than any forwarded signal — the default
 `authstarGetKey` in `build-app.ts`; tests override it with a `staticKeyProvider` fixture
 (`spec/lib/internal-jwt.ts`) pinned to a locally-generated keypair, so no test makes a real JWKS
-fetch. Applications/providers/accounts/roles/invites/activity-feed routes from the story's own
-route table don't exist as code in this repo yet (see "Deliberately deferred" below) — nothing to
-gate there until those routes are built.
+fetch. Providers/roles/invites/activity-feed routes from the story's own route table don't exist as
+code in this repo yet (see "Deliberately deferred" below) — nothing to gate there until those
+routes are built. Applications routes (below) are now real and gated the same way.
 
 **`POST /tenants/:tenantSlug/accounts/:accountId/change-email` (ADR 0076) is now implemented** —
 `src/routes/accounts.ts`, the first route in this repo's own `accounts` family. Deliberately a
@@ -202,6 +202,70 @@ case, and the same 403/400 coverage every other gated route gets. Herald's own c
 pass, including the ADR 0076 `suppression` carry-forward extension — see herald's own
 TESTING.md; no changes needed there.
 
+**Applications CRUD (Story 004, Applications half only) is now implemented** —
+`src/routes/applications.ts`: `POST`/`GET` (list+detail)/`PATCH`/`DELETE
+/tenants/:tenantSlug/applications[...]`, gated by `applications:manage` on every write. Built as
+a prerequisite for ADR 0047's keep-side reference cache (task tracker's decomposition of "keep:
+grantedRoles reference cache poller") — keep needs a real way to know whether an application
+slug exists and is active before its own consumer/backfill work (next in the chain) has anything
+real to consume. Two deliberate scope boundaries, both explained in the route file's own header
+comment:
+
+- **Providers CRUD (the other half of Story 004) is not built.** Not needed by ADR 0047 (keep's
+  reference cache never tracks providers, only applications/role definitions, per the story's own
+  text) and orthogonal to it — OIDC provider management for portcullis's own routing. `exposedProviders`
+  validation on the applications routes still works for real, though: each entry is checked
+  against a real, existing, active `provider` actor (`consequent.fetch('provider', '{tenant}:{name}')`),
+  it just doesn't get its own CRUD surface here.
+- **`upstream`/`cors`/`exempt`/`auth` (ADR 0020's full `application` shape) are not added to the
+  actor.** Portcullis-routing-config concerns with no bearing on ADR 0047's actual driver. `publicUrl`
+  *is* added, though — Story 004/ADR 0051's `publicUrl`-host-must-be-in-`hosts` validation is cheap
+  and real, implemented and tested on both create and update.
+
+Two further deviations from the story's literal route description, both driven by checking this
+codebase's actual actor shapes directly rather than the story's originally-envisioned
+`aggregateFrom`-synced embedded array (see `tenant_actor.ts`'s header comment on why
+`aggregateFrom` isn't actually used):
+
+- List/detail/patch/delete resolve directly against the `application` actor
+  (`consequent.find('application', {tenant})` for list, direct `consequent.fetch('application',
+  '{tenant}:{slug}')` for detail/patch/delete — the actor's own `identifiedBy: 'key'` makes this
+  an O(1) computation, no search needed) rather than via `tenant.applications`. That embedded
+  array only ever carries `{slug, name}` (`TenantApplicationRef`) — no `status` — so it structurally
+  cannot answer "list active applications" on its own; a direct actor read is strictly more
+  correct, not just simpler.
+- Creation's race-free duplicate-slug rejection (the story's own requirement: "checked against
+  `tenant.applications` at command-handling time... `consequent`'s single-writer-per-actor queue
+  on `tenant` is what makes this race-free") is now real, not just described — `tenant_actor.ts`'s
+  `add-application` command gained a `slugNotTaken` guard (same `{when, then}` + reject-fallback
+  pattern already used by `suspend`), rejecting with 409 rather than the silent no-op it used to
+  be. Verified directly: `applications.spec.ts` proves a duplicate slug under the same tenant
+  409s while the identical slug succeeds under a *different* tenant.
+
+`application` also gained its own soft-delete: a `delete` command/`application.deleted` event
+(guarded `isNotDeleted`, same pattern as `suspend`'s `isActive` guard), with the DELETE route
+itself treating an already-deleted application as a no-op 200 rather than a 409 — matching
+`accounts.ts`'s change-email no-op convention for "retry converges" (ADR 0067).
+
+Every write that creates an application or changes its `status`/`hosts` publishes the matching
+`application.<created|hosts-changed|suspended|deleted>` event (ADR 0047's own outbound-event
+requirement for keep's future consumer) — `{tenant, application, name, status}`, the same shape
+`herald.contact.migrated`/`contact.purged` already established as this codebase's outbound-event
+convention. Verified in `applications.spec.ts` by asserting the spy publisher's exact calls, not
+just that *something* got published.
+
+A real, pre-existing bug found and fixed while building this: `tenant_actor.ts`'s in-memory
+default in-memory search adapter — used only by tests, `consequent-postgres`'s real one does a
+correct upsert-by-id (confirmed against its `set_<type>_search_fields` SQL) — is a module-level
+singleton (`consequent/dist/index.js` constructs its `defaults.searchAdapter` once, at module
+import time, not per `initialize()` call) whose field index never deduplicates repeated writes of
+the same id. Reusing a tenant slug/application slug already exercised by an earlier
+`buildInMemoryConsequent()`-backed test in the same file makes `find()` return accumulated
+duplicate ids — not a bug in `applications.ts`'s route logic, purely a test-isolation artifact of
+that in-memory adapter. `applications.spec.ts`'s list tests use dedicated, not-reused-elsewhere
+tenant slugs to avoid it; worth remembering for any future spec file that calls `consequent.find()`
+with criteria values also used by other tests in the same file.
+
 **Deliberately deferred** (documented here, matching every other authstar service's own scope
 notes, rather than left unstated):
 
@@ -219,10 +283,14 @@ notes, rather than left unstated):
   real client is real; tower's own server-side check of *who's calling* is not).
 - **`aggregateFrom`'s built-in cross-actor event routing** — `tenant`'s `add-application`/
   `add-provider` commands are hand-rolled (a direct route-level `consequent.handle()` against the
-  new child actor, plus a best-effort convenience mirror onto `tenant`'s own embedded array)
-  rather than using `consequent`'s own `aggregateFrom` mechanism (`manager.js`'s `getSourceIds`/
-  `onActor`), which infers source actor ids from state shapes it never gets a chance to see for a
-  same-request child creation. See `tenant_actor.ts`'s header comment for the full rationale.
+  new child actor, plus `tenant.add-application`/`tenant.add-provider` to append a lightweight
+  reference into `tenant`'s own embedded array) rather than using `consequent`'s own
+  `aggregateFrom` mechanism (`manager.js`'s `getSourceIds`/`onActor`), which infers source actor
+  ids from state shapes it never gets a chance to see for a same-request child creation. See
+  `tenant_actor.ts`'s header comment for the full rationale. `add-application` now has a real,
+  race-free duplicate-slug rejection guard (`slugNotTaken`, added alongside `applications.ts` —
+  see below) — `add-provider` does not yet, since no route calls it outside `provisioning.ts`'s
+  own already-guarded default-provider seeding.
 - **Identity-alias garbage collection** (ADR 0028) — an aliased older-generation `identity`
   record is created but nothing ever prunes it after its retention window closes; no such sweep
   is designed anywhere in the source docs either.

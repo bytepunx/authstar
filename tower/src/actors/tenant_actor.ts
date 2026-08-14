@@ -133,12 +133,28 @@ function rejectSuspend() {
   return Promise.reject(new Error('tenant must be active to be suspended'))
 }
 
-// Idempotent by construction -- a retried `POST /tenants` calling this
-// again for a slug already present in `applications` is a silent no-op at
-// the event-handler layer (see `applicationAdded` below), not a rejection,
-// matching ADR 0067's "retry-same-request is the recovery model".
+// `_admin`'s own auto-provisioning (ADR 0067, `routes/provisioning.ts`)
+// only ever calls this once per tenant -- guarded by its own
+// fetch-before-create check on the `application` actor itself, so this
+// command never sees a second call for the same slug from that path, and
+// the reject-on-duplicate guard below never fires for it. For
+// `routes/applications.ts`'s general creation route, Story 004 wants a real
+// rejection ("Rejects if slug already exists under this tenant... checked
+// against tenant.applications at command-handling time") rather than a
+// silent no-op -- `consequent`'s single-writer-per-actor queue on `tenant`
+// is exactly what makes checking `tenant.applications` here race-free
+// against concurrent creates, so the check belongs on this command, not as
+// a pre-check in the route (which would have a TOCTOU window).
+function slugNotTaken(tenant: TenantState, command: AddApplicationCommand) {
+  return !tenant.applications.some((a) => a.slug === command.slug)
+}
+
 function addApplication(_tenant: TenantState, command: AddApplicationCommand) {
   return { type: 'tenant.application-added', slug: command.slug, name: command.name }
+}
+
+function rejectDuplicateApplication() {
+  return Promise.reject(new Error('application slug already exists for this tenant'))
 }
 
 function addProvider(_tenant: TenantState, command: AddProviderCommand) {
@@ -235,7 +251,10 @@ export default function tenantActor() {
         { when: isActive, then: suspend },
         rejectSuspend,
       ],
-      'add-application': addApplication,
+      'add-application': [
+        { when: slugNotTaken, then: addApplication },
+        rejectDuplicateApplication,
+      ],
       'add-provider': addProvider,
       'set-seat-limit': setSeatLimit,
       'mark-secrets-provisioned': markSecretsProvisioned,

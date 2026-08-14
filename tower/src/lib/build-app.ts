@@ -20,6 +20,7 @@ import registerContactsRoutes from '../routes/contacts.js'
 import registerErasureRequestsRoutes from '../routes/erasure-requests.js'
 import registerRotateKeysRoutes from '../routes/rotate-keys.js'
 import registerAccountRoutes from '../routes/accounts.js'
+import registerApplicationRoutes from '../routes/applications.js'
 
 const defaultProvisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: true,
@@ -101,5 +102,6 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   await app.register(registerErasureRequestsRoutes)
   await app.register(registerRotateKeysRoutes)
   await app.register(registerAccountRoutes)
+  await app.register(registerApplicationRoutes)
   return app
 }
