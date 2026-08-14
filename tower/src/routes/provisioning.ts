@@ -6,6 +6,7 @@ import type { ProviderState } from '../actors/provider_actor.js'
 import type { InviteState } from '../actors/invite_actor.js'
 import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypto.js'
 import { randomEcPrivateKeyPem, randomSecret } from '../lib/tenant-keys.js'
+import { isOperatorRequest } from '../lib/operator-auth.js'
 
 // Per design/stories/tower/012-tenant-creation-and-provisioning.md and ADR
 // 0067 -- the full provisioning sequence: validate slug -> create `tenant`
@@ -16,10 +17,14 @@ import { randomEcPrivateKeyPem, randomSecret } from '../lib/tenant-keys.js'
 // Posture: tower's own direct ingress, *not* behind portcullis (no tenant
 // to resolve a `Host` from pre-tenant) -- either an operator bearer token
 // (always allowed) or fully unauthenticated (only if
-// `provisioning.selfServiceEnabled` is true). This pilot slice checks a
-// single shared operator token header rather than building the full
+// `provisioning.selfServiceEnabled` is true). This pilot slice checks the
+// same shared operator bearer token every other operator route checks
+// (`isOperatorRequest`, ADR 0021/0045) rather than building the full
 // bearer-token/operator-route-tree auth middleware Story 013 describes --
-// see TESTING.md's scope note.
+// see TESTING.md's scope note. Previously checked a bespoke `x-operator-token`
+// header steward never actually sent, which meant this route silently
+// rejected every real operator caller; fixed to match steward's actual
+// `Authorization: Bearer` convention.
 //
 // Idempotency: no cross-step rollback exists (consequent has no
 // multi-actor transaction primitive) -- "retry-same-request is the
@@ -78,7 +83,7 @@ const provisioningRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     const body = request.body as CreateTenantBody
     const config = app.provisioningConfig
 
-    const isOperator = Boolean(config.operatorToken) && request.headers['x-operator-token'] === config.operatorToken
+    const isOperator = isOperatorRequest(request.headers, config.operatorToken)
     if (!isOperator && !config.selfServiceEnabled) {
       return reply.code(403).send({ error: 'tenant self-service provisioning is disabled' })
     }

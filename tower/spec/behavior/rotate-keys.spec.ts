@@ -43,11 +43,21 @@ describe('POST /operator/tenants/:tenantSlug/rotate-keys', () => {
     expect(signetAdmin.calls).toHaveLength(0)
   })
 
-  it('rejects an empty keys array', async () => {
+  it('rejects the old x-operator-token header -- steward never sends it, only Authorization: Bearer', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/operator/tenants/acme/rotate-keys',
       headers: { 'x-operator-token': 'op-secret' },
+      payload: { keys: ['session'] },
+    })
+    expect(response.statusCode).toBe(403)
+  })
+
+  it('rejects an empty keys array', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/operator/tenants/acme/rotate-keys',
+      headers: { authorization: 'Bearer op-secret' },
       payload: { keys: [] },
     })
     expect(response.statusCode).toBe(400)
@@ -57,7 +67,7 @@ describe('POST /operator/tenants/:tenantSlug/rotate-keys', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/operator/tenants/acme/rotate-keys',
-      headers: { 'x-operator-token': 'op-secret' },
+      headers: { authorization: 'Bearer op-secret' },
       payload: { keys: ['bogus'] },
     })
     expect(response.statusCode).toBe(400)
@@ -67,7 +77,7 @@ describe('POST /operator/tenants/:tenantSlug/rotate-keys', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/operator/tenants/acme/rotate-keys',
-      headers: { 'x-operator-token': 'op-secret' },
+      headers: { authorization: 'Bearer op-secret' },
       payload: { keys: ['session'] },
     })
 
@@ -110,7 +120,7 @@ describe('POST /operator/tenants/:tenantSlug/rotate-keys', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/operator/tenants/acme/rotate-keys',
-      headers: { 'x-operator-token': 'op-secret' },
+      headers: { authorization: 'Bearer op-secret' },
       payload: { keys: ['internal', 'identity-hash'] },
     })
 
@@ -141,7 +151,7 @@ describe('POST /operator/tenants/:tenantSlug/rotate-keys', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/operator/tenants/acme/rotate-keys',
-      headers: { 'x-operator-token': 'op-secret' },
+      headers: { authorization: 'Bearer op-secret' },
       payload: { keys: ['session', 'internal', 'identity-hash'] },
     })
 

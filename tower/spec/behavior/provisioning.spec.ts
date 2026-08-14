@@ -54,11 +54,21 @@ describe('POST /tenants -- provisioning', () => {
     expect(response.statusCode).toBe(403)
   })
 
-  it('rejects a malformed slug', async () => {
+  it('rejects the old x-operator-token header -- steward never sends it, only Authorization: Bearer', async () => {
     const response = await app.inject({
       method: 'POST',
       url: '/tenants',
       headers: { 'x-operator-token': 'op-secret' },
+      payload: { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' },
+    })
+    expect(response.statusCode).toBe(403)
+  })
+
+  it('rejects a malformed slug', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
       payload: { slug: 'Not_Valid!', name: 'Acme', adminEmail: 'admin@acme.test' },
     })
     expect(response.statusCode).toBe(400)
@@ -68,7 +78,7 @@ describe('POST /tenants -- provisioning', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/tenants',
-      headers: { 'x-operator-token': 'op-secret' },
+      headers: { authorization: 'Bearer op-secret' },
       payload: { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' },
     })
 
@@ -168,10 +178,10 @@ describe('POST /tenants -- provisioning', () => {
 
   it('retrying the same request is idempotent -- no duplicate secret pushes or actor re-creation', async () => {
     const payload = { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' }
-    const first = await app.inject({ method: 'POST', url: '/tenants', headers: { 'x-operator-token': 'op-secret' }, payload })
+    const first = await app.inject({ method: 'POST', url: '/tenants', headers: { authorization: 'Bearer op-secret' }, payload })
     expect(first.statusCode).toBe(201)
 
-    const second = await app.inject({ method: 'POST', url: '/tenants', headers: { 'x-operator-token': 'op-secret' }, payload })
+    const second = await app.inject({ method: 'POST', url: '/tenants', headers: { authorization: 'Bearer op-secret' }, payload })
     expect(second.statusCode).toBe(201)
     expect(second.json()).toEqual(first.json())
 

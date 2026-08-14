@@ -1,16 +1,19 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { jsonPatchAppend } from '@bytepunx/signet-client'
 import { randomEcPrivateKeyPem, randomSecret } from '../lib/tenant-keys.js'
+import { isOperatorRequest } from '../lib/operator-auth.js'
 
 // `POST /operator/tenants/{tenantSlug}/rotate-keys` -- ADR 0080/0088,
 // design/stories/tower/011-tenant-management-and-key-rotation.md.
 //
 // Operator-only, cross-tenant -- no tenant-scoped equivalent (ADR 0080's own
 // framing: this is an operator/infrastructure concern, not a tenant-admin
-// action, even though it acts on one tenant's keys). Reuses the same
-// shared-token check `provisioning.ts`'s operator path already established
-// (this pilot slice's auth model, see that file's own header comment) rather
-// than inventing a second one.
+// action, even though it acts on one tenant's keys). Uses the same
+// `Authorization: Bearer` operator-token check every operator route uses
+// (`isOperatorRequest`, ADR 0021/0045) -- steward's client sends this for
+// every operator call (`steward/src/lib/server/backend-client.ts`); an
+// earlier version of this route checked a bespoke `x-operator-token` header
+// steward never sends, which meant this route 403'd on every real call.
 //
 // Each requested key type is generated and pushed independently -- a
 // failure partway through (e.g. session succeeds, internal's signet push
@@ -74,10 +77,6 @@ interface RotationFailure {
   error: string
 }
 
-function isOperator(request: { headers: Record<string, unknown> }, operatorToken: string): boolean {
-  return Boolean(operatorToken) && request.headers['x-operator-token'] === operatorToken
-}
-
 async function rotateOne(app: FastifyInstance, tenantSlug: string, key: RotatableKey): Promise<RotationResult> {
   const version = Math.floor(Date.now() / 1000)
   const effectiveFrom = new Date(version * 1000).toISOString()
@@ -111,7 +110,7 @@ const rotateKeysRoutes: FastifyPluginAsync = async function (app: FastifyInstanc
     '/operator/tenants/:tenantSlug/rotate-keys',
     { schema: { params: rotateKeysParamsSchema, body: rotateKeysBodySchema } },
     async (request, reply) => {
-      if (!isOperator(request, app.provisioningConfig.operatorToken)) {
+      if (!isOperatorRequest(request.headers, app.provisioningConfig.operatorToken)) {
         return reply.code(403).send({ error: 'operator bearer token required' })
       }
 

@@ -66,7 +66,7 @@ describe('tenant provisioning -> first-admin login -> enrichment -> entitlement 
     const create = await app.inject({
       method: 'POST',
       url: '/tenants',
-      headers: { 'x-operator-token': 'op-secret' },
+      headers: { authorization: 'Bearer op-secret' },
       payload: { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' },
     })
     expect(create.statusCode).toBe(201)
