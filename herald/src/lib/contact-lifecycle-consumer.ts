@@ -22,13 +22,10 @@ import type { CommunicationState } from '../actors/communication_actor.js'
 //   Named in ADR 0024, *not* generalized by ADR 0026 the way `purged` was
 //   (that ADR's "generalize the purge signal" section only renames the
 //   purge message), so the routing key keeps its original `herald.`
-//   prefix. ADR 0076 (2026-08-02) is the first thing that actually
-//   triggers this for the email-change case -- confirmed by reading
-//   tower's source directly: no publish call for it exists anywhere in
-//   `tower/src` yet (grepped for `migrated`/`oldContactId`/`newContactId`,
-//   nothing found), so there is no real producer to integration-test
-//   against in this pass. Built here against the ADR-documented contract
-//   only -- see TESTING.md for the explicit scope note.
+//   prefix. ADR 0076's `POST /accounts/{accountId}/change-email` (tower's
+//   own `src/routes/accounts.ts`) is the real producer -- confirmed
+//   directly against that route's own publish call, same shape this
+//   handler already expected.
 //
 // Same minimal `ChannelLike` structural-fake convention as
 // `comms-consumer.ts`/tower's `entitlement-consumer.ts`: behavior/e2e tests

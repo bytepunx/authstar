@@ -191,16 +191,16 @@ total, up from 107.
   actual `DELETE /tenants/{tenantSlug}/contacts/{contactId}` route, read directly from
   `tower/src/routes/contacts.ts`) — routing key `'contact.purged'`, payload
   `{ tenant, contactId, accountId }`, exactly what this consumer expects.
-  `herald.contact.migrated`: **no producer exists in tower's codebase as of this pass** — grepped
-  `tower/src` for `migrated`/`oldContactId`/`newContactId`, no publish call anywhere, despite ADR
-  0076 (2026-08-02) narrating "tower actually publishes `herald.contact.migrated` for the first
-  time." The admin-initiated email-change route ADR 0076 describes (`POST
-  /accounts/{accountId}/change-email`) isn't in tower's `src/routes/` either. Built and tested here
-  strictly against the ADR-documented contract (`{ tenant, oldContactId, newContactId }`,
-  `herald.contact.migrated` routing key — *not* generalized to a bare `contact.migrated` the way
-  ADR 0026 explicitly generalized the purge message) — genuinely untestable end-to-end against a
-  real producer until tower builds that route. Not a gap in this pass's own work; a gap in what
-  tower has actually shipped, same honest scoping this platform uses elsewhere.
+  `herald.contact.migrated`: **now has a real producer** — tower's `POST
+  /tenants/{tenantSlug}/accounts/{accountId}/change-email` (ADR 0076, `tower/src/routes/
+  accounts.ts`) publishes exactly the contract this consumer already expected (`{ tenant,
+  oldContactId, newContactId }`, `herald.contact.migrated` routing key, *not* generalized to a
+  bare `contact.migrated` the way ADR 0026 generalized the purge message) — confirmed directly
+  against tower's own route, not assumed. Still no live cross-repo integration test (each
+  service's own test tier stays scoped to itself, per this platform's own convention) — tower's
+  `spec/behavior/accounts.spec.ts` proves the publish shape on its side, this repo's own
+  `handleContactMigrated` tests prove the consume side, and the two are now confirmed to agree
+  by direct comparison rather than by ADR prose alone.
 
 ## Permission enforcement middleware (Story 006) is now implemented
 
