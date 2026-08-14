@@ -7,6 +7,12 @@ import { AuthstarJwtError } from './errors.js'
 // package uses elsewhere in this org for mapping a third-party library's errors onto a
 // stable, local error surface.
 function mapJoseError(err: unknown): AuthstarJwtError {
+  // A getKey callback (e.g. perTenantJwksKeyProvider) can throw its own AuthstarJwtError
+  // before jose ever gets involved -- pass it through as-is rather than falling into the
+  // generic 'malformed' branch below and losing the real reason.
+  if (err instanceof AuthstarJwtError) {
+    return err
+  }
   if (err instanceof joseErrors.JWTExpired) {
     return new AuthstarJwtError('expired', 'token has expired', { cause: err })
   }
@@ -89,7 +95,7 @@ export async function verifyInternalJwt(
   getKey: JWTVerifyGetKey,
   options: VerifyInternalJwtOptions = {},
 ): Promise<InternalClaims> {
-  const { payload } = await jwtVerify(token, getKey, {
+  const { payload, protectedHeader } = await jwtVerify(token, getKey, {
     algorithms: ['ES256'],
     clockTolerance: options.clockToleranceSeconds ?? 5,
   }).catch((err: unknown) => {
@@ -103,11 +109,19 @@ export async function verifyInternalJwt(
   if (enrichmentStatus !== 'ok' && enrichmentStatus !== 'degraded') {
     throw new AuthstarJwtError('missing-claim', 'internal JWT missing or invalid enrichmentStatus claim')
   }
+  // Sourced from the *verified* header (ADR 0089) -- read only now, after jwtVerify has
+  // already confirmed the signature, not re-trusted from the pre-verification hint
+  // perTenantJwksKeyProvider read to pick a key.
+  const tenant = (protectedHeader as { tenant?: unknown }).tenant
+  if (typeof tenant !== 'string' || tenant.length === 0) {
+    throw new AuthstarJwtError('missing-claim', 'internal JWT header missing tenant claim')
+  }
 
   return {
     sub: payload.sub,
     idp: payload.idp as string,
     identityHash: payload.identityHash as string,
+    tenant,
     enrichmentStatus: enrichmentStatus as EnrichmentStatus,
     accountId: typeof payload.accountId === 'string' ? payload.accountId : undefined,
     roles: Array.isArray(payload.roles) ? (payload.roles as string[]) : [],

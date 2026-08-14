@@ -101,7 +101,7 @@ test('verifyInternalJwt accepts an "ok" enrichment token and returns roles', asy
     permissions: ['tenant:manage'],
     isNewAccount: true,
   })
-    .setProtectedHeader({ alg: 'ES256', kid })
+    .setProtectedHeader({ alg: 'ES256', kid, tenant: 'acme' })
     .setIssuedAt(now)
     .setExpirationTime(now + 60)
     .sign(privateKey)
@@ -112,6 +112,7 @@ test('verifyInternalJwt accepts an "ok" enrichment token and returns roles', asy
   assert.deepEqual(claims.roles, ['admin'])
   assert.deepEqual(claims.permissions, ['tenant:manage'])
   assert.equal(claims.isNewAccount, true)
+  assert.equal(claims.tenant, 'acme')
 })
 
 test('verifyInternalJwt accepts a "degraded" token with empty roles/permissions, not as an error', async () => {
@@ -125,7 +126,7 @@ test('verifyInternalJwt accepts a "degraded" token with empty roles/permissions,
     roles: [],
     permissions: [],
   })
-    .setProtectedHeader({ alg: 'ES256', kid })
+    .setProtectedHeader({ alg: 'ES256', kid, tenant: 'acme' })
     .setIssuedAt(now)
     .setExpirationTime(now + 60)
     .sign(privateKey)
@@ -135,6 +136,29 @@ test('verifyInternalJwt accepts a "degraded" token with empty roles/permissions,
   assert.equal(claims.accountId, undefined)
   assert.deepEqual(claims.roles, [])
   assert.deepEqual(claims.permissions, [])
+  assert.equal(claims.tenant, 'acme')
+})
+
+test('verifyInternalJwt rejects a token whose header is missing the tenant hint', async () => {
+  const { getKey, kid, privateKey } = await generateTestKey()
+  const now = Math.floor(Date.now() / 1000)
+  const token = await new SignJWT({
+    sub: 'admin@example.com',
+    idp: 'dex',
+    identityHash: 'abc123',
+    enrichmentStatus: 'ok',
+    roles: [],
+    permissions: [],
+  })
+    .setProtectedHeader({ alg: 'ES256', kid })
+    .setIssuedAt(now)
+    .setExpirationTime(now + 60)
+    .sign(privateKey)
+
+  await assert.rejects(
+    () => verifyInternalJwt(token, getKey),
+    (err: unknown) => err instanceof AuthstarJwtError && err.reason === 'missing-claim',
+  )
 })
 
 test('extractBearerToken parses a well-formed header', () => {

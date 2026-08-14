@@ -27,7 +27,7 @@ async function signInternalToken(
     roles: ['admin'],
     ...claims,
   })
-    .setProtectedHeader({ alg: 'ES256', kid })
+    .setProtectedHeader({ alg: 'ES256', kid, tenant: 'acme' })
     .setIssuedAt(now)
     .setExpirationTime(now + 60)
     .sign(privateKey)

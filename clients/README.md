@@ -15,7 +15,9 @@ authoritative source:
 - **Session JWT** (`sub`, `idp`, `identityHash`, `iss`, `aud`, `iat`, `exp`) — the
   long-lived `jwt` cookie. Consumed mainly by portcullis itself.
 - **Internal JWT** (`sub`, `idp`, `identityHash`, `enrichmentStatus`, `accountId?`,
-  `roles`, `permissions`, `usage?`, `isNewAccount?`, `iat`, `exp`) — a 60-second,
+  `roles`, `permissions`, `usage?`, `isNewAccount?`, `iat`, `exp` in the payload, plus a
+  `tenant` field on the **protected header** alongside `alg`/`kid`/`typ` — ADR 0089) — a
+  60-second,
   upstream-facing `Authorization: Bearer` token portcullis mints fresh on every proxied
   request. Its own doc comment says it plainly: *"downstream services verify it
   independently against the tenant's public key, per ADR 0030's 'defense in depth'"* —
@@ -31,9 +33,24 @@ authoritative source:
 Both JWTs are independently verifiable via a live JWKS endpoint: `GET
 https://<tenant-host>/.well-known/jwks.json` (ADR 0086/0087), serving the tenant's
 current internal-key public key as a standard JWK, plus a `publicKeyPem` member for
-client libraries whose crypto API prefers PEM/DER over a JWK's raw EC point. Use
-`jwksKeyProvider()` for this — the recommended key-resolution path going forward.
-`staticKeyProvider()` remains available for pinned-key deployments or tests.
+client libraries whose crypto API prefers PEM/DER over a JWK's raw EC point.
+
+Which key-provider to use depends on how your service learns which tenant a request is
+for:
+
+- **`jwksKeyProvider(url)`** — a single, fixed JWKS URL. The right choice for portcullis
+  itself, or any service reached at a tenant-branded host (`Host`-based tenant
+  resolution, ADR 0002).
+- **`perTenantJwksKeyProvider(baseDomain)`** — for a service with no Host-based tenant
+  signal at all (tower/keep/herald: one shared deployment serving every tenant, per ADR
+  0089). Reads the internal JWT's own `tenant` header field to resolve
+  `https://admin.<tenant-slug>.<baseDomain>/.well-known/jwks.json` per request, caching
+  one `createRemoteJWKSet` per tenant. This is almost certainly what a non-portcullis
+  backend service needs — see the ADR for why this is safe (the same principle `kid`
+  selection already relies on) and its own doc comment for the SSRF guard on the tenant
+  value before it's used to build a URL.
+- **`staticKeyProvider(jwks)`** — a fixed, locally-held key set. For tests, or any
+  deployment that prefers pinning keys over a runtime fetch.
 
 Neither JWT has a distinct `email` claim — `sub` *is* the email, by design (see
 `internal.rs`/`session.rs`'s own doc comments). Each core library exposes a `getEmail()`

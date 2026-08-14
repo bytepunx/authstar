@@ -36,6 +36,14 @@ export interface InternalClaims {
   sub: string
   idp: string
   identityHash: string
+  /**
+   * The tenant slug, e.g. "acme" -- sourced from the token's *protected header*, not the
+   * payload (ADR 0089), read only after signature verification succeeds. portcullis
+   * always sets this (it already knows the tenant, resolved from `Host`, at mint time);
+   * see `perTenantJwksKeyProvider` for how a non-Host-routed service uses the same field,
+   * pre-verification, to resolve which tenant's JWKS to check against in the first place.
+   */
+  tenant: string
   enrichmentStatus: EnrichmentStatus
   /** Absent when enrichmentStatus is "degraded", or when tower reports no account yet. */
   accountId?: string

@@ -24,11 +24,14 @@ declare module 'fastify' {
 export interface AuthstarFastifyOptions {
   /**
    * Resolves which tenant's verification key(s) to use for a given request --
-   * portcullis's internal JWT carries no `iss`/`aud` of its own (see
-   * @bytepunx/authstar-core's README), so this plugin has no way to infer the tenant
-   * on its own. A single-tenant deployment can just return the same
-   * `staticKeyProvider`/`jwksKeyProvider` result every time; a multi-tenant one
-   * typically resolves it from a header, subdomain, or route param.
+   * portcullis's internal JWT carries no `iss`/`aud` in its payload (see
+   * @bytepunx/authstar-core's README), so this plugin doesn't infer the tenant itself.
+   * A service reached at a tenant-branded host can just return the same
+   * `jwksKeyProvider`/`staticKeyProvider` result every time. A service with no such
+   * signal (tower/keep/herald: one shared deployment for every tenant) should return
+   * the same `perTenantJwksKeyProvider(baseDomain)` instance every time instead -- it
+   * resolves the tenant itself, per request, from the token's own header (ADR 0089), so
+   * this hook has nothing tenant-specific left to do.
    */
   getKeyForRequest: (request: FastifyRequest) => JWTVerifyGetKey | Promise<JWTVerifyGetKey>
   /**

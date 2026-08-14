@@ -21,6 +21,7 @@ test('getEmail reads sub off an InternalClaims', () => {
     sub: 'admin@example.com',
     idp: 'dex',
     identityHash: 'abc123',
+    tenant: 'acme',
     enrichmentStatus: 'ok',
     roles: [],
     permissions: [],
