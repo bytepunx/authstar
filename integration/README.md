@@ -46,6 +46,11 @@ manifests/
                           Stripe (design/stories/keep/003's "Periodic
                           pricing re-sync") -- reuses keep's own image/
                           ServiceAccount, no separate identity
+  12-herald-retention-purge-cronjob.yaml
+                          daily CronJob purging encrypted communication
+                          payloads past their type's retention window (ADR
+                          0029) -- same shape as the keep job above, reuses
+                          herald's own image/ServiceAccount
 scripts/
   lib.sh                  shared constants/helpers (cluster name, trust
                            domain, the shared "authstar" signet namespace)
