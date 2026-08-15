@@ -14,8 +14,19 @@ webUpstream:
   address: http://web.authstar.svc.cluster.local:3000
   timeout: 10
 
+# https, not http: tower's own server always runs real SPIFFE mTLS now
+# (fetchServerCredentials() + a real https.Server, unconditional -- no
+# plain-HTTP fallback, see tower's src/server.ts and src/lib/spiffe-mtls.ts).
+# `tower_http_client` (authstar-middleware/src/state.rs) IS correctly
+# mTLS-configured (use_preconfigured_tls, presents portcullis's own SVID),
+# but reqwest only attempts a TLS handshake at all when the URL scheme
+# itself says https:// -- a real gap this run found live: this repo's
+# tower_http_client was never actually exercised end-to-end against
+# tower's real TLS listener before now, and "http://" here silently made
+# reqwest attempt a plain-TCP connection against a TLS-only port
+# ("error sending request", no deeper detail, exactly this failure mode).
 towerUpstream:
-  address: http://tower.authstar.svc.cluster.local:8080
+  address: https://tower.authstar.svc.cluster.local:8080
   timeout: 10
 
 tenants:
@@ -49,6 +60,22 @@ tenants:
       web:
         hosts:
           - acme.authstar.app
+          # tower's own tenant provisioning (POST /tenants) creates an
+          # `_admin` application host at admin.<slug>.<baseDomain> for the
+          # per-tenant JWKS convention (perTenantJwksKeyProvider) every
+          # JWT-consuming service resolves against -- but that route only
+          # writes tower's own actor state + pushes secrets, it never
+          # patches portcullis's Bundle config with a matching host (no
+          # `signetAdmin.patchConfig` call anywhere in provisioning.ts,
+          # confirmed by grep -- only rotate-keys.ts uses patchConfig, for
+          # EC key generation arrays). Host routing is a GitOps/deploy-time
+          # concern this repo owns, not something tower auto-provisions.
+          # JWKS resolution only needs the Host to resolve to *some* active
+          # application for the right tenant (jwks_handler discards the
+          # matched application, only reads tenant.internal_keys -- see
+          # portcullis's endpoints/jwks.rs) -- no separate `_admin`
+          # application block is needed, just this second host entry.
+          - admin.acme.authstar.app
         server:
           publicUrl: https://acme.authstar.app
         upstream:
