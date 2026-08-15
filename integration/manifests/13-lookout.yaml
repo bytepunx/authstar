@@ -61,7 +61,7 @@ spec:
             failureThreshold: 3
           env:
             - name: LOOKOUT_RABBITMQ_URL
-              value: amqp://tower:0ee655e69db3ef7d4b0cd8191a9ed1e554abec26d6406058@rabbitmq.rabbitmq.svc.cluster.local:5672/authstar
+              value: amqp://tower:6dd9a30b4b819743ed58e3db6080d3999756aa97a242cf95@rabbitmq.rabbitmq.svc.cluster.local:5672/authstar
 ---
 apiVersion: v1
 kind: Service
