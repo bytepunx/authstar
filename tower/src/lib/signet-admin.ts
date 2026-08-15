@@ -42,18 +42,26 @@ export interface SignetAdminOptions {
 // `pushSecret`'s own comment for the other half of that fix (checking the
 // response, not just the transport-level error).
 //
-// KNOWN GAP, flagged here rather than glossed over: signet's GitOps sync
+// KNOWN GAP, confirmed live, not just theoretical: signet's GitOps sync
 // path is designed around SOPS-encrypted secret files (the service also
 // exposes `GetSOPSPublicKey`) -- this pushes the secret value as
-// **plaintext** YAML inside the archive, not SOPS-encrypted. Getting the
-// encryption step right needs either shelling out to the real `sops` CLI
-// (not a dependency of this repo) or an in-process age-encryption library,
-// and the exact per-service directory layout `secretsPath` expects
-// (single file vs. one-file-per-key) isn't pinned down anywhere this pilot
-// slice's research could confirm without deeper access to signet's own
-// server source. This wiring is real (real RPC, real streaming, real
-// auth) and has not been validated against a live signet -- see
-// TESTING.md and this project's final report for the explicit scope note.
+// **plaintext** YAML inside the archive, not SOPS-encrypted. A plaintext
+// push *appears* to succeed (the RPC returns cleanly), but signetd's own
+// periodic gitops reconciler re-processes every tracked secret path --
+// including ones written via a direct SyncBundle admin push, not just
+// git-synced ones -- and tries to SOPS-decrypt each one. A plaintext
+// value fails that with "sops decrypt: parse sops file: sops metadata
+// not found" (confirmed directly in signetd's own logs against a live
+// cluster, reproduced twice), so the secret survives only until the next
+// reconciliation cycle (~1 minute in that deployment) and then silently
+// becomes permanently unreadable -- with no error surfaced anywhere on
+// the read side. No client in `signet-clients` (any language, including
+// Go's own reference implementation) provides a helper to actually
+// produce SOPS-compatible ciphertext -- filed as
+// bytepunx/signet-clients#49. Blocked on that landing; nothing this repo
+// owns can fix it (real in-process age+SOPS-format encryption, or
+// shelling out to a bundled `sops` binary, belongs in the shared client
+// library every consumer depends on, not reimplemented per-repo).
 export function buildSecretArchive(namespace: string, targetService: 'tower' | 'portcullis', key: string, value: string): Buffer {
   const path = `secrets/${namespace}/${targetService}/${key}.yaml`
   const content = Buffer.from(`value: ${JSON.stringify(value)}\n`, 'utf8')
