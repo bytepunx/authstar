@@ -12,5 +12,13 @@
 # for real against a live cluster: RabbitMQ's own broker log showed literal
 # user 'guest' being rejected, sourced from exactly this file.
 #
-# No other plain config exists for keep today -- per-tenant Stripe key
-# material is secret-only (see secrets/authstar/keep/), never placed here.
+# towerBaseUrl: keep's own startup role/application reference backfill
+# (src/lib/role-reference-backfill.ts's createTowerReferenceClient, wired
+# into server.ts after this file was first authored -- a real gap this run
+# found: keep crashed on startup with "signet bundle missing towerBaseUrl").
+# In-cluster Service DNS name + port, no trailing slash (the client appends
+# a leading-slash path directly).
+towerBaseUrl: http://tower.authstar.svc.cluster.local:8080
+
+# Per-tenant Stripe key material is secret-only (see secrets/authstar/keep/),
+# never placed here.
