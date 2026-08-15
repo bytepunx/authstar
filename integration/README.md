@@ -476,8 +476,21 @@ Fastify's `close()` isn't designed to be re-entered while a prior call is still 
 flight. This matches (and gives a precise root cause to) the "self-restart whose shutdown
 hung instead of exiting" observation already flagged in `manifests/13-lookout.yaml`'s and
 `14-chronicle.yaml`'s own TCP-probe comments — not a new bug, but now understood well
-enough to fix rather than just work around with a TCP probe. **Not yet fixed** — worked
-around this pass by deleting the stuck pods; see "Not yet done" below.
+enough to fix rather than just work around with a TCP probe.
+
+**Fixed and re-verified live**: `tower`/`herald`/`keep`'s `src/server.ts` now share a
+`closeOnce()` helper that memoizes the `app.close()` promise, so both `Promise.race`
+branches share the same in-flight close instead of issuing a second concurrent one
+(tower `6a32f53`, herald `7a42907`, keep `8d0cd81` — keep's copy applied preemptively
+from the identical code pattern, not independently reproduced). Rebuilt all three via
+`deploy-local.sh`'s own build+import steps and redeployed to this cluster. Re-ran the
+exact reproduction recipe against the fixed images — a `repo sync` immediately followed
+by a `rotate-keys` call, twice in a row to stack multiple bundle changes — and watched
+pod restart counts for several minutes: each service restarted exactly once (settling
+the queued bundle change cleanly) and then stayed at `1/1 Running` with no further
+restarts, instead of the previous repeated `CrashLoopBackOff`. A follow-up invite against
+the freshly-rebuilt herald still decrypts correctly (`"no send adapter configured"`),
+confirming the shutdown-race fix didn't regress the SOPS/keyring fix above.
 
 ## Live verification status
 
@@ -528,13 +541,6 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
 
 ## Not yet done
 
-- **Fix the tower/herald shutdown-hang race** — see "A fourth issue" above.
-  `Promise.race`ing signet's coordinated-restart wait against this process's own SIGTERM
-  handler lets both branches call `app.close()` concurrently when a bundle-change restart
-  and an external SIGTERM land close together, which can wedge the pod in
-  `CrashLoopBackOff` until manually deleted. Root cause is understood precisely enough now
-  to fix (e.g. guard `app.close()` behind a single in-flight promise shared by both race
-  branches) rather than rely on the TCP liveness probe to eventually notice and recover.
 - **Extend `scripts/scenario-golden-path.sh`'s herald step to a full send** — no longer
   blocked (bytepunx/signet-clients#49 landed and both the SOPS gap and the
   git-tracked-keyring-clobbering bug it surfaced are fixed and live-verified above); just
