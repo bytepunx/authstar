@@ -501,14 +501,14 @@ golden path was "proven working end-to-end" — that claim did not survive a fre
 - `scripts/up.sh` (with the `kluster`/signet fixes above) → `scripts/provision.sh` →
   `scripts/deploy-local.sh` (new — see below) brought up a real disposable cluster with
   all 8 services `1/1 Running`, backed by real signet-sourced secrets/config.
-- `scripts/scenario-golden-path.sh` passes end-to-end: real tenant provisioning, a real
-  Dex authorization-code + PKCE login (driven with plain curl, no headless browser — see
-  the script for the exact 6-request sequence), tower genuinely resolving/creating the
-  account, a real Stripe-signature-verified webhook call to keep, herald's real operator
-  key-rotation API, and a real lookout → RabbitMQ → ClickHouse → chronicle-report chain.
-  herald's key-distribution/decryption chain is now fully live-verified too (see "A
-  second, deeper, separate bug" above) — the script itself still only exercises the
-  rotate-keys call, not a full send-and-verify; that extension is tracked below.
+- `scripts/scenario-golden-path.sh` passes end-to-end, 7/7: real tenant provisioning, a
+  real Dex authorization-code + PKCE login (driven with plain curl, no headless browser —
+  see the script for the exact 6-request sequence), tower genuinely resolving/creating the
+  account, a real Stripe-signature-verified webhook call to keep, a real herald key
+  rotation followed by a real invite that herald genuinely decrypts (verified by querying
+  its own `communication_event` table directly, not by trusting the invite's HTTP status
+  alone — see "A second, deeper, separate bug" above), and a real lookout → RabbitMQ →
+  ClickHouse → chronicle-report chain.
 - The GitHub repository (`bytepunx/authstar-integration`, private) received real pushes
   throughout this pass — the deploy-key/`repo add`/`repo sync` steps work as designed.
 
@@ -541,10 +541,6 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
 
 ## Not yet done
 
-- **Extend `scripts/scenario-golden-path.sh`'s herald step to a full send** — no longer
-  blocked (bytepunx/signet-clients#49 landed and both the SOPS gap and the
-  git-tracked-keyring-clobbering bug it surfaced are fixed and live-verified above); just
-  not yet written into the script itself.
 - **Keep's trial-grant path** (`POST /tenants/:slug/trials`) — the other keep billing
   route from the original scenario research, not yet exercised (only the Stripe webhook
   path has been).
@@ -554,7 +550,15 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
 - **A rotation mechanism for tower's and herald's own `signetAdminToken`** — both are
   currently a manually-minted, short-lived (1h) Kubernetes token, a same-session stopgap
   documented in `scripts/lib-secrets.sh`'s own comments, not a durable fix. Needs a
-  CronJob matching kickr's own `rabbitmq-provisioner-rotate` pattern.
+  CronJob matching kickr's own `rabbitmq-provisioner-rotate` pattern. **Found live while
+  refreshing an expired token this pass**: the token must be minted from the
+  `signet-admin` service account (`kubectl create token signet-admin -n signet --audience
+  signet`) — minting from each app's own service account (`tower`/`herald`) instead gets
+  `PERMISSION_DENIED: unauthorized ... not authorized to administer signet (grant via
+  SIGNET_ADMIN_SUBJECTS or RBAC on signet.io/admin operations verb administer)`. Worth
+  keeping in mind for whatever rotation mechanism eventually replaces the manual mint —
+  it needs the `signet-admin` identity specifically, not a least-privilege per-service one
+  (none is currently granted `administer`).
 - **`config/authstar/herald.yaml`/`lookout.yaml`'s comment-only-YAML parse error** —
   confirmed real and currently silent (logged every sync cycle, blocking nothing yet
   since neither service reads anything through this path). Worth fixing before either
