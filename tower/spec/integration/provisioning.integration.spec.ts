@@ -40,6 +40,7 @@ describe('provisioning + contacts -- real Postgres', () => {
   let pgAdapters: ReturnType<typeof initializePostgresAdapters>
   let pool: Pool
   let eraseHeaders: { authorization: string }
+  let activityHeaders: { authorization: string }
 
   beforeAll(async () => {
     container = await new PostgreSqlContainer('postgres:16').start()
@@ -66,6 +67,7 @@ describe('provisioning + contacts -- real Postgres', () => {
       authstarGetKey: jwt.getKey,
     })
     eraseHeaders = bearer(await jwt.signToken({ permissions: ['contacts:erase'] }))
+    activityHeaders = bearer(await jwt.signToken({ permissions: ['activity:read'] }))
   }, 60_000)
 
   afterAll(async () => {
@@ -159,5 +161,30 @@ describe('provisioning + contacts -- real Postgres', () => {
 
     const erasureRequest = await consequent.fetch('erasureRequest', contact.id)
     expect(erasureRequest?.state.status).toBe('pending')
+  })
+
+  // Story 010: proves the real merged multi-actor-type getEventStream path
+  // (tenant/application/provider/account events, discovered via a real
+  // consequent-postgres find() per type, all merged/sorted in one
+  // getEventStream({ actors: {...} }) call) against real Postgres, not
+  // just the in-memory adapter -- exactly the tier every earlier fix in
+  // this pass (streamBuilder.ts's manager.models shape, the unawaited
+  // fetchStream, the missing actorType arg) only ever surfaced against.
+  // Reuses `acme-pg`'s state already built up by the tests above
+  // (provisioning's application/provider, the enrich tests' two accounts,
+  // one role grant) rather than provisioning a fresh tenant.
+  it('merges activity across actor types for a real Postgres-backed tenant', async () => {
+    const response = await app.inject({ method: 'GET', url: '/tenants/acme-pg/activity', headers: activityHeaders })
+    expect(response.statusCode).toBe(200)
+
+    const body = response.json() as { data: Array<{ actorType: string, eventType: string, summary: string }>, nextCursor: string | null }
+    const eventTypes = body.data.map((e) => e.eventType)
+    expect(eventTypes).toContain('application.created')
+    expect(eventTypes).toContain('provider.created')
+    expect(eventTypes).toContain('account.created')
+    expect(eventTypes).toContain('account.role-granted')
+
+    const roleGrant = body.data.find((e) => e.eventType === 'account.role-granted')
+    expect(roleGrant?.summary).toBe("Role 'member' granted (tenant-wide)")
   })
 })

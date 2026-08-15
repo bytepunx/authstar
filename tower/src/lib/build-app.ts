@@ -24,6 +24,7 @@ import registerApplicationRoutes from '../routes/applications.js'
 import registerRoleDefinitionRoutes from '../routes/role-definitions.js'
 import registerInviteRoutes from '../routes/invites.js'
 import registerInviteCodeRoutes from '../routes/invite-codes.js'
+import registerActivityRoutes from '../routes/activity.js'
 
 const defaultProvisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: true,
@@ -109,5 +110,6 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   await app.register(registerRoleDefinitionRoutes)
   await app.register(registerInviteRoutes)
   await app.register(registerInviteCodeRoutes)
+  await app.register(registerActivityRoutes)
   return app
 }

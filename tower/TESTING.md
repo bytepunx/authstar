@@ -37,7 +37,7 @@ so every tier runs against the same compiled artifact the real server loads, not
 - Needs Docker running locally / in CI. `beforeAll`'s own timeout should be generous (60s+) —
   container pull + start can genuinely take a while on a cold image cache.
 
-## Six real bugs this pilot found — worth knowing before writing more services' tests
+## Seven real bugs this pilot found — worth knowing before writing more services' tests
 
 1. **`consequent`'s loader only finds compiled `*_actor.js` files** — pointing it at `src/actors`
    (TypeScript source) silently loads zero actors (`Object.keys(actors) === []`), which then
@@ -101,6 +101,27 @@ so every tier runs against the same compiled artifact the real server loads, not
    `consequent@^2.0.6` (and `consequent-postgres@^2.0.6`, which fixed a related concurrent-
    `CREATE TABLE IF NOT EXISTS` race in the same pass) made this integration test pass
    consistently across 5+ repeated runs where it previously failed roughly half the time.
+7. **`consequent`'s `getEventStream` could hang indefinitely (100% CPU, starving even
+   `setTimeout`) against real `consequent-postgres` -- found building Story 010's activity feed,
+   the first real caller of `getEventStream` against Postgres rather than the in-memory
+   adapter.** The upstream fix for bug #6's in-memory-vs-Postgres divergence (awaiting
+   `fetchStream`'s result with `for await`) was necessary but not sufficient: `getEventStream`'s
+   internal design tried to be a true incremental merge across actor types -- per-type queues
+   with a depth-2 lookahead, rescheduled via `process.nextTick` until enough queues were "deep
+   enough" to safely emit the next event in order. That assumed every adapter's `fetchStream`
+   resolved to an already-fully-produced *synchronous* iterable (true for the in-memory
+   adapter's plain generator), but consequent-postgres's real, pg-cursor-backed adapter yields
+   one row at a time with a genuine async gap per row -- under that real interleaving, the
+   depth check could go unsatisfied forever, spinning the reschedule loop indefinitely. Not
+   caught by any existing unit test because every one of them mocked a synchronous generator.
+   Reproduced directly with a standalone script against real Postgres (hung indefinitely,
+   100% CPU) and fixed upstream (`consequent@2.0.8`) by replacing the incremental-merge design
+   entirely with something simple and provably correct: fully drain each requested actor's
+   event stream, concatenate, sort once by event id. `getEventStream` was never a true
+   streaming/backpressure API to begin with (it returns a fully materialized `Iterable`, not
+   something a caller pulls incrementally), so the old complexity bought nothing observable.
+   Re-verified against real Postgres with the same reproduction script (resolves in ~1ms
+   post-fix) before this repo's own `consequent` dependency was bumped again.
 
 ## Scope covered by this pass (tower's four target cross-service flows)
 

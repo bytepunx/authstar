@@ -7,6 +7,13 @@ import initialize from 'consequent'
 // return signature works regardless of whether that changes later.
 export type ConsequentApi = Awaited<ReturnType<typeof initialize>>
 
+// Same problem, one level deeper: `Event` (the raw shape `getEventStream`
+// yields) lives in the same unexported `types.ts`. Derived from
+// `getEventStream`'s own resolved return type (`Promise<Iterable<Event>>`)
+// rather than a second hand-copied interface that could drift from the
+// real one.
+export type ConsequentEvent = ConsequentApi['getEventStream'] extends (...args: never[]) => Promise<Iterable<infer E>> ? E : never
+
 // `consequent`'s own public type for `find(type, criteria)` declares
 // `criteria: Record<string, unknown>` -- a flat field->value object -- and
 // its *default* in-memory search adapter genuinely treats it that way
