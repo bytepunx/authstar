@@ -25,35 +25,28 @@
 #   - chronicle: lookout's genuinely unauthenticated /events ingestion route,
 #     then a self-minted HS256 JWT using chronicle's own configured dev
 #     secret (real auth check, not bypassed)
-#   - herald: verified only as far as POST /operator/rotate-keys succeeding
-#     (proves herald's own operator API + admin-token wiring) -- see the
-#     "Known gap" note for why a full send-and-verify isn't attempted here
+#   - herald: a real key rotation followed by a real invite, verified by
+#     querying herald's own Postgres communication_event table directly
+#     (kubectl exec + psql -- no HTTP status alone can distinguish "sent"
+#     from "decrypted fine but no send adapter configured" from "never
+#     decrypted at all", and the last of those is exactly the bug class
+#     this step exists to catch)
 #
-# Known gap: herald's rotate-keys route successfully pushes its real
-# payload-encryption public key to tower's signet secret path
-# (authstar/tower/heraldPayloadPublicKey, confirmed via herald's own {
-# "rotated": [...] } response), but tower's *own* subsequent bundle fetch
-# never picks it up -- even after a fresh pod restart and repeated
-# `signet repo sync` calls, tower keeps logging "no signet-sourced herald
-# payload-encryption public key configured yet" and falls back to a
-# fresh ephemeral key every boot. That mismatch means any comms.* event
-# tower publishes is encrypted with a key herald can never decrypt --
-# a PERMANENT failure that herald's own comms-consumer.ts (blanket
-# `nack(msg, false, true)` on any ingestCommunication error, no backoff,
-# no dead-lettering, the error itself silently swallowed) turns into an
-# infinite tight redelivery loop -- confirmed live via the RabbitMQ
-# management API showing herald.comms at 700k+ redeliveries in minutes.
-# This script deliberately does NOT create a fresh invite (which would
-# retrigger that loop) until both bugs are fixed:
-#   1. why tower's bundle fetch doesn't see a secret pushed via
-#      signetAdmin.pushSecret soon after a fresh signet repo sync
-#      (signetd-internals question, not something this repo owns)
-#   2. herald/src/lib/comms-consumer.ts should distinguish permanent
-#      failures (decryption, malformed payload) from transient ones
-#      (a momentary store outage) and dead-letter the former instead of
-#      requeuing forever
-# Fix both, then this script's herald step can be extended to create a
-# real invite and verify the resulting communication_snapshot row.
+# Previously blocked on two real bugs, both fixed and live-verified (full
+# writeup in README.md's "A critical, unresolved bug" / "A second, deeper,
+# separate bug" / "A third, distinct bug" sections):
+#   1. signet-clients SDK gap (bytepunx/signet-clients#49): no client could
+#      produce real SOPS ciphertext, so signetAdmin.pushSecret's writes were
+#      silently rejected by signetd's reconciler. Fixed upstream
+#      (encryptForSecret, @bytepunx/signet-client >=0.6.0).
+#   2. herald's own payloadKeyGenerations/unsubscribeKeyGenerations secrets
+#      were git-tracked in this repo's lib-secrets.sh as a static
+#      placeholder AND runtime-managed via rotate-keys -- the reconciler
+#      kept clobbering every real rotation back to generation 1. Fixed by
+#      removing both from git tracking here.
+# A third, separate shutdown-race bug (concurrent app.close() calls able to
+# wedge tower/herald/keep in CrashLoopBackOff) was also found and fixed
+# during re-verification -- see README.md's "A fourth issue" section.
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
@@ -214,28 +207,81 @@ else
 fi
 
 ##############################################################################
-log "step 5/6: herald -- verify operator key-rotation API works"
+log "step 5/6: herald -- full send-and-verify (real rotation, real invite, real decrypt)"
 ##############################################################################
-# Deliberately NOT sending a fresh invite here -- see this script's own
-# header comment for why (an unresolved key-distribution bug turns any new
-# comms.* event into an infinite RabbitMQ redelivery loop until fixed).
-HERALD_OPERATOR_TOKEN="${HERALD_OPERATOR_TOKEN:-}"
-if [[ -n "$HERALD_OPERATOR_TOKEN" ]]; then
-  port_forward herald "$HERALD_LOCAL_PORT" 8080
-  HERALD_URL="http://localhost:${HERALD_LOCAL_PORT}"
-  rotate_response="$(curl -s -X POST "${HERALD_URL}/operator/rotate-keys" \
-    -H "Authorization: Bearer ${HERALD_OPERATOR_TOKEN}" \
-    -H "Content-Type: application/json" \
-    -d '{"keys":["unsubscribe-signing"]}' \
-    -w '\n%{http_code}')"
-  rotate_status="$(echo "$rotate_response" | tail -1)"
-  if [[ "$rotate_status" == "200" ]]; then
-    pass "herald operator key-rotation API (real signet admin push)"
-  else
-    fail "herald key rotation (HTTP $rotate_status): $(echo "$rotate_response" | head -1)"
-  fi
+HERALD_OPERATOR_TOKEN="${HERALD_OPERATOR_TOKEN:-dev-placeholder-LKL0D3M7tKg2ZpRXgB3c29lviezj-cRFBUTSYEWJV7w}"
+port_forward herald "$HERALD_LOCAL_PORT" 8080
+HERALD_URL="http://localhost:${HERALD_LOCAL_PORT}"
+
+rotate_response="$(curl -s -X POST "${HERALD_URL}/operator/rotate-keys" \
+  -H "Authorization: Bearer ${HERALD_OPERATOR_TOKEN}" \
+  -H "Content-Type: application/json" \
+  -d '{"keys":["payload-encryption","unsubscribe-signing"]}' \
+  -w '\n%{http_code}')"
+rotate_status="$(echo "$rotate_response" | tail -1)"
+if [[ "$rotate_status" == "200" ]]; then
+  pass "herald operator key-rotation API (real signet admin push)"
 else
-  log "SKIP: herald step needs HERALD_OPERATOR_TOKEN set -- see README.md for the current dev value"
+  fail "herald key rotation (HTTP $rotate_status): $(echo "$rotate_response" | head -1)"
+fi
+
+# GET /tenants/:tenantSlug/contacts is gated on a portcullis-enriched JWT
+# (request.authstar, populated by portcullis's own header injection --
+# permissions.ts's own comment) -- calling tower directly with the operator
+# bearer token (as every other step here does) can never populate that, so
+# this route isn't reachable from this script. Step 1's tenant provisioning
+# already created the bootstrap admin contact via contactStore.upsert(slug,
+# adminEmail) (provisioning.ts) into tower's own `contacts` table -- query
+# it directly instead, same technique step 5's own herald verification uses
+# below.
+contact_id="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d tower -tA -c \
+  "select id from contacts where tenant = '${TENANT_SLUG}' and email = '${DEX_LOGIN}' limit 1;" 2>/dev/null || echo "")"
+
+if [[ -z "$contact_id" ]]; then
+  fail "herald send-and-verify -- could not resolve bootstrap contact in tower's own contacts table"
+else
+  before_ts="$(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+  invite_response="$(curl -sk -X POST "${TOWER_URL}/operator/tenants/${TENANT_SLUG}/invites" \
+    -H "Authorization: Bearer ${TOWER_OPERATOR_TOKEN}" \
+    -H "X-Operator-Actor: scenario-script" \
+    -H "Content-Type: application/json" \
+    -d "{\"contactId\":\"${contact_id}\"}" \
+    -w '\n%{http_code}')"
+  invite_status="$(echo "$invite_response" | tail -1)"
+
+  if [[ "$invite_status" != "201" ]]; then
+    fail "herald send-and-verify -- invite creation failed (HTTP $invite_status): $(echo "$invite_response" | head -1)"
+  else
+    # Query herald's own communication_event table directly rather than
+    # trusting the invite's 201 alone -- that only proves tower accepted
+    # and published the request, not that herald could decrypt/send it.
+    # "no send adapter configured" is the one expected terminal failure in
+    # this dev cluster (build-app.ts's deliberate no-op adapter); any other
+    # communication.failed reason (a decrypt/key-generation error) means
+    # the SOPS/keyring fix regressed.
+    sql="select content->>'type', content->>'error' from communication_event where created_on > '${before_ts}' and content->>'type' in ('communication.sent','communication.failed') order by created_on desc limit 1;"
+    outcome_type=""
+    outcome_error=""
+    for _ in $(seq 1 10); do
+      row="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d herald -tA -F'|' -c "$sql" 2>/dev/null || echo "")"
+      if [[ -n "$row" ]]; then
+        outcome_type="${row%%|*}"
+        outcome_error="${row#*|}"
+        break
+      fi
+      sleep 1
+    done
+
+    if [[ "$outcome_type" == "communication.sent" ]]; then
+      pass "herald send-and-verify -- real invite decrypted and sent"
+    elif [[ "$outcome_type" == "communication.failed" && "$outcome_error" == "no send adapter configured" ]]; then
+      pass "herald send-and-verify -- real invite decrypted successfully (expected terminal failure: no send adapter configured in this dev cluster)"
+    elif [[ -z "$outcome_type" ]]; then
+      fail "herald send-and-verify -- no communication.sent/communication.failed event appeared within 10s"
+    else
+      fail "herald send-and-verify -- unexpected outcome ($outcome_type): $outcome_error"
+    fi
+  fi
 fi
 
 ##############################################################################
