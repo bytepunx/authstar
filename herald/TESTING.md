@@ -574,8 +574,32 @@ next pass ("sops decrypt: parse sops file: sops metadata not found"). Confirmed 
 `signet-clients` SDK gap spanning every language (including Go's own reference
 implementation), filed as bytepunx/signet-clients#49, and fixed upstream (`encryptForSecret`,
 `@bytepunx/signet-client` >=0.6.0). `pushSecret` now fetches the live SOPS public key
-(`GetSOPSPublicKey`) and calls `encryptForSecret` before building the archive — see
-`authstar-integration`'s own README for live re-verification status.
+(`GetSOPSPublicKey`) and calls `encryptForSecret` before building the archive.
+
+**Update 2**: re-verified live against a fresh cluster — tower now durably receives herald's
+real rotated payload-encryption public key with zero SOPS-decrypt errors. A separate, distinct
+bug surfaced while re-verifying this one: herald's own `payloadKeyGenerations`/
+`unsubscribeKeyGenerations` secrets were git-tracked in `authstar-integration/scripts/
+lib-secrets.sh` as a static single-generation placeholder *and* exclusively runtime-managed via
+`POST /operator/rotate-keys` — signetd's periodic gitops reconciler kept silently reverting
+every real rotation back to generation 1 on its own schedule, independent of whether herald
+itself restarted (a fresh invite right after a real rotation failed with `"no payload key
+generation 2"`, not a decrypt error — herald's own in-process keyring genuinely didn't have
+the generation it had just created). Fixed in `authstar-integration` (not here) by removing
+both from git tracking — this file's own `loadPayloadKeyring`/`loadUnsubscribeKeyring` already
+handled a missing secret gracefully, so nothing needed to change herald-side. Re-verified live:
+a fresh invite now decrypts successfully after a rotation + herald restart, reaching the
+expected `"no send adapter configured"` terminal state. Full writeup in `authstar-integration`'s
+README.
+
+**Update 3**: this same re-verification pass separately found and fixed a shutdown race in
+`src/server.ts` — signet's coordinated-restart wait and this process's own SIGTERM handler
+raced via `Promise.race`, and both could end up calling `app.close()` concurrently when a
+bundle-change restart landed close to an external SIGTERM, hanging the process (Fastify's
+`close()` isn't safe to re-enter mid-flight) until Kubernetes' liveness probe force-killed it —
+reproduced live as a real `CrashLoopBackOff`. Fixed with a `closeOnce()` helper memoizing the
+close promise; re-verified live by deliberately stacking multiple bundle changes and confirming
+a single clean restart instead of a loop.
 
 **Correction to this section's own earlier live-debugging theory, and two more bugs found
 and fixed in the same pass**: the original live diagnosis (recorded in
