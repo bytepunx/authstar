@@ -5,13 +5,14 @@ import { render } from '../lib/mustache-render.js'
 import { resolvePinnedTemplate } from '../lib/template-lookup.js'
 import { processCommunication } from '../lib/send-worker.js'
 import { requirePermission } from '../lib/permissions.js'
+import { communicationActorId } from '../lib/communication-id.js'
 
 // Per design/stories/herald/004-communication-history-opt-outs-and-suppressions.md
 // and the manual-retry route from
 // design/stories/herald/002-send-worker-and-retry.md.
 
 async function fetchCommunication(app: FastifyInstance, tenantSlug: string, id: string): Promise<CommunicationState> {
-  const instance = await app.consequent.fetch('communication', `${tenantSlug}:${id}`)
+  const instance = await app.consequent.fetch('communication', communicationActorId(tenantSlug, id))
   return instance!.state as unknown as CommunicationState
 }
 
@@ -182,7 +183,7 @@ const communicationRoutes: FastifyPluginAsync = async function (app: FastifyInst
       return reply.code(404).send()
     }
 
-    const results = await app.consequent.handle(`${tenantSlug}:${id}`, 'communication.resetForRetry', {})
+    const results = await app.consequent.handle(communicationActorId(tenantSlug, id), 'communication.resetForRetry', {})
     const rejection = results.find((r) => r?.rejected)
     if (rejection) {
       return reply.code(409).send({ error: rejection.reason?.message })

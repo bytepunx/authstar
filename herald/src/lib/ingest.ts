@@ -1,4 +1,5 @@
 import { processCommunication, type SendWorkerDeps } from './send-worker.js'
+import { communicationActorId } from './communication-id.js'
 
 // Per design/stories/herald/002-send-worker-and-retry.md.
 
@@ -26,7 +27,7 @@ export interface IngestMessage {
 // redelivered message with the same `idempotencyKey` is a safe no-op (the
 // `create` command rejects, we just move on), never a duplicate send.
 export async function ingestCommunication(deps: SendWorkerDeps, message: IngestMessage): Promise<void> {
-  const key = `${message.tenant}:${message.idempotencyKey}`
+  const key = communicationActorId(message.tenant, message.idempotencyKey)
   const existing = await deps.consequent.fetch('communication', key)
   const existingState = existing?.state as { createdAt?: string } | undefined
 

@@ -7,6 +7,7 @@ import { PayloadKeyring } from '../../src/lib/payload-crypto.js'
 import { UnsubscribeKeyring } from '../../src/lib/unsubscribe-token.js'
 import { processCommunication, runRetrySweep, type SendWorkerDeps } from '../../src/lib/send-worker.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { communicationActorId } from '../../src/lib/communication-id.js'
 
 // Behavior tier: design/stories/herald/002-send-worker-and-retry.md's core
 // logic, tested directly against the worker module rather than through
@@ -44,7 +45,7 @@ describe('send worker -- core logic', () => {
     })
 
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'to@example.com', { name: 'Ada' })
-    await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
+    await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category, type,
       title: 'Test', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email',
     })
@@ -74,7 +75,7 @@ describe('send worker -- core logic', () => {
     expect(adapter.sent[0].subject).toBe('Hi Ada')
     expect(adapter.sent[0].body).toBe('Welcome Ada!')
 
-    const state = await consequent.fetch('communication', `${tenant}:${idempotencyKey}`)
+    const state = await consequent.fetch('communication', communicationActorId(tenant, idempotencyKey))
     expect((state!.state as { status: string }).status).toBe('sent')
     expect((state!.state as { providerMessageId: string }).providerMessageId).toBe('msg-1')
   })
@@ -111,7 +112,7 @@ describe('send worker -- core logic', () => {
 
     expect(outcome).toBe('suppressed')
     expect(adapter.sent).toHaveLength(0)
-    const state = await consequent.fetch('communication', `${tenant}:${idempotencyKey}`)
+    const state = await consequent.fetch('communication', communicationActorId(tenant, idempotencyKey))
     expect((state!.state as { status: string }).status).toBe('suppressed')
   })
 
@@ -158,7 +159,7 @@ describe('send worker -- core logic', () => {
     const outcome = await processCommunication(deps(adapter, { now: () => now }), tenant, idempotencyKey)
 
     expect(outcome).toBe('retry-scheduled')
-    const state = await consequent.fetch('communication', `${tenant}:${idempotencyKey}`)
+    const state = await consequent.fetch('communication', communicationActorId(tenant, idempotencyKey))
     const s = state!.state as { status: string, retryCount: number, nextRetryAt: string, lastError: string }
     expect(s.status).toBe('pending')
     expect(s.retryCount).toBe(1)
@@ -173,7 +174,7 @@ describe('send worker -- core logic', () => {
     const outcome = await processCommunication(deps(adapter), tenant, idempotencyKey)
 
     expect(outcome).toBe('failed')
-    const state = await consequent.fetch('communication', `${tenant}:${idempotencyKey}`)
+    const state = await consequent.fetch('communication', communicationActorId(tenant, idempotencyKey))
     const s = state!.state as { status: string, nextRetryAt: string | null, error: string | null }
     expect(s.status).toBe('failed')
     expect(s.nextRetryAt).toBeNull()
@@ -191,7 +192,7 @@ describe('send worker -- core logic', () => {
     // Third attempt: retryCount(2) is no longer < maxRetries(2) -- exhausted.
     expect(await processCommunication(wDeps, tenant, idempotencyKey)).toBe('failed')
 
-    const state = await consequent.fetch('communication', `${tenant}:${idempotencyKey}`)
+    const state = await consequent.fetch('communication', communicationActorId(tenant, idempotencyKey))
     expect((state!.state as { status: string }).status).toBe('failed')
   })
 
@@ -225,7 +226,7 @@ describe('send worker -- core logic', () => {
       const outcomes = await runRetrySweep(deps(adapter))
 
       expect(outcomes).toContain('sent')
-      const state = await consequent.fetch('communication', `${tenant}:${idempotencyKey}`)
+      const state = await consequent.fetch('communication', communicationActorId(tenant, idempotencyKey))
       expect((state!.state as { status: string }).status).toBe('sent')
     })
 
@@ -238,7 +239,7 @@ describe('send worker -- core logic', () => {
       await runRetrySweep(deps(sweepAdapter))
 
       expect(sweepAdapter.sent).toHaveLength(0)
-      const state = await consequent.fetch('communication', `${tenant}:${idempotencyKey}`)
+      const state = await consequent.fetch('communication', communicationActorId(tenant, idempotencyKey))
       expect((state!.state as { status: string }).status).toBe('pending')
     })
   })

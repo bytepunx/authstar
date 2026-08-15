@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import { purgeExpiredPayloads } from '../../src/lib/retention-purge.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
+import { communicationActorId } from '../../src/lib/communication-id.js'
 
 // Behavior tier for the retention purge scheduled sweep (ADR 0029). Tests
 // the run-once core directly (`purgeExpiredPayloads`) -- the standalone
@@ -15,22 +16,20 @@ async function createCommunicationType(consequent: ConsequentApi, tenant: string
   })
 }
 
-// `communication`'s real business key is `${tenant}:${idempotencyKey}`,
-// computed independently by both the caller (see `ingest.ts`'s own
-// `ingestCommunication`) and the `created` event handler itself -- callers
-// must pass this same composite string as the id to `consequent.handle`,
-// not a bare idempotencyKey, or the actor ends up stored under one id
-// while its own `state.key` field reports a different one (found the hard
-// way debugging this spec: a purge issued against `state.key` read back
-// from a `find()` result silently created and "purged" an unrelated,
-// orphaned actor instance instead of the real one, since it had never
-// been used as an id before).
-function communicationKey(tenant: string, idempotencyKey: string): string {
-  return `${tenant}:${idempotencyKey}`
-}
-
+// `communication`'s real actor id is `communicationActorId(tenant,
+// idempotencyKey)` (a SHA-1 hash, not the raw composite string -- see that
+// function's own header comment for why a raw `${tenant}:${idempotencyKey}`
+// composite isn't safe as a Postgres id). Callers must pass this same
+// value to `consequent.handle`, not a bare idempotencyKey or the raw
+// composite, or the actor ends up stored under one id while its own
+// `state.key` field (still the human-readable composite, informational
+// only) reports a different one (found the hard way debugging this spec,
+// before the hash-based id existed: a purge issued against `state.key`
+// read back from a `find()` result silently created and "purged" an
+// unrelated, orphaned actor instance instead of the real one, since it had
+// never been used as an id before).
 async function createCommunication(consequent: ConsequentApi, idempotencyKey: string, overrides: { tenant: string, type: string }) {
-  const key = communicationKey(overrides.tenant, idempotencyKey)
+  const key = communicationActorId(overrides.tenant, idempotencyKey)
   await consequent.handle(key, 'communication.create', {
     idempotencyKey,
     tenant: overrides.tenant,

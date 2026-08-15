@@ -21,13 +21,22 @@ export interface SignetAdminOptions {
 }
 
 // Builds a minimal single-file USTAR archive (no external `tar` dependency
-// needed for one small file) containing `secrets/<key>.yaml`, then gzips
-// it -- the wire shape `GitOpsServiceClient.syncBundle` documents. Byte-
-// for-byte the same construction as tower's own `signet-admin.ts` -- see
-// that file's header comment for the fuller rationale (including the same
-// plaintext-not-SOPS-encrypted known gap, unchanged here).
-function buildSecretArchive(targetService: string, key: string, value: string): Buffer {
-  const path = `secrets/${targetService}/${key}.yaml`
+// needed for one small file) containing `secrets/<namespace>/<service>/
+// <key>.yaml`, then gzips it -- the wire shape `GitOpsServiceClient.
+// syncBundle` documents. Byte-for-byte the same construction as tower's
+// own `signet-admin.ts` -- see that file's header comment for the fuller
+// rationale (including the same plaintext-not-SOPS-encrypted known gap,
+// unchanged here), AND for a real incident this exact file caused: the
+// path used to omit the namespace segment entirely (`opts.namespace` was
+// received and explicitly discarded, `void opts.namespace`), which
+// signetd's real `ParseSecretPath` silently rejects -- the RPC still
+// resolves successfully, so `POST /operator/rotate-keys` reported success
+// while tower never actually received herald's public key. Fixed
+// identically in both files; see tower's own signet-admin.ts and
+// syncBundleFailure for the other half of that fix (checking the
+// response, not just the transport-level error).
+export function buildSecretArchive(namespace: string, targetService: string, key: string, value: string): Buffer {
+  const path = `secrets/${namespace}/${targetService}/${key}.yaml`
   const content = Buffer.from(`value: ${JSON.stringify(value)}\n`, 'utf8')
 
   const header = Buffer.alloc(512)
@@ -53,6 +62,15 @@ function buildSecretArchive(targetService: string, key: string, value: string): 
   return gzipSync(tar)
 }
 
+// Pure so it's directly unit-testable against a fake `SyncBundleResponse`
+// without a real (or mocked) gRPC client. Identical to tower's own
+// signet-admin.ts export of the same name.
+export function syncBundleFailure(response: { errors: string[], secretsAdded: number, secretsUpdated: number }): string | null {
+  if (response.errors.length > 0) return response.errors.join('; ')
+  if (response.secretsAdded + response.secretsUpdated === 0) return 'no secret was added or updated'
+  return null
+}
+
 export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
   // plaintext: true is required -- see tower's own signet-admin.ts header
   // comment for the confirmed-against-a-live-cluster reasoning, unchanged
@@ -62,17 +80,24 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
   return {
     pushSecret(targetService, key, value) {
       return new Promise<void>((resolve, reject) => {
-        const call = client.syncBundle((err) => {
-          if (err) reject(err)
-          else resolve()
+        const call = client.syncBundle((err, response) => {
+          if (err) {
+            reject(err)
+            return
+          }
+          const failure = syncBundleFailure(response)
+          if (failure) {
+            reject(new Error(`signet rejected pushSecret(${targetService}, ${key}): ${failure}`))
+          } else {
+            resolve()
+          }
         })
         call.write({
           header: { secretsPath: 'secrets/', headSha: '', configPath: '' },
         } as never)
-        const archive = buildSecretArchive(targetService, key, value)
+        const archive = buildSecretArchive(opts.namespace, targetService, key, value)
         call.write({ data: archive } as never)
         call.end()
-        void opts.namespace
       })
     },
   }

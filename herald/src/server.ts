@@ -197,6 +197,7 @@ async function main(): Promise<void> {
   const commsConsumer: CommsConsumer = await buildCommsConsumer({
     url: rabbitmqUrl,
     deps: app.sendWorkerDeps,
+    log: (message) => app.log.error(message),
   })
   const contactLifecycleConsumer: ContactLifecycleConsumer = await buildContactLifecycleConsumer({
     url: rabbitmqUrl,

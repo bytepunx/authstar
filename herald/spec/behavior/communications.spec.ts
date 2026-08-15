@@ -8,6 +8,7 @@ import { FakeSendAdapter } from '../lib/fake-send-adapter.js'
 import { PayloadKeyring } from '../../src/lib/payload-crypto.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
+import { communicationActorId } from '../../src/lib/communication-id.js'
 
 // Behavior tier: design/stories/herald/004-communication-history-opt-outs-and-suppressions.md's
 // communication history routes, plus the manual-retry route from Story 002.
@@ -53,7 +54,7 @@ describe('communication history -- API contract', () => {
       payload: { subjectTemplate: 'Hi {{name}}', bodyTemplate: 'Welcome, {{name}}!' },
     })
 
-    await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
+    await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
       idempotencyKey,
       tenant,
       application: 'app1',
@@ -157,7 +158,7 @@ describe('communication history -- API contract', () => {
       // purged the payload -- drives the actor's own `purgePayload` command
       // directly, the same way tower's pilot drove setup steps with no
       // route of their own.
-      const key = `${tenant}:${idempotencyKey}`
+      const key = communicationActorId(tenant, idempotencyKey)
       await consequent.handle(key, 'communication.purgePayload', {})
 
       const response = await app.inject({ headers, method: 'GET', url: `/tenants/${tenant}/communications/${idempotencyKey}/render` })
@@ -171,7 +172,7 @@ describe('communication history -- API contract', () => {
   describe('PATCH /tenants/:tenantSlug/communications/:id -- manual retry', () => {
     it('resets a failed communication back to pending and re-attempts the send', async () => {
       const { tenant, idempotencyKey } = await seedCommunication()
-      const key = `${tenant}:${idempotencyKey}`
+      const key = communicationActorId(tenant, idempotencyKey)
       // Drive straight to `failed` via a permanent-failure adapter result,
       // then flip the adapter to succeed before retrying -- exercises the
       // real command guard (`resetForRetry` only reachable from `failed`)

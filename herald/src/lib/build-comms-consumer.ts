@@ -23,6 +23,7 @@ export interface CommsConsumerOptions {
   deps: SendWorkerDeps
   exchange?: string
   queue?: string
+  log?: (message: string) => void
 }
 
 export interface Consumer {
@@ -55,7 +56,7 @@ export default async function buildCommsConsumer(options: CommsConsumerOptions):
   await channel.assertQueue(queue, { durable: true })
   await channel.bindQueue(queue, exchange, ROUTING_PATTERN)
 
-  await startCommsConsumer(channel, queue, options.deps)
+  await startCommsConsumer(channel, queue, options.deps, options.log)
 
   return {
     async close() {

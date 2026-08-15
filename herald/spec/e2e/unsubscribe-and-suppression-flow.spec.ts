@@ -9,6 +9,7 @@ import { PayloadKeyring } from '../../src/lib/payload-crypto.js'
 import { processCommunication } from '../../src/lib/send-worker.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
+import { communicationActorId } from '../../src/lib/communication-id.js'
 
 // End-to-end tier: a realistic sequence spanning marketing send -> click
 // unsubscribe -> a later send for the same category is suppressed, and
@@ -47,7 +48,7 @@ describe('unsubscribe and suppression, end to end', () => {
     await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type, category: 'marketing' } })
     await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types/${type}/templates`, payload: { subjectTemplate: 'Sale!', bodyTemplate: 'Big sale, {{name}}' } })
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'shopper@example.com', { name: 'Sam' })
-    await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
+    await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'marketing', type,
       title: 'Sale', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email',
     })
@@ -98,7 +99,7 @@ describe('unsubscribe and suppression, end to end', () => {
     await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type } })
     await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types/${type}/templates`, payload: { subjectTemplate: 'Hi', bodyTemplate: 'Body' } })
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'x@example.com', { name: 'X' })
-    await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
+    await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional', type,
       title: 'x', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email',
     })

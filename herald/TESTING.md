@@ -535,6 +535,90 @@ distinguishes "never created" from "created, all categories removed" today), but
 that ever changes (e.g. an audit view that lists *whether* a contact ever had an opt-out record at
 all, not just which categories), this purge path would need revisiting.
 
+## New finding: `signet-admin.ts`'s `pushSecret` silently no-op'd on every real call
+
+### 13. A malformed tar path + an unchecked RPC response made every `pushSecret` call succeed without writing anything
+
+Found live, running `authstar-integration`'s golden-path scenario against a real cluster:
+`POST /operator/rotate-keys` reported success (`{"rotated":[{"key":"payload-encryption",
+"version":2}],"failed":[]}`), but tower's own subsequent bundle fetch never saw the pushed
+`heraldPayloadPublicKey` secret — even from a brand-new tower pod, restarted well after the
+push completed, with an explicit `signet repo sync` triggered in between.
+
+Traced all the way through signetd's own real Go source (`~/git/signet`) before finding the
+actual defect — signetd itself behaves correctly throughout: `GetServiceBundle` reads the same
+table `SyncBundle`/`PutSecret` writes to, synchronously, with no cache, TTL, or reconcile lag
+anywhere in between. The bug was entirely in this file: `buildSecretArchive` built the tar
+entry path as `secrets/<service>/<key>.yaml` (2 components), but signetd's real
+`ParseSecretPath` (`internal/gitops/path.go`) requires exactly 3:
+`<namespace>/<service>/<name>.yaml`. `opts.namespace` was received and then explicitly
+discarded (`void opts.namespace`) instead of used. signetd doesn't fail the RPC for an
+unrecognised path shape — it silently skips the file and reports the problem only in
+`SyncBundleResponse.errors`/`secretsAdded`, which `pushSecret`'s callback never inspected
+(only the transport-level `err`).
+
+No existing test caught this — every one injects a fake `SignetAdmin`, matching this file's
+own header comment ("behavior/e2e tests inject a fake"), so the real wire format was never
+exercised until a live signetd was. Fixed identically in both this file and tower's own
+`signet-admin.ts` (byte-for-byte the same construction, byte-for-byte the same bug):
+`buildSecretArchive` now takes and uses `namespace`, and the new pure `syncBundleFailure`
+helper (checking `errors`/`secretsAdded`/`secretsUpdated`) is applied to the RPC response
+before resolving. Both are exported and directly unit-tested
+(`spec/behavior/signet-admin.spec.ts`) — the archive test parses the real gzipped tar bytes
+and asserts the path shape matches signetd's own contract, not just "looks plausible".
+
+**Correction to this section's own earlier live-debugging theory, and two more bugs found
+and fixed in the same pass**: the original live diagnosis (recorded in
+`authstar-integration`'s own README) attributed the 1,300-messages/second infinite
+RabbitMQ redelivery loop to tower encrypting every comms event with an undecryptable
+ephemeral key, because herald's real public key never reached it. That *is* a real,
+separately-fixed bug (above) — but re-reading `send-worker.ts`'s actual code afterward
+found it doesn't explain the loop: a decryption failure inside `processCommunication`
+(`payloadKeyring.get()` miss, or `decryptPayload` throwing) is caught internally and
+turned into a normal `communication.markFailed` outcome, never a thrown exception —
+`ingestCommunication` would `ack`, not `nack`, on that path.
+
+The **actual** cause: `communication`'s composite actor id (previously the raw
+`${tenant}:${idempotencyKey}` string) routinely exceeds `consequent-postgres`'s
+`character(42)` id column — the exact same platform-level constraint tower's own
+TESTING.md already documents hitting for contact ids and invite tokens. tower's real
+invite-sent publish uses `idempotencyKey: \`invite:${token}:sent\`` (52 characters on its
+own, `token` already 40 hex chars) — `${tenant}:${idempotencyKey}` for a real tenant
+routinely lands at 50-60+ characters. `communication.create`'s underlying Postgres INSERT
+failed with "value too long for type character(42)" identically on every single
+redelivery (a genuinely permanent, deterministic failure, not transient), and
+`comms-consumer.ts`'s `nack(msg, false, true)` on *any* `ingestCommunication` error (with
+the error itself silently swallowed, `.catch(() => {...})`) turned that into an invisible,
+unbounded loop.
+
+Both fixed in this same pass:
+- **`src/lib/communication-id.ts`** (new) — `communicationActorId(tenant, idempotencyKey)`
+  hashes the composite down to a fixed 40-hex-char SHA-1 digest (a hash, not a truncation,
+  to avoid two distinct long `idempotencyKey`s colliding after a naive `.slice()`). Every
+  call site that used to construct the raw composite directly now goes through this one
+  function: `ingest.ts`, `send-worker.ts#processCommunication`, `communications.ts`'s two
+  route handlers, and — found along the way, a *third* real bug of the identical shape —
+  `retention-purge.ts` and `contact-lifecycle-consumer.ts#purgeCommunicationPayloads` were
+  both issuing their `communication.purgePayload` command against `state.key` (a redundant,
+  human-readable informational field set once in `created`'s event handler and never used
+  as a lookup anywhere else), which after this fix no longer matches the real actor id —
+  silently creating and "purging" an unrelated orphaned actor instead of the real one. Both
+  now recompute `communicationActorId(state.tenant, state.idempotencyKey)` instead. A real,
+  tower-shaped long `idempotencyKey` is now exercised directly against real Postgres
+  (`spec/integration/herald.integration.spec.ts`), not just the in-memory tier, since that's
+  the only way the `character(42)` constraint itself gets exercised at all.
+- **`comms-consumer.ts`** hardened regardless, since no caught `Error` can be reliably
+  classified transient-vs-permanent from this function alone: a fresh message gets exactly
+  one requeue (`nack(msg, false, true)`); a message that comes back already marked
+  `msg.fields.redelivered` (standard AMQP, no new infrastructure needed) is dead-lettered
+  instead of requeued again; every failure is logged (`log` defaults to `console.error`,
+  not the previous silent no-op). Bounds any *future* permanent-failure class to at most 2
+  delivery attempts instead of an unbounded loop, and makes sure the next one is visible in
+  logs immediately rather than requiring a live RabbitMQ management-API investigation to
+  even notice. Directly unit-tested against a fake `ChannelLike`
+  (`spec/behavior/comms-consumer.spec.ts`) — no real broker needed to prove the bounded
+  retry, dead-letter, and logging behavior all work.
+
 ## Practical implication for the routes/worker as shipped
 
 Every route in this codebase is written the *correct*, `find()`-based way (matching what Story

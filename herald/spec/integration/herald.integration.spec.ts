@@ -13,6 +13,7 @@ import { uniqueSlug } from '../lib/unique.js'
 import type { FastifyInstance } from 'fastify'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
+import { communicationActorId } from '../../src/lib/communication-id.js'
 
 // Integration tier: `consequent`'s real `consequent-postgres` adapters
 // against a real, disposable Postgres (testcontainers) -- proves the
@@ -137,7 +138,7 @@ describe('herald -- real Postgres', () => {
     await app.inject({ headers: suppressionsHeaders, method: 'POST', url: `/tenants/${tenant}/suppressions`, payload: { contactId } })
 
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'x@example.com', {})
-    await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
+    await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional', type: 'invite-sent',
       title: 'x', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email',
     })
@@ -151,6 +152,44 @@ describe('herald -- real Postgres', () => {
     // works too.
     const outcome = await processCommunication(app.sendWorkerDeps, tenant, idempotencyKey)
     expect(outcome).toBe('suppressed')
+  })
+
+  it('round-trips a real, tower-shaped long idempotencyKey against real Postgres (regression: consequent-postgres stores id as character(42))', async () => {
+    // tower's real invite-sent publish (routes/invites.ts, provisioning.ts)
+    // uses `idempotencyKey: \`invite:${token}:sent\`` where `token` is
+    // already a 40-hex-char id -- 52 characters on its own, well past what
+    // a raw `${tenant}:${idempotencyKey}` composite could ever fit in
+    // consequent-postgres's `character(42)` id column. Confirmed live: this
+    // is what turned a single real invite into an infinite RabbitMQ
+    // redelivery loop against a real cluster (comms-consumer.ts nacks with
+    // requeue on any ingestCommunication error, and the underlying INSERT
+    // failed identically -- "value too long for type character(42)" -- on
+    // every single redelivery). communicationActorId hashes the composite
+    // down to a fixed 40-hex-char digest specifically to fit; this test
+    // proves that against the real column constraint, not just in-memory.
+    const tenant = uniqueSlug('acme')
+    const contactId = uniqueSlug('contact')
+    const token = 'f5fb9355ca61afe7f613078230a935c84bdf376a' // 40 hex chars, matching tower's real token length
+    const idempotencyKey = `invite:${token}:sent`
+    expect(`${tenant}:${idempotencyKey}`.length).toBeGreaterThan(42) // the composite this bug used to use, unfit
+
+    await app.inject({ headers: manageHeaders, method: 'POST', url: `/tenants/${tenant}/communication-types`, payload: { type: 'invite-sent' } })
+    await app.inject({
+      headers: manageHeaders,
+      method: 'POST',
+      url: `/tenants/${tenant}/communication-types/invite-sent/templates`,
+      payload: { subjectTemplate: 'Hi', bodyTemplate: 'Body' },
+    })
+
+    const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'x@example.com', {})
+    const results = await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
+      idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional', type: 'invite-sent',
+      title: 'x', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email',
+    })
+    expect(results.some((r) => r?.rejected)).toBe(false)
+
+    const outcome = await processCommunication(app.sendWorkerDeps, tenant, idempotencyKey)
+    expect(outcome).toBe('sent')
   })
 
   // The following three depend on `consequent.find()` against real
@@ -214,7 +253,7 @@ describe('herald -- real Postgres', () => {
     })
 
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'pg-recipient@example.com', { name: 'Postgres' })
-    await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
+    await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional', type: 'invite-sent',
       title: 'Invite', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email',
     })

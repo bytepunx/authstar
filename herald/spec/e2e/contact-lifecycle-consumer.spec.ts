@@ -13,6 +13,7 @@ import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import type { CommunicationState } from '../../src/actors/communication_actor.js'
 import type { OptOutState } from '../../src/actors/opt_out_actor.js'
 import type { SuppressionState } from '../../src/actors/suppression_actor.js'
+import { communicationActorId } from '../../src/lib/communication-id.js'
 
 // End-to-end tier, same shape as `comms-ingestion-and-delivery.spec.ts`:
 // the full RabbitMQ-shaped path for herald's new subscriber side of the
@@ -81,7 +82,7 @@ describe('contact lifecycle consumer -- contact.purged / herald.contact.migrated
     const tenant = uniqueSlug('acme')
     const contactId = uniqueSlug('contact')
     const idempotencyKey = uniqueSlug('idem')
-    const key = `${tenant}:${idempotencyKey}`
+    const key = communicationActorId(tenant, idempotencyKey)
 
     await consequent.handle(key, 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional',
@@ -127,7 +128,7 @@ describe('contact lifecycle consumer -- contact.purged / herald.contact.migrated
     const tenant = uniqueSlug('acme')
     const contactId = uniqueSlug('contact')
     const idempotencyKey = uniqueSlug('idem')
-    const key = `${tenant}:${idempotencyKey}`
+    const key = communicationActorId(tenant, idempotencyKey)
 
     await consequent.handle(key, 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional',

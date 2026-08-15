@@ -2,6 +2,7 @@ import type { ConsequentApi } from './consequent-types.js'
 import type { CommunicationState } from '../actors/communication_actor.js'
 import type { SendingConfigState } from '../actors/sending_config_actor.js'
 import { decryptPayload, deserializeEnvelope, type PayloadKeyring } from './payload-crypto.js'
+import { communicationActorId } from './communication-id.js'
 import { render } from './mustache-render.js'
 import { resolvePinnedTemplate } from './template-lookup.js'
 import { issueToken, type UnsubscribeKeyring } from './unsubscribe-token.js'
@@ -75,7 +76,7 @@ async function isBlocked(consequent: ConsequentApi, state: CommunicationState): 
 
 export async function processCommunication(deps: SendWorkerDeps, tenant: string, idempotencyKey: string): Promise<ProcessOutcome> {
   const now = deps.now ?? (() => new Date())
-  const key = `${tenant}:${idempotencyKey}`
+  const key = communicationActorId(tenant, idempotencyKey)
   const instance = await deps.consequent.fetch('communication', key)
   const state = instance?.state as unknown as CommunicationState | undefined
   if (!state?.createdAt) {

@@ -1,6 +1,7 @@
 import type { ConsequentApi } from './consequent-types.js'
 import type { CommunicationTypeState } from '../actors/communication_type_actor.js'
 import type { CommunicationState } from '../actors/communication_actor.js'
+import { communicationActorId } from './communication-id.js'
 
 // Per design/decisions/0029-herald-payload-retention.md's "Purging is a
 // scheduled sweep, not a reactive mechanism" -- "the same operational
@@ -68,8 +69,21 @@ export async function purgeExpiredPayloads(
       if (communication.payloadPurgedAt || !communication.encryptedPayload) continue
       if (!isPastRetention(communication, communicationType.retentionDays, now)) continue
 
+      // `communication.key` is a redundant, human-readable informational
+      // field only (`"<tenant>:<idempotencyKey>"`, set once in `created`'s
+      // event handler and never used as a lookup elsewhere) -- it is NOT
+      // the actor's real id, which is `communicationActorId(tenant,
+      // idempotencyKey)` (a hash, since the raw composite can exceed
+      // consequent-postgres's `character(42)` id column -- see that
+      // function's own header comment). Using `communication.key` here
+      // directly was a real bug: it silently created and "purged" an
+      // unrelated, never-before-used orphaned actor instance instead of
+      // the real one, since a `consequent.handle()` call against an id
+      // matching no existing actor is indistinguishable from a legitimate
+      // first command to a brand-new one.
+      const actorId = communicationActorId(communication.tenant, communication.idempotencyKey)
       try {
-        const results = await consequent.handle(communication.key, 'communication.purgePayload', {})
+        const results = await consequent.handle(actorId, 'communication.purgePayload', {})
         const rejection = results.find((r) => r?.rejected)
         if (rejection) {
           result.errors.push({ key: communication.key, tenant: communication.tenant, error: rejection.reason?.message ?? 'rejected' })

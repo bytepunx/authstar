@@ -3,6 +3,7 @@ import type { Publisher } from './publisher.js'
 import type { OptOutState } from '../actors/opt_out_actor.js'
 import type { SuppressionState } from '../actors/suppression_actor.js'
 import type { CommunicationState } from '../actors/communication_actor.js'
+import { communicationActorId } from './communication-id.js'
 
 // Herald's subscriber side of the erasure/lifecycle cascade -- explicitly
 // out of scope in Story 001/004's own "Not Covered Here" sections (see
@@ -116,7 +117,12 @@ async function purgeCommunicationPayloads(consequent: ConsequentApi, tenant: str
   for (const instance of instances) {
     const state = instance.state as unknown as CommunicationState
     if (state.payloadPurgedAt) continue // already purged -- idempotent redelivery, not an error
-    const results = await consequent.handle(state.key, 'communication.purgePayload', {})
+    // state.key is a redundant, human-readable informational field only,
+    // not the actor's real id -- see retention-purge.ts's own comment
+    // (the identical bug, found and fixed in the same pass) for the full
+    // explanation of why `communicationActorId` must be recomputed here
+    // instead.
+    const results = await consequent.handle(communicationActorId(state.tenant, state.idempotencyKey), 'communication.purgePayload', {})
     const rejection = results.find((r) => r?.rejected)
     if (rejection) continue // lost a race with another redelivery purging the same record -- fine
   }

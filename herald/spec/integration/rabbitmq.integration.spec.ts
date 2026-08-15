@@ -14,6 +14,7 @@ import type { Publisher } from '../../src/lib/publisher.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import type { CommunicationState } from '../../src/actors/communication_actor.js'
 import type { OptOutState } from '../../src/actors/opt_out_actor.js'
+import { communicationActorId } from '../../src/lib/communication-id.js'
 
 // Bonus integration coverage: the real `amqplib` wiring
 // (`build-comms-consumer.ts`/`build-contact-lifecycle-consumer.ts`) against
@@ -123,7 +124,7 @@ describe('herald -- real RabbitMQ', () => {
     const type = uniqueSlug('invite-sent')
     const idempotencyKey = uniqueSlug('idem')
     const contactId = uniqueSlug('contact')
-    const key = `${tenant}:${idempotencyKey}`
+    const key = communicationActorId(tenant, idempotencyKey)
 
     // Deliberately no communicationType/template setup -- this test's job
     // is proving the real broker/exchange/queue/binding delivers the
@@ -164,7 +165,7 @@ describe('herald -- real RabbitMQ', () => {
     const tenant = uniqueSlug('acme')
     const idempotencyKey = uniqueSlug('idem')
     const contactId = uniqueSlug('contact')
-    const key = `${tenant}:${idempotencyKey}`
+    const key = communicationActorId(tenant, idempotencyKey)
 
     await publishRaw('comms.transactional.whatever', Buffer.from('{not valid json'))
 
@@ -186,7 +187,7 @@ describe('herald -- real RabbitMQ', () => {
     const tenant = uniqueSlug('acme')
     const contactId = uniqueSlug('contact')
     const idempotencyKey = uniqueSlug('idem')
-    const key = `${tenant}:${idempotencyKey}`
+    const key = communicationActorId(tenant, idempotencyKey)
 
     await consequent.handle(key, 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional',

@@ -9,6 +9,7 @@ import { PayloadKeyring } from '../../src/lib/payload-crypto.js'
 import { processCommunication } from '../../src/lib/send-worker.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
+import { communicationActorId } from '../../src/lib/communication-id.js'
 
 // End-to-end tier: Story 003's "editing a template creates a new version,
 // the pinned version on a `communication` stays what it was at creation
@@ -57,7 +58,7 @@ describe('template versioning -- edits never retroactively change a pinned send'
 
     const idempotencyKey = uniqueSlug('idem')
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'x@example.com', { name: 'Ada' })
-    await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
+    await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional', type,
       title: 'x', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email',
     })
@@ -107,7 +108,7 @@ describe('template versioning -- edits never retroactively change a pinned send'
 
     const idempotencyKey = uniqueSlug('idem')
     const { encryptedPayload, payloadKeyVersion } = buildEncryptedPayload(payloadKeyring, 'x@example.com', {})
-    await consequent.handle(`${tenant}:${idempotencyKey}`, 'communication.create', {
+    await consequent.handle(communicationActorId(tenant, idempotencyKey), 'communication.create', {
       idempotencyKey, tenant, application: 'app1', contactId, category: 'transactional', type,
       title: 'x', templateVersion: 1, encryptedPayload, payloadKeyVersion, channel: 'email',
     })
