@@ -169,8 +169,22 @@ function rejectDuplicateApplication() {
   return Promise.reject(new Error('application slug already exists for this tenant'))
 }
 
+// Story 004: "Rejects if name already exists (active or removed) under
+// this tenant -- a removed provider's name isn't reusable, since its key
+// must stay a stable historical reference." `tenant.providers` is
+// append-only (never pruned on removal, same as `tenant.applications`), so
+// checking every entry ever added -- not just currently-active ones --
+// correctly captures "active or removed" in one check.
+function providerNameNotTaken(tenant: TenantState, command: AddProviderCommand) {
+  return !tenant.providers.some((p) => p.name === command.name)
+}
+
 function addProvider(_tenant: TenantState, command: AddProviderCommand) {
   return { type: 'tenant.provider-added', name: command.name }
+}
+
+function rejectDuplicateProvider() {
+  return Promise.reject(new Error('provider name already exists for this tenant'))
 }
 
 function setSeatLimit(_tenant: TenantState, command: SetSeatLimitCommand) {
@@ -267,7 +281,10 @@ export default function tenantActor() {
         { when: slugNotTaken, then: addApplication },
         rejectDuplicateApplication,
       ],
-      'add-provider': addProvider,
+      'add-provider': [
+        { when: providerNameNotTaken, then: addProvider },
+        rejectDuplicateProvider,
+      ],
       'set-seat-limit': setSeatLimit,
       'mark-secrets-provisioned': markSecretsProvisioned,
     },

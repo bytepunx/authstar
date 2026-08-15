@@ -501,10 +501,10 @@ notes, rather than left unstated):
   reference into `tenant`'s own embedded array) rather than using `consequent`'s own
   `aggregateFrom` mechanism (`manager.js`'s `getSourceIds`/`onActor`), which infers source actor
   ids from state shapes it never gets a chance to see for a same-request child creation. See
-  `tenant_actor.ts`'s header comment for the full rationale. `add-application` now has a real,
-  race-free duplicate-slug rejection guard (`slugNotTaken`, added alongside `applications.ts` —
-  see below) — `add-provider` does not yet, since no route calls it outside `provisioning.ts`'s
-  own already-guarded default-provider seeding.
+  `tenant_actor.ts`'s header comment for the full rationale. Both `add-application` and
+  `add-provider` now have a real, race-free duplicate-name rejection guard (`slugNotTaken`/
+  `providerNameNotTaken`, the latter added alongside `routes/providers.ts` -- Story 013's own
+  dependency chain needed the Providers half of Story 004 built, not just Applications).
 - **Identity-alias garbage collection** (ADR 0028) — an aliased older-generation `identity`
   record is created but nothing ever prunes it after its retention window closes; no such sweep
   is designed anywhere in the source docs either.
@@ -523,3 +523,56 @@ notes, rather than left unstated):
 - **Usage-record writes** (`account.update-usage`) — the command/event exist (symmetry with the
   `usage` field `/enrich` reports) but nothing calls it yet; no service publishes usage events to
   tower in this pass.
+
+## Story 013 (operator API) — the Providers half of Story 004, plus the whole operator route tree
+
+Story 013 depends on Stories 004/005/007/010/011, and 004's own Providers half ("add, edit,
+rotate secret, remove") had never actually been built — only `provider.create` existed, used
+solely by `provisioning.ts`'s default-provider seeding. Building both together, in dependency
+order:
+
+- **`src/routes/providers.ts`** (new) — full tenant-scoped CRUD, same deviation from Story 004's
+  literal route description that `applications.ts` already established (list/detail resolve
+  directly against the `provider` actor, not `tenant.providers`, since that embedded ref only
+  ever carries `{name}`, no `status`). `clientSecret` is write-only, pushed to signet under the
+  exact naming `provisioning.ts`'s own seeding already used. `DELETE`/`PATCH{status:'removed'}`
+  checks two independent conditions (any active non-`_admin` application still referencing it;
+  `_admin` itself down to its last provider) per Story 004's own wording — see `providers.ts`'s
+  own `providerInUse`.
+- **`provider_actor.ts`** gained `update`/`remove` commands and a `discoveryStatus` field (ADR
+  0073's `{status:'ok', checkedAt:null, error:null}` optimistic default) — previously only
+  `create` existed.
+- **The operator route tree itself** — every mutating and read handler in `accounts.ts`/
+  `providers.ts`/`invites.ts` is registered *twice*: once tenant-scoped (permission-gated, as
+  before), once under `/operator/...` (bearer-token-gated via `requireOperatorAuth`/
+  `requireOperatorActor`, `src/lib/operator-auth.ts`), calling the exact same extracted handler
+  function both times — not a second implementation, per ADR 0030's own framing. Verified this is
+  real reuse, not superficially similar code, by exercising an operator call against a route with
+  *no* permissions-bearing JWT involved at all (`operator.spec.ts`).
+- **`X-Operator-Actor` → `event.actingAs`** (Story 010's own mechanism, unbuilt until this story
+  gave it a real mutating route to attach to): every mutating command handler this surface reaches
+  (`account.*`, `provider.*`, `invite.create`/`revoke`) now optionally spreads
+  `...actingAsFields(command)` onto its returned event (`src/lib/acting-as.ts`) — a no-op for a
+  tenant-scoped call (the header is operator-route-only, so `command.actingAs` is simply
+  `undefined` there). A mutating operator request *without* the header is rejected `400`,
+  never silently allowed through unattributed. Verified end-to-end through the real activity feed
+  (Story 010), not by reaching into consequent's storage directly: `operator.spec.ts` grants a
+  role via `/operator/.../roles` with `X-Operator-Actor: steward-alice`, then asserts the
+  resulting `account.role-granted` entry in `/operator/tenants/:slug/activity` carries
+  `actingAs: 'steward-alice'` — and, separately, that the identical tenant-scoped command leaves
+  `actingAs: null`.
+- **`GET /operator/tenants`** (new, genuinely no tenant-scoped equivalent could exist) —
+  `tenant_actor.ts`'s own `searchableBy: ['status']` has no field to fetch "everything" by in one
+  `find()` call (confirmed directly against both search adapters: an *empty* criteria set matches
+  nothing, not everything) — implemented as three `find()` calls (one per status) merged, `q`
+  (slug/name substring) filtered in memory rather than via the search adapter's own `contains`
+  operator, whose real semantics diverge between adapters (see bug list above's general caution
+  about adapter-specific operator behavior) — same "consistent behavior over adapter-specific
+  cleverness" trade-off `activity-feed.ts`'s own pagination already documents.
+- **`GET /operator/erasure-requests/stuck`** (new) — `requestedAt` isn't a `searchableBy` field on
+  `erasureRequest`, so staleness filtering is in-memory over every `status: 'pending'` request,
+  matching ADR 0075's own framing ("no timeout, ever, by design... staleness is a read-time
+  computation, never a write").
+- **New tests**: `spec/behavior/providers.spec.ts` (9), `spec/behavior/operator.spec.ts` (11).
+  Full suite: 220 tests across 21 files, plus the existing real-Postgres integration tier,
+  unaffected by any of this pass's changes.

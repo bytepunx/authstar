@@ -1,4 +1,5 @@
 import type { PermissionGrant } from './account_actor.js'
+import { actingAsFields } from '../lib/acting-as.js'
 
 // Per design/stories/tower/007-invites-and-invite-codes.md and ADR
 // 0021/0067/0082/0053. `identifiedBy: 'token'` -- a single-use,
@@ -28,10 +29,15 @@ interface CreateCommand {
   roles: InviteState['roles']
   permissions: PermissionGrant[]
   expiresAt: string | null
+  actingAs?: string
 }
 
 interface AcceptCommand {
   accountId: string
+}
+
+interface RevokeCommand {
+  actingAs?: string
 }
 
 function create(_invite: InviteState, command: CreateCommand) {
@@ -43,6 +49,7 @@ function create(_invite: InviteState, command: CreateCommand) {
     roles: command.roles ?? [],
     permissions: command.permissions ?? [],
     expiresAt: command.expiresAt,
+    ...actingAsFields(command),
   }
 }
 
@@ -68,8 +75,8 @@ function isPending(invite: InviteState) {
   return invite.status === 'pending'
 }
 
-function revoke() {
-  return { type: 'invite.revoked' }
+function revoke(_invite: InviteState, command: RevokeCommand) {
+  return { type: 'invite.revoked', ...actingAsFields(command) }
 }
 
 function rejectRevoke() {

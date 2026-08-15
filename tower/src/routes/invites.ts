@@ -1,5 +1,5 @@
 import { randomBytes } from 'node:crypto'
-import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { InviteState } from '../actors/invite_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
@@ -8,6 +8,7 @@ import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypt
 import { requirePermission } from '../lib/permissions.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 import { rolesValid, type Scope } from '../lib/role-definition-lookup.js'
+import { requireOperatorAuth, requireOperatorActor, operatorActor } from '../lib/operator-auth.js'
 
 // Per design/stories/tower/007-invites-and-invite-codes.md. The
 // general-purpose, admin-facing counterpart to `routes/provisioning.ts`'s
@@ -28,6 +29,10 @@ import { rolesValid, type Scope } from '../lib/role-definition-lookup.js'
 // host (`hosts[0]`) -- falling back to the tenant admin host if that
 // application has none, rather than failing the whole request over a
 // template-rendering detail.
+//
+// Story 013: the "bootstrap path" for admin access ("issue an elevated
+// invite") reuses `POST`/`DELETE`/`PATCH` below via the operator tree --
+// same pattern as `routes/accounts.ts`'s own header comment describes.
 
 const tenantParamsSchema = {
   type: 'object',
@@ -177,121 +182,165 @@ async function publishInviteSent(app: FastifyInstance, tenantSlug: string, tenan
   })
 }
 
+async function listInvites(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug } = request.params as { tenantSlug: string }
+  const { status } = request.query as { status?: InviteState['status'] }
+
+  const tenant = await fetchTenant(app, tenantSlug)
+  if (!tenantExists(tenant)) return reply.code(404).send()
+
+  const instances = status
+    ? await app.consequent.find('invite', searchCriteria({ tenant: tenantSlug, status }))
+    : await app.consequent.find('invite', searchCriteria({ tenant: tenantSlug }))
+  // `token` (the actor's own `identifiedBy` field) isn't part of
+  // `InviteState`'s own declared shape -- it's `consequent`'s own generic
+  // bookkeeping (`populateActorState` sets both `state.id` and
+  // `state[identifiedBy]` to the id an actor was created/fetched with),
+  // present on every actor instance at runtime regardless of whether the
+  // actor module's own state type lists it.
+  return instances
+    .map((i) => ({ token: (i.state as unknown as { token: string }).token, state: i.state as unknown as InviteState }))
+    .map(({ token, state }) => toResponse(token, state))
+}
+
+async function getInvite(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, token } = request.params as { tenantSlug: string, token: string }
+  const state = await fetchInvite(app, tenantSlug, token)
+  if (!state) return reply.code(404).send()
+  return toResponse(token, state)
+}
+
+async function createInvite(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug } = request.params as { tenantSlug: string }
+  const body = request.body as {
+    contactId: string
+    application?: string
+    roles?: Array<{ name: string, scope: Scope }>
+    permissions?: PermissionGrant[]
+    expiresAt?: string | null
+  }
+
+  const tenant = await fetchTenant(app, tenantSlug)
+  if (!tenantExists(tenant)) return reply.code(404).send()
+
+  if (!(await rolesValid(app, tenantSlug, body.roles))) {
+    return reply.code(400).send({ error: 'roles must reference existing, active role definitions for this tenant' })
+  }
+
+  const token = randomBytes(20).toString('hex')
+  await app.consequent.handle(token, 'invite.create', {
+    tenant: tenantSlug,
+    application: body.application ?? null,
+    contactId: body.contactId,
+    roles: body.roles ?? [],
+    permissions: body.permissions ?? [],
+    expiresAt: body.expiresAt ?? null,
+    actingAs: operatorActor(request),
+  })
+
+  await publishInviteSent(app, tenantSlug, tenant.name, body.application ?? null, token, body.contactId)
+
+  const created = await fetchInvite(app, tenantSlug, token)
+  return reply.code(201).send(toResponse(token, created!))
+}
+
+async function patchInvite(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, token } = request.params as { tenantSlug: string, token: string }
+
+  const current = await fetchInvite(app, tenantSlug, token)
+  if (!current) return reply.code(404).send()
+
+  const results = await app.consequent.handle(token, 'invite.revoke', { actingAs: operatorActor(request) })
+  const rejection = results.find((r) => r?.rejected)
+  if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+
+  const updated = await fetchInvite(app, tenantSlug, token)
+  return toResponse(token, updated!)
+}
+
+// Soft alias for `PATCH { status: "revoked" }` (ADR 0053).
+async function deleteInvite(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, token } = request.params as { tenantSlug: string, token: string }
+  const current = await fetchInvite(app, tenantSlug, token)
+  if (!current) return reply.code(404).send()
+
+  if (current.status === 'revoked') {
+    // Retry converges rather than erroring -- same "retry-same-request is
+    // the recovery model" convention every other soft-delete route in this
+    // codebase follows.
+    return toResponse(token, current)
+  }
+
+  const results = await app.consequent.handle(token, 'invite.revoke', { actingAs: operatorActor(request) })
+  const rejection = results.find((r) => r?.rejected)
+  if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+
+  const updated = await fetchInvite(app, tenantSlug, token)
+  return toResponse(token, updated!)
+}
+
 const invitesRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.get(
     '/tenants/:tenantSlug/invites',
     { schema: { params: tenantParamsSchema, querystring: listQuerySchema } },
-    async (request, reply) => {
-      const { tenantSlug } = request.params as { tenantSlug: string }
-      const { status } = request.query as { status?: InviteState['status'] }
-
-      const tenant = await fetchTenant(app, tenantSlug)
-      if (!tenantExists(tenant)) return reply.code(404).send()
-
-      const instances = status
-        ? await app.consequent.find('invite', searchCriteria({ tenant: tenantSlug, status }))
-        : await app.consequent.find('invite', searchCriteria({ tenant: tenantSlug }))
-      // `token` (the actor's own `identifiedBy` field) isn't part of
-      // `InviteState`'s own declared shape -- it's `consequent`'s own
-      // generic bookkeeping (`populateActorState` sets both `state.id` and
-      // `state[identifiedBy]` to the id an actor was created/fetched
-      // with), present on every actor instance at runtime regardless of
-      // whether the actor module's own state type lists it.
-      return instances
-        .map((i) => ({ token: (i.state as unknown as { token: string }).token, state: i.state as unknown as InviteState }))
-        .map(({ token, state }) => toResponse(token, state))
-    },
+    (request, reply) => listInvites(app, request, reply),
   )
 
   app.get(
     '/tenants/:tenantSlug/invites/:token',
     { schema: { params: inviteParamsSchema } },
-    async (request, reply) => {
-      const { tenantSlug, token } = request.params as { tenantSlug: string, token: string }
-      const state = await fetchInvite(app, tenantSlug, token)
-      if (!state) return reply.code(404).send()
-      return toResponse(token, state)
-    },
+    (request, reply) => getInvite(app, request, reply),
   )
 
   app.post(
     '/tenants/:tenantSlug/invites',
     { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('invite:send') },
-    async (request, reply) => {
-      const { tenantSlug } = request.params as { tenantSlug: string }
-      const body = request.body as {
-        contactId: string
-        application?: string
-        roles?: Array<{ name: string, scope: Scope }>
-        permissions?: PermissionGrant[]
-        expiresAt?: string | null
-      }
-
-      const tenant = await fetchTenant(app, tenantSlug)
-      if (!tenantExists(tenant)) return reply.code(404).send()
-
-      if (!(await rolesValid(app, tenantSlug, body.roles))) {
-        return reply.code(400).send({ error: 'roles must reference existing, active role definitions for this tenant' })
-      }
-
-      const token = randomBytes(20).toString('hex')
-      await app.consequent.handle(token, 'invite.create', {
-        tenant: tenantSlug,
-        application: body.application ?? null,
-        contactId: body.contactId,
-        roles: body.roles ?? [],
-        permissions: body.permissions ?? [],
-        expiresAt: body.expiresAt ?? null,
-      })
-
-      await publishInviteSent(app, tenantSlug, tenant.name, body.application ?? null, token, body.contactId)
-
-      const created = await fetchInvite(app, tenantSlug, token)
-      return reply.code(201).send(toResponse(token, created!))
-    },
+    (request, reply) => createInvite(app, request, reply),
   )
 
   app.patch(
     '/tenants/:tenantSlug/invites/:token',
     { schema: { params: inviteParamsSchema, body: patchBodySchema }, preHandler: requirePermission('invite:send') },
-    async (request, reply) => {
-      const { tenantSlug, token } = request.params as { tenantSlug: string, token: string }
-
-      const current = await fetchInvite(app, tenantSlug, token)
-      if (!current) return reply.code(404).send()
-
-      const results = await app.consequent.handle(token, 'invite.revoke', {})
-      const rejection = results.find((r) => r?.rejected)
-      if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-
-      const updated = await fetchInvite(app, tenantSlug, token)
-      return toResponse(token, updated!)
-    },
+    (request, reply) => patchInvite(app, request, reply),
   )
 
-  // Soft alias for `PATCH { status: "revoked" }` (ADR 0053).
   app.delete(
     '/tenants/:tenantSlug/invites/:token',
     { schema: { params: inviteParamsSchema }, preHandler: requirePermission('invite:send') },
-    async (request, reply) => {
-      const { tenantSlug, token } = request.params as { tenantSlug: string, token: string }
-      const current = await fetchInvite(app, tenantSlug, token)
-      if (!current) return reply.code(404).send()
+    (request, reply) => deleteInvite(app, request, reply),
+  )
 
-      if (current.status === 'revoked') {
-        // Retry converges rather than erroring -- same "retry-same-request
-        // is the recovery model" convention every other soft-delete route
-        // in this codebase follows.
-        return toResponse(token, current)
-      }
+  // Story 013: the operator tree -- same handlers, bearer-token auth
+  // instead of `permissions`, mutations additionally require
+  // `X-Operator-Actor`.
+  app.get(
+    '/operator/tenants/:tenantSlug/invites',
+    { schema: { params: tenantParamsSchema, querystring: listQuerySchema }, preHandler: requireOperatorAuth(app) },
+    (request, reply) => listInvites(app, request, reply),
+  )
 
-      const results = await app.consequent.handle(token, 'invite.revoke', {})
-      const rejection = results.find((r) => r?.rejected)
-      if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+  app.get(
+    '/operator/tenants/:tenantSlug/invites/:token',
+    { schema: { params: inviteParamsSchema }, preHandler: requireOperatorAuth(app) },
+    (request, reply) => getInvite(app, request, reply),
+  )
 
-      const updated = await fetchInvite(app, tenantSlug, token)
-      return toResponse(token, updated!)
-    },
+  app.post(
+    '/operator/tenants/:tenantSlug/invites',
+    { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => createInvite(app, request, reply),
+  )
+
+  app.patch(
+    '/operator/tenants/:tenantSlug/invites/:token',
+    { schema: { params: inviteParamsSchema, body: patchBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => patchInvite(app, request, reply),
+  )
+
+  app.delete(
+    '/operator/tenants/:tenantSlug/invites/:token',
+    { schema: { params: inviteParamsSchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => deleteInvite(app, request, reply),
   )
 }
 
