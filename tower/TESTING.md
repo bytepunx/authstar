@@ -37,7 +37,7 @@ so every tier runs against the same compiled artifact the real server loads, not
 - Needs Docker running locally / in CI. `beforeAll`'s own timeout should be generous (60s+) —
   container pull + start can genuinely take a while on a cold image cache.
 
-## Eight real bugs this pilot found — worth knowing before writing more services' tests
+## Nine real bugs this pilot found — worth knowing before writing more services' tests
 
 1. **`consequent`'s loader only finds compiled `*_actor.js` files** — pointing it at `src/actors`
    (TypeScript source) silently loads zero actors (`Object.keys(actors) === []`), which then
@@ -133,6 +133,25 @@ so every tier runs against the same compiled artifact the real server loads, not
    needed a genuine `https.Server` (`app.listen({port: 0})`) and real `https.request()` calls
    with generated client certificates (`@peculiar/x509`, the same library `spiffe` itself uses to
    parse certs) — see `spec/behavior/spiffe-mtls.spec.ts`.
+9. **`signet-admin.ts`'s `pushSecret` silently no-op'd on every call, since this repo's own
+   inception, while still resolving successfully** — `buildSecretArchive` built the tar entry
+   path as `secrets/<service>/<key>.yaml` (2 components), but signetd's real `ParseSecretPath`
+   (`internal/gitops/path.go` in the signet repo) requires exactly 3: `<namespace>/<service>/
+   <name>.yaml`. `opts.namespace` was received and then explicitly discarded (`void
+   opts.namespace`) instead of used. signetd doesn't fail the RPC for an unrecognised path shape
+   — it skips the file and reports it only in `SyncBundleResponse.errors`/`secretsAdded`, which
+   `pushSecret`'s callback never inspected (only the transport-level `err`). Found live, the hard
+   way: `authstar-integration`'s golden-path scenario run showed herald's `POST
+   /operator/rotate-keys` reporting success while tower's own subsequent bundle fetch never saw
+   the pushed key — traced all the way through signetd's real source (confirming signetd itself
+   behaves correctly and even reports the problem) before finding the actual defect was two bugs
+   in this file: the malformed path, and the response never being checked. No existing test
+   caught this, because every existing test injects a fake `SignetAdmin` (`ContactStore`/
+   `Publisher`-style fake, per this file's own header comment) — the real wire format was never
+   exercised until a live signetd was. `buildSecretArchive` and the response-check logic
+   (`syncBundleFailure`) are now both exported and directly unit-tested
+   (`spec/behavior/signet-admin.spec.ts`) — the archive test parses the real gzipped tar bytes
+   and asserts the path shape matches signetd's own contract, not just "looks plausible".
 
 ## Scope covered by this pass (tower's four target cross-service flows)
 

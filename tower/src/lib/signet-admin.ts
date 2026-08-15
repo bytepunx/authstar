@@ -28,10 +28,19 @@ export interface SignetAdminOptions {
 }
 
 // Builds a minimal single-file USTAR archive (no external `tar` dependency
-// needed for one small file) containing `secrets/<key>.yaml`, then gzips
-// it -- the wire shape `GitOpsServiceClient.syncBundle` documents
-// (`SyncBundleHeader` + raw tar.gz `data` chunks, see
-// `signet-clients/typescript/src/gen/admin/v1/admin.ts`).
+// needed for one small file) containing `secrets/<namespace>/<service>/
+// <key>.yaml`, then gzips it -- the wire shape `GitOpsServiceClient.
+// syncBundle` documents (`SyncBundleHeader` + raw tar.gz `data` chunks, see
+// `signet-clients/typescript/src/gen/admin/v1/admin.ts`). The 3-segment
+// path is required: signetd's own `ParseSecretPath` (signet/internal/
+// gitops/path.go) rejects anything else as unrecognised and silently
+// *skips* it (reported only in `SyncBundleResponse.errors`, not as an RPC
+// error) -- a real bug this repo shipped with (missing the namespace
+// segment entirely, `opts.namespace` was received and then explicitly
+// discarded, `void opts.namespace` below) that made every `pushSecret`
+// call silently no-op while still resolving successfully. See
+// `pushSecret`'s own comment for the other half of that fix (checking the
+// response, not just the transport-level error).
 //
 // KNOWN GAP, flagged here rather than glossed over: signet's GitOps sync
 // path is designed around SOPS-encrypted secret files (the service also
@@ -45,8 +54,8 @@ export interface SignetAdminOptions {
 // server source. This wiring is real (real RPC, real streaming, real
 // auth) and has not been validated against a live signet -- see
 // TESTING.md and this project's final report for the explicit scope note.
-function buildSecretArchive(targetService: 'tower' | 'portcullis', key: string, value: string): Buffer {
-  const path = `secrets/${targetService}/${key}.yaml`
+export function buildSecretArchive(namespace: string, targetService: 'tower' | 'portcullis', key: string, value: string): Buffer {
+  const path = `secrets/${namespace}/${targetService}/${key}.yaml`
   const content = Buffer.from(`value: ${JSON.stringify(value)}\n`, 'utf8')
 
   const header = Buffer.alloc(512)
@@ -72,6 +81,15 @@ function buildSecretArchive(targetService: 'tower' | 'portcullis', key: string, 
   return gzipSync(tar)
 }
 
+// Pure so it's directly unit-testable against a fake `SyncBundleResponse`
+// without a real (or mocked) gRPC client -- exactly the check that was
+// missing before, see `buildSecretArchive`'s own comment.
+export function syncBundleFailure(response: { errors: string[], secretsAdded: number, secretsUpdated: number }): string | null {
+  if (response.errors.length > 0) return response.errors.join('; ')
+  if (response.secretsAdded + response.secretsUpdated === 0) return 'no secret was added or updated'
+  return null
+}
+
 export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
   // plaintext: true is required, not optional: signet's admin/GitOps listener never
   // terminates TLS itself, even reached by its in-cluster DNS name (a non-loopback
@@ -86,17 +104,30 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
   return {
     pushSecret(targetService, key, value) {
       return new Promise<void>((resolve, reject) => {
-        const call = client.syncBundle((err) => {
-          if (err) reject(err)
-          else resolve()
+        // `err` is only a transport/RPC-level failure -- signetd reports a
+        // rejected (unrecognised-path-shape) secret as a *successful* RPC
+        // with the problem described in `response.errors` instead (see
+        // `buildSecretArchive`'s own comment for why this matters: this
+        // exact blind spot let a real path-building bug silently no-op
+        // every push for as long as this code went unexercised).
+        const call = client.syncBundle((err, response) => {
+          if (err) {
+            reject(err)
+            return
+          }
+          const failure = syncBundleFailure(response)
+          if (failure) {
+            reject(new Error(`signet rejected pushSecret(${targetService}, ${key}): ${failure}`))
+          } else {
+            resolve()
+          }
         })
         call.write({
           header: { secretsPath: 'secrets/', headSha: '', configPath: '' },
         } as never)
-        const archive = buildSecretArchive(targetService, key, value)
+        const archive = buildSecretArchive(opts.namespace, targetService, key, value)
         call.write({ data: archive } as never)
         call.end()
-        void opts.namespace
       })
     },
     patchConfig(targetService, operations) {
