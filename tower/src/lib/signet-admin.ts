@@ -84,9 +84,23 @@ export function buildSecretArchive(namespace: string, targetService: 'tower' | '
 // Pure so it's directly unit-testable against a fake `SyncBundleResponse`
 // without a real (or mocked) gRPC client -- exactly the check that was
 // missing before, see `buildSecretArchive`'s own comment.
-export function syncBundleFailure(response: { errors: string[], secretsAdded: number, secretsUpdated: number }): string | null {
+//
+// `errors` alone, not also `secretsAdded + secretsUpdated === 0` -- found
+// live, the hard way, immediately after adding that second condition: a
+// real idempotent re-push (this exact value already stored from a prior
+// sync -- e.g. tower's own provisioning route pushes the same
+// `defaultProviderClientSecret` on every `POST /tenants` call, not just
+// the first) correctly produces zero added/zero updated *with zero
+// errors*, and that first version of this function misreported the
+// legitimate no-op as a failure. signetd's own `SyncBundle` handler
+// (`internal/gitops/sync.go`) appends every genuinely-skipped file to
+// `result.Skipped`, always surfaced via `errors` -- there is no rejection
+// path that produces zero errors, so checking `errors` alone is both
+// necessary and sufficient to catch the real bug class this guards
+// against (a malformed path silently skipped) without flagging a
+// harmless re-push of unchanged content.
+export function syncBundleFailure(response: { errors: string[] }): string | null {
   if (response.errors.length > 0) return response.errors.join('; ')
-  if (response.secretsAdded + response.secretsUpdated === 0) return 'no secret was added or updated'
   return null
 }
 

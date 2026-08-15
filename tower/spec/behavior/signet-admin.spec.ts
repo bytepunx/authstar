@@ -42,26 +42,31 @@ describe('buildSecretArchive', () => {
 
 describe('syncBundleFailure', () => {
   it('returns null when signetd reports secrets actually added', () => {
-    expect(syncBundleFailure({ errors: [], secretsAdded: 1, secretsUpdated: 0 })).toBeNull()
+    expect(syncBundleFailure({ errors: [] })).toBeNull()
   })
 
-  it('returns null when signetd reports secrets updated (idempotent re-push)', () => {
-    expect(syncBundleFailure({ errors: [], secretsAdded: 0, secretsUpdated: 1 })).toBeNull()
-  })
-
-  it('returns the join of signetd-reported errors, even with zero counts', () => {
+  it('returns the join of signetd-reported errors', () => {
     const failure = syncBundleFailure({
       errors: ['skipped secrets/tower/heraldPayloadPublicKey.yaml: unrecognised path shape'],
-      secretsAdded: 0,
-      secretsUpdated: 0,
     })
     expect(failure).toBe('skipped secrets/tower/heraldPayloadPublicKey.yaml: unrecognised path shape')
   })
 
-  it('flags a silent no-op even when signetd reports no explicit errors', () => {
-    // The exact shape that let the real bug hide: a successful RPC,
-    // zero errors, and zero secrets actually persisted.
-    const failure = syncBundleFailure({ errors: [], secretsAdded: 0, secretsUpdated: 0 })
-    expect(failure).toBe('no secret was added or updated')
+  it('joins multiple signetd-reported errors', () => {
+    const failure = syncBundleFailure({ errors: ['first problem', 'second problem'] })
+    expect(failure).toBe('first problem; second problem')
+  })
+
+  it('does NOT flag a real idempotent no-op (zero errors) as a failure', () => {
+    // Found live, the hard way: an earlier version of this function also
+    // checked `secretsAdded + secretsUpdated === 0` and misreported a
+    // genuine idempotent re-push (this exact value already stored from a
+    // prior sync -- e.g. tower's own provisioning route pushes the same
+    // defaultProviderClientSecret on every POST /tenants call, not just
+    // the first) as a failure, even though signetd reported zero errors.
+    // signetd always surfaces a genuinely-skipped file via `errors` (see
+    // this function's own comment) -- zero errors is unambiguously
+    // success, regardless of the add/update counts.
+    expect(syncBundleFailure({ errors: [] })).toBeNull()
   })
 })
