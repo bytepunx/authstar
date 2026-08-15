@@ -62,6 +62,14 @@ export interface BuildAppOptions {
   // pinned to a locally-generated key, so they never make a real JWKS
   // fetch.
   authstarGetKey?: JWTVerifyGetKey
+  // Real fastify-level SPIFFE mTLS for `/enrich`/`/identities/resolve`
+  // (`src/lib/spiffe-mtls.ts`) -- both `tls` and `spiffeTrustDomain` must
+  // be supplied together for it to engage; omitted by every existing
+  // test/dev caller, which keeps building a plain-HTTP app with those two
+  // routes open exactly as before this option existed. `src/server.ts` is
+  // the one real caller that supplies both, via `fetchServerCredentials()`.
+  tls?: { cert: string, key: string, ca: string }
+  spiffeTrustDomain?: string
 }
 
 // A single place to assemble the fastify instance so behavior/e2e/integration
@@ -81,6 +89,14 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
     // Overridden globally so `additionalProperties: false` means what it
     // says everywhere in this service, not just for this one route.
     ajv: { customOptions: { removeAdditional: false } },
+    // `requestCert: true, rejectUnauthorized: false` -- accepts a
+    // connection regardless of whether a valid client certificate was
+    // presented; enforcement is fastify-level (`requireSpiffePeer`,
+    // applied only to `/enrich`/`/identities/resolve` in their own route
+    // files), not a whole-server requirement every other JWT/operator-
+    // bearer-authenticated route on this same server would otherwise need
+    // to satisfy too. See `src/lib/spiffe-mtls.ts`'s own header comment.
+    ...(options.tls ? { https: { ...options.tls, requestCert: true, rejectUnauthorized: false } } : {}),
   })
   app.decorate('consequent', options.consequent)
   app.decorate('contactStore', options.contactStore ?? createInMemoryContactStore())
@@ -90,6 +106,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   const provisioningConfig = options.provisioningConfig ?? defaultProvisioningConfig
   app.decorate('provisioningConfig', provisioningConfig)
   app.decorate('heraldPayloadKey', options.heraldPayloadKey ?? createEphemeralHeraldKey())
+  app.decorate('spiffeTrustDomain', options.spiffeTrustDomain)
 
   const authstarGetKey = options.authstarGetKey ?? perTenantJwksKeyProvider(provisioningConfig.baseDomain)
   // `required: false` -- Story 014's own posture is a uniform 403 from

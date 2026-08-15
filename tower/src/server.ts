@@ -13,6 +13,7 @@ import { createIdGenerator } from './lib/ids.js'
 import { startEntitlementConsumer } from './lib/entitlement-consumer.js'
 import { startErasureAckConsumer } from './lib/erasure-ack-consumer.js'
 import { createEphemeralHeraldKey, heraldKeyFromPem, type HeraldPayloadKey } from './lib/herald-payload-crypto.js'
+import { fetchServerCredentials } from './lib/spiffe-mtls.js'
 import type { ProvisioningConfig } from './routes/provisioning.js'
 
 // Production entrypoint. Follows the fetch-once/watch/restart-lock pattern
@@ -28,7 +29,8 @@ import type { ProvisioningConfig } from './routes/provisioning.js'
 // NOT LIVE-VALIDATED in this pass -- no `kluster up --profile signet`
 // cluster was exercised against this file (see TESTING.md and the
 // project's final report for the explicit scope note). Every I/O
-// dependency this file wires (signet, Postgres, RabbitMQ) is exercised for
+// dependency this file wires (signet, Postgres, RabbitMQ, and now the
+// SPIFFE Workload API via `fetchServerCredentials`) is exercised for
 // real by this repo's own test tiers only indirectly, through the
 // injectable interfaces (`ContactStore`, `SignetAdmin`, `Publisher`,
 // `ChannelLike`) those tiers fake -- this file itself has no test coverage,
@@ -88,6 +90,12 @@ async function main(): Promise<void> {
   process.once('SIGINT', onSignal)
 
   const workload = await dialWorkload({ address, trustDomain })
+
+  // Same ambient `SPIFFE_ENDPOINT_SOCKET` Workload API socket `dialWorkload`
+  // itself defaults to when its own `address`/`trustDomain` opts are for
+  // signet specifically -- no separate credential/env story needed for
+  // tower's own server-side X.509-SVID.
+  const spiffeCredentials = await fetchServerCredentials()
 
   let bundleResponse: { bundle?: Record<string, unknown>, configVersion: number }
   try {
@@ -171,6 +179,8 @@ async function main(): Promise<void> {
     provisioningConfig,
     heraldPayloadKey,
     logger: true,
+    tls: spiffeCredentials,
+    spiffeTrustDomain: trustDomain,
   })
 
   const port = Number(process.env.PORT ?? 8080)

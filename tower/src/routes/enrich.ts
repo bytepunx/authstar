@@ -1,8 +1,9 @@
-import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync, RouteShorthandOptions } from 'fastify'
 import type { IdentityState } from '../actors/identity_actor.js'
 import type { AccountState } from '../actors/account_actor.js'
 import { filterRolesForApplication } from '../lib/roles.js'
 import { searchCriteria } from '../lib/consequent-types.js'
+import { requireSpiffePeer } from '../lib/spiffe-mtls.js'
 
 // Per design/stories/tower/002-claims-enrichment-endpoint.md and ADR
 // 0001/0003. Called by portcullis's real Rust client
@@ -19,9 +20,12 @@ import { searchCriteria } from '../lib/consequent-types.js'
 // Auth: SPIFFE mTLS only, no independent JWT check -- this route runs
 // *before* a session/token exists to have produced one, per ADR 0001/0003.
 // `tenant` in the body is trusted as-is from the mTLS-authenticated caller
-// (portcullis, having already resolved it from `Host`). This pilot slice
-// does not implement mTLS verification at the fastify layer itself (no
-// SPIFFE workload wiring in tests) -- see TESTING.md's scope note.
+// (portcullis, having already resolved it from `Host`). `requireSpiffePeer`
+// (`src/lib/spiffe-mtls.ts`) only actually gates this route when
+// `buildApp()` was given real `tls`/`spiffeTrustDomain` (`src/server.ts`'s
+// own real call) -- every existing test/dev caller omits both, so this
+// route stays open in every test the way it always was, not a behavior
+// change for them.
 
 const enrichBodySchema = {
   type: 'object',
@@ -63,7 +67,12 @@ async function fetchAccount(app: FastifyInstance, accountId: string): Promise<Ac
 }
 
 const enrichRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/enrich', { schema: { body: enrichBodySchema } }, async (request, reply) => {
+  const routeOptions: RouteShorthandOptions = {
+    schema: { body: enrichBodySchema },
+    ...(app.spiffeTrustDomain ? { preHandler: requireSpiffePeer(app.spiffeTrustDomain) } : {}),
+  }
+
+  app.post('/enrich', routeOptions, async (request, reply) => {
     const body = request.body as EnrichBody
 
     // Identity lookup fails -> Deny, never resolve-or-create -- an

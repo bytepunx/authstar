@@ -1,9 +1,10 @@
-import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync, RouteShorthandOptions } from 'fastify'
 import type { IdentityState } from '../actors/identity_actor.js'
 import type { AccountState } from '../actors/account_actor.js'
 import type { InviteState } from '../actors/invite_actor.js'
 import type { InviteCodeState } from '../actors/invite_code_actor.js'
 import { searchCriteria } from '../lib/consequent-types.js'
+import { requireSpiffePeer } from '../lib/spiffe-mtls.js'
 
 // Per design/stories/tower/003-identity-resolution-at-login.md,
 // 007-invites-and-invite-codes.md, and ADR 0027/0028. Called by
@@ -16,6 +17,12 @@ import { searchCriteria } from '../lib/consequent-types.js'
 // Both `invite` (token-based) and `inviteCode` (code-based, multi-
 // redemption) redemption are wired here now -- `redeem.type` accepts
 // either `"invite"` or `"inviteCode"`.
+//
+// Auth: SPIFFE mTLS only, same posture as `enrich.ts` (runs at/before
+// login, before any session/token exists) -- `requireSpiffePeer` only
+// actually gates this route when `buildApp()` was given real
+// `tls`/`spiffeTrustDomain`; every test/dev caller omits both, so this
+// stays open in every test exactly as before this existed.
 
 const resolveBodySchema = {
   type: 'object',
@@ -60,7 +67,12 @@ async function fetchIdentity(app: FastifyInstance, hash: string): Promise<Identi
 }
 
 const identitiesRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/identities/resolve', { schema: { body: resolveBodySchema } }, async (request, reply) => {
+  const routeOptions: RouteShorthandOptions = {
+    schema: { body: resolveBodySchema },
+    ...(app.spiffeTrustDomain ? { preHandler: requireSpiffePeer(app.spiffeTrustDomain) } : {}),
+  }
+
+  app.post('/identities/resolve', routeOptions, async (request, reply) => {
     const body = request.body as ResolveBody
 
     let accountId: string | undefined

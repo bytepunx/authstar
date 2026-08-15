@@ -37,7 +37,7 @@ so every tier runs against the same compiled artifact the real server loads, not
 - Needs Docker running locally / in CI. `beforeAll`'s own timeout should be generous (60s+) —
   container pull + start can genuinely take a while on a cold image cache.
 
-## Seven real bugs this pilot found — worth knowing before writing more services' tests
+## Eight real bugs this pilot found — worth knowing before writing more services' tests
 
 1. **`consequent`'s loader only finds compiled `*_actor.js` files** — pointing it at `src/actors`
    (TypeScript source) silently loads zero actors (`Object.keys(actors) === []`), which then
@@ -122,6 +122,17 @@ so every tier runs against the same compiled artifact the real server loads, not
    something a caller pulls incrementally), so the old complexity bought nothing observable.
    Re-verified against real Postgres with the same reproduction script (resolves in ~1ms
    post-fix) before this repo's own `consequent` dependency was bumped again.
+8. **The `spiffe` npm package's `client.fetchX509SVID()` requires an argument even though its own
+   `X509SVIDRequest` type is an empty interface** — calling it with zero arguments fails
+   typecheck (`TS2554: Expected 1-2 arguments, but got 0`), not a runtime surprise, but easy to
+   miss since an empty-interface parameter reads as though it should be optional. Call it as
+   `client.fetchX509SVID({})`. Also worth knowing: `app.inject()` (fastify's usual, lightweight
+   test-injection path, used everywhere else in this repo's behavior tier) never touches a real
+   socket, so `request.raw.socket.authorized`/`.getPeerCertificate()` — the exact mechanism
+   `requireSpiffePeer` depends on — are never populated under it. Testing real mTLS enforcement
+   needed a genuine `https.Server` (`app.listen({port: 0})`) and real `https.request()` calls
+   with generated client certificates (`@peculiar/x509`, the same library `spiffe` itself uses to
+   parse certs) — see `spec/behavior/spiffe-mtls.spec.ts`.
 
 ## Scope covered by this pass (tower's four target cross-service flows)
 
@@ -519,7 +530,10 @@ notes, rather than left unstated):
   NOT need a live cluster to build/test most of this"). Every I/O boundary it wires is exercised
   for real only through its own injected interface's test double (`ContactStore`, `SignetAdmin`,
   `Publisher`, the RabbitMQ `ChannelLike` consumers) — `server.ts` itself has no test coverage of
-  its own, consistent with how every other authstar service scopes its entrypoint.
+  its own, consistent with how every other authstar service scopes its entrypoint. This now
+  includes `fetchServerCredentials()` (`src/lib/spiffe-mtls.ts`) — real against a genuine SPIFFE
+  Workload API socket in principle (same `SPIFFE_ENDPOINT_SOCKET` convention `dialWorkload`
+  already relies on), but never actually dialed against one in this pass.
 - **Usage-record writes** (`account.update-usage`) — the command/event exist (symmetry with the
   `usage` field `/enrich` reports) but nothing calls it yet; no service publishes usage events to
   tower in this pass.
@@ -576,3 +590,44 @@ order:
 - **New tests**: `spec/behavior/providers.spec.ts` (9), `spec/behavior/operator.spec.ts` (11).
   Full suite: 220 tests across 21 files, plus the existing real-Postgres integration tier,
   unaffected by any of this pass's changes.
+
+## Fastify-level SPIFFE mTLS for `/enrich` and `/identities/resolve`
+
+Tower previously had zero TLS termination — plain fastify, `app.listen()` straight to HTTP — so
+the east-west mTLS portcullis's own client already implements
+(`~/git/authstar/portcullis/crates/authstar-config/src/mtls.rs`) only ever "worked" because it
+was pointed at `http://` and TLS never actually engaged. Closed that gap using the `spiffe` npm
+package (already a transitive dependency via `@bytepunx/signet-client`), matching portcullis's
+own authorization posture exactly rather than inventing a stricter one for this direction:
+
+- **`src/lib/spiffe-mtls.ts`** (new) — `fetchServerCredentials()` fetches tower's own X.509-SVID
+  and trust-domain CA bundle via the SPIFFE Workload API (first message off the indefinitely-
+  streaming `FetchX509SVID` RPC; rotation handled by process-restart-into-fresh-fetch, same
+  posture `server.ts`'s own header comment already documents for signet). `requireSpiffePeer
+  (trustDomain)` is a fastify `preHandler` that checks `socket.authorized` (was a chain-trusted
+  cert presented at all) then extracts the SPIFFE URI SAN from `getPeerCertificate()` and checks
+  it's prefixed `spiffe://${trustDomain}/` — two distinct failure modes, two distinct error
+  bodies (no/invalid cert vs. valid-but-wrong-trust-domain cert), not collapsed into one generic
+  403.
+- **Fastify-level, not whole-server** — `build-app.ts`'s `BuildAppOptions` gained `tls?: {cert,
+  key, ca}`/`spiffeTrustDomain?: string`; when both are supplied, the underlying `https.Server` is
+  configured `requestCert: true, rejectUnauthorized: false` (accepts a connection regardless of
+  whether a valid client cert was presented) and `requireSpiffePeer` is applied as a `preHandler`
+  only to `/enrich` (`routes/enrich.ts`) and `POST /identities/resolve` (`routes/identities.ts`) —
+  every other route on the same server (JWT/operator-bearer authenticated) is unaffected. Every
+  existing test/dev caller omits both options, so behavior/e2e tests keep building a plain-HTTP
+  app with these two routes open exactly as before this existed — not a behavior change for them.
+- **`src/server.ts`** now calls `fetchServerCredentials()` once at startup (alongside its existing
+  `dialWorkload` call, same ambient `SPIFFE_ENDPOINT_SOCKET`) and passes `tls`/`spiffeTrustDomain`
+  (the same `SIGNET_TRUST_DOMAIN` it already requires) into its own `buildApp()` call — the real
+  production entrypoint now actually exercises this, not just the test-only path.
+- See bug #8 above for the two real findings from building this: `fetchX509SVID({})`'s
+  zero-argument gotcha, and why `app.inject()` cannot exercise `socket.authorized`/
+  `getPeerCertificate()` at all (needed a genuine `https.Server` + real `https.request()` calls
+  with certs generated via `@peculiar/x509` — `spec/lib/spiffe-test-certs.ts`).
+- **New tests**: `spec/behavior/spiffe-mtls.spec.ts` (6) — real TLS handshakes, not
+  `app.inject()`: no client cert, a validly-CA-signed cert with no SPIFFE SAN, a valid SPIFFE cert
+  from the wrong trust domain, a cert signed by an untrusted CA, a valid matching-trust-domain
+  cert (reaches the real handler, denied for an unrelated reason — proving the mTLS check itself
+  passed), and confirmation the check is a no-op when `tls`/`spiffeTrustDomain` are omitted. Full
+  suite: 234 tests across 24 files, all passing; zero regressions.

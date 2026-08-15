@@ -15,5 +15,6 @@ declare module 'fastify' {
     ids: IdGenerator
     provisioningConfig: ProvisioningConfig
     heraldPayloadKey: HeraldPayloadKey
+    spiffeTrustDomain: string | undefined
   }
 }
