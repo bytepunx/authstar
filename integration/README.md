@@ -180,7 +180,7 @@ the other 6 is extrapolated from ADR 0004's generic pattern plus tower/keep/hera
 |---|---|---|---|
 | tower | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `contactHashPepper`, `operatorToken`, `default-provider-client-secret`, `tenant-acme-contact-hash-pepper` | `dbConnectionString`, `rabbitmqUrl`, `provisioning.*` | Yes |
 | keep | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `stripe-secret-key-acme`, `stripe-webhook-secret-acme` | `dbConnectionString`, `rabbitmqUrl` | Yes |
-| herald | `dbConnectionString`, `rabbitmqUrl`, `payloadKeyGenerations`, `unsubscribeKeyGenerations` | `dbConnectionString`, `rabbitmqUrl` | Yes |
+| herald | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `operatorToken` | `dbConnectionString`, `rabbitmqUrl` | Yes |
 | lookout | `rabbitmqUrl` | `rabbitmqUrl` | **No** — reads `LOOKOUT_RABBITMQ_URL` env var directly; scope provisioned ahead of the wiring landing |
 | chronicle | `clickhousePassword`, `rabbitmqUrl`, `internalJwtSecret` | `clickhouseUrl`, `clickhouseUsername`, `clickhouseDatabase`, `retentionMonths`, `maxDateRangeDays`, `queryTimeoutMs`, `rateLimitMax`, `rateLimitWindowMs` | **No** — reads `CHRONICLE_*` env vars directly |
 | portcullis | `tenant-acme-session-key`, `tenant-acme-internal-key`, `tenant-acme-identity-hash-key-1`, `tenant-acme-provider-dex-client-secret` | `webUpstream`, `towerUpstream`, `tenants.acme.*` (full `Bundle` struct shape) | Yes (Rust, `authstar-config` crate) |
@@ -211,7 +211,15 @@ All secrets use tenant slug `acme` for consistency with portcullis's own
 - **herald's `payloadKeyGenerations`/`unsubscribeKeyGenerations` key names are explicitly
   unratified** — herald's own `server.ts` comment (lines 34–46) calls them "this file's
   own best-effort guess, not a contract anything else in this design has committed to."
-  Used here as the only concrete names that exist anywhere; flagged as unstable.
+  Not provisioned as placeholders here (see below) — found live: these two are
+  exclusively runtime-managed via `POST /operator/rotate-keys`, and git-tracking a
+  static placeholder for them let signetd's periodic gitops reconciler clobber every
+  real rotation back down to generation 1 within its next sync cycle, independent of
+  whether herald itself restarted. `lib-secrets.sh`'s own comment on this has the full
+  incident writeup. A fresh cluster boots both as ephemeral in-process-only keys
+  (`loadPayloadKeyring`/`loadUnsubscribeKeyring` in `server.ts` handle a missing secret
+  by design) until an operator calls rotate-keys once; every rotation after that
+  persists for real since nothing in git competes with it anymore.
 - **tower's singular `contactHashPepper` vs. the per-tenant `tenant-<slug>-contact-hash-pepper`
   it pushes but never reads back:** both are provisioned here since either could plausibly
   be a live gap in tower rather than intentional, and it costs nothing to provision both.
