@@ -15,10 +15,12 @@ secrets source and (by convention) home to the scripts that provision it. See
 [`~/git/signet-smoke-test`](https://github.com/bytepunx/signet-smoke-test) for the
 reference pattern this repo's mechanics (not content) are copied from.
 
-**Before running anything against a real cluster**, read "A critical, unresolved bug"
-under "Golden-path scenario" below — herald must stay at 0 replicas (or the bug fixed)
-before any real `comms.transactional.*` traffic flows, or its consumer can spin at
-1,000+ messages/second indefinitely.
+A real infinite-loop bug in herald's comms consumer (confirmed live at 1,300+
+messages/second) was found and **fixed** in `authstar-tower`/`authstar-herald` — see
+"FIXED: herald's comms consumer could loop infinitely" under "Golden-path scenario"
+below for the full writeup, including a correction to the live-debugging theory recorded
+at the time. Not yet re-verified against a fresh live cluster (this repo's own cluster
+was torn down before the fix landed) — the natural next step, not yet done.
 
 ## Directory layout
 
@@ -315,56 +317,75 @@ databases, not asserted:
   forward doesn't error loudly, it just refuses new connections. The scenario script
   establishes its own forwards fresh on every run rather than assuming any are already up.
 
-### A critical, unresolved bug: herald's comms consumer can loop infinitely
+### FIXED: herald's comms consumer could loop infinitely (was: "critical, unresolved bug")
 
-**Do not create a new invite (or otherwise trigger a `comms.transactional.*` publish)
-against this cluster until this is fixed.** Confirmed live, twice, independently: creating
-one invite caused herald's own `herald.comms` RabbitMQ queue to redeliver the *same two
-messages* at **over 1,300 messages/second**, reaching 700k–1.4M+ redeliveries within
-minutes — real, sustained CPU burn, not a benign retry.
+**This is now fixed, in both `authstar-tower` and `authstar-herald`** — the section below
+is kept as-written for the record, including the incident's own live-debugging false start,
+because the correction is itself worth knowing. See both repos' own `TESTING.md` for the
+full writeup and `git log` for the exact commits.
 
-Root cause, fully traced:
+Confirmed live, twice, independently, before the fix: creating one invite caused herald's
+own `herald.comms` RabbitMQ queue to redeliver the *same two messages* at **over 1,300
+messages/second**, reaching 700k–1.4M+ redeliveries within minutes — real, sustained CPU
+burn, not a benign retry.
 
-1. Tower encrypts every `comms.*` payload it publishes using `heraldPayloadPublicKey`
-   from its own signet bundle — but that secret was never populated in this cluster
-   (confirmed: tower logs "no signet-sourced herald payload-encryption public key
-   configured yet" on every boot), so tower falls back to a **fresh, random ephemeral
-   key every time it restarts**, per ADR 0025/0081's own documented fallback.
-2. herald's `POST /operator/rotate-keys` (see it now correctly provisioned above) is
-   meant to fix this — it pushes herald's real public key to
-   `authstar/tower/heraldPayloadPublicKey` via `signetAdmin.pushSecret`, and reports
-   success (confirmed: `{"rotated":[{"key":"payload-encryption","version":2}],"failed":[]}`).
-3. **But tower's own subsequent bundle fetch never picks it up** — confirmed repeatedly:
-   fresh tower pod restarts, multiple `signet repo sync` calls in between, and tower
-   *still* logs the same "no signet-sourced herald payload-encryption public key"
-   fallback message every time. This looks like a genuine signetd-internals question
-   (something about how a directly-`pushSecret`'d value becomes visible to a workload's
-   regular `getServiceBundle` fetch) that this pass could not root-cause within a
-   reasonable stopping point — it is **not** something this repo's own config can fix.
-4. Because of (3), any new comms message tower publishes is encrypted with a key herald
-   can never decrypt — a **permanent** failure, not a transient one.
-5. herald's `src/lib/comms-consumer.ts` doesn't distinguish the two: *any* error from
-   `ingestCommunication` other than a JSON-parse failure hits
-   `channel.nack(msg, false, true)` — unconditional requeue, no backoff, no
-   dead-lettering, and the actual error is silently swallowed (`.catch(() => {...})`,
-   never logged) — so the permanent decryption failure becomes an invisible, infinite,
-   maximum-speed retry loop instead of a visible, one-time error.
+**The live-debugging theory recorded at the time (below) turned out to be wrong** — worth
+keeping visible as a reminder that a plausible-sounding live diagnosis still needs to
+survive a re-read of the actual code before you trust it:
 
-Mitigated for this session by scaling herald to 0 replicas and purging the queue via the
-RabbitMQ management API (`DELETE /api/queues/authstar/herald.comms/contents`, admin
-credentials at `kubectl get secret rabbitmq-topology-operator-connection -n rabbitmq`) —
-not fixed. Two real fixes are needed, in two different repos, before herald can safely
-run against live comms traffic again:
+> Tower encrypts every `comms.*` payload using `heraldPayloadPublicKey` from its own
+> signet bundle, but that secret was never populated (confirmed: tower logs "no
+> signet-sourced herald payload-encryption public key configured yet" on every boot), so
+> it falls back to a fresh ephemeral key every restart — a permanent decryption failure
+> herald's `comms-consumer.ts` doesn't distinguish from a transient one, hence the loop.
 
-1. Root-cause why tower's bundle fetch doesn't see a secret `pushSecret`'d shortly after
-   a `signet repo sync` (signetd or its client library, not this repo).
-2. `herald/src/lib/comms-consumer.ts` should distinguish permanent failures (decryption,
-   malformed payload) from transient ones (a momentary store outage) and dead-letter the
-   former instead of requeuing forever — plus log the swallowed error either way.
+Re-reading `herald/src/lib/send-worker.ts`'s actual code afterward found this doesn't hold
+up: a decryption failure inside `processCommunication` is caught *internally* and turned
+into a normal `communication.markFailed` outcome — never a thrown exception. That code
+path acks, it doesn't nack-and-loop.
 
-`scripts/scenario-golden-path.sh`'s own herald step only verifies the key-rotation API
-call itself (safe — it doesn't touch `comms.*` traffic), never a full send, specifically
-because of this.
+**The real, confirmed root cause**: `communication`'s composite actor id
+(`${tenant}:${idempotencyKey}`) routinely exceeds `consequent-postgres`'s `character(42)`
+id column — the same platform-level constraint tower's own `TESTING.md` already documents
+for contact ids and invite tokens. tower's real invite-sent publish uses `idempotencyKey:
+\`invite:${token}:sent\`` (52 characters on its own), so the composite easily lands at
+50–60+ characters for a real tenant. `communication.create`'s underlying Postgres INSERT
+failed with "value too long for type character(42)" — identically, deterministically, on
+every single redelivery — and `comms-consumer.ts`'s `nack(msg, false, true)` on *any*
+`ingestCommunication` error, with the error itself silently swallowed, turned that into an
+invisible, unbounded loop.
+
+Along the way, tracing *why* herald's real public key never reached tower in the first
+place (a real, separate bug, also now fixed) found: `signetAdmin.pushSecret` in both
+tower's and herald's `signet-admin.ts` built its tar archive path missing the namespace
+segment (`secrets/<service>/<key>.yaml` instead of the `secrets/<namespace>/<service>/
+<key>.yaml` signetd's own `ParseSecretPath` requires) — signetd doesn't fail the RPC for
+an unrecognised path, it silently skips the file and reports it only in
+`SyncBundleResponse.errors`, which the client never checked. Every `pushSecret` call had
+been reporting success while writing nothing, since this repo's inception.
+
+Both root causes are now fixed, with real regression coverage (not just asserted):
+- `herald/src/lib/communication-id.ts` (new) hashes the composite actor id to a fixed
+  40-hex-char digest. A real Postgres integration test
+  (`herald/spec/integration/herald.integration.spec.ts`) exercises the exact tower-shaped
+  52-character `idempotencyKey` that caused the live incident, against the real
+  `character(42)` column, not just the in-memory tier.
+- `herald/src/lib/comms-consumer.ts` is hardened regardless (defense in depth — no caught
+  `Error` can be reliably classified transient-vs-permanent from that function alone): one
+  requeue via standard AMQP redelivery tracking, then dead-letter instead of looping
+  again, and every failure is now actually logged. Unit-tested against a fake channel
+  (`herald/spec/behavior/comms-consumer.spec.ts`).
+- `signet-admin.ts` (both repos) now builds the correct 3-segment path and checks
+  `SyncBundleResponse` before resolving, instead of only the transport-level error.
+
+**Not yet re-verified against a fresh live cluster** — this repo's own cluster was torn
+down before these fixes landed (in `authstar-tower`/`authstar-herald`, not here), and
+re-standing one up plus re-running `scripts/scenario-golden-path.sh` with a real invite is
+the next natural step to close the loop end-to-end, but hasn't been done as of this
+writing. `scripts/scenario-golden-path.sh`'s own herald step still only verifies the
+key-rotation API call, not a full send — extending it to create a real invite and check
+the resulting `communication_snapshot` row is the natural next step once that
+re-verification happens.
 
 ## Live verification status
 
@@ -414,10 +435,13 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
 
 ## Not yet done
 
-- **Fix the two herald bugs** described in "A critical, unresolved bug" above — the
-  tower-doesn't-see-a-freshly-pushed-secret mystery, and comms-consumer.ts's
-  requeue-forever-on-any-error design. Herald must stay at 0 replicas (or these fixed)
-  before any real comms traffic flows through this cluster again.
+- **Re-verify the now-fixed herald bugs against a fresh live cluster** — see "FIXED:
+  herald's comms consumer could loop infinitely" above. Fixed and covered by real
+  tests (including a real-Postgres integration test reproducing the exact failure
+  shape) in `authstar-tower`/`authstar-herald`, but this repo's own cluster was torn
+  down before a live end-to-end re-run happened. Bring a cluster up with both repos'
+  latest `main`, run `scripts/scenario-golden-path.sh`, and extend its herald step to
+  create a real invite + check the resulting `communication_snapshot` row.
 - **`kubectl port-forward` reliability** — this pass worked around silent forward death
   by re-establishing forwards fresh each run rather than fixing the underlying flakiness;
   a longer-running test harness (e.g. a CI job) would want retry/reconnect logic instead.
