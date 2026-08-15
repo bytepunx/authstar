@@ -25,9 +25,8 @@ export interface SignetAdminOptions {
 // <key>.yaml`, then gzips it -- the wire shape `GitOpsServiceClient.
 // syncBundle` documents. Byte-for-byte the same construction as tower's
 // own `signet-admin.ts` -- see that file's header comment for the fuller
-// rationale (including the same plaintext-not-SOPS-encrypted known gap,
-// unchanged here), AND for a real incident this exact file caused: the
-// path used to omit the namespace segment entirely (`opts.namespace` was
+// rationale, AND for a real incident this exact file caused: the path
+// used to omit the namespace segment entirely (`opts.namespace` was
 // received and explicitly discarded, `void opts.namespace`), which
 // signetd's real `ParseSecretPath` silently rejects -- the RPC still
 // resolves successfully, so `POST /operator/rotate-keys` reported success
@@ -35,6 +34,16 @@ export interface SignetAdminOptions {
 // identically in both files; see tower's own signet-admin.ts and
 // syncBundleFailure for the other half of that fix (checking the
 // response, not just the transport-level error).
+//
+// A SEPARATE, still-open gap, confirmed live even after that fix: this
+// still pushes the secret value as plaintext YAML, not real SOPS
+// ciphertext, and signetd's own periodic reconciler rejects a plaintext
+// value on its next pass ("sops decrypt: parse sops file: sops metadata
+// not found"), so a pushed secret survives only until then and then
+// becomes permanently unreadable. No `signet-clients` language, including
+// Go's own reference implementation, provides a helper to produce real
+// SOPS ciphertext -- filed as bytepunx/signet-clients#49; blocked on that
+// landing, see tower's own signet-admin.ts for the fuller writeup.
 export function buildSecretArchive(namespace: string, targetService: string, key: string, value: string): Buffer {
   const path = `secrets/${namespace}/${targetService}/${key}.yaml`
   const content = Buffer.from(`value: ${JSON.stringify(value)}\n`, 'utf8')
