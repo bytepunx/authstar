@@ -41,25 +41,22 @@ describe('buildSecretArchive', () => {
 })
 
 describe('syncBundleFailure', () => {
-  it('returns null when signetd reports secrets actually added', () => {
-    expect(syncBundleFailure({ errors: [], secretsAdded: 1, secretsUpdated: 0 })).toBeNull()
+  it('returns null when signetd reports zero errors', () => {
+    expect(syncBundleFailure({ errors: [] })).toBeNull()
   })
 
-  it('returns null when signetd reports secrets updated (idempotent re-push)', () => {
-    expect(syncBundleFailure({ errors: [], secretsAdded: 0, secretsUpdated: 1 })).toBeNull()
-  })
-
-  it('returns the join of signetd-reported errors, even with zero counts', () => {
+  it('returns the join of signetd-reported errors', () => {
     const failure = syncBundleFailure({
       errors: ['skipped secrets/tower/heraldPayloadPublicKey.yaml: unrecognised path shape'],
-      secretsAdded: 0,
-      secretsUpdated: 0,
     })
     expect(failure).toBe('skipped secrets/tower/heraldPayloadPublicKey.yaml: unrecognised path shape')
   })
 
-  it('flags a silent no-op even when signetd reports no explicit errors', () => {
-    const failure = syncBundleFailure({ errors: [], secretsAdded: 0, secretsUpdated: 0 })
-    expect(failure).toBe('no secret was added or updated')
+  it('does NOT flag a real idempotent re-push (zero errors) as a failure', () => {
+    // Found live, the hard way -- see this function's own comment: an
+    // earlier version also checked `secretsAdded + secretsUpdated === 0`
+    // and misreported a genuine idempotent re-push as a failure even
+    // though signetd reported zero errors.
+    expect(syncBundleFailure({ errors: [] })).toBeNull()
   })
 })

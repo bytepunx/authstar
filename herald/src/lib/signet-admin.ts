@@ -64,10 +64,15 @@ export function buildSecretArchive(namespace: string, targetService: string, key
 
 // Pure so it's directly unit-testable against a fake `SyncBundleResponse`
 // without a real (or mocked) gRPC client. Identical to tower's own
-// signet-admin.ts export of the same name.
-export function syncBundleFailure(response: { errors: string[], secretsAdded: number, secretsUpdated: number }): string | null {
+// signet-admin.ts export of the same name -- including a real, live-found
+// correction: an earlier version of this function also checked
+// `secretsAdded + secretsUpdated === 0`, which misreported a genuine
+// idempotent re-push (unchanged value, zero errors) as a failure.
+// signetd's own SyncBundle handler always surfaces a genuinely-skipped
+// file via `errors` -- zero errors is unambiguously success regardless of
+// the add/update counts, so those counts add nothing this check needs.
+export function syncBundleFailure(response: { errors: string[] }): string | null {
   if (response.errors.length > 0) return response.errors.join('; ')
-  if (response.secretsAdded + response.secretsUpdated === 0) return 'no secret was added or updated'
   return null
 }
 
