@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib'
-import { gitOpsClient, type GitOpsServiceClient, type adminv1 } from '@bytepunx/signet-client'
+import { gitOpsClient, encryptForSecret, type GitOpsServiceClient, type adminv1 } from '@bytepunx/signet-client'
 
 // ADR 0067's tenant-provisioning flow needs tower to push four secrets
 // (session signing key, internal signing key, `identity-hash-key`
@@ -42,29 +42,20 @@ export interface SignetAdminOptions {
 // `pushSecret`'s own comment for the other half of that fix (checking the
 // response, not just the transport-level error).
 //
-// KNOWN GAP, confirmed live, not just theoretical: signet's GitOps sync
-// path is designed around SOPS-encrypted secret files (the service also
-// exposes `GetSOPSPublicKey`) -- this pushes the secret value as
-// **plaintext** YAML inside the archive, not SOPS-encrypted. A plaintext
-// push *appears* to succeed (the RPC returns cleanly), but signetd's own
-// periodic gitops reconciler re-processes every tracked secret path --
-// including ones written via a direct SyncBundle admin push, not just
-// git-synced ones -- and tries to SOPS-decrypt each one. A plaintext
-// value fails that with "sops decrypt: parse sops file: sops metadata
-// not found" (confirmed directly in signetd's own logs against a live
-// cluster, reproduced twice), so the secret survives only until the next
-// reconciliation cycle (~1 minute in that deployment) and then silently
-// becomes permanently unreadable -- with no error surfaced anywhere on
-// the read side. No client in `signet-clients` (any language, including
-// Go's own reference implementation) provides a helper to actually
-// produce SOPS-compatible ciphertext -- filed as
-// bytepunx/signet-clients#49. Blocked on that landing; nothing this repo
-// owns can fix it (real in-process age+SOPS-format encryption, or
-// shelling out to a bundled `sops` binary, belongs in the shared client
-// library every consumer depends on, not reimplemented per-repo).
-export function buildSecretArchive(namespace: string, targetService: 'tower' | 'portcullis', key: string, value: string): Buffer {
+// FIXED (was a known gap, confirmed live): a plaintext push used to
+// *appear* to succeed (the RPC returns cleanly) but never durably
+// persist -- signetd's own periodic gitops reconciler re-processes every
+// tracked secret path, including ones written via a direct SyncBundle
+// admin push, and tries to SOPS-decrypt each one; a plaintext value
+// failed that with "sops decrypt: parse sops file: sops metadata not
+// found" and silently became permanently unreadable after the next
+// reconciliation cycle. Filed as bytepunx/signet-clients#49; fixed
+// upstream (`encryptForSecret`, `@bytepunx/signet-client` >=0.6.0) -- see
+// `pushSecret`'s own comment for how it's used here. `content` below is
+// now always real SOPS ciphertext (`encryptForSecret`'s own output),
+// never a raw plaintext `value: ...` YAML leaf.
+export function buildSecretArchive(namespace: string, targetService: 'tower' | 'portcullis', key: string, content: Uint8Array): Buffer {
   const path = `secrets/${namespace}/${targetService}/${key}.yaml`
-  const content = Buffer.from(`value: ${JSON.stringify(value)}\n`, 'utf8')
 
   const header = Buffer.alloc(512)
   header.write(path, 0, 'utf8')
@@ -124,8 +115,20 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
   const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token, plaintext: true })
 
   return {
-    pushSecret(targetService, key, value) {
-      return new Promise<void>((resolve, reject) => {
+    async pushSecret(targetService, key, value) {
+      // The SOPS public key changes only on an operator-issued rotation
+      // (`RotateSOPSKey`) -- fetched fresh on every call rather than
+      // cached, since pushSecret calls are infrequent (tenant
+      // provisioning, key rotation) and a stale cached key would encrypt
+      // to a recipient signetd's already rotated away from, silently
+      // reintroducing the same "appears to succeed, never actually
+      // readable" failure mode this whole file exists to avoid.
+      const sopsKey = await new Promise<string>((resolve, reject) => {
+        client.getSopsPublicKey({}, (err, response) => (err ? reject(err) : resolve(response.publicKey)))
+      })
+      const encrypted = await encryptForSecret(sopsKey, value)
+
+      await new Promise<void>((resolve, reject) => {
         // `err` is only a transport/RPC-level failure -- signetd reports a
         // rejected (unrecognised-path-shape) secret as a *successful* RPC
         // with the problem described in `response.errors` instead (see
@@ -147,7 +150,7 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
         call.write({
           header: { secretsPath: 'secrets/', headSha: '', configPath: '' },
         } as never)
-        const archive = buildSecretArchive(opts.namespace, targetService, key, value)
+        const archive = buildSecretArchive(opts.namespace, targetService, key, encrypted)
         call.write({ data: archive } as never)
         call.end()
       })

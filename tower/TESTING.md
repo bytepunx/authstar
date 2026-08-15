@@ -152,6 +152,15 @@ so every tier runs against the same compiled artifact the real server loads, not
    (`syncBundleFailure`) are now both exported and directly unit-tested
    (`spec/behavior/signet-admin.spec.ts`) — the archive test parses the real gzipped tar bytes
    and asserts the path shape matches signetd's own contract, not just "looks plausible".
+   **Update**: fixing the two bugs above surfaced a third, deeper one — even a correctly-shaped
+   push never durably persisted, because `pushSecret` wrote the value as plaintext YAML, not
+   real SOPS ciphertext, and signetd's own periodic reconciler silently rejects a plaintext
+   secret on its next pass. Confirmed this was a `signet-clients` SDK gap (no language client,
+   including Go's own reference implementation, could produce real SOPS ciphertext), filed as
+   bytepunx/signet-clients#49, and fixed upstream (`encryptForSecret`, `@bytepunx/signet-client`
+   >=0.6.0). `pushSecret` now fetches the live SOPS public key (`GetSOPSPublicKey`) and calls
+   `encryptForSecret` before building the archive — see `authstar-integration`'s own README for
+   live re-verification status once that's been run against a fresh cluster.
 
 ## Scope covered by this pass (tower's four target cross-service flows)
 
