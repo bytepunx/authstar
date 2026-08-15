@@ -24,7 +24,7 @@ function extractTarEntryPath(gzipped: Buffer): string {
 
 describe('buildSecretArchive', () => {
   it('produces a tar entry path with exactly <namespace>/<service>/<name>.yaml after secrets/', () => {
-    const archive = buildSecretArchive('authstar', 'tower', 'heraldPayloadPublicKey', '{"version":1}')
+    const archive = buildSecretArchive('authstar', 'tower', 'heraldPayloadPublicKey', Buffer.from('{"version":1}'))
     const path = extractTarEntryPath(archive)
     expect(path).toBe('secrets/authstar/tower/heraldPayloadPublicKey.yaml')
 
@@ -32,11 +32,17 @@ describe('buildSecretArchive', () => {
     expect(rel.split('/')).toHaveLength(3)
   })
 
-  it('embeds the given value as parseable YAML content', () => {
-    const archive = buildSecretArchive('authstar', 'herald', 'payloadKeyGenerations', 'some-secret-value')
+  // `content` is opaque bytes here -- real callers pass `encryptForSecret`'s
+  // own output (real SOPS ciphertext, tested against a round-trip through
+  // the real `sops` binary in signet-clients' own test suite, not
+  // reproduced here). This only proves buildSecretArchive's own remaining
+  // responsibility: tar+gzip framing preserves the given bytes exactly.
+  it('embeds the given content bytes exactly, unmodified', () => {
+    const content = Buffer.from('sops:\n  age:\n    - recipient: age1abc\nvalue: ENC[...]\n', 'utf8')
+    const archive = buildSecretArchive('authstar', 'herald', 'payloadKeyGenerations', content)
     const tar = gunzipSync(archive)
-    const content = tar.subarray(512, 512 + 'value: "some-secret-value"\n'.length).toString('utf8')
-    expect(content).toBe('value: "some-secret-value"\n')
+    const embedded = tar.subarray(512, 512 + content.length)
+    expect(embedded.equals(content)).toBe(true)
   })
 })
 

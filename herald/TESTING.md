@@ -567,6 +567,16 @@ before resolving. Both are exported and directly unit-tested
 (`spec/behavior/signet-admin.spec.ts`) — the archive test parses the real gzipped tar bytes
 and asserts the path shape matches signetd's own contract, not just "looks plausible".
 
+**Update**: fixing this surfaced a third, deeper bug — even a correctly-shaped push never
+durably persisted, because `pushSecret` wrote the value as plaintext YAML, not real SOPS
+ciphertext, and signetd's own periodic reconciler silently rejects a plaintext secret on its
+next pass ("sops decrypt: parse sops file: sops metadata not found"). Confirmed this was a
+`signet-clients` SDK gap spanning every language (including Go's own reference
+implementation), filed as bytepunx/signet-clients#49, and fixed upstream (`encryptForSecret`,
+`@bytepunx/signet-client` >=0.6.0). `pushSecret` now fetches the live SOPS public key
+(`GetSOPSPublicKey`) and calls `encryptForSecret` before building the archive — see
+`authstar-integration`'s own README for live re-verification status.
+
 **Correction to this section's own earlier live-debugging theory, and two more bugs found
 and fixed in the same pass**: the original live diagnosis (recorded in
 `authstar-integration`'s own README) attributed the 1,300-messages/second infinite

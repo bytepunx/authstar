@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib'
-import { gitOpsClient, type GitOpsServiceClient } from '@bytepunx/signet-client'
+import { gitOpsClient, encryptForSecret, type GitOpsServiceClient } from '@bytepunx/signet-client'
 
 // ADR 0081's key-rotation route needs herald to push secrets into two
 // places: its *own* bundle (the full generation set, so a restart doesn't
@@ -35,18 +35,17 @@ export interface SignetAdminOptions {
 // syncBundleFailure for the other half of that fix (checking the
 // response, not just the transport-level error).
 //
-// A SEPARATE, still-open gap, confirmed live even after that fix: this
-// still pushes the secret value as plaintext YAML, not real SOPS
-// ciphertext, and signetd's own periodic reconciler rejects a plaintext
-// value on its next pass ("sops decrypt: parse sops file: sops metadata
-// not found"), so a pushed secret survives only until then and then
-// becomes permanently unreadable. No `signet-clients` language, including
-// Go's own reference implementation, provides a helper to produce real
-// SOPS ciphertext -- filed as bytepunx/signet-clients#49; blocked on that
-// landing, see tower's own signet-admin.ts for the fuller writeup.
-export function buildSecretArchive(namespace: string, targetService: string, key: string, value: string): Buffer {
+// FIXED (was a separate, still-open gap at the time): a plaintext push
+// used to appear to succeed but never durably persist -- signetd's own
+// periodic reconciler rejected a plaintext value on its next pass ("sops
+// decrypt: parse sops file: sops metadata not found"). Filed as
+// bytepunx/signet-clients#49; fixed upstream (`encryptForSecret`,
+// `@bytepunx/signet-client` >=0.6.0) -- see tower's own signet-admin.ts
+// and `pushSecret`'s own comment here for how it's used. `content` below
+// is now always real SOPS ciphertext, never a raw plaintext `value: ...`
+// YAML leaf.
+export function buildSecretArchive(namespace: string, targetService: string, key: string, content: Uint8Array): Buffer {
   const path = `secrets/${namespace}/${targetService}/${key}.yaml`
-  const content = Buffer.from(`value: ${JSON.stringify(value)}\n`, 'utf8')
 
   const header = Buffer.alloc(512)
   header.write(path, 0, 'utf8')
@@ -92,8 +91,17 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
   const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token, plaintext: true })
 
   return {
-    pushSecret(targetService, key, value) {
-      return new Promise<void>((resolve, reject) => {
+    async pushSecret(targetService, key, value) {
+      // Fetched fresh on every call, not cached -- see tower's own
+      // signet-admin.ts for why (a stale cached key across a SOPS key
+      // rotation would silently reintroduce the same "appears to
+      // succeed, never actually readable" failure mode).
+      const sopsKey = await new Promise<string>((resolve, reject) => {
+        client.getSopsPublicKey({}, (err, response) => (err ? reject(err) : resolve(response.publicKey)))
+      })
+      const encrypted = await encryptForSecret(sopsKey, value)
+
+      await new Promise<void>((resolve, reject) => {
         const call = client.syncBundle((err, response) => {
           if (err) {
             reject(err)
@@ -109,7 +117,7 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
         call.write({
           header: { secretsPath: 'secrets/', headSha: '', configPath: '' },
         } as never)
-        const archive = buildSecretArchive(opts.namespace, targetService, key, value)
+        const archive = buildSecretArchive(opts.namespace, targetService, key, encrypted)
         call.write({ data: archive } as never)
         call.end()
       })
