@@ -159,8 +159,22 @@ so every tier runs against the same compiled artifact the real server loads, not
    including Go's own reference implementation, could produce real SOPS ciphertext), filed as
    bytepunx/signet-clients#49, and fixed upstream (`encryptForSecret`, `@bytepunx/signet-client`
    >=0.6.0). `pushSecret` now fetches the live SOPS public key (`GetSOPSPublicKey`) and calls
-   `encryptForSecret` before building the archive — see `authstar-integration`'s own README for
-   live re-verification status once that's been run against a fresh cluster.
+   `encryptForSecret` before building the archive.
+   **Update 2**: re-verified live against a fresh cluster — tower now durably receives herald's
+   real rotated payload-encryption public key with zero SOPS-decrypt errors and no fallback
+   message. A separate, distinct bug surfaced in `authstar-herald` while re-verifying this (its
+   own `payloadKeyGenerations` secret was git-tracked as a static placeholder that `authstar-
+   integration`'s reconciler kept clobbering back over real rotations) — fixed there, not here;
+   see `authstar-integration`'s README for the full writeup.
+   **Update 3**: this same re-verification pass separately found and fixed a shutdown race in
+   `src/server.ts` — signet's coordinated-restart wait and this process's own SIGTERM handler
+   raced via `Promise.race`, and both could end up calling `app.close()` concurrently when a
+   bundle-change restart landed close to an external SIGTERM. Fastify's `close()` isn't safe to
+   re-enter while a prior call is in flight, so the process hung instead of exiting, until
+   Kubernetes' liveness probe eventually force-killed it — reproduced live as a real
+   `CrashLoopBackOff`. Fixed with a `closeOnce()` helper that memoizes the close promise so both
+   race branches share the same in-flight call; re-verified live by deliberately stacking
+   multiple bundle changes and confirming a single clean restart instead of a loop.
 
 ## Scope covered by this pass (tower's four target cross-service flows)
 
