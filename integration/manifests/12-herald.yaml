@@ -1,6 +1,10 @@
-# No SIGNET_ADMIN_ADDR here: unlike tower/keep, herald has no signet-admin.ts
-# GitOps wiring (confirmed: no SIGNET_ADMIN_TOKEN requireEnv call in
-# herald/src/server.ts) — it only ever calls the regular workload port.
+# SIGNET_ADMIN_ADDR is required: herald/src/server.ts gained its own
+# createSignetAdmin wiring under ADR 0025 (pushing herald's payload-
+# encryption public key to signet) after this comment was first written --
+# the "no admin wiring" claim above is stale as of that change. Same
+# fallback-to-wrong-port risk tower's own manifest comment already
+# documents (herald's own `SIGNET_ADMIN_ADDR ?? address` fallback would
+# otherwise silently point GitOps calls at the workload port).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -53,6 +57,8 @@ spec:
               value: authstar
             - name: SIGNET_ADDR
               value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_ADMIN_ADDR
+              value: signet.signet.svc.cluster.local:8444
             - name: SIGNET_TRUST_DOMAIN
               value: authstar.cluster.local
             - name: SPIFFE_ENDPOINT_SOCKET

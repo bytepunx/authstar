@@ -6,7 +6,14 @@
 # CHRONICLE_RABBITMQ_URL's credential is this specific cluster's live,
 # randomly-generated broker credential, not guest/guest -- see
 # scripts/lib-secrets.sh's header comment for how to read the current one
-# and why guest/guest 403s (ACCESS_REFUSED) against a real broker.
+# and why guest/guest 403s (ACCESS_REFUSED) against a real broker. Reuses
+# tower's own dedicated user rather than a separate chronicle identity:
+# chronicle isn't in rabbitmqTargetServices (kluster-lib/profile/
+# authstar.go, "today: tower, keep" per ADR 0008/0012), and tower's own
+# Permission resource is a fully-permissive dev-only wildcard (configure/
+# read/write: ".*", confirmed via `kubectl get permission.rabbitmq.com -n
+# rabbitmq`), so sharing it works and needs no new topology-operator
+# identity.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -64,7 +71,7 @@ spec:
             - name: CHRONICLE_CLICKHOUSE_DATABASE
               value: chronicle
             - name: CHRONICLE_RABBITMQ_URL
-              value: amqp://rmq-e723a8343b2dd491:c68cd68864a92438478140b78988be85c7ba571a@rabbitmq.rabbitmq.svc.cluster.local:5672/
+              value: amqp://tower:7f2404f31f79db28f89d2feb3a175af5e52c80699ce083cd@rabbitmq.rabbitmq.svc.cluster.local:5672/authstar
             - name: CHRONICLE_INTERNAL_JWT_SECRET
               value: dev-only-insecure-secret
 ---
