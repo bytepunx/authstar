@@ -211,11 +211,21 @@ async function main(): Promise<void> {
   // Race our own shutdown signal against signet's coordinated-restart wait
   // -- identical reasoning to tower's `server.ts`: a stuck `waitForRestart`
   // can never block an operator-issued SIGTERM.
+  //
+  // Both branches can resolve close together (e.g. a signet bundle-change
+  // restart racing an external SIGTERM) -- closeOnce ensures app.close() is
+  // only ever invoked once, since Fastify's close() isn't safe to re-enter
+  // while a prior call is still in flight (confirmed live: a concurrent
+  // second call left the process hung after logging, never reaching
+  // process.exit, until Kubernetes' liveness probe force-killed it).
+  let closePromise: Promise<void> | undefined
+  const closeOnce = (): Promise<void> => (closePromise ??= app.close())
+
   await Promise.race([
     waitForRestart(workload.client, namespace, service, 30, 10_000, { signal: controller.signal })
       .then(async (lock) => {
         app.log.info('signet bundle changed -- acquired restart lock, shutting down for Kubernetes to restart')
-        await app.close()
+        await closeOnce()
         await lock.release()
       })
       .catch((err) => {
@@ -224,7 +234,7 @@ async function main(): Promise<void> {
       }),
     new Promise<void>((resolve) => controller.signal.addEventListener('abort', () => resolve())).then(async () => {
       app.log.info('shutdown signal received -- closing')
-      await app.close()
+      await closeOnce()
     }),
   ])
 
