@@ -427,8 +427,57 @@ its next pass, permanently. Confirmed this is a `signet-clients` SDK gap, not an
 authstar one: no language client (including Go's own reference implementation) provides
 a way to actually produce SOPS-compatible ciphertext — filed as
 [bytepunx/signet-clients#49](https://github.com/bytepunx/signet-clients/issues/49).
-Blocked on that landing; `scripts/scenario-golden-path.sh`'s herald step will stay
-limited to the key-rotation API call (not a full send) until it does.
+
+**FIXED and re-verified live**: `signet-clients` published `encryptForSecret` /
+`@bytepunx/signet-client@0.6.0` closing #49. Both `tower/src/lib/signet-admin.ts` and
+`herald/src/lib/signet-admin.ts` now fetch signet's real SOPS public key
+(`getSopsPublicKey`) and encrypt through the client before pushing. Live-confirmed: after
+a real `POST /operator/rotate-keys` call, tower's boot log shows no
+`heraldPayloadPublicKey` fallback message, and signetd logs zero decrypt errors on that
+path — the exact failure quoted above no longer occurs.
+
+**A third, distinct bug surfaced immediately after, chasing the same "does herald
+actually decrypt now" question**: a fresh invite created right after a real rotation
+failed not with a decrypt error but with `"no payload key generation 2"` — herald's own
+in-process keyring didn't have the generation it had just created, even though the
+rotation's own HTTP response confirmed `{"version":2}` and signetd logged no error on the
+push. Root cause: `herald/payloadKeyGenerations` (and `unsubscribeKeyGenerations`) were
+**both** git-tracked in `scripts/lib-secrets.sh` as a static single-generation placeholder
+*and* exclusively runtime-managed via `rotate-keys` — signetd's periodic gitops
+reconciler (confirmed firing roughly every 5 minutes independent of any explicit `repo
+sync`, via its own `reconcile: sync complete` log lines) kept re-applying the git-tracked
+generation-1-only value, silently reverting every real rotation within one sync cycle,
+regardless of whether herald itself restarted. `tower/heraldPayloadPublicKey` never had
+this problem because it was never git-tracked in the first place — only ever written by
+`rotate-keys`, so nothing competed with it.
+
+**Fixed**: removed both secrets from `SECRET_ENTRIES`/`SECRET_VALUE__` in
+`scripts/lib-secrets.sh` and deleted the committed `secrets/authstar/herald/
+{payloadKeyGenerations,unsubscribeKeyGenerations}.yaml` placeholder files (herald's own
+`loadPayloadKeyring`/`loadUnsubscribeKeyring` already fall back to an ephemeral
+in-process key when the secret is absent, so this is safe). Re-verified live end to end
+after the fix: rotate → restart herald → create a fresh invite → `communication_event`
+shows `communication.created` → `communication.failed` with reason `"no send adapter
+configured"` (the deliberate no-op placeholder adapter in `build-app.ts`, expected in
+this dev cluster) — not a decrypt or generation-lookup failure. Herald durably decrypts a
+real payload encrypted under a real rotated key, surviving a restart, for the first time
+in this project's history.
+
+**A fourth issue was reproduced (not newly introduced) while chasing the above**: firing
+multiple signet bundle changes in quick succession (a `repo sync` immediately followed by
+a `rotate-keys` call) drove both tower and herald into a real `CrashLoopBackOff`. Their
+shutdown log sequence stalls at `"shutdown signal received -- closing"` with no further
+progress, until kubelet's TCP liveness probe eventually force-kills the container. Traced
+to `server.ts`'s `Promise.race` between signet's own coordinated-restart wait
+(`waitForRestart` → `app.close()` → `lock.release()`) and this process's own SIGTERM/
+SIGINT handler (`app.close()` again) — if a bundle-change restart and an external SIGTERM
+land close together, both branches can end up calling `app.close()` concurrently, and
+Fastify's `close()` isn't designed to be re-entered while a prior call is still in
+flight. This matches (and gives a precise root cause to) the "self-restart whose shutdown
+hung instead of exiting" observation already flagged in `manifests/13-lookout.yaml`'s and
+`14-chronicle.yaml`'s own TCP-probe comments — not a new bug, but now understood well
+enough to fix rather than just work around with a TCP probe. **Not yet fixed** — worked
+around this pass by deleting the stuck pods; see "Not yet done" below.
 
 ## Live verification status
 
@@ -444,8 +493,9 @@ golden path was "proven working end-to-end" — that claim did not survive a fre
   the script for the exact 6-request sequence), tower genuinely resolving/creating the
   account, a real Stripe-signature-verified webhook call to keep, herald's real operator
   key-rotation API, and a real lookout → RabbitMQ → ClickHouse → chronicle-report chain.
-  herald's full send-and-verify path remains blocked — see "A critical, unresolved bug"
-  above.
+  herald's key-distribution/decryption chain is now fully live-verified too (see "A
+  second, deeper, separate bug" above) — the script itself still only exercises the
+  rotate-keys call, not a full send-and-verify; that extension is tracked below.
 - The GitHub repository (`bytepunx/authstar-integration`, private) received real pushes
   throughout this pass — the deploy-key/`repo add`/`repo sync` steps work as designed.
 
@@ -478,12 +528,17 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
 
 ## Not yet done
 
-- **Extend `scripts/scenario-golden-path.sh`'s herald step to a full send, once
-  bytepunx/signet-clients#49 lands** — blocked, not forgotten: see "FIXED: herald's
-  comms consumer could loop infinitely" above for why a full send can't be verified yet
-  (herald's real key can't durably reach tower until that issue is fixed upstream). The
-  infinite-loop bug itself is fixed and re-verified live; only the key-distribution gap
-  remains, and it isn't this repo's to fix.
+- **Fix the tower/herald shutdown-hang race** — see "A fourth issue" above.
+  `Promise.race`ing signet's coordinated-restart wait against this process's own SIGTERM
+  handler lets both branches call `app.close()` concurrently when a bundle-change restart
+  and an external SIGTERM land close together, which can wedge the pod in
+  `CrashLoopBackOff` until manually deleted. Root cause is understood precisely enough now
+  to fix (e.g. guard `app.close()` behind a single in-flight promise shared by both race
+  branches) rather than rely on the TCP liveness probe to eventually notice and recover.
+- **Extend `scripts/scenario-golden-path.sh`'s herald step to a full send** — no longer
+  blocked (bytepunx/signet-clients#49 landed and both the SOPS gap and the
+  git-tracked-keyring-clobbering bug it surfaced are fixed and live-verified above); just
+  not yet written into the script itself.
 - **Keep's trial-grant path** (`POST /tenants/:slug/trials`) — the other keep billing
   route from the original scenario research, not yet exercised (only the Stripe webhook
   path has been).
