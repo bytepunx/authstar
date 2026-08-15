@@ -16,11 +16,21 @@ secrets source and (by convention) home to the scripts that provision it. See
 reference pattern this repo's mechanics (not content) are copied from.
 
 A real infinite-loop bug in herald's comms consumer (confirmed live at 1,300+
-messages/second) was found and **fixed** in `authstar-tower`/`authstar-herald` — see
-"FIXED: herald's comms consumer could loop infinitely" under "Golden-path scenario"
-below for the full writeup, including a correction to the live-debugging theory recorded
-at the time. Not yet re-verified against a fresh live cluster (this repo's own cluster
-was torn down before the fix landed) — the natural next step, not yet done.
+messages/second) was found, **fixed**, and **re-verified live against a fresh
+cluster** — see "FIXED: herald's comms consumer could loop infinitely" under
+"Golden-path scenario" below for the full writeup, including a correction to the
+live-debugging theory recorded at the time.
+
+**Blocked, separately**: herald's `POST /operator/rotate-keys` still can't durably
+distribute its real key to tower — not an infinite-loop risk (that's fixed), but
+`comms.*` payloads are still encrypted with a throwaway ephemeral key tower generates
+every boot, so every send still fails (cleanly, as `communication.failed`, no loop) with
+a decryption error. Root cause confirmed live and filed upstream as
+[bytepunx/signet-clients#49](https://github.com/bytepunx/signet-clients/issues/49) — no
+`signet-clients` language SDK provides a way to actually produce a SOPS-encrypted secret,
+so every `pushSecret`/admin-push call in any language silently stops working after
+signetd's next reconciliation cycle. Nothing this repo (or `authstar-tower`/
+`authstar-herald`) owns can fix this — waiting on that issue.
 
 ## Directory layout
 
@@ -378,14 +388,39 @@ Both root causes are now fixed, with real regression coverage (not just asserted
 - `signet-admin.ts` (both repos) now builds the correct 3-segment path and checks
   `SyncBundleResponse` before resolving, instead of only the transport-level error.
 
-**Not yet re-verified against a fresh live cluster** — this repo's own cluster was torn
-down before these fixes landed (in `authstar-tower`/`authstar-herald`, not here), and
-re-standing one up plus re-running `scripts/scenario-golden-path.sh` with a real invite is
-the next natural step to close the loop end-to-end, but hasn't been done as of this
-writing. `scripts/scenario-golden-path.sh`'s own herald step still only verifies the
-key-rotation API call, not a full send — extending it to create a real invite and check
-the resulting `communication_snapshot` row is the natural next step once that
-re-verification happens.
+**Re-verified live against a fresh cluster** (both fixes deployed, real tenant
+provisioned for real, not asserted):
+- `herald.comms` after the provisioning call that triggers the bootstrap invite: **1
+  publish, 1 ack, 0 redeliveries** — confirmed via the RabbitMQ management API. No loop.
+- The real event trail lands in Postgres: `communication.created` → `communication.failed`
+  — a clean terminal state, not a crash or a retry storm. `communication.create`'s own
+  INSERT succeeding at all is itself proof `communicationActorId`'s hash-based id works
+  against the real `character(42)` column in production, not just in the integration test.
+- The `failed` reason is `"payload decryption failed: ... oaep decoding error"` — expected,
+  and itself informative: it's the *other*, separately-tracked gap below, not the
+  infinite-loop bug. The loop is conclusively fixed regardless of whether herald's key
+  ever reaches tower.
+
+**A second, deeper, separate bug was found chasing that failure reason**: calling
+`POST /operator/rotate-keys` reports success and `signetAdmin.pushSecret`'s own
+now-fixed response-checking confirms zero errors — but tower still never sees the key,
+even restarting immediately afterward with no intervening `repo sync`. Traced to
+signetd's own logs:
+
+```
+ERROR store secret path=secrets/authstar/tower/heraldPayloadPublicKey.yaml err="sops decrypt: parse sops file: sops metadata not found"
+```
+
+`pushSecret` (both repos) pushes the value as plaintext YAML, not real SOPS ciphertext —
+a gap `signet-admin.ts`'s own header comment already flagged. signetd's periodic
+reconciler tries to SOPS-decrypt every tracked secret path (including ones pushed
+directly via the admin API, not just git-synced ones) and rejects a plaintext value on
+its next pass, permanently. Confirmed this is a `signet-clients` SDK gap, not an
+authstar one: no language client (including Go's own reference implementation) provides
+a way to actually produce SOPS-compatible ciphertext — filed as
+[bytepunx/signet-clients#49](https://github.com/bytepunx/signet-clients/issues/49).
+Blocked on that landing; `scripts/scenario-golden-path.sh`'s herald step will stay
+limited to the key-rotation API call (not a full send) until it does.
 
 ## Live verification status
 
@@ -435,13 +470,15 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
 
 ## Not yet done
 
-- **Re-verify the now-fixed herald bugs against a fresh live cluster** — see "FIXED:
-  herald's comms consumer could loop infinitely" above. Fixed and covered by real
-  tests (including a real-Postgres integration test reproducing the exact failure
-  shape) in `authstar-tower`/`authstar-herald`, but this repo's own cluster was torn
-  down before a live end-to-end re-run happened. Bring a cluster up with both repos'
-  latest `main`, run `scripts/scenario-golden-path.sh`, and extend its herald step to
-  create a real invite + check the resulting `communication_snapshot` row.
+- **Extend `scripts/scenario-golden-path.sh`'s herald step to a full send, once
+  bytepunx/signet-clients#49 lands** — blocked, not forgotten: see "FIXED: herald's
+  comms consumer could loop infinitely" above for why a full send can't be verified yet
+  (herald's real key can't durably reach tower until that issue is fixed upstream). The
+  infinite-loop bug itself is fixed and re-verified live; only the key-distribution gap
+  remains, and it isn't this repo's to fix.
+- **Keep's trial-grant path** (`POST /tenants/:slug/trials`) — the other keep billing
+  route from the original scenario research, not yet exercised (only the Stripe webhook
+  path has been).
 - **`kubectl port-forward` reliability** — this pass worked around silent forward death
   by re-establishing forwards fresh each run rather than fixing the underlying flakiness;
   a longer-running test harness (e.g. a CI job) would want retry/reconnect logic instead.
