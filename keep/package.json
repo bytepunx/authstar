@@ -16,6 +16,7 @@
     "test:e2e": "vitest run spec/e2e",
     "pretest:integration": "npm run build",
     "test:integration": "vitest run spec/integration",
+    "test:live": "vitest run spec/live",
     "test:all": "npm run build && vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit"

@@ -44,6 +44,39 @@ entitlement-publishing dependencies.
   integration tier documents (`pgAdapters.close()` then `container.stop()`).
 - Needs Docker running locally / in CI.
 
+## `spec/live/*.spec.ts` — real Stripe test-mode API, opt-in only
+
+- Run with `npm run test:live` (not part of `npm test`/`test:e2e`/`test:integration`, though
+  `npm run test:all`'s unfiltered `vitest run` does pick it up). Requires
+  `STRIPE_LIVE_TEST_SECRET_KEY` (a real `sk_test_`/`rk_test_` key from a free Stripe account,
+  https://dashboard.stripe.com/test/apikeys — test mode needs no business verification or bank
+  details) to be exported before running. Every spec file is wrapped in
+  `describe.skipIf(!process.env.STRIPE_LIVE_TEST_SECRET_KEY, ...)`, so the suite skips cleanly
+  (not a failure) when the var is unset — safe to leave wired into a CI job with no Stripe
+  credentials configured. `spec/lib/live-stripe-app.ts`'s `liveStripeSecretKey()` also fails
+  closed if the value doesn't start with `sk_test_`/`rk_test_`, so a live-mode key pasted in by
+  mistake can't accidentally run this suite against real money.
+- **What this tier exists to catch, that the fake client (`spec/lib/fake-stripe-client.ts`)
+  structurally cannot**: its own header comment says signature verification is "a simple
+  sentinel check (`valid:<webhookSecret>`), not real HMAC." That means nothing in
+  `spec/behavior`/`spec/e2e` ever exercises the installed `stripe` SDK's actual
+  `webhooks.constructEvent` — its real signature-header parsing, timestamp-tolerance
+  enforcement (Stripe's default is 300s; keep passes no override, `stripe-client.ts:131`), or
+  rejection of a tampered payload/wrong secret. Likewise `getPrice`/`createCheckoutSession`/
+  `validateApiKey` against the fake only prove keep's request/response *mapping* code compiles
+  against a shape this codebase hand-wrote itself, not that it matches what Stripe's real API
+  actually returns.
+- **No webhook endpoint is registered in Stripe's dashboard for this tier, deliberately.**
+  `stripe.webhooks.generateTestHeaderString`/`constructEvent` treat the webhook secret as a
+  plain shared string used for local HMAC-SHA256, not something tied to a registered endpoint
+  (confirmed against the installed SDK's own types, `node_modules/stripe/types/Webhooks.d.ts`)
+  — `stripe-live.spec.ts` picks its own constant and uses it on both sides (generating the test
+  signature, and configuring the tenant's `stripeConfig`).
+- Creates one real (test-mode) Price via `stripe.prices.create()` in `beforeAll`, used by the
+  `getPrice`/`createCheckoutSession` specs; archives the Price and its Product in `afterAll`
+  (best-effort — Stripe Prices can't be hard-deleted once created, only deactivated).
+- Needs network access to `api.stripe.com` and a real (test-mode) Stripe account.
+
 ## What's covered vs. left for a follow-up pass
 
 **Fully implemented, all 3 tiers passing (70 tests: 65 behavior, 2 e2e, 3 integration) as of the
