@@ -59,10 +59,12 @@ describeLive('stripe integration -- live test-mode API', () => {
 
   let t: LiveTestApp
   let headers: { authorization: string }
+  let readHeaders: { authorization: string }
 
   beforeEach(async () => {
     t = await buildLiveTestApp()
     headers = await t.headers({ permissions: ['billing:manage'] })
+    readHeaders = await t.headers({ permissions: ['billing:read'] })
   })
 
   afterEach(async () => {
@@ -133,6 +135,160 @@ describeLive('stripe integration -- live test-mode API', () => {
       const body = response.json()
       expect(body.url).toContain('checkout.stripe.com')
     })
+  })
+
+  // `pm_card_visa` is a Stripe-documented test PaymentMethod token
+  // (https://docs.stripe.com/testing#cards) -- attaches and charges
+  // successfully without going through Checkout/Elements UI, so a real
+  // `active` Subscription can exist entirely via the API, no browser needed.
+  async function createActiveSubscription(stripe: Stripe, priceId: string, extra: Stripe.CustomerCreateParams = {}) {
+    const customer = await stripe.customers.create({ email: `live-test+${Math.random().toString(36).slice(2)}@example.com`, ...extra })
+    const paymentMethod = await stripe.paymentMethods.attach('pm_card_visa', { customer: customer.id })
+    await stripe.customers.update(customer.id, { invoice_settings: { default_payment_method: paymentMethod.id } })
+    const subscription = await stripe.subscriptions.create({ customer: customer.id, items: [{ price: priceId }], default_payment_method: paymentMethod.id })
+    return { customer, subscription }
+  }
+
+  function subscriptionEventObject(sub: Stripe.Subscription, scope: Record<string, string>) {
+    return {
+      id: sub.id,
+      customer: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
+      status: sub.status,
+      current_period_end: sub.items.data[0]?.current_period_end ?? 0,
+      items: { data: [{ price: { id: sub.items.data[0]?.price.id ?? '' } }] },
+      metadata: { scope: JSON.stringify(scope) },
+    }
+  }
+
+  describe('getSubscription -- real object shape via checkout.session.completed', () => {
+    beforeEach(async () => {
+      await t.stripeConfig.set(LIVE_TEST_TENANT, { secretKey: liveStripeSecretKey(), webhookSecret })
+    })
+
+    it('correctly maps a real Stripe Subscription -- including current_period_end living on the SubscriptionItem, not the Subscription itself (stripe-client.ts\'s own flagged API-version gotcha)', async () => {
+      const { customer, subscription } = await createActiveSubscription(stripe, priceId)
+      expect(subscription.status).toBe('active')
+
+      const eventPayload = JSON.stringify({
+        id: `evt_live_${Math.random().toString(36).slice(2)}`,
+        type: 'checkout.session.completed',
+        data: {
+          object: {
+            id: 'cs_test_live_fake_session',
+            customer: customer.id,
+            subscription: subscription.id,
+            metadata: { scope: JSON.stringify({ account: 'live-checkout-acct' }) },
+          },
+        },
+      })
+      const signature = stripe.webhooks.generateTestHeaderString({ payload: eventPayload, secret: webhookSecret })
+
+      const response = await t.app.inject({
+        method: 'POST',
+        url: '/_authstar/webhooks/stripe',
+        headers: { 'x-authstar-tenant-slug': LIVE_TEST_TENANT, 'stripe-signature': signature, 'content-type': 'application/json' },
+        payload: eventPayload,
+      })
+      expect(response.statusCode).toBe(200)
+
+      const subResponse = await t.app.inject({ method: 'GET', url: `/tenants/${LIVE_TEST_TENANT}/subscriptions/${subscription.id}`, headers: readHeaders })
+      expect(subResponse.statusCode).toBe(200)
+      const subBody = subResponse.json()
+      expect(subBody.status).toBe('active')
+      expect(subBody.stripePriceId).toBe(priceId)
+      // A real future period end, proving getSubscription's real mapping
+      // (stripe-client.ts:114-128) reads the field from the right place --
+      // it silently returns 0 if the SDK's response shape ever moves again.
+      expect(new Date(subBody.currentPeriodEnd).getTime()).toBeGreaterThan(Date.now())
+
+      await stripe.subscriptions.cancel(subscription.id)
+    })
+  })
+
+  describe('subscription renewal via a Stripe test clock', () => {
+    let clockId: string | undefined
+
+    afterEach(async () => {
+      if (!clockId) return
+      // Deleting a test clock cascades to every customer/subscription
+      // attached to it -- the only cleanup this block needs.
+      await stripe.testHelpers.testClocks.del(clockId).catch(() => {})
+      clockId = undefined
+    })
+
+    beforeEach(async () => {
+      await t.stripeConfig.set(LIVE_TEST_TENANT, { secretKey: liveStripeSecretKey(), webhookSecret })
+    })
+
+    it('advances real simulated time to trigger a real billing-period renewal, and keep processes the resulting real object', async () => {
+      const scope = { account: 'live-renewal-acct' }
+
+      async function postEvent(type: string, sub: Stripe.Subscription) {
+        const eventPayload = JSON.stringify({ id: `evt_live_${Math.random().toString(36).slice(2)}`, type, data: { object: subscriptionEventObject(sub, scope) } })
+        const signature = stripe.webhooks.generateTestHeaderString({ payload: eventPayload, secret: webhookSecret })
+        return t.app.inject({
+          method: 'POST',
+          url: '/_authstar/webhooks/stripe',
+          headers: { 'x-authstar-tenant-slug': LIVE_TEST_TENANT, 'stripe-signature': signature, 'content-type': 'application/json' },
+          payload: eventPayload,
+        })
+      }
+
+      const clock = await stripe.testHelpers.testClocks.create({ frozen_time: Math.floor(Date.now() / 1000), name: 'keep live test tier' })
+      clockId = clock.id
+
+      const { subscription } = await createActiveSubscription(stripe, priceId, { test_clock: clockId })
+      const initialPeriodEnd = subscription.items.data[0]?.current_period_end ?? 0
+
+      // Seed keep's own subscription record first, the same way a real
+      // integration receives customer.subscription.created before any
+      // later renewal update.
+      const created = await postEvent('customer.subscription.created', subscription)
+      expect(created.statusCode).toBe(200)
+
+      // Just past the subscription's own period end (itself ~1 interval
+      // after the clock's creation time) -- Stripe caps a single advance at
+      // "two intervals... based on the shortest subscription interval in
+      // the test clock" (TestClockAdvanceParams's own doc comment, and
+      // confirmed live: advancing periodEnd + 32 more days overshot that
+      // ceiling and was rejected outright).
+      const advanceTo = initialPeriodEnd + 24 * 60 * 60
+      await stripe.testHelpers.testClocks.advance(clockId, { frozen_time: advanceTo })
+
+      // Advancing is asynchronous on Stripe's side -- poll until it reports
+      // caught up, rather than assuming a fixed delay is long enough.
+      let status: Stripe.TestHelpers.TestClock.Status = clock.status
+      for (let i = 0; i < 30 && status !== 'ready'; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        status = (await stripe.testHelpers.testClocks.retrieve(clockId)).status
+      }
+      expect(status).toBe('ready')
+
+      // The clock reporting "ready" only means Stripe caught up to the
+      // target time, not that every downstream side effect (invoicing,
+      // rolling the subscription to its next period) has necessarily
+      // settled yet -- confirmed live: reading immediately after "ready"
+      // sometimes still showed the pre-renewal period end. Poll a few more
+      // times rather than assume the first read is authoritative.
+      let renewed = await stripe.subscriptions.retrieve(subscription.id)
+      let renewedPeriodEnd = renewed.items.data[0]?.current_period_end ?? 0
+      for (let i = 0; i < 10 && renewedPeriodEnd <= initialPeriodEnd; i++) {
+        await new Promise((resolve) => setTimeout(resolve, 1000))
+        renewed = await stripe.subscriptions.retrieve(subscription.id)
+        renewedPeriodEnd = renewed.items.data[0]?.current_period_end ?? 0
+      }
+      // The actual proof real time passed: Stripe genuinely rolled the
+      // subscription into a new billing period, not something this test
+      // fabricated.
+      expect(renewedPeriodEnd).toBeGreaterThan(initialPeriodEnd)
+
+      const updated = await postEvent('customer.subscription.updated', renewed)
+      expect(updated.statusCode).toBe(200)
+
+      const subResponse = await t.app.inject({ method: 'GET', url: `/tenants/${LIVE_TEST_TENANT}/subscriptions/${subscription.id}`, headers: readHeaders })
+      const subBody = subResponse.json()
+      expect(new Date(subBody.currentPeriodEnd).getTime()).toBe(renewedPeriodEnd * 1000)
+    }, 60_000) // generous override -- polling a real test-clock advance takes real wall-clock seconds, well past the file's default 30s
   })
 
   describe('webhook signature verification -- real HMAC via the installed stripe SDK', () => {

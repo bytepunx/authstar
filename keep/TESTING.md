@@ -75,6 +75,33 @@ entitlement-publishing dependencies.
 - Creates one real (test-mode) Price via `stripe.prices.create()` in `beforeAll`, used by the
   `getPrice`/`createCheckoutSession` specs; archives the Price and its Product in `afterAll`
   (best-effort — Stripe Prices can't be hard-deleted once created, only deactivated).
+- **`getSubscription` (via a real `checkout.session.completed` event)** creates a genuinely
+  `active` Subscription entirely through the API — Stripe's documented `pm_card_visa` test
+  PaymentMethod token (https://docs.stripe.com/testing#cards) attaches and charges
+  successfully with no Checkout/Elements UI involved — then proves `getSubscription`'s real
+  field mapping (`stripe-client.ts:114-128`) against Stripe's actual response shape, including
+  the specific gotcha its own code comment flags: `current_period_end` lives on each
+  `SubscriptionItem`, not the `Subscription` object itself, in the API version this account is
+  pinned to.
+- **Subscription renewal via a Stripe test clock** (`stripe.testHelpers.testClocks`) creates a
+  clock-attached subscription, advances simulated time past its billing period, and confirms
+  both that Stripe genuinely rolled it to a new period (proof real time passed, not something
+  the test fabricated) and that keep's `onSubscriptionUpdated` correctly processes the
+  resulting real `customer.subscription.updated` event. Two real gotchas found live while
+  building this:
+  - Stripe caps a single `advance()` call at "two intervals... based on the shortest
+    subscription interval in the test clock" (`TestClockAdvanceParams`'s own doc comment) —
+    advancing to `initialPeriodEnd + 32 more days` overshot that ceiling and was rejected
+    outright; advancing to just past `initialPeriodEnd` itself stays within it.
+  - The test clock reporting `status: 'ready'` only means Stripe caught up to the target time,
+    not that every downstream side effect (invoicing, rolling the subscription to its next
+    period) has necessarily settled yet — reading the subscription immediately after `ready`
+    sometimes still showed the pre-renewal period end. The spec polls a few more times rather
+    than trusting the first read.
+  - This is also the natural building block for "test purchasing behaviors without spending
+    real money" against a real deployed cluster (`bytepunx-deploy`, when it exists) — the same
+    `pm_card_visa` + test-clock pattern works against any test-mode Stripe account, local or
+    deployed.
 - Needs network access to `api.stripe.com` and a real (test-mode) Stripe account.
 
 ## What's covered vs. left for a follow-up pass
