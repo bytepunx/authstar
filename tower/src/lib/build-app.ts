@@ -20,6 +20,7 @@ import registerContactsRoutes from '../routes/contacts.js'
 import registerErasureRequestsRoutes from '../routes/erasure-requests.js'
 import registerRotateKeysRoutes from '../routes/rotate-keys.js'
 import registerAccountRoutes from '../routes/accounts.js'
+import registerOrganizationRoutes from '../routes/organizations.js'
 import registerApplicationRoutes from '../routes/applications.js'
 import registerProviderRoutes from '../routes/providers.js'
 import registerRoleDefinitionRoutes from '../routes/role-definitions.js'
@@ -125,6 +126,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   await app.register(registerErasureRequestsRoutes)
   await app.register(registerRotateKeysRoutes)
   await app.register(registerAccountRoutes)
+  await app.register(registerOrganizationRoutes)
   await app.register(registerApplicationRoutes)
   await app.register(registerProviderRoutes)
   await app.register(registerRoleDefinitionRoutes)

@@ -29,6 +29,13 @@ export const PERMISSION_CATALOG = [
   'tenant:manage',
   'suppressions:manage',
   'contacts:erase',
+  // ADR 0090: organization-scoped, held by end-user accounts (not tenant
+  // admins) -- an account belongs to at most one organization, so unlike
+  // every grant above, neither of these needs a companion scope object;
+  // holding it at all means "for my own org" (see account_actor.ts's own
+  // PermissionGrant.scope comment).
+  'organization:manage',
+  'organization-billing:manage',
 ] as const
 
 // Permission-enforcement middleware (Story 014, ADR 0018/0030/0051). This is
@@ -85,6 +92,72 @@ export function requireSelfOrPermission(grant: string, paramName = 'accountId'):
     const isSelf = claims?.enrichmentStatus === 'ok' && claims.accountId === params[paramName]
     const authorized = isSelf || (claims?.enrichmentStatus === 'ok' && claims.permissions.includes(grant))
     if (!authorized) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+  }
+}
+
+/**
+ * ADR 0090: gates an organization's own management routes (add/remove
+ * manager, org-scoped invites, successor management). Unlike every other
+ * `requirePermission` grant, `organization:manage` needs no scope object
+ * to disambiguate *which* organization it applies to -- an account belongs
+ * to at most one, so the caller's own `claims.organizationId` (set by
+ * enrichment from `account.organizationId`) is compared directly against
+ * the route's `{organizationId}` param. A tenant admin holding
+ * `accounts:manage` can act on any organization in their tenant, the same
+ * admin-override shape every other self-service route in this codebase
+ * already has (`requireSelfOrPermission`).
+ */
+export function requireOrganizationManager(paramName = 'organizationId'): preHandlerHookHandler {
+  return async (request, reply) => {
+    const claims = request.authstar
+    const params = request.params as Record<string, string>
+    const isOrgManager = claims?.enrichmentStatus === 'ok' && claims.organizationId === params[paramName] && claims.permissions.includes('organization:manage')
+    const isTenantAdmin = claims?.enrichmentStatus === 'ok' && claims.permissions.includes('accounts:manage')
+    if (!isOrgManager && !isTenantAdmin) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+  }
+}
+
+/**
+ * Voluntary departure (`DELETE .../organizations/{organizationId}/managers/
+ * {accountId}` targeting your own accountId) needs no `organization:manage`
+ * grant -- same self-action principle ADR 0070 already established for
+ * ordinary accounts, extended to this route. Acting on a *different*
+ * manager (involuntary removal) still needs `requireOrganizationManager`'s
+ * checks.
+ */
+export function requireSelfOrOrganizationManager(orgParamName = 'organizationId', accountParamName = 'accountId'): preHandlerHookHandler {
+  return async (request, reply) => {
+    const claims = request.authstar
+    const params = request.params as Record<string, string>
+    const isSelf = claims?.enrichmentStatus === 'ok' && claims.accountId === params[accountParamName]
+    const isOrgManager = claims?.enrichmentStatus === 'ok' && claims.organizationId === params[orgParamName] && claims.permissions.includes('organization:manage')
+    const isTenantAdmin = claims?.enrichmentStatus === 'ok' && claims.permissions.includes('accounts:manage')
+    if (!isSelf && !isOrgManager && !isTenantAdmin) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+  }
+}
+
+/**
+ * ADR 0090: strictly self-only, no org-manager or tenant-admin override --
+ * a manager designating their own successor is deliberately narrower than
+ * every other org route here. "A manager cannot set another manager's
+ * successor" is the whole point (the ADR's own wording); an org-manager
+ * override would let a co-manager quietly redirect a peer's succession,
+ * and a tenant-admin override isn't needed since the operator tree
+ * (`requireOperatorActor`) already covers the legitimate support/recovery
+ * case for this route, same as everywhere else in this codebase.
+ */
+export function requireSelf(paramName = 'accountId'): preHandlerHookHandler {
+  return async (request, reply) => {
+    const claims = request.authstar
+    const params = request.params as Record<string, string>
+    const isSelf = claims?.enrichmentStatus === 'ok' && claims.accountId === params[paramName]
+    if (!isSelf) {
       return reply.code(403).send({ error: 'forbidden' })
     }
   }

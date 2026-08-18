@@ -157,6 +157,19 @@ async function redeemInvite(app: FastifyInstance, token: string, accountId: stri
     // `grantPermission` comment for the full history of this gap.
     ...invite.permissions.map((permission) => app.consequent.handle(accountId, 'account.grant-permission', { permission })),
   ])
+
+  // ADR 0090: same "mismatch is not an error, login proceeds anyway"
+  // posture -- an account already belonging to a *different* organization
+  // silently skips this rather than failing the whole login. An account
+  // belongs to at most one organization at a time, so re-redeeming the
+  // same invite (or one for the org it's already in) is naturally
+  // idempotent via organization.add-manager's own set-membership handler.
+  if (invite.organizationId && (!account.organizationId || account.organizationId === invite.organizationId)) {
+    await app.consequent.handle(accountId, 'account.join-organization', { organizationId: invite.organizationId })
+    if (invite.organizationRole === 'manager') {
+      await app.consequent.handle(invite.organizationId, 'organization.add-manager', { accountId })
+    }
+  }
   return true
 }
 

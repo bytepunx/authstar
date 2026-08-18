@@ -12,6 +12,7 @@ import { getBase62Provider } from 'node-flakes'
 export interface IdGenerator {
   nextAccountId(): string
   nextIdentityId(): string
+  nextOrganizationId(): string
 }
 
 export function createIdGenerator(nodeIdentifier = 'tower'): IdGenerator {
@@ -19,5 +20,6 @@ export function createIdGenerator(nodeIdentifier = 'tower'): IdGenerator {
   return {
     nextAccountId: () => provider(),
     nextIdentityId: () => provider(),
+    nextOrganizationId: () => provider(),
   }
 }

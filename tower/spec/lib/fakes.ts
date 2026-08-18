@@ -41,11 +41,13 @@ export function createSpyPublisher(): SpyPublisher {
   }
 }
 
-export function createDeterministicIds(prefix = 'acct'): { nextAccountId: () => string, nextIdentityId: () => string } {
+export function createDeterministicIds(prefix = 'acct'): { nextAccountId: () => string, nextIdentityId: () => string, nextOrganizationId: () => string } {
   let accountCounter = 0
   let identityCounter = 0
+  let organizationCounter = 0
   return {
     nextAccountId: () => `${prefix}-${++accountCounter}`,
     nextIdentityId: () => `identity-${++identityCounter}`,
+    nextOrganizationId: () => `org-${++organizationCounter}`,
   }
 }

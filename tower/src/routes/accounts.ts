@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import type { AccountState, RoleGrant, PermissionGrant } from '../actors/account_actor.js'
+import type { OrganizationState } from '../actors/organization_actor.js'
 import { requirePermission, requireSelfOrPermission, PERMISSION_CATALOG } from '../lib/permissions.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 import { rolesValid, type Scope } from '../lib/role-definition-lookup.js'
@@ -179,6 +180,31 @@ async function getAccount(app: FastifyInstance, request: FastifyRequest, reply: 
   return toResponse(state)
 }
 
+// ADR 0090: an account being deleted (business offboarding, not GDPR
+// erasure -- see this file's own header comment) may be a manager of an
+// organization. Departure and deletion get the *same* auto-succession
+// treatment first (organization.remove-manager already contains that
+// logic, see organization_actor.ts) -- but unlike voluntary departure,
+// a rejection here (the sole manager with no successor designated) can't
+// just leave the deleted account listed as manager: they're already gone
+// and can't functionally hold the role. Falls back to the internal-only
+// force-remove-manager command, which never rejects -- the organization
+// ends up with zero managers, a real, accepted edge case (the ADR's own
+// wording) needing operator intervention, not a reason to fail the
+// deletion itself. Membership is detached either way, manager or not.
+async function detachFromOrganizationOnDelete(app: FastifyInstance, account: AccountState) {
+  if (!account.organizationId) return
+  const orgInstance = await app.consequent.fetch('organization', account.organizationId)
+  const org = orgInstance?.state as unknown as OrganizationState | undefined
+  if (org?.managers.includes(account.accountId)) {
+    const results = await app.consequent.handle(account.organizationId, 'organization.remove-manager', { accountId: account.accountId })
+    if (results.find((r) => r?.rejected)) {
+      await app.consequent.handle(account.organizationId, 'organization.force-remove-manager', { accountId: account.accountId })
+    }
+  }
+  await app.consequent.handle(account.accountId, 'account.leave-organization', {})
+}
+
 async function patchAccount(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug, accountId } = request.params as { tenantSlug: string, accountId: string }
   const { status } = request.body as { status: 'active' | 'suspended' | 'deleted' }
@@ -190,6 +216,10 @@ async function patchAccount(app: FastifyInstance, request: FastifyRequest, reply
   const results = await app.consequent.handle(accountId, command, { actingAs: operatorActor(request) })
   const rejection = results.find((r) => r?.rejected)
   if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+
+  if (status === 'deleted') {
+    await detachFromOrganizationOnDelete(app, current)
+  }
 
   return toResponse(await fetchAccount(app, accountId))
 }

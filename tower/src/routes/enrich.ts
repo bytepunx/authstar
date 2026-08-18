@@ -93,6 +93,7 @@ const enrichRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return reply.code(200).send({
       outcome: 'allow',
       accountId: account.accountId,
+      organizationId: account.organizationId ?? null,
       grantedRoles: filterRolesForApplication(account.grantedRoles, body.application),
       trialRoles: filterRolesForApplication(account.trialRoles, body.application),
       trialExpiresAt: account.trialExpiresAt ?? null,

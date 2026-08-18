@@ -17,6 +17,14 @@ export interface InviteState {
   contactId: string
   roles: Array<{ name: string, scope: 'tenant' | { application: string } }>
   permissions: PermissionGrant[]
+  // ADR 0090: deliberately separate from `permissions` above (reserved for
+  // the operator-only elevated-bootstrap case, ADR 0021/0067) --
+  // organization membership is a narrower, well-defined structural fact an
+  // org manager already has standing authority over (the same authority
+  // `POST .../organizations/{id}/managers` grants directly), not a general
+  // permissions grant that needs operator mediation.
+  organizationId: string | null
+  organizationRole: 'member' | 'manager' | null
   status: 'pending' | 'accepted' | 'revoked' | 'expired'
   createdAt: string
   expiresAt: string | null
@@ -28,6 +36,8 @@ interface CreateCommand {
   contactId: string
   roles: InviteState['roles']
   permissions: PermissionGrant[]
+  organizationId?: string | null
+  organizationRole?: 'member' | 'manager' | null
   expiresAt: string | null
   actingAs?: string
 }
@@ -48,6 +58,8 @@ function create(_invite: InviteState, command: CreateCommand) {
     contactId: command.contactId,
     roles: command.roles ?? [],
     permissions: command.permissions ?? [],
+    organizationId: command.organizationId ?? null,
+    organizationRole: command.organizationRole ?? null,
     expiresAt: command.expiresAt,
     ...actingAsFields(command),
   }
@@ -89,6 +101,8 @@ function created(invite: InviteState, event: CreateCommand) {
   invite.contactId = event.contactId
   invite.roles = event.roles ?? []
   invite.permissions = event.permissions ?? []
+  invite.organizationId = event.organizationId ?? null
+  invite.organizationRole = event.organizationRole ?? null
   invite.status = 'pending'
   invite.createdAt = new Date(0).toISOString() // replaced by consequent's own event timestamp on read
   invite.expiresAt = event.expiresAt
@@ -116,6 +130,8 @@ export default function inviteActor() {
       contactId: '',
       roles: [],
       permissions: [],
+      organizationId: null,
+      organizationRole: null,
       status: 'pending',
       createdAt: '',
       expiresAt: null,

@@ -3,9 +3,10 @@ import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest 
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { InviteState } from '../actors/invite_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
+import type { OrganizationState } from '../actors/organization_actor.js'
 import type { PermissionGrant } from '../actors/account_actor.js'
 import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypto.js'
-import { requirePermission } from '../lib/permissions.js'
+import { requirePermission, requireOrganizationManager } from '../lib/permissions.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 import { rolesValid, type Scope } from '../lib/role-definition-lookup.js'
 import { requireOperatorAuth, requireOperatorActor, operatorActor } from '../lib/operator-auth.js'
@@ -111,6 +112,23 @@ const createBodySchema = {
   },
 } as const
 
+const organizationParamsSchema = {
+  type: 'object',
+  required: ['tenantSlug', 'organizationId'],
+  properties: { tenantSlug: { type: 'string' }, organizationId: { type: 'string' } },
+} as const
+
+const createOrganizationInviteBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['contactId', 'organizationRole'],
+  properties: {
+    contactId: { type: 'string', minLength: 1 },
+    organizationRole: { type: 'string', enum: ['member', 'manager'] },
+    expiresAt: { type: ['string', 'null'] },
+  },
+} as const
+
 const patchBodySchema = {
   type: 'object',
   additionalProperties: false,
@@ -142,6 +160,8 @@ function toResponse(token: string, state: InviteState) {
     contactId: state.contactId,
     roles: state.roles,
     permissions: state.permissions,
+    organizationId: state.organizationId,
+    organizationRole: state.organizationRole,
     status: state.status,
     createdAt: state.createdAt,
     expiresAt: state.expiresAt,
@@ -244,6 +264,42 @@ async function createInvite(app: FastifyInstance, request: FastifyRequest, reply
   return reply.code(201).send(toResponse(token, created!))
 }
 
+// ADR 0090: an org manager's own invite-creation path -- narrower than
+// createInvite above (no application/roles/general permissions), reusing
+// the same invite actor and herald-publish machinery. `organizationRole`
+// is the only thing this invite grants: 'manager' promotes the invitee to
+// a co-manager on redemption, matching the same authority `POST .../
+// organizations/{id}/managers` already gives an org manager directly.
+async function createOrganizationInvite(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, organizationId } = request.params as { tenantSlug: string, organizationId: string }
+  const body = request.body as { contactId: string, organizationRole: 'member' | 'manager', expiresAt?: string | null }
+
+  const tenant = await fetchTenant(app, tenantSlug)
+  if (!tenantExists(tenant)) return reply.code(404).send()
+
+  const orgInstance = await app.consequent.fetch('organization', organizationId)
+  const org = orgInstance?.state as unknown as OrganizationState | undefined
+  if (!org?.createdAt || org.tenant !== tenantSlug) return reply.code(404).send()
+
+  const token = randomBytes(20).toString('hex')
+  await app.consequent.handle(token, 'invite.create', {
+    tenant: tenantSlug,
+    application: null,
+    contactId: body.contactId,
+    roles: [],
+    permissions: [],
+    organizationId,
+    organizationRole: body.organizationRole,
+    expiresAt: body.expiresAt ?? null,
+    actingAs: operatorActor(request),
+  })
+
+  await publishInviteSent(app, tenantSlug, tenant.name, null, token, body.contactId)
+
+  const created = await fetchInvite(app, tenantSlug, token)
+  return reply.code(201).send(toResponse(token, created!))
+}
+
 async function patchInvite(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug, token } = request.params as { tenantSlug: string, token: string }
 
@@ -298,6 +354,12 @@ const invitesRoutes: FastifyPluginAsync = async function (app: FastifyInstance) 
     (request, reply) => createInvite(app, request, reply),
   )
 
+  app.post(
+    '/tenants/:tenantSlug/organizations/:organizationId/invites',
+    { schema: { params: organizationParamsSchema, body: createOrganizationInviteBodySchema }, preHandler: requireOrganizationManager() },
+    (request, reply) => createOrganizationInvite(app, request, reply),
+  )
+
   app.patch(
     '/tenants/:tenantSlug/invites/:token',
     { schema: { params: inviteParamsSchema, body: patchBodySchema }, preHandler: requirePermission('invite:send') },
@@ -329,6 +391,12 @@ const invitesRoutes: FastifyPluginAsync = async function (app: FastifyInstance) 
     '/operator/tenants/:tenantSlug/invites',
     { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requireOperatorActor(app) },
     (request, reply) => createInvite(app, request, reply),
+  )
+
+  app.post(
+    '/operator/tenants/:tenantSlug/organizations/:organizationId/invites',
+    { schema: { params: organizationParamsSchema, body: createOrganizationInviteBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => createOrganizationInvite(app, request, reply),
   )
 
   app.patch(
