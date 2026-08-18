@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import type { OrganizationState } from '../actors/organization_actor.js'
 import type { AccountState } from '../actors/account_actor.js'
-import { requireOrganizationManager, requireSelfOrOrganizationManager, requireSelf } from '../lib/permissions.js'
+import { requireOrganizationManager, requireOrganizationMember, requireSelfOrOrganizationManager, requireSelf, requirePermission } from '../lib/permissions.js'
 import { requireOperatorAuth, requireOperatorActor, operatorActor } from '../lib/operator-auth.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 
@@ -101,6 +101,16 @@ async function getOrganization(app: FastifyInstance, request: FastifyRequest, re
   const org = await fetchOrganization(app, organizationId)
   if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
   return toResponse(org)
+}
+
+// Tenant-admin only (accounts:manage, same gate listAccounts already uses)
+// -- an ordinary org member has no legitimate reason to enumerate every
+// other organization in the tenant, only their own (reachable directly by
+// id, gated by requireOrganizationMember instead).
+async function listOrganizations(app: FastifyInstance, request: FastifyRequest) {
+  const { tenantSlug } = request.params as { tenantSlug: string }
+  const instances = await app.consequent.find('organization', searchCriteria({ tenant: tenantSlug }))
+  return instances.map((i) => toResponse(i.state as unknown as OrganizationState))
 }
 
 async function addManager(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
@@ -205,8 +215,14 @@ const organizationRoutes: FastifyPluginAsync = async function (app: FastifyInsta
   )
 
   app.get(
+    '/tenants/:tenantSlug/organizations',
+    { schema: { params: tenantParamsSchema }, preHandler: requirePermission('accounts:manage') },
+    (request) => listOrganizations(app, request),
+  )
+
+  app.get(
     '/tenants/:tenantSlug/organizations/:organizationId',
-    { schema: { params: organizationParamsSchema } },
+    { schema: { params: organizationParamsSchema }, preHandler: requireOrganizationMember() },
     (request, reply) => getOrganization(app, request, reply),
   )
 
@@ -257,6 +273,12 @@ const organizationRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     '/operator/tenants/:tenantSlug/organizations',
     { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requireOperatorAuth(app) },
     (request, reply) => createOrganization(app, request, reply),
+  )
+
+  app.get(
+    '/operator/tenants/:tenantSlug/organizations',
+    { schema: { params: tenantParamsSchema }, preHandler: requireOperatorAuth(app) },
+    (request) => listOrganizations(app, request),
   )
 
   app.get(

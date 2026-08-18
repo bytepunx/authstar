@@ -122,6 +122,26 @@ export function requireOrganizationManager(paramName = 'organizationId'): preHan
 }
 
 /**
+ * Read-only gate for an organization's own detail (`GET .../organizations/
+ * {organizationId}`) -- deliberately broader than `requireOrganizationManager`:
+ * any member (not just a manager) can view who manages their own
+ * organization and who's designated as each manager's successor, plus the
+ * usual tenant-admin override. No `organization:manage`/
+ * `organization-billing:manage` grant required at all for this read.
+ */
+export function requireOrganizationMember(paramName = 'organizationId'): preHandlerHookHandler {
+  return async (request, reply) => {
+    const claims = request.authstar
+    const params = request.params as Record<string, string>
+    const isMember = claims?.enrichmentStatus === 'ok' && claims.organizationId === params[paramName]
+    const isTenantAdmin = claims?.enrichmentStatus === 'ok' && claims.permissions.includes('accounts:manage')
+    if (!isMember && !isTenantAdmin) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+  }
+}
+
+/**
  * Voluntary departure (`DELETE .../organizations/{organizationId}/managers/
  * {accountId}` targeting your own accountId) needs no `organization:manage`
  * grant -- same self-action principle ADR 0070 already established for

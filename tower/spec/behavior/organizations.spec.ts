@@ -84,6 +84,62 @@ describe('organizations -- API contract (ADR 0090)', () => {
     })
   })
 
+  describe('GET /tenants/:tenantSlug/organizations (list)', () => {
+    it('lists every organization in a tenant for a tenant admin', async () => {
+      await createOrgWithManager('acct-1')
+      await createOrgWithManager('acct-2')
+      const adminHeaders = bearer(await jwt.signToken({ permissions: ['accounts:manage'] }))
+
+      const response = await app.inject({ method: 'GET', url: '/tenants/acme/organizations', headers: adminHeaders })
+      expect(response.statusCode).toBe(200)
+      expect((response.json() as Array<{ name: string }>)).toHaveLength(2)
+    })
+
+    it('rejects 403 for a caller without accounts:manage, even an org manager', async () => {
+      const organizationId = await createOrgWithManager('acct-1')
+      const headers = bearer(await jwt.signToken({ accountId: 'acct-1', organizationId, permissions: ['organization:manage'] }))
+
+      const response = await app.inject({ method: 'GET', url: '/tenants/acme/organizations', headers })
+      expect(response.statusCode).toBe(403)
+    })
+  })
+
+  describe('GET /tenants/:tenantSlug/organizations/:organizationId (read)', () => {
+    it('any member (not just a manager) can view their own organization', async () => {
+      const organizationId = await createOrgWithManager('acct-1')
+      await createAccount('acct-2')
+      await consequent.handle('acct-2', 'account.join-organization', { organizationId })
+
+      const headers = bearer(await jwt.signToken({ accountId: 'acct-2', organizationId }))
+      const response = await app.inject({ method: 'GET', url: `/tenants/acme/organizations/${organizationId}`, headers })
+      expect(response.statusCode).toBe(200)
+      expect(response.json().managers).toEqual(['acct-1'])
+    })
+
+    it('a tenant admin can view any organization, even without membership', async () => {
+      const organizationId = await createOrgWithManager('acct-1')
+      const adminHeaders = bearer(await jwt.signToken({ permissions: ['accounts:manage'] }))
+
+      const response = await app.inject({ method: 'GET', url: `/tenants/acme/organizations/${organizationId}`, headers: adminHeaders })
+      expect(response.statusCode).toBe(200)
+    })
+
+    it('rejects 403 for a caller who is neither a member nor a tenant admin', async () => {
+      const organizationId = await createOrgWithManager('acct-1')
+      const otherOrgId = await createOrgWithManager('acct-x')
+      const headers = bearer(await jwt.signToken({ accountId: 'acct-x', organizationId: otherOrgId }))
+
+      const response = await app.inject({ method: 'GET', url: `/tenants/acme/organizations/${organizationId}`, headers })
+      expect(response.statusCode).toBe(403)
+    })
+
+    it('rejects 403 with no bearer token at all -- confirms this route is no longer wide open', async () => {
+      const organizationId = await createOrgWithManager('acct-1')
+      const response = await app.inject({ method: 'GET', url: `/tenants/acme/organizations/${organizationId}` })
+      expect(response.statusCode).toBe(403)
+    })
+  })
+
   describe('POST /tenants/:tenantSlug/organizations/:organizationId/managers (add-manager)', () => {
     it('an org manager can promote an existing member to co-manager', async () => {
       const organizationId = await createOrgWithManager('acct-1')

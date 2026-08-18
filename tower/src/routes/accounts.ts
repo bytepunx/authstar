@@ -54,6 +54,12 @@ const listQuerySchema = {
   properties: {
     email: { type: 'string', minLength: 3 },
     status: { type: 'string', enum: ['active', 'suspended', 'deleted'] },
+    // ADR 0090 -- lists an organization's plain membership (not just its
+    // managers, which the organization's own GET already returns). Still
+    // gated by accounts:manage like every other list-accounts query mode;
+    // a non-admin org manager listing their own org's roster is a
+    // separate, not-yet-built self-service capability.
+    organizationId: { type: 'string', minLength: 1 },
   },
 } as const
 
@@ -145,7 +151,7 @@ function toResponse(state: AccountState) {
 
 async function listAccounts(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug } = request.params as { tenantSlug: string }
-  const { email, status } = request.query as { email?: string, status?: AccountState['status'] }
+  const { email, status, organizationId } = request.query as { email?: string, status?: AccountState['status'], organizationId?: string }
 
   if (email !== undefined) {
     // ADR 0023/0051: resolving an email to an account necessarily
@@ -169,6 +175,7 @@ async function listAccounts(app: FastifyInstance, request: FastifyRequest, reply
 
   const criteria: Record<string, unknown> = { tenant: tenantSlug }
   if (status) criteria.status = status
+  if (organizationId) criteria.organizationId = organizationId
   const instances = await app.consequent.find('account', searchCriteria(criteria))
   return instances.map((i) => toResponse(i.state as unknown as AccountState))
 }

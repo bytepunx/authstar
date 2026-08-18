@@ -91,6 +91,19 @@ describe('accounts management -- API contract', () => {
       const response = await app.inject({ method: 'GET', url: '/tenants/acme/accounts' })
       expect(response.statusCode).toBe(403)
     })
+
+    it('filters by organizationId (ADR 0090) -- lists an organization\'s plain membership', async () => {
+      await createTenant('acme')
+      await createAccount('acct-1', 'acme')
+      await createAccount('acct-2', 'acme')
+      await createAccount('acct-3', 'acme')
+      await consequent.handle('acct-1', 'account.join-organization', { organizationId: 'org-1' })
+      await consequent.handle('acct-2', 'account.join-organization', { organizationId: 'org-1' })
+
+      const response = await app.inject({ method: 'GET', url: '/tenants/acme/accounts?organizationId=org-1', headers: manageHeaders })
+      expect(response.statusCode).toBe(200)
+      expect((response.json() as Array<{ accountId: string }>).map((a) => a.accountId).sort()).toEqual(['acct-1', 'acct-2'])
+    })
   })
 
   describe('GET /tenants/:tenantSlug/accounts/:accountId', () => {
