@@ -10,6 +10,7 @@ import type { EntitlementPublisher, SequenceProvider } from './entitlement-publi
 import { createInMemorySequenceProvider } from './entitlement-publisher.js'
 import registerPlanMappingRoutes from '../routes/plan-mappings.js'
 import registerCheckoutSessionRoutes from '../routes/checkout-sessions.js'
+import registerPortalSessionRoutes from '../routes/portal-sessions.js'
 import registerBillingReadRoutes from '../routes/billing-reads.js'
 import registerWebhookRoutes from '../routes/webhooks.js'
 import registerTrialRoutes from '../routes/trials.js'
@@ -97,6 +98,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
 
   await app.register(registerPlanMappingRoutes)
   await app.register(registerCheckoutSessionRoutes)
+  await app.register(registerPortalSessionRoutes)
   await app.register(registerBillingReadRoutes)
   await app.register(registerWebhookRoutes)
   await app.register(registerTrialRoutes)

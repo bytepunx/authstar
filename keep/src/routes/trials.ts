@@ -1,7 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { searchCriteria } from '../lib/consequent-types.js'
 import type { TrialState, GrantedRole } from '../actors/trial_actor.js'
-import type { Scope } from '../lib/scope.js'
 import generateId from '../lib/ids.js'
 import { requirePermission } from '../lib/permissions.js'
 
@@ -95,7 +94,12 @@ function toResponse(state: TrialState) {
 const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.post('/tenants/:tenantSlug/trials', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
-    const body = request.body as { scope: Scope, grantedRoles?: GrantedRole[], seatLimit?: number | null, expiresAt: string }
+    // Trials stay account/tenant-scoped only (this route's own schema
+    // enforces it, `scopeSchema` above) -- organization-scoped trials are
+    // a genuinely separate, undesigned question (ADR 0090 doesn't cover
+    // them), not something to silently widen alongside checkout/billing
+    // scope.
+    const body = request.body as { scope: { account: string } | { tenant: string }, grantedRoles?: GrantedRole[], seatLimit?: number | null, expiresAt: string }
 
     const grantedRoles = body.grantedRoles ?? []
     await app.roleBackfill.ensureFresh(tenantSlug)

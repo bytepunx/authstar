@@ -36,6 +36,20 @@ export interface CheckoutSession {
   url: string
 }
 
+// ADR 0090: the Billing Portal session, not a Checkout Session -- Stripe's
+// hosted, self-service surface for managing an existing subscription
+// (payment method, invoices, cancellation), reached only once a Stripe
+// Customer already exists (no implicit-creation fallback the way Checkout
+// has via customerEmail).
+export interface PortalSessionParams {
+  stripeCustomerId: string
+  returnUrl: string
+}
+
+export interface PortalSession {
+  url: string
+}
+
 export interface StripeWebhookEvent {
   id: string
   type: string
@@ -54,6 +68,10 @@ export interface StripeSubscriptionSummary {
 export interface StripeClient {
   getPrice(stripePriceId: string): Promise<StripePrice>
   createCheckoutSession(params: CheckoutSessionParams): Promise<CheckoutSession>
+  // ADR 0090. No customerEmail/implicit-creation fallback like
+  // createCheckoutSession has -- the route layer 404s if no Stripe
+  // customer exists yet for the target scope.
+  createPortalSession(params: PortalSessionParams): Promise<PortalSession>
   // `checkout.session.completed`'s own payload doesn't carry subscription
   // items/status without expansion -- webhook handling retrieves the full
   // subscription record itself rather than depending on webhook payload
@@ -109,6 +127,14 @@ class RealStripeClient implements StripeClient {
       metadata: params.metadata,
     })
     return { id: session.id, url: session.url ?? '' }
+  }
+
+  async createPortalSession(params: PortalSessionParams): Promise<PortalSession> {
+    const session = await this.stripe.billingPortal.sessions.create({
+      customer: params.stripeCustomerId,
+      return_url: params.returnUrl,
+    })
+    return { url: session.url }
   }
 
   async getSubscription(stripeSubscriptionId: string): Promise<StripeSubscriptionSummary> {

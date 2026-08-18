@@ -130,7 +130,21 @@ function diffRoles(previous: GrantedRole[], next: GrantedRole[]): { granted: Gra
   }
 }
 
+// ADR 0090 leaves organization-scoped entitlement fan-out genuinely
+// undesigned: tower's entitlement-consumer (ADR 0031) only knows how to
+// grant a role to one specific account or every account in a tenant --
+// "grant this role to every member of organization X" needs its own
+// design pass (which member(s)? all of them, only managers?) this ADR
+// never took. Skip publishing rather than guess at semantics; the
+// customer/subscription actors themselves are still created/updated
+// correctly either way (see callers) -- only the tower-facing role
+// fan-out is deferred.
+function isEntitlementScope(scope: Scope): scope is { account: string } | { tenant: string } {
+  return 'account' in scope || 'tenant' in scope
+}
+
 async function publishRoleEvents(app: FastifyInstance, tenant: string, scope: Scope, roles: GrantedRole[], eventType: 'entitlement.role-granted' | 'entitlement.role-revoked') {
+  if (!isEntitlementScope(scope)) return
   for (const role of roles) {
     const sequence = await app.sequences.next(tenant, scope)
     await app.entitlements.publish({
@@ -184,8 +198,10 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
     await app.consequent.handle(trial.id, 'trial.convert', {})
   }
 
-  const sequence = await app.sequences.next(tenant, scope)
-  await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence })
+  if (isEntitlementScope(scope)) {
+    const sequence = await app.sequences.next(tenant, scope)
+    await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence })
+  }
 
   if (mapping) {
     await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-granted')

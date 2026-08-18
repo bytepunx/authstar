@@ -4,6 +4,8 @@ import type {
   StripePrice,
   CheckoutSessionParams,
   CheckoutSession,
+  PortalSessionParams,
+  PortalSession,
   StripeWebhookEvent,
   StripeSubscriptionSummary,
 } from '../../src/lib/stripe-client.js'
@@ -20,6 +22,7 @@ export interface FakeStripeState {
   subscriptions: Map<string, StripeSubscriptionSummary>
   validApiKeys: Set<string>
   checkoutSessions: CheckoutSessionParams[]
+  portalSessions: PortalSessionParams[]
 }
 
 export function createFakeStripeState(): FakeStripeState {
@@ -28,6 +31,7 @@ export function createFakeStripeState(): FakeStripeState {
     subscriptions: new Map(),
     validApiKeys: new Set(),
     checkoutSessions: [],
+    portalSessions: [],
   }
 }
 
@@ -44,6 +48,12 @@ class FakeStripeClient implements StripeClient {
     this.state.checkoutSessions.push(params)
     const id = `cs_test_${this.state.checkoutSessions.length}`
     return { id, url: `https://checkout.stripe.test/${id}` }
+  }
+
+  async createPortalSession(params: PortalSessionParams): Promise<PortalSession> {
+    this.state.portalSessions.push(params)
+    const id = `bps_test_${this.state.portalSessions.length}`
+    return { url: `https://billing.stripe.test/${id}` }
   }
 
   async getSubscription(stripeSubscriptionId: string): Promise<StripeSubscriptionSummary> {

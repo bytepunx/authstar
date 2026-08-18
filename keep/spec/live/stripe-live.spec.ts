@@ -205,6 +205,30 @@ describeLive('stripe integration -- live test-mode API', () => {
     })
   })
 
+  describe('createPortalSession -- real Billing Portal session (ADR 0090)', () => {
+    it('creates a genuine billing.stripe.com session URL for an organization\'s real stripe customer', async () => {
+      const customer = await stripe.customers.create({ email: `live-portal+${Math.random().toString(36).slice(2)}@example.com` })
+      await t.stripeConfig.set(LIVE_TEST_TENANT, { secretKey: liveStripeSecretKey(), webhookSecret })
+      await t.consequent.handle(`cust_${customer.id}`, 'customer.create', {
+        id: `cust_${customer.id}`,
+        tenant: LIVE_TEST_TENANT,
+        scope: { organization: 'org-live-portal-test' },
+        stripeCustomerId: customer.id,
+      })
+
+      const orgHeaders = await t.headers({ organizationId: 'org-live-portal-test', permissions: ['organization:manage'] })
+      const response = await t.app.inject({
+        method: 'POST',
+        url: `/tenants/${LIVE_TEST_TENANT}/organizations/org-live-portal-test/portal-sessions`,
+        headers: orgHeaders,
+        payload: { returnUrl: 'https://example.com/account' },
+      })
+
+      expect(response.statusCode).toBe(201)
+      expect(response.json().url).toContain('billing.stripe.com')
+    })
+  })
+
   describe('subscription renewal via a Stripe test clock', () => {
     let clockId: string | undefined
 

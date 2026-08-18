@@ -10,10 +10,18 @@
 // codebase: `find` (or list) by an indexed scalar field (`tenant`) and
 // filter the results down to a matching `scope` in application code.
 
-export type Scope = { account: string } | { tenant: string }
+// ADR 0090: a third tier, between individual (`account`) and tenant-wide
+// (`tenant`) -- a subscription shared across one organization's seats.
+// Unlike tower's `organization`-scoped permissions (which need no id,
+// since an account belongs to at most one org), this one *must* carry the
+// real id -- a tenant can have many organizations, each with its own
+// Stripe subscription, and keep needs to know which one a given
+// customer/subscription/planMapping record belongs to.
+export type Scope = { account: string } | { organization: string } | { tenant: string }
 
 export function scopesEqual(a: Scope, b: Scope): boolean {
   if ('account' in a && 'account' in b) return a.account === b.account
+  if ('organization' in a && 'organization' in b) return a.organization === b.organization
   if ('tenant' in a && 'tenant' in b) return a.tenant === b.tenant
   return false
 }
@@ -22,6 +30,7 @@ export function isValidScope(value: unknown): value is Scope {
   if (!value || typeof value !== 'object') return false
   const v = value as Record<string, unknown>
   const hasAccount = typeof v.account === 'string' && Object.keys(v).length === 1
+  const hasOrganization = typeof v.organization === 'string' && Object.keys(v).length === 1
   const hasTenant = typeof v.tenant === 'string' && Object.keys(v).length === 1
-  return hasAccount || hasTenant
+  return hasAccount || hasOrganization || hasTenant
 }

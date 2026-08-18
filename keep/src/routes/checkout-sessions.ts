@@ -23,10 +23,17 @@ const tenantParamsSchema = {
 
 // See routes/trials.ts's identical `scopeSchema` for why there's no
 // top-level `additionalProperties: false` alongside `oneOf` here.
+// Unlike trials.ts, this one accepts `organization` too (ADR 0090) -- a
+// checkout is exactly how an organization's shared subscription comes to
+// exist in the first place. Entitlement fan-out for an organization-scoped
+// subscription (which member accounts, if any, get the granted roles) is
+// deliberately unresolved -- webhooks.ts skips publishing rather than
+// guess; see its own comment.
 const scopeSchema = {
   type: 'object',
   oneOf: [
     { additionalProperties: false, required: ['account'], properties: { account: { type: 'string', minLength: 1 } } },
+    { additionalProperties: false, required: ['organization'], properties: { organization: { type: 'string', minLength: 1 } } },
     { additionalProperties: false, required: ['tenant'], properties: { tenant: { type: 'string', minLength: 1 } } },
   ],
 } as const

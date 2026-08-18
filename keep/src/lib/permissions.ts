@@ -28,3 +28,28 @@ export function requirePermission(grant: string): preHandlerHookHandler {
     }
   }
 }
+
+/**
+ * ADR 0090: gates keep's Billing Portal session route. Accepts either of
+ * tower's two organization-scoped grants (`organization:manage` -- full
+ * control -- or the narrower `organization-billing:manage`, which can
+ * reach the Portal but can't grant/revoke that right to others). An
+ * account belongs to at most one organization at a time, so no scope
+ * object is needed on the grant itself (see tower's
+ * account_actor.ts's own PermissionGrant.scope comment) -- but the
+ * caller's `organizationId` claim must still match the route's
+ * `{organizationId}` param, so a holder of either grant for a *different*
+ * organization can't reach this one.
+ */
+export function requireOrganizationAccess(paramName = 'organizationId'): preHandlerHookHandler {
+  return async (request, reply) => {
+    const claims = request.authstar
+    const params = request.params as Record<string, string>
+    const authorized = claims?.enrichmentStatus === 'ok'
+      && claims.organizationId === params[paramName]
+      && (claims.permissions.includes('organization:manage') || claims.permissions.includes('organization-billing:manage'))
+    if (!authorized) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+  }
+}

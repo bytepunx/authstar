@@ -19,8 +19,10 @@ entitlement-publishing dependencies.
   `src/lib/role-reference-cache.ts`, `src/lib/entitlement-publisher.ts`'s in-memory
   implementations) — one shared builder, `spec/lib/test-app.ts`, assembles all of it per test.
 - One file per route group (`plan-mappings`, `webhooks`, `checkout-sessions`, `billing-reads`,
-  `trials`, `coupons`, `usage`, `stripe-config`), asserting exactly what's in the corresponding
-  Story's acceptance criteria.
+  `trials`, `coupons`, `usage`, `stripe-config`, `portal-sessions`), asserting exactly what's in
+  the corresponding Story's acceptance criteria (`portal-sessions.spec.ts` is ADR 0090, not a
+  Story — no direct customer-creation route exists, so it seeds a `customer` actor via
+  `consequent.handle()` the same way every other actor-with-no-creation-route is tested).
 
 ## `spec/e2e/*.spec.ts` — full flows, still no external dependencies
 
@@ -83,6 +85,10 @@ entitlement-publishing dependencies.
   the specific gotcha its own code comment flags: `current_period_end` lives on each
   `SubscriptionItem`, not the `Subscription` object itself, in the API version this account is
   pinned to.
+- **`createPortalSession` (ADR 0090)** creates a real Stripe Customer directly, seeds a
+  `customer` actor scoped to an organization, and confirms the real portal-sessions route
+  returns a genuine `billing.stripe.com` URL — not `checkout.stripe.com`, proving this hits
+  `stripe.billingPortal.sessions.create`, not `checkout.sessions.create`.
 - **Subscription renewal via a Stripe test clock** (`stripe.testHelpers.testClocks`) creates a
   clock-attached subscription, advances simulated time past its billing period, and confirms
   both that Stripe genuinely rolled it to a new period (proof real time passed, not something
