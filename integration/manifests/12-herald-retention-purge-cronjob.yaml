@@ -51,7 +51,7 @@ spec:
             - name: dockerhub-pull
           containers:
             - name: herald-retention-purge
-              image: arobson/authstar-herald:latest
+              image: bytepunx/authstar-herald:latest
               imagePullPolicy: Always
               command: ["node", "dist/purge-retention.js"]
               env:

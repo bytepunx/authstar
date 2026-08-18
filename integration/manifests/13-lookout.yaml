@@ -34,7 +34,7 @@ spec:
         - name: dockerhub-pull
       containers:
         - name: lookout
-          image: arobson/authstar-lookout:latest
+          image: bytepunx/authstar-lookout:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

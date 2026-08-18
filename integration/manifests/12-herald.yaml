@@ -27,7 +27,7 @@ spec:
         - name: dockerhub-pull
       containers:
         - name: herald
-          image: arobson/authstar-herald:latest
+          image: bytepunx/authstar-herald:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

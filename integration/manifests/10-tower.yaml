@@ -28,7 +28,7 @@ spec:
         - name: dockerhub-pull
       containers:
         - name: tower
-          image: arobson/authstar-tower:latest
+          image: bytepunx/authstar-tower:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

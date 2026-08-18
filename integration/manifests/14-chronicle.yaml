@@ -36,7 +36,7 @@ spec:
         - name: dockerhub-pull
       containers:
         - name: chronicle
-          image: arobson/authstar-chronicle:latest
+          image: bytepunx/authstar-chronicle:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

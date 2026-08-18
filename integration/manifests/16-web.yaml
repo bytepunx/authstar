@@ -30,7 +30,7 @@ spec:
         - name: dockerhub-pull
       containers:
         - name: web
-          image: arobson/authstar-web:latest
+          image: bytepunx/authstar-web:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000

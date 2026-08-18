@@ -62,7 +62,7 @@ spec:
             - name: dockerhub-pull
           containers:
             - name: keep-pricing-sync
-              image: arobson/authstar-keep:latest
+              image: bytepunx/authstar-keep:latest
               imagePullPolicy: Always
               command: ["node", "dist/sync-pricing.js"]
               env:
