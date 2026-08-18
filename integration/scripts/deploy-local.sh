@@ -36,14 +36,14 @@ docker ps --format '{{.Names}}' | grep -qx "$K3D_SERVER_CONTAINER" \
 
 log "building all 8 service images from $SERVICE_REPOS_ROOT/<service>"
 for svc in "${SERVICES[@]}"; do
-  log "  building arobson/authstar-$svc:latest"
+  log "  building bytepunx/authstar-$svc:latest"
   # Literal tag, no shell-variable-immediately-before-colon interpolation --
   # this environment has a real, reproducible shell hook bug that silently
   # corrupts a "$var:text" argument (drops ":<first-char>"), confirmed
-  # against `docker build -t "arobson/authstar-$svc:latest"` producing
-  # "arobson/authstar-${svc}atest:latest" instead. Building into a fixed
+  # against `docker build -t "bytepunx/authstar-$svc:latest"` producing
+  # "bytepunx/authstar-${svc}atest:latest" instead. Building into a fixed
   # local var first and using it as a single opaque token sidesteps it.
-  image="arobson/authstar-${svc}"
+  image="bytepunx/authstar-${svc}"
   tag="latest"
   ref="${image}:${tag}"
   (cd "$SERVICE_REPOS_ROOT/$svc" && docker build -t "$ref" .) \
@@ -52,7 +52,7 @@ done
 
 log "importing all 8 images into $K3D_SERVER_CONTAINER's containerd (k8s.io namespace)"
 for svc in "${SERVICES[@]}"; do
-  ref="arobson/authstar-${svc}:latest"
+  ref="bytepunx/authstar-${svc}:latest"
   docker save "$ref" | docker exec -i "$K3D_SERVER_CONTAINER" ctr -n k8s.io images import - \
     || die "image import failed for $svc"
 done

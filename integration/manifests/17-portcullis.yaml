@@ -24,7 +24,7 @@ spec:
         - name: dockerhub-pull
       containers:
         - name: portcullis
-          image: arobson/authstar-portcullis:latest
+          image: bytepunx/authstar-portcullis:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3710

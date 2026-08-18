@@ -23,7 +23,7 @@ spec:
         - name: dockerhub-pull
       containers:
         - name: keep
-          image: arobson/authstar-keep:latest
+          image: bytepunx/authstar-keep:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8080

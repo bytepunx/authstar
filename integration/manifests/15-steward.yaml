@@ -24,7 +24,7 @@ spec:
         - name: dockerhub-pull
       containers:
         - name: steward
-          image: arobson/authstar-steward:latest
+          image: bytepunx/authstar-steward:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 3000
