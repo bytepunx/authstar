@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.2](https://github.com/bytepunx/authstar-clients/compare/fastify-v0.2.1...fastify-v0.2.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* **fastify:** actually bundle core's types, not just its JS ([6523ab5](https://github.com/bytepunx/authstar-clients/commit/6523ab5535671d8eec0c0932c1b24950033b90ed))
+
 ## [0.2.1](https://github.com/bytepunx/authstar-clients/compare/fastify-v0.2.0...fastify-v0.2.1) (2026-08-14)
 
 
