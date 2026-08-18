@@ -76,6 +76,41 @@ export interface ApplicationUpdateInput {
 	status?: 'active' | 'suspended' | 'deleted'
 }
 
+// ADR 0090 (design/decisions/0090-organizations-shared-billing-
+// administration-and-succession.md). `successors` is keyed by each
+// manager's own accountId -- read-only here (successor designation is
+// strictly self-only in tower, no tenant-admin override, ADR 0090's own
+// wording: "a manager cannot set another manager's successor" -- this
+// admin surface can view who's designated, never change it).
+export interface Organization {
+	organizationId: string
+	tenant: string
+	name: string
+	managers: string[]
+	successors: Record<string, string>
+}
+
+// A minimal account projection -- no PII (contactId, and therefore email,
+// is never returned by tower's own account responses, ADR 0023). Just
+// enough to list an organization's plain membership alongside its
+// managers.
+export interface AccountSummary {
+	accountId: string
+	status: 'active' | 'suspended' | 'deleted'
+	organizationId: string | null
+}
+
+export interface OrganizationInvite {
+	token: string
+	tenant: string
+	contactId: string
+	organizationId: string | null
+	organizationRole: 'member' | 'manager' | null
+	status: 'pending' | 'accepted' | 'revoked' | 'expired'
+	createdAt: string
+	expiresAt: string | null
+}
+
 export class TowerRequestError extends Error {
 	constructor(
 		message: string,
@@ -97,6 +132,17 @@ export interface TowerClient {
 	listProviders(tenantSlug: string): Promise<{ name: string; label: string }[]>
 	issueUsageCredential(tenantSlug: string, slug: string): Promise<{ credentialId: string; secret: string }>
 	revokeUsageCredential(tenantSlug: string, slug: string, credentialId: string): Promise<void>
+	listOrganizations(tenantSlug: string): Promise<Organization[]>
+	getOrganization(tenantSlug: string, organizationId: string): Promise<Organization>
+	listOrganizationMembers(tenantSlug: string, organizationId: string): Promise<AccountSummary[]>
+	addOrganizationManager(tenantSlug: string, organizationId: string, accountId: string): Promise<Organization>
+	removeOrganizationManager(tenantSlug: string, organizationId: string, accountId: string): Promise<Organization>
+	removeOrganizationMember(tenantSlug: string, organizationId: string, accountId: string): Promise<void>
+	createOrganizationInvite(
+		tenantSlug: string,
+		organizationId: string,
+		input: { contactId: string; organizationRole: 'member' | 'manager'; expiresAt?: string | null },
+	): Promise<OrganizationInvite>
 }
 
 export interface CreateTowerClientOptions {
@@ -160,6 +206,27 @@ export function createTowerClient(options: CreateTowerClientOptions): TowerClien
 		},
 		async revokeUsageCredential(tenantSlug, slug, credentialId) {
 			await request('DELETE', `/tenants/${tenantSlug}/applications/${slug}/usage-credentials/${credentialId}`)
+		},
+		listOrganizations(tenantSlug) {
+			return request('GET', `/tenants/${tenantSlug}/organizations`)
+		},
+		getOrganization(tenantSlug, organizationId) {
+			return request('GET', `/tenants/${tenantSlug}/organizations/${organizationId}`)
+		},
+		listOrganizationMembers(tenantSlug, organizationId) {
+			return request('GET', `/tenants/${tenantSlug}/accounts?organizationId=${encodeURIComponent(organizationId)}`)
+		},
+		addOrganizationManager(tenantSlug, organizationId, accountId) {
+			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/managers`, { accountId })
+		},
+		removeOrganizationManager(tenantSlug, organizationId, accountId) {
+			return request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/managers/${accountId}`)
+		},
+		async removeOrganizationMember(tenantSlug, organizationId, accountId) {
+			await request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}`)
+		},
+		createOrganizationInvite(tenantSlug, organizationId, input) {
+			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/invites`, input)
 		},
 	}
 }

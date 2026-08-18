@@ -35,7 +35,11 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
 		id: 'billing',
 		label: 'Billing',
 		href: '/billing',
-		permissions: ['billing:read', 'billing:manage'],
+		// ADR 0090's two organization-scoped permissions live here too -- an
+		// account holding only one of those (no billing:read/manage at all)
+		// is still the intended audience for this section's Organizations
+		// page, not a tenant billing admin.
+		permissions: ['billing:read', 'billing:manage', 'organization:manage', 'organization-billing:manage'],
 	},
 	{
 		id: 'communications',
