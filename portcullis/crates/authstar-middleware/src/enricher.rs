@@ -43,6 +43,11 @@ struct EnrichRequestBody<'a> {
 #[serde(rename_all = "camelCase")]
 pub struct AllowOutcome {
     pub account_id: String,
+    /// The account's organization, if it belongs to one (ADR 0090). Passed through unchanged
+    /// onto the internal token, same treatment as `account_id` -- portcullis never interprets
+    /// it, just forwards it for downstream services (tower/keep) to authorize against.
+    #[serde(default)]
+    pub organization_id: Option<String>,
     #[serde(default)]
     pub granted_roles: Vec<String>,
     #[serde(default)]

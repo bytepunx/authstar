@@ -26,6 +26,10 @@ pub struct InternalClaims {
     pub enrichment_status: EnrichmentStatus,
     #[serde(rename = "accountId", skip_serializing_if = "Option::is_none", default)]
     pub account_id: Option<String>,
+    /// The account's organization, if it belongs to one (ADR 0090). Same optionality/never-
+    /// fabricated treatment as `account_id` -- absent on a degraded token, never guessed.
+    #[serde(rename = "organizationId", skip_serializing_if = "Option::is_none", default)]
+    pub organization_id: Option<String>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub roles: Vec<String>,
     /// Tenant-wide, unfiltered permissions (ADR 0018/0030) — the closed, authstar-owned
@@ -60,6 +64,7 @@ pub struct BaselineIdentity<'a> {
 pub fn allow_claims(
     identity: BaselineIdentity,
     account_id: String,
+    organization_id: Option<String>,
     roles: Vec<String>,
     permissions: Vec<String>,
     usage: serde_json::Value,
@@ -72,6 +77,7 @@ pub fn allow_claims(
         identity_hash: identity.identity_hash.to_string(),
         enrichment_status: EnrichmentStatus::Ok,
         account_id: Some(account_id),
+        organization_id,
         roles,
         permissions,
         usage: if usage.is_null() { None } else { Some(usage) },
@@ -91,6 +97,7 @@ pub fn degraded_claims(identity: BaselineIdentity) -> InternalClaims {
         identity_hash: identity.identity_hash.to_string(),
         enrichment_status: EnrichmentStatus::Degraded,
         account_id: None,
+        organization_id: None,
         roles: Vec::new(),
         permissions: Vec::new(),
         usage: None,
@@ -162,12 +169,33 @@ mod tests {
         let claims = allow_claims(
             identity(),
             "acct-1".to_string(),
+            None,
             vec!["member".to_string()],
             vec!["tenant:manage".to_string()],
             serde_json::Value::Null,
             false,
         );
         assert_eq!(claims.permissions, vec!["tenant:manage".to_string()]);
+    }
+
+    #[test]
+    fn allow_claims_carries_organization_id_through_when_present() {
+        let claims = allow_claims(
+            identity(),
+            "acct-1".to_string(),
+            Some("org-1".to_string()),
+            vec![],
+            vec![],
+            serde_json::Value::Null,
+            false,
+        );
+        assert_eq!(claims.organization_id, Some("org-1".to_string()));
+    }
+
+    #[test]
+    fn degraded_claims_never_fabricates_organization_id() {
+        let claims = degraded_claims(identity());
+        assert_eq!(claims.organization_id, None);
     }
 
     #[test]
