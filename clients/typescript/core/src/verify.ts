@@ -124,6 +124,7 @@ export async function verifyInternalJwt(
     tenant,
     enrichmentStatus: enrichmentStatus as EnrichmentStatus,
     accountId: typeof payload.accountId === 'string' ? payload.accountId : undefined,
+    organizationId: typeof payload.organizationId === 'string' ? payload.organizationId : undefined,
     roles: Array.isArray(payload.roles) ? (payload.roles as string[]) : [],
     permissions: Array.isArray(payload.permissions) ? (payload.permissions as string[]) : [],
     usage: payload.usage,

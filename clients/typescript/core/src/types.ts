@@ -47,6 +47,14 @@ export interface InternalClaims {
   enrichmentStatus: EnrichmentStatus
   /** Absent when enrichmentStatus is "degraded", or when tower reports no account yet. */
   accountId?: string
+  /**
+   * The account's organization, if it belongs to one (ADR 0090). An account belongs to at
+   * most one organization at a time, so unlike `roles`/`permissions` this needs no
+   * accompanying scope object -- holding an organization-scoped permission at all
+   * unambiguously means "for this organization." Absent when enrichmentStatus is
+   * "degraded", or when the account isn't a member of any organization.
+   */
+  organizationId?: string
   /** Open, app-owned vocabulary (ADR 0069). Always present; empty when enrichmentStatus is "degraded". */
   roles: string[]
   /**
