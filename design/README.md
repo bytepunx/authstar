@@ -9,6 +9,9 @@ Design decisions, stories, and reference documentation for the authstar project.
   that touches a decision already recorded here.
 - `stories/` — user-facing feature specifications, organized per service.
 - `docs/` — supplementary reference material (provider setup guides, operational runbooks, etc.)
+- `scripts/clone-siblings.sh` — clones every other `bytepunx/authstar-*` repo as a sibling
+  directory of this one (e.g. `~/git/authstar/tower`, `~/git/authstar/keep`, ...). Requires
+  the `gh` CLI, authenticated against the `bytepunx` org.
 
 ## Related repos
 
