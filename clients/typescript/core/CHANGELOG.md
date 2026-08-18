@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.0](https://github.com/bytepunx/authstar-clients/compare/core-v0.2.0...core-v0.3.0) (2026-08-18)
+
+
+### Features
+
+* **core:** InternalClaims gains organizationId ([c0d1b5c](https://github.com/bytepunx/authstar-clients/commit/c0d1b5c8d5e590c1b17e4a0585a73e322e222ddd))
+
 ## [0.2.0](https://github.com/bytepunx/authstar-clients/compare/core-v0.1.0...core-v0.2.0) (2026-08-14)
 
 
