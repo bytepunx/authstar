@@ -202,8 +202,18 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
           send(res, 400, { error: 'X-Operator-Actor required' })
           return
         }
+        // Real tower response shape (src/routes/rotate-keys.ts): rotated is an
+        // array of { key, version, effectiveFrom } objects, not bare key
+        // strings -- this fake used to send back `body.keys` directly, which
+        // silently rendered as empty strings in the UI's `r.key` access
+        // (RotatedKeyGeneration.key), confirmed live: the operator-console
+        // e2e test's "Rotated: session, identity-hash" assertion never
+        // matched because every `.key` read undefined.
         const body = (await readBody(req)) as { keys: string[] }
-        send(res, 200, { rotated: body.keys })
+        send(res, 200, {
+          rotated: body.keys.map((key) => ({ key, version: 2, effectiveFrom: new Date().toISOString() })),
+          failed: [],
+        })
         return
       }
 

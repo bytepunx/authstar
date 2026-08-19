@@ -113,8 +113,14 @@ describe('steward server <-> fake tower, over real HTTP', () => {
       body: JSON.stringify({ keys: ['session', 'identity-hash'] }),
     })
     expect(response.status).toBe(200)
-    const body = (await response.json()) as { rotated: string[] }
-    expect(body.rotated).toEqual(['session', 'identity-hash'])
+    // Real tower shape (src/routes/rotate-keys.ts): an array of
+    // { key, version, effectiveFrom } objects, not bare key strings -- this
+    // assertion used to match the fake backend's old (wrong) echo-back
+    // behavior, not tower's actual contract. See fake-backend-server.ts's
+    // own comment on the same fix.
+    const body = (await response.json()) as { rotated: Array<{ key: string; version: number; effectiveFrom: string }> }
+    expect(body.rotated.map((r) => r.key)).toEqual(['session', 'identity-hash'])
+    expect(body.rotated.every((r) => typeof r.version === 'number' && typeof r.effectiveFrom === 'string')).toBe(true)
   })
 
   it('grants and revokes a permission end to end, and reflects it in the accounts read', async () => {
