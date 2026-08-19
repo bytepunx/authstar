@@ -29,10 +29,15 @@ export function createTowerClient({ baseUrl, fetchImpl = fetch }: TowerClientOpt
   const call = <T>(opts: Parameters<typeof backendRequest<T>>[2]) => backendRequest<T>(fetchImpl, baseUrl, opts)
 
   return {
-    // Story 001: the lightweight token-confirmation call, `limit=0` so it's
-    // cheap regardless of how many tenants the installation has.
+    // Story 001: the lightweight token-confirmation call, `limit=1` so it's
+    // cheap regardless of how many tenants the installation has. Was `limit:
+    // 0` -- confirmed live against a real tower instance: its own
+    // querystring schema (routes/operator.ts) requires `minimum: 1`, so the
+    // "cheaper" limit=0 always 400'd instead, meaning no token ever
+    // confirmed successfully. 1 is still cheap; the response body's data is
+    // never used here, only whether the call itself succeeded.
     confirmToken(token: string): Promise<BackendResult<TenantListResponse>> {
-      return call<TenantListResponse>({ path: '/operator/tenants', token, query: { limit: 0 } })
+      return call<TenantListResponse>({ path: '/operator/tenants', token, query: { limit: 1 } })
     },
 
     // Story 002 / tower Story 013: paginated, searchable by slug/name.

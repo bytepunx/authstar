@@ -10,7 +10,7 @@ describe('POST /api/connect', () => {
   it('confirms a valid token and reports the tower installation it reached', async () => {
     const fetchImpl = makeFakeFetch((url) => {
       expect(url).toContain('/operator/tenants')
-      expect(url).toContain('limit=0')
+      expect(url).toContain('limit=1')
       return { status: 200, body: { items: [], total: 42 } }
     })
 
