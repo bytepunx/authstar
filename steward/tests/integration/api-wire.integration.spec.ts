@@ -134,8 +134,8 @@ describe('steward server <-> fake tower, over real HTTP', () => {
     const afterGrant = await fetch(`${steward.url}/api/tenants/acme/accounts`, {
       headers: { Authorization: `Bearer ${backend.state.validToken}` },
     })
-    const afterGrantBody = (await afterGrant.json()) as { items: Array<{ id: string; permissions: unknown[] }> }
-    expect(afterGrantBody.items.find((a) => a.id === 'acc-2')?.permissions).toHaveLength(1)
+    const afterGrantBody = (await afterGrant.json()) as Array<{ id: string; permissions: unknown[] }>
+    expect(afterGrantBody.find((a) => a.id === 'acc-2')?.permissions).toHaveLength(1)
 
     const revoke = await fetch(`${steward.url}/api/tenants/acme/accounts/acc-2/permissions/${encodeURIComponent(':billing')}`, {
       method: 'DELETE',
@@ -146,7 +146,7 @@ describe('steward server <-> fake tower, over real HTTP', () => {
     const afterRevoke = await fetch(`${steward.url}/api/tenants/acme/accounts`, {
       headers: { Authorization: `Bearer ${backend.state.validToken}` },
     })
-    const afterRevokeBody = (await afterRevoke.json()) as { items: Array<{ id: string; permissions: unknown[] }> }
-    expect(afterRevokeBody.items.find((a) => a.id === 'acc-2')?.permissions).toHaveLength(0)
+    const afterRevokeBody = (await afterRevoke.json()) as Array<{ id: string; permissions: unknown[] }>
+    expect(afterRevokeBody.find((a) => a.id === 'acc-2')?.permissions).toHaveLength(0)
   })
 })

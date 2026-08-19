@@ -54,9 +54,13 @@ export interface Account {
   permissions: PermissionGrant[]
 }
 
-export interface AccountListResponse {
-  items: Account[]
-}
+// Matches tower's real GET /operator/tenants/:slug/accounts response
+// exactly (routes/accounts.ts's listAccounts): a bare array, no wrapper --
+// same class of bug as TenantListResponse (see its own comment above): the
+// old {items:[...]} shape meant this always read undefined off a real
+// response, surfacing as "Failed to load admin access" on the tenant
+// detail page even for a tenant with real accounts.
+export type AccountListResponse = Account[]
 
 export interface InviteRequest {
   email: string

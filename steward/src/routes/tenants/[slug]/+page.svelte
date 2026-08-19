@@ -36,7 +36,7 @@
     holdersError = undefined
     try {
       const result = await apiCall<AccountListResponse>(`/api/tenants/${encodeURIComponent(slug)}/accounts`)
-      holders = result.items.filter((a) => a.permissions && a.permissions.length > 0)
+      holders = result.filter((a) => a.permissions && a.permissions.length > 0)
     } catch (err) {
       holdersError = err instanceof ApiError ? err.message : 'Failed to load admin access.'
     } finally {
@@ -52,7 +52,7 @@
       const result = await apiCall<AccountListResponse>(
         `/api/tenants/${encodeURIComponent(slug)}/accounts?email=${encodeURIComponent(emailSearch)}`,
       )
-      searchResults = result.items
+      searchResults = result
     } catch (err) {
       searchError = err instanceof ApiError ? err.message : 'Search failed.'
     } finally {

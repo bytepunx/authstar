@@ -142,7 +142,10 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
         const email = url.searchParams.get('email')
         const all = state.accounts[slug] ?? []
         const items = email ? all.filter((a) => a.email === email) : all
-        send(res, 200, { items })
+        // Real tower shape (src/routes/accounts.ts): a bare array, no
+        // wrapper -- see AccountListResponse's own comment in
+        // src/lib/types.ts.
+        send(res, 200, items)
         return
       }
 

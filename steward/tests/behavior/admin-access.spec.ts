@@ -10,7 +10,7 @@ import { capturingFakeFetch, makeFakeFetch } from '../helpers/fake-fetch.js'
 
 describe('GET /api/tenants/:slug/accounts', () => {
   it('forwards an email search to tower', async () => {
-    const { fetchImpl, calls } = capturingFakeFetch({ status: 200, body: { items: [] } })
+    const { fetchImpl, calls } = capturingFakeFetch({ status: 200, body: [] })
     const event = fakeEvent({
       path: '/api/tenants/acme/accounts?email=a%40acme.test',
       params: { slug: 'acme' },
