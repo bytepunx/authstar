@@ -9,7 +9,6 @@
   let submitting = $state(false)
   let errorMessage = $state<string | undefined>(undefined)
   let confirmedTowerUrl = $state<string | undefined>(undefined)
-  let confirmedTenantCount = $state<number | undefined>(undefined)
 
   // Story 001: "your session is no longer valid, reconnect" -- surfaced
   // here when api.ts redirects back after a 401 from any backend call.
@@ -38,7 +37,6 @@
       }
 
       confirmedTowerUrl = result.towerUrl
-      confirmedTenantCount = result.tenantCount
       session.connect(token, actorLabel, result.towerUrl)
       await goto('/tenants')
     } catch (err) {
@@ -78,7 +76,6 @@
 {#if confirmedTowerUrl}
   <p class="confirmation">
     Connected to <code>{confirmedTowerUrl}</code>
-    {#if confirmedTenantCount !== undefined}({confirmedTenantCount} tenants known){/if}
   </p>
 {/if}
 

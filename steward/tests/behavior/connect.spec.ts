@@ -11,7 +11,7 @@ describe('POST /api/connect', () => {
     const fetchImpl = makeFakeFetch((url) => {
       expect(url).toContain('/operator/tenants')
       expect(url).toContain('limit=1')
-      return { status: 200, body: { items: [], total: 42 } }
+      return { status: 200, body: { data: [], nextCursor: null } }
     })
 
     const event = fakeEvent({ method: 'POST', path: '/api/connect', body: { token: 'good-token' }, fetchImpl })
@@ -19,14 +19,14 @@ describe('POST /api/connect', () => {
     expect(response.status).toBe(200)
     const result = (await readJson(response)) as ConnectResult
     expect(result.ok).toBe(true)
-    expect(result.tenantCount).toBe(42)
+    expect(result.towerUrl).toBeDefined()
   })
 
   it('forwards the token as a bearer header, never in the query string', async () => {
     const fetchImpl = makeFakeFetch((_url, init) => {
       const headers = new Headers(init?.headers)
       expect(headers.get('authorization')).toBe('Bearer good-token')
-      return { status: 200, body: { items: [], total: 0 } }
+      return { status: 200, body: { data: [], nextCursor: null } }
     })
     const event = fakeEvent({ method: 'POST', path: '/api/connect', body: { token: 'good-token' }, fetchImpl })
     await POST(event as any)

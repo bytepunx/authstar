@@ -94,7 +94,10 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
         const items = state.tenants.filter(
           (t) => !search || t.slug.toLowerCase().includes(search) || t.name.toLowerCase().includes(search),
         )
-        send(res, 200, { items, total: items.length })
+        // Real tower shape (src/routes/operator.ts): cursor pagination
+        // (data/nextCursor), not items/total -- see TenantListResponse's
+        // own comment in src/lib/types.ts for the bug this used to hide.
+        send(res, 200, { data: items, nextCursor: null })
         return
       }
 

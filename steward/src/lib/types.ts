@@ -12,9 +12,16 @@ export interface Tenant {
   createdAt?: string
 }
 
+// Matches tower's real GET /operator/tenants response exactly (routes/
+// operator.ts) -- confirmed live against a real tower instance: it returns
+// cursor-based pagination (data/nextCursor), not the items/total shape this
+// used to declare. That mismatch meant the tenant list page always read
+// undefined off a real response and rendered nothing, even when tower had
+// real tenants -- steward's own tests never caught it because they mocked
+// the (wrong) assumed shape instead of tower's actual one.
 export interface TenantListResponse {
-  items: Tenant[]
-  total: number
+  data: Tenant[]
+  nextCursor: string | null
 }
 
 export interface CreateTenantRequest {
@@ -150,7 +157,6 @@ export interface ProviderListResponse {
 export interface ConnectResult {
   ok: boolean
   towerUrl?: string
-  tenantCount?: number
   reason?: 'invalid-token' | 'unreachable' | 'unknown'
   message?: string
 }

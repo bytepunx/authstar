@@ -34,7 +34,7 @@
     try {
       const query = search ? `?search=${encodeURIComponent(search)}` : ''
       const result = await apiCall<TenantListResponse>(`/api/tenants${query}`)
-      tenants = result.items
+      tenants = result.data
     } catch (err) {
       if (err instanceof ApiError) loadError = err.message
       else loadError = 'Failed to load tenants.'

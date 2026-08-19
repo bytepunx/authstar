@@ -33,9 +33,9 @@ describe('steward server <-> fake tower, over real HTTP', () => {
       body: JSON.stringify({ token: backend.state.validToken }),
     })
     expect(response.status).toBe(200)
-    const body = (await response.json()) as { ok: boolean; tenantCount?: number }
+    const body = (await response.json()) as { ok: boolean; towerUrl?: string }
     expect(body.ok).toBe(true)
-    expect(body.tenantCount).toBe(backend.state.tenants.length)
+    expect(body.towerUrl).toBeDefined()
   })
 
   it('reports an invalid token distinctly from an unreachable backend', async () => {
@@ -54,8 +54,8 @@ describe('steward server <-> fake tower, over real HTTP', () => {
       headers: { Authorization: `Bearer ${backend.state.validToken}` },
     })
     expect(response.status).toBe(200)
-    const body = (await response.json()) as { items: Array<{ slug: string }>; total: number }
-    expect(body.items.map((t) => t.slug)).toEqual(['acme'])
+    const body = (await response.json()) as { data: Array<{ slug: string }>; nextCursor: string | null }
+    expect(body.data.map((t) => t.slug)).toEqual(['acme'])
   })
 
   it('rejects a request with no bearer token at the real HTTP layer', async () => {
@@ -81,8 +81,8 @@ describe('steward server <-> fake tower, over real HTTP', () => {
     const search = await fetch(`${steward.url}/api/tenants?search=globex`, {
       headers: { Authorization: `Bearer ${backend.state.validToken}` },
     })
-    const body = (await search.json()) as { items: Array<{ slug: string; status: string }> }
-    expect(body.items[0].status).toBe('active')
+    const body = (await search.json()) as { data: Array<{ slug: string; status: string }> }
+    expect(body.data[0].status).toBe('active')
   })
 
   it('creates a tenant end to end and surfaces a duplicate-slug failure with its failed step on retry semantics', async () => {

@@ -13,7 +13,7 @@ describe('GET /api/tenants', () => {
   })
 
   it('forwards the search query to tower', async () => {
-    const { fetchImpl, calls } = capturingFakeFetch({ status: 200, body: { items: [], total: 0 } })
+    const { fetchImpl, calls } = capturingFakeFetch({ status: 200, body: { data: [], nextCursor: null } })
     const event = fakeEvent({
       path: '/api/tenants?search=acme',
       headers: { authorization: 'Bearer t' },
@@ -23,16 +23,22 @@ describe('GET /api/tenants', () => {
     expect(calls[0].url).toContain('search=acme')
   })
 
+  // Matches tower's real GET /operator/tenants response exactly (routes/
+  // operator.ts) -- cursor-based pagination, not items/total. See
+  // TenantListResponse's own comment in src/lib/types.ts for why this
+  // matters: the old (wrong) assumed shape here is exactly what let the
+  // real bug (tenants/+page.svelte reading result.items, always undefined)
+  // ship unnoticed.
   it('passes through the tenant list shape from tower', async () => {
     const fetchImpl = makeFakeFetch(() => ({
       status: 200,
-      body: { items: [{ slug: 'acme', name: 'Acme', status: 'active' }], total: 1 },
+      body: { data: [{ slug: 'acme', name: 'Acme', status: 'active' }], nextCursor: null },
     }))
     const event = fakeEvent({ path: '/api/tenants', headers: { authorization: 'Bearer t' }, fetchImpl })
     const response = await GET(event as any)
-    const body = (await readJson(response)) as { items: unknown[]; total: number }
-    expect(body.total).toBe(1)
-    expect(body.items[0]).toMatchObject({ slug: 'acme', status: 'active' })
+    const body = (await readJson(response)) as { data: unknown[]; nextCursor: string | null }
+    expect(body.nextCursor).toBeNull()
+    expect(body.data[0]).toMatchObject({ slug: 'acme', status: 'active' })
   })
 })
 

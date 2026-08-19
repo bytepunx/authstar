@@ -25,10 +25,15 @@ export const POST: RequestHandler = async (event) => {
   const result = await tower.confirmToken(token)
 
   if (result.ok) {
+    // No tenantCount here: tower's real /operator/tenants response is
+    // cursor-paginated (data/nextCursor, see TenantListResponse's own
+    // comment in $lib/types.js), not items/total -- and confirmToken's own
+    // limit=1 means result.body.data.length can never reliably represent
+    // the installation's real tenant count anyway. Reporting one would
+    // just be misleading, not a smaller version of the truth.
     return json({
       ok: true,
       towerUrl: env.towerUrl,
-      tenantCount: result.body.total,
     } satisfies ConnectResult)
   }
 
