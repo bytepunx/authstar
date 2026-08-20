@@ -1,6 +1,6 @@
 # ADR 0091: Tenant-Owned Domains and the Reserved `authstar` Admin Surface
 
-- **Status:** Accepted
+- **Status:** Accepted (domain-at-creation requirement superseded by [ADR 0093](0093-domain-pending-tenant-provisioning.md))
 - **Date:** 2026-08-19
 - **Affects:** tower, portcullis, web, steward, authstar-clients
 - **Supersedes:** the `_admin`/`admin.<slug>.<baseDomain>` convention in [ADR 0067](0067-tenant-creation-and-provisioning.md),
@@ -126,12 +126,10 @@ leaking into another's.
 
 ## Resolved 2026-08-19 (were open items)
 
-- **Self-service signup and domain-less tenants.** Decision: require `domain` unconditionally,
-  for every caller, operator or self-service. This gives up the "no domain infrastructure ready"
-  convenience ADR 0067 designed for self-service signers — accepted given this system's stated
-  common case (a single tenant per installation, an operator who already controls the domain they
-  intend to run on). An authstar-hosted fallback subdomain for domain-less self-service signups
-  is a real option but a separate, later enhancement — not designed or built as part of this ADR.
+- **Self-service signup and domain-less tenants.** *Superseded 2026-08-20 by
+  [ADR 0093](0093-domain-pending-tenant-provisioning.md)* — domain becomes optional at creation
+  after all, with a domain-pending state and a later completion step, rather than required
+  unconditionally as first decided here.
 - **Invite redemption via OIDC login.** Resolved by [ADR 0092](0092-invite-redemption-survives-the-oauth-round-trip.md),
   implemented alongside this ADR rather than deferred — admin onboarding (this ADR's whole point)
   doesn't actually work end to end without it.
