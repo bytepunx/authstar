@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/bytepunx/authstar-clients/compare/core-v0.3.0...core-v1.0.0) (2026-08-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** perTenantJwksKeyProvider's first parameter changes from a baseDomain string to a (tenantSlug) => string | undefined | Promise<string | undefined> resolver function. Callers (tower, and web once it adopts this) must supply a resolver instead of a baseDomain -- see ADR 0091 for the recommended tower-backed, cached implementation.
+
+### Features
+
+* **core:** perTenantJwksKeyProvider takes a domain resolver, not a baseDomain string ([382c563](https://github.com/bytepunx/authstar-clients/commit/382c56352098468d40003fa9ae603b556a9eee91))
+
 ## [0.3.0](https://github.com/bytepunx/authstar-clients/compare/core-v0.2.0...core-v0.3.0) (2026-08-18)
 
 
