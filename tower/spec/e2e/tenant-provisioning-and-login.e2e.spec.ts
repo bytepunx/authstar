@@ -70,11 +70,13 @@ describe('tenant provisioning -> first-admin login -> enrichment -> entitlement 
     })
     expect(create.statusCode).toBe(201)
 
-    // The invite token is deterministic (tenant+adminEmail) per
-    // `provisioning.ts` -- recompute it the same way to redeem it, exactly
-    // as the real invite-sent email's link would encode it.
+    // The invite token is deterministic (tenant+adminContactId, ADR 0093 --
+    // never the raw email) per `provisioning.ts` -- recompute it the same
+    // way to redeem it, exactly as the real invite-sent email's link would
+    // encode it.
     const { createHash } = await import('node:crypto')
-    const token = createHash('sha256').update('acme:admin@acme.test:admin-invite').digest('hex').slice(0, 40)
+    const tenantState = (await consequent.fetch('tenant', 'acme'))!.state as unknown as { adminContactId: string }
+    const token = createHash('sha256').update(`acme:${tenantState.adminContactId}:admin-invite`).digest('hex').slice(0, 40)
 
     // 2. First admin logs in via portcullis's OIDC flow -> identity
     // resolution, redeeming the invite in the same call.

@@ -294,3 +294,145 @@ describe('POST /tenants -- provisioning', () => {
     await selfServiceApp.close()
   })
 })
+
+// ADR 0093: domain-pending tenants -- created without a domain, completed
+// later via PATCH /tenants/:tenantSlug/domain.
+describe('domain-pending provisioning (ADR 0093)', () => {
+  let app: FastifyInstance
+  let consequent: ConsequentApi
+  let signetAdmin: ReturnType<typeof createSpySignetAdmin>
+  let publisher: ReturnType<typeof createSpyPublisher>
+
+  beforeEach(async () => {
+    ;({ app, consequent, signetAdmin, publisher } = await buildProvisioningApp())
+  })
+
+  afterEach(async () => {
+    await app.close()
+  })
+
+  it('creates a tenant with no domain, deferring everything hostname-dependent', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'pending-co', name: 'Pending Co', adminEmail: 'admin@pending.test' },
+    })
+
+    expect(response.statusCode).toBe(201)
+    const body = response.json()
+    expect(body.domain).toBeNull()
+    expect(body.adminHost).toBeNull()
+
+    const tenant = (await consequent.fetch('tenant', 'pending-co'))!.state as unknown as TenantState
+    expect(tenant.domain).toBeNull()
+    expect(tenant.secretsProvisioned).toBe(true) // not domain-dependent -- still runs
+    expect(tenant.portcullisRegistered).toBe(false) // domain-dependent -- deferred
+
+    const adminApp = await consequent.fetch('application', 'pending-co:_admin')
+    expect((adminApp?.state as { createdAt?: string } | undefined)?.createdAt).toBeFalsy()
+    expect(signetAdmin.patchCalls).toHaveLength(0)
+    expect(publisher.calls).toHaveLength(0)
+  })
+
+  it('completes provisioning once a domain is set via PATCH', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'pending-co', name: 'Pending Co', adminEmail: 'admin@pending.test' },
+    })
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/tenants/pending-co/domain',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { domain: 'pending-co.io' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json()
+    expect(body.domain).toBe('pending-co.io')
+    expect(body.adminHost).toBe('authstar.pending-co.io')
+
+    const tenant = (await consequent.fetch('tenant', 'pending-co'))!.state as unknown as TenantState
+    expect(tenant.domain).toBe('pending-co.io')
+    expect(tenant.portcullisRegistered).toBe(true)
+
+    const adminApp = await consequent.fetch('application', 'pending-co:_admin')
+    expect((adminApp!.state as { hosts: string[] }).hosts).toEqual(['authstar.pending-co.io'])
+    expect(signetAdmin.patchCalls).toHaveLength(1)
+    expect(publisher.calls).toHaveLength(1)
+    expect(publisher.calls[0].routingKey).toBe('comms.transactional.invite-sent')
+  })
+
+  it('rejects setting a domain on a tenant that never existed', async () => {
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/tenants/nonexistent/domain',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { domain: 'nonexistent.io' },
+    })
+    expect(response.statusCode).toBe(404)
+  })
+
+  it('rejects setting a domain already claimed by another tenant', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'taken', name: 'Taken', domain: 'shared.io', adminEmail: 'admin@taken.test' },
+    })
+    await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'pending-co', name: 'Pending Co', adminEmail: 'admin@pending.test' },
+    })
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/tenants/pending-co/domain',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { domain: 'shared.io' },
+    })
+    expect(response.statusCode).toBe(409)
+  })
+
+  it('rejects re-setting a domain once one is already set', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'acme', name: 'Acme', domain: 'acme.io', adminEmail: 'admin@acme.test' },
+    })
+
+    const response = await app.inject({
+      method: 'PATCH',
+      url: '/tenants/acme/domain',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { domain: 'different.io' },
+    })
+    expect(response.statusCode).toBe(409)
+  })
+
+  it('retrying the same PATCH is idempotent', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'pending-co', name: 'Pending Co', adminEmail: 'admin@pending.test' },
+    })
+
+    const payload = { domain: 'pending-co.io' }
+    const first = await app.inject({ method: 'PATCH', url: '/tenants/pending-co/domain', headers: { authorization: 'Bearer op-secret' }, payload })
+    expect(first.statusCode).toBe(200)
+
+    const second = await app.inject({ method: 'PATCH', url: '/tenants/pending-co/domain', headers: { authorization: 'Bearer op-secret' }, payload })
+    expect(second.statusCode).toBe(200)
+    expect(second.json()).toEqual(first.json())
+
+    expect(signetAdmin.patchCalls).toHaveLength(1)
+    expect(publisher.calls).toHaveLength(1)
+  })
+})

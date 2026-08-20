@@ -43,11 +43,19 @@ export interface TenantProviderRef {
 export interface TenantState {
   slug: string
   name: string
-  // ADR 0091: the tenant's own, globally-unique domain -- routing/cookie/JWKS
-  // hostnames are all built from this, not from the slug + a shared
-  // installation-wide baseDomain (that convention couldn't cover an
-  // arbitrary number of tenants; see the ADR for why).
-  domain: string
+  // ADR 0091/0093: the tenant's own, globally-unique domain -- routing/
+  // cookie/JWKS hostnames are all built from this, not from the slug + a
+  // shared installation-wide baseDomain (that convention couldn't cover an
+  // arbitrary number of tenants; see ADR 0091 for why). Null means
+  // domain-pending (ADR 0093) -- the tenant exists but nothing that needs a
+  // real hostname (the `_admin` application, portcullis registration, the
+  // first-admin invite) has run yet.
+  domain: string | null
+  // ADR 0023/0093: the deterministic contactId (never the raw email) for
+  // whoever should receive the first-admin invite -- resolved once, at
+  // creation, so the domain-pending completion step doesn't need the
+  // caller to resupply an email it already gave once.
+  adminContactId: string
   status: 'active' | 'suspended' | 'deleted'
   cookie: TenantCookie
   seatLimit: number | null
@@ -73,9 +81,14 @@ export interface TenantState {
 interface CreateCommand {
   slug: string
   name: string
-  domain: string
+  domain: string | null
   cookieDomain: string
+  adminContactId: string
   createdBy: string
+}
+
+interface SetDomainCommand {
+  domain: string
 }
 
 interface UpdateCommand {
@@ -111,8 +124,23 @@ function create(_tenant: TenantState, command: CreateCommand) {
     name: command.name,
     domain: command.domain,
     cookieDomain: command.cookieDomain,
+    adminContactId: command.adminContactId,
     createdBy: command.createdBy,
   }
+}
+
+// ADR 0093: only reachable while the tenant is still domain-pending --
+// domains are immutable once set in this pass, no re-pointing.
+function domainNotYetSet(tenant: TenantState) {
+  return tenant.domain === null
+}
+
+function setDomain(_tenant: TenantState, command: SetDomainCommand) {
+  return { type: 'tenant.domain-set', domain: command.domain }
+}
+
+function rejectDomainAlreadySet() {
+  return Promise.reject(new Error('tenant already has a domain set'))
 }
 
 function update(_tenant: TenantState, command: UpdateCommand) {
@@ -213,10 +241,11 @@ function markPortcullisRegistered(_tenant: TenantState, _command: MarkPortcullis
   return { type: 'tenant.portcullis-registered' }
 }
 
-function created(tenant: TenantState, event: { slug: string, name: string, domain: string, cookieDomain: string, createdBy: string }) {
+function created(tenant: TenantState, event: { slug: string, name: string, domain: string | null, cookieDomain: string, adminContactId: string, createdBy: string }) {
   tenant.slug = event.slug
   tenant.name = event.name
   tenant.domain = event.domain
+  tenant.adminContactId = event.adminContactId
   tenant.status = 'active'
   tenant.cookie = {
     domain: event.cookieDomain,
@@ -271,6 +300,10 @@ function portcullisRegistered(tenant: TenantState) {
   tenant.portcullisRegistered = true
 }
 
+function domainSet(tenant: TenantState, event: { domain: string }) {
+  tenant.domain = event.domain
+}
+
 export default function tenantActor() {
   return {
     actor: {
@@ -283,7 +316,8 @@ export default function tenantActor() {
     state: {
       slug: '',
       name: '',
-      domain: '',
+      domain: null,
+      adminContactId: '',
       status: 'active',
       cookie: { domain: '', path: '/', maxAge: 604_800, httpOnly: true, secure: true },
       seatLimit: null,
@@ -313,6 +347,10 @@ export default function tenantActor() {
       'set-seat-limit': setSeatLimit,
       'mark-secrets-provisioned': markSecretsProvisioned,
       'mark-portcullis-registered': markPortcullisRegistered,
+      'set-domain': [
+        { when: domainNotYetSet, then: setDomain },
+        rejectDomainAlreadySet,
+      ],
     },
     events: {
       created,
@@ -323,6 +361,7 @@ export default function tenantActor() {
       'seat-limit-set': seatLimitSet,
       'secrets-provisioned': secretsProvisioned,
       'portcullis-registered': portcullisRegistered,
+      'domain-set': domainSet,
     },
   }
 }
