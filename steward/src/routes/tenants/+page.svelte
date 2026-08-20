@@ -14,8 +14,8 @@
   let showCreate = $state(false)
   let createSlug = $state('')
   let createName = $state('')
+  let createDomain = $state('')
   let createAdminEmail = $state('')
-  let createAdminHost = $state('')
   let creating = $state(false)
   let createError = $state<string | undefined>(undefined)
   let createResult = $state<CreateTenantResponse | undefined>(undefined)
@@ -63,20 +63,31 @@
     const body: CreateTenantRequest = {
       slug: createSlug,
       name: createName,
+      domain: createDomain,
       adminEmail: createAdminEmail,
-      adminHost: createAdminHost || undefined,
     }
     try {
       createResult = await apiCall<CreateTenantResponse>('/api/tenants', { method: 'POST', body })
     } catch (err) {
       if (err instanceof ApiError) {
         const errBody = err.body as CreateTenantErrorBody | undefined
-        // tower Story 012: failure mid-provisioning is expected, not
-        // exceptional -- retrying the same slug is the correct recovery,
-        // never "try a different slug" or "contact support".
-        createError = errBody?.failedStep
-          ? `Provisioning failed at step "${errBody.failedStep}": ${errBody.error}. Retry with the same slug "${createSlug}" -- provisioning resumes from where it stopped.`
-          : `${err.message}. Retry with the same slug "${createSlug}" -- provisioning resumes from where it stopped.`
+        // ADR 0091: tower returns 409 for two distinct reasons -- a
+        // duplicate slug (has `failedStep`, tower Story 012's own shape,
+        // handled below) or a duplicate domain (no `failedStep` -- see
+        // provisioning.ts's own domain-uniqueness check). These need
+        // different guidance: retrying a duplicate slug with the same
+        // slug is correct; retrying a duplicate domain with the same
+        // domain never will be.
+        if (err.status === 409 && !errBody?.failedStep) {
+          createError = `Domain "${createDomain}" is already registered to another tenant. Choose a different domain.`
+        } else {
+          // tower Story 012: failure mid-provisioning is expected, not
+          // exceptional -- retrying the same slug is the correct recovery,
+          // never "try a different slug" or "contact support".
+          createError = errBody?.failedStep
+            ? `Provisioning failed at step "${errBody.failedStep}": ${errBody.error}. Retry with the same slug "${createSlug}" -- provisioning resumes from where it stopped.`
+            : `${err.message}. Retry with the same slug "${createSlug}" -- provisioning resumes from where it stopped.`
+        }
       } else {
         createError = 'Failed to create tenant.'
       }
@@ -139,8 +150,10 @@
     <form onsubmit={createTenant}>
       <label>Slug <input type="text" bind:value={createSlug} required /></label>
       <label>Name <input type="text" bind:value={createName} required /></label>
+      <label>
+        Domain <input type="text" bind:value={createDomain} placeholder="acme.io" required />
+      </label>
       <label>Admin email <input type="email" bind:value={createAdminEmail} required /></label>
-      <label>Admin host override (optional) <input type="text" bind:value={createAdminHost} /></label>
       <button type="submit" disabled={creating}>{creating ? 'Creating...' : 'Create'}</button>
     </form>
 

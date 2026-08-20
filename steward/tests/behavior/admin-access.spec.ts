@@ -105,4 +105,27 @@ describe('POST /api/tenants/:slug/invites (bootstrap)', () => {
     const body = (await readJson(response)) as { id: string }
     expect(body.id).toBe('inv-1')
   })
+
+  // ADR 0091: the tenant detail page's "Invite an admin" form sends
+  // permissions in tower's real {grant, scope, maxOutstanding} shape
+  // (routes/invites.ts's permissionSchema) -- not the unrelated
+  // {application, role} shape the accounts grant/revoke endpoints use.
+  it('forwards tower-shaped permission grants unmodified', async () => {
+    const { fetchImpl, calls } = capturingFakeFetch({ status: 201, body: { id: 'inv-2', email: 'admin@acme.test' } })
+    const event = fakeEvent({
+      method: 'POST',
+      path: '/api/tenants/acme/invites',
+      params: { slug: 'acme' },
+      headers: { authorization: 'Bearer t', 'x-operator-actor': 'alice' },
+      body: {
+        email: 'admin@acme.test',
+        application: null,
+        permissions: [{ grant: 'tenant:manage', scope: 'tenant', maxOutstanding: null }],
+      },
+      fetchImpl,
+    })
+    await createInvite(event as any)
+    const sentBody = JSON.parse(calls[0].init?.body as string)
+    expect(sentBody.permissions).toEqual([{ grant: 'tenant:manage', scope: 'tenant', maxOutstanding: null }])
+  })
 })

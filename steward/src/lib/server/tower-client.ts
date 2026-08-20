@@ -17,6 +17,7 @@ import type {
   RotateTenantKeysResponse,
   StuckErasureRequestsResponse,
   Tenant,
+  TenantDetailResponse,
   TenantListResponse,
 } from '../types.js'
 
@@ -78,6 +79,17 @@ export function createTowerClient({ baseUrl, fetchImpl = fetch }: TowerClientOpt
     // the operator tree), but still takes the operator bearer token.
     createTenant(token: string, body: CreateTenantRequest): Promise<BackendResult<CreateTenantResponse>> {
       return call<CreateTenantResponse>({ method: 'POST', path: '/tenants', token, body })
+    },
+
+    // ADR 0091: `GET /tenants/:slug` -- tower's own direct route (routes/
+    // tenants.ts), not on the operator tree at all (no operator-tree
+    // single-tenant GET exists). Doesn't check auth (no preHandler on that
+    // route), so the operator token sent here is inert, not required --
+    // kept for consistency with every other call this client makes. Used
+    // to surface a tenant's `domain` (and therefore its authstar.<domain>
+    // admin URL) on the detail page, which the list response doesn't carry.
+    getTenant(token: string, slug: string): Promise<BackendResult<TenantDetailResponse>> {
+      return call<TenantDetailResponse>({ path: `/tenants/${encodeURIComponent(slug)}`, token })
     },
 
     // Story 003 Admin Access -- read + email search share one route.

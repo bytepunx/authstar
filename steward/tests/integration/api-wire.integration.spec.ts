@@ -89,21 +89,32 @@ describe('steward server <-> fake tower, over real HTTP', () => {
     const create = await fetch(`${steward.url}/api/tenants`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${backend.state.validToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'newco', name: 'New Co', adminEmail: 'admin@newco.test' }),
+      body: JSON.stringify({ slug: 'newco', name: 'New Co', domain: 'newco.test', adminEmail: 'admin@newco.test' }),
     })
     expect(create.status).toBe(201)
-    const created = (await create.json()) as { slug: string; adminHost: string }
+    const created = (await create.json()) as { slug: string; domain: string; adminHost: string }
     expect(created.slug).toBe('newco')
-    expect(created.adminHost).toContain('newco')
+    expect(created.domain).toBe('newco.test')
+    expect(created.adminHost).toBe('authstar.newco.test')
 
     const duplicate = await fetch(`${steward.url}/api/tenants`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${backend.state.validToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug: 'newco', name: 'New Co', adminEmail: 'admin@newco.test' }),
+      body: JSON.stringify({ slug: 'newco', name: 'New Co', domain: 'newco.test', adminEmail: 'admin@newco.test' }),
     })
     expect(duplicate.status).toBe(409)
     const failure = (await duplicate.json()) as { failedStep?: string }
     expect(failure.failedStep).toBe('validate-slug')
+  })
+
+  it("exposes a tenant's domain via GET /api/tenants/:slug (ADR 0091)", async () => {
+    const response = await fetch(`${steward.url}/api/tenants/acme`, {
+      headers: { Authorization: `Bearer ${backend.state.validToken}` },
+    })
+    expect(response.status).toBe(200)
+    const body = (await response.json()) as { slug: string; domain: string }
+    expect(body.slug).toBe('acme')
+    expect(body.domain).toBe('acme.test')
   })
 
   it('rotates tenant keys end to end', async () => {

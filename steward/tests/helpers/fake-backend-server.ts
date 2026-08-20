@@ -17,6 +17,7 @@ import type { AddressInfo } from 'node:net'
 export interface FakeTenant {
   slug: string
   name: string
+  domain: string
   status: 'active' | 'suspended' | 'deleted'
   createdAt: string
 }
@@ -57,8 +58,8 @@ async function readBody(req: IncomingMessage): Promise<unknown> {
 export async function startFakeBackend(initial?: Partial<FakeBackendState>, port = 0): Promise<FakeBackend> {
   const state: FakeBackendState = {
     tenants: initial?.tenants ?? [
-      { slug: 'acme', name: 'Acme Corp', status: 'active', createdAt: new Date().toISOString() },
-      { slug: 'globex', name: 'Globex', status: 'suspended', createdAt: new Date().toISOString() },
+      { slug: 'acme', name: 'Acme Corp', domain: 'acme.test', status: 'active', createdAt: new Date().toISOString() },
+      { slug: 'globex', name: 'Globex', domain: 'globex.test', status: 'suspended', createdAt: new Date().toISOString() },
     ],
     accounts: initial?.accounts ?? {
       acme: [
@@ -124,14 +125,33 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
 
       // POST /tenants -- creation (Story 012), standalone ingress
       if (method === 'POST' && url.pathname === '/tenants') {
-        const body = (await readBody(req)) as { slug: string; name: string; adminEmail: string; adminHost?: string }
+        const body = (await readBody(req)) as { slug: string; name: string; domain: string; adminEmail: string }
         if (state.tenants.some((t) => t.slug === body.slug)) {
           send(res, 409, { error: `slug "${body.slug}" already exists`, failedStep: 'validate-slug' })
           return
         }
-        state.tenants.push({ slug: body.slug, name: body.name, status: 'active', createdAt: new Date().toISOString() })
+        // ADR 0091: domain must be globally unique across tenants.
+        if (state.tenants.some((t) => t.domain === body.domain)) {
+          send(res, 409, { error: `domain "${body.domain}" is already registered to another tenant` })
+          return
+        }
+        state.tenants.push({ slug: body.slug, name: body.name, domain: body.domain, status: 'active', createdAt: new Date().toISOString() })
         state.accounts[body.slug] = []
-        send(res, 201, { slug: body.slug, adminHost: body.adminHost ?? `admin.${body.slug}.authstar.app` })
+        send(res, 201, { slug: body.slug, domain: body.domain, adminHost: `authstar.${body.domain}` })
+        return
+      }
+
+      // GET /tenants/:slug -- single-tenant detail (ADR 0091), tower's own
+      // direct route, not the operator tree.
+      const tenantDetailMatch = /^\/tenants\/([^/]+)$/.exec(url.pathname)
+      if (method === 'GET' && tenantDetailMatch) {
+        const slug = decodeURIComponent(tenantDetailMatch[1])
+        const tenant = state.tenants.find((t) => t.slug === slug)
+        if (!tenant) {
+          send(res, 404, { error: 'not found' })
+          return
+        }
+        send(res, 200, tenant)
         return
       }
 

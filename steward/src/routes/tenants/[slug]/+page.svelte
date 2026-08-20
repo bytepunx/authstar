@@ -4,9 +4,23 @@
   import { goto } from '$app/navigation'
   import { session } from '$lib/client/session.svelte.js'
   import { apiCall, ApiError } from '$lib/client/api.js'
-  import type { Account, AccountListResponse, PermissionGrant, RotateTenantKeysResponse, TenantRotationKey } from '$lib/types.js'
+  import type {
+    Account,
+    AccountListResponse,
+    InvitePermissionGrant,
+    InviteRequest,
+    InviteResponse,
+    PermissionGrant,
+    RotateTenantKeysResponse,
+    TenantDetailResponse,
+    TenantRotationKey,
+  } from '$lib/types.js'
 
   const slug = $derived(page.params.slug!)
+
+  // -- Tenant detail (ADR 0091: domain -> authstar.<domain> admin URL) --
+  let domain = $state<string | undefined>(undefined)
+  let detailError = $state<string | undefined>(undefined)
 
   // -- Admin Access (Story 003) --------------------------------------
   let holders = $state<Account[]>([])
@@ -23,13 +37,56 @@
   let grantBusy = $state<string | undefined>(undefined)
   let grantError = $state<string | undefined>(undefined)
 
+  // -- Invite an admin (ADR 0091) ---------------------------------------
+  // Same permission set tower's own bootstrap invite grants
+  // (provisioning.ts's FULL_TENANT_PERMISSIONS) -- this form is
+  // specifically for onboarding tenant admins, not a general-purpose
+  // product-invite UI with role/permission pickers.
+  const FULL_TENANT_PERMISSIONS: InvitePermissionGrant[] = [
+    'roles:manage', 'permissions:manage', 'invite:send', 'invite:code:issue',
+    'accounts:manage', 'applications:manage', 'providers:manage',
+    'contacts:read', 'contacts:erase', 'contacts:export',
+    'erasure-requests:read', 'activity:read', 'tenant:manage',
+  ].map((grant) => ({ grant, scope: 'tenant', maxOutstanding: null }))
+  let inviteEmail = $state('')
+  let inviting = $state(false)
+  let inviteError = $state<string | undefined>(undefined)
+  let inviteResult = $state<InviteResponse | undefined>(undefined)
+
   onMount(() => {
     if (!session.connected) {
       goto('/connect')
       return
     }
+    void loadDetail()
     void loadHolders()
   })
+
+  async function loadDetail() {
+    detailError = undefined
+    try {
+      const result = await apiCall<TenantDetailResponse>(`/api/tenants/${encodeURIComponent(slug)}`)
+      domain = result.domain
+    } catch (err) {
+      detailError = err instanceof ApiError ? err.message : 'Failed to load tenant detail.'
+    }
+  }
+
+  async function inviteAdmin(event: SubmitEvent) {
+    event.preventDefault()
+    inviting = true
+    inviteError = undefined
+    inviteResult = undefined
+    const body: InviteRequest = { email: inviteEmail, application: null, permissions: FULL_TENANT_PERMISSIONS }
+    try {
+      inviteResult = await apiCall<InviteResponse>(`/api/tenants/${encodeURIComponent(slug)}/invites`, { method: 'POST', body })
+      inviteEmail = ''
+    } catch (err) {
+      inviteError = err instanceof ApiError ? err.message : 'Failed to send invite.'
+    } finally {
+      inviting = false
+    }
+  }
 
   async function loadHolders() {
     holdersLoading = true
@@ -132,6 +189,14 @@
 
 <h1>Tenant: {slug}</h1>
 
+{#if detailError}
+  <p class="error" role="alert">{detailError}</p>
+{:else if domain}
+  <p class="admin-url">
+    Admin console: <a href={`https://authstar.${domain}`} target="_blank" rel="noopener">authstar.{domain}</a>
+  </p>
+{/if}
+
 <section>
   <h2>Admin Access</h2>
 
@@ -188,6 +253,18 @@
   {/each}
   {#if grantError}
     <p class="error" role="alert">{grantError}</p>
+  {/if}
+
+  <h3>Invite an admin</h3>
+  <form onsubmit={inviteAdmin}>
+    <input type="email" placeholder="new admin's email" bind:value={inviteEmail} required />
+    <button type="submit" disabled={inviting}>{inviting ? 'Sending...' : 'Send invite'}</button>
+  </form>
+  {#if inviteError}
+    <p class="error" role="alert">{inviteError}</p>
+  {/if}
+  {#if inviteResult}
+    <p class="confirmation">Invite sent to <strong>{inviteResult.email}</strong>.</p>
   {/if}
 </section>
 
@@ -255,6 +332,7 @@
 
 <style>
   .error { color: #b00020; }
+  .admin-url { margin-bottom: 1rem; }
   .warning { color: #9a6700; font-weight: bold; }
   .confirm-dialog {
     border: 2px solid #b00020;

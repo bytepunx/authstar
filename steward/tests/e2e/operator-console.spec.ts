@@ -67,14 +67,44 @@ test.describe('Tenant Search and Creation (Story 002)', () => {
     await page.getByRole('button', { name: 'Create Tenant' }).click()
     await page.locator('label', { hasText: 'Slug' }).locator('input').fill(slug)
     await page.locator('label', { hasText: 'Name' }).locator('input').fill('E2E Co')
+    await page.locator('label', { hasText: 'Domain' }).locator('input').fill(`${slug}.test`)
     await page.locator('label', { hasText: 'Admin email' }).locator('input').fill('admin@e2e.test')
     await page.getByRole('button', { name: 'Create', exact: true }).click()
     await expect(page.getByText(`Tenant ${slug} created`)).toBeVisible()
+    // ADR 0091: adminHost is now authstar.<domain>, not admin.<slug>.<baseDomain>.
+    await expect(page.getByText(`authstar.${slug}.test`)).toBeVisible()
 
     // Retry the exact same slug -- expected to surface a clear "retry is
     // correct" message per tower Story 012, not "try a different slug".
     await page.getByRole('button', { name: 'Create', exact: true }).click()
     await expect(page.getByRole('alert')).toContainText(`same slug "${slug}"`)
+  })
+
+  // ADR 0091: a *different* slug but a domain already claimed by another
+  // tenant is a distinct failure from the same-slug retry above -- "try
+  // the same slug again" would never help here, a different domain is
+  // needed. Regression test for a real bug found while building this: the
+  // 409 handler originally treated every 409 as a domain conflict, which
+  // broke the same-slug-retry guidance above.
+  test('rejects a domain already claimed by another tenant, with actionable guidance', async ({ page }) => {
+    const domain = `dup-${Date.now()}.test`
+    await page.getByRole('button', { name: 'Create Tenant' }).click()
+    await page.locator('label', { hasText: 'Slug' }).locator('input').fill(`first-${Date.now()}`)
+    await page.locator('label', { hasText: 'Name' }).locator('input').fill('First Co')
+    await page.locator('label', { hasText: 'Domain' }).locator('input').fill(domain)
+    await page.locator('label', { hasText: 'Admin email' }).locator('input').fill('admin@first.test')
+    await page.getByRole('button', { name: 'Create', exact: true }).click()
+    await expect(page.getByText('created', { exact: false })).toBeVisible()
+
+    await page.locator('label', { hasText: 'Slug' }).locator('input').fill(`second-${Date.now()}`)
+    await page.locator('label', { hasText: 'Name' }).locator('input').fill('Second Co')
+    // Domain field keeps its previous value -- fill explicitly anyway to
+    // make the duplicate deliberate, not incidental.
+    await page.locator('label', { hasText: 'Domain' }).locator('input').fill(domain)
+    await page.locator('label', { hasText: 'Admin email' }).locator('input').fill('admin@second.test')
+    await page.getByRole('button', { name: 'Create', exact: true }).click()
+    await expect(page.getByRole('alert')).toContainText(`Domain "${domain}" is already registered`)
+    await expect(page.getByRole('alert')).toContainText('Choose a different domain')
   })
 })
 
@@ -91,6 +121,23 @@ test.describe('Tenant Operator Context (Story 003 Admin Access, Story 005 Rotate
   test('shows existing permission holders', async ({ page }) => {
     await expect(page.getByText('admin@acme.test')).toBeVisible()
     await expect(page.getByText('tenant-admin')).toBeVisible()
+  })
+
+  // ADR 0091: the tenant's admin console URL, derived from its domain --
+  // fake backend seeds acme with domain "acme.test".
+  test('shows the tenant\'s admin console URL, linking to authstar.<domain>', async ({ page }) => {
+    const link = page.getByRole('link', { name: 'authstar.acme.test' })
+    await expect(link).toBeVisible()
+    await expect(link).toHaveAttribute('href', 'https://authstar.acme.test')
+    await expect(link).toHaveAttribute('target', '_blank')
+  })
+
+  // ADR 0091: inviting a brand-new admin by email, distinct from the
+  // existing-account grant/revoke recovery flow above.
+  test('invites a new admin by email', async ({ page }) => {
+    await page.getByPlaceholder("new admin's email").fill('new-admin@acme.test')
+    await page.getByRole('button', { name: 'Send invite' }).click()
+    await expect(page.getByText('Invite sent to new-admin@acme.test')).toBeVisible()
   })
 
   test('grants a permission to an account found by email search', async ({ page }) => {

@@ -10,6 +10,23 @@ export interface Tenant {
   status: 'active' | 'suspended' | 'deleted'
   seatLimit?: number
   createdAt?: string
+  // ADR 0091: not present on tower's GET /operator/tenants list response
+  // (routes/operator.ts's own tenantResponse projection doesn't include it)
+  // -- only on the single-tenant GET /tenants/:slug (routes/tenants.ts,
+  // spreads full state). Optional here for that reason: present on
+  // TenantDetailResponse, absent on list rows.
+  domain?: string
+}
+
+// GET /tenants/:slug (tower's own direct, unauthenticated-by-design route --
+// see tower-client.ts's getTenant for why the operator token is sent anyway
+// even though this route doesn't check it) -- narrowed to just what steward
+// actually displays, not tower's full TenantState.
+export interface TenantDetailResponse {
+  slug: string
+  name: string
+  domain: string
+  status: 'active' | 'suspended' | 'deleted'
 }
 
 // Matches tower's real GET /operator/tenants response exactly (routes/
@@ -24,15 +41,20 @@ export interface TenantListResponse {
   nextCursor: string | null
 }
 
+// ADR 0091: `domain` replaces `adminHost` override -- every tenant now
+// requires its own globally-unique domain (tower computes the admin host
+// deterministically from it, authstar.<domain>); an operator can no longer
+// hand tower an arbitrary host directly.
 export interface CreateTenantRequest {
   slug: string
   name: string
+  domain: string
   adminEmail: string
-  adminHost?: string
 }
 
 export interface CreateTenantResponse {
   slug: string
+  domain: string
   adminHost: string
 }
 
@@ -62,10 +84,21 @@ export interface Account {
 // detail page even for a tenant with real accounts.
 export type AccountListResponse = Account[]
 
+// Matches tower's real permission-grant shape for invite creation exactly
+// (routes/invites.ts's permissionSchema) -- distinct from, and not to be
+// confused with, this file's own `PermissionGrant` ({application, role}),
+// which is a different, pre-existing shape used by the accounts grant/
+// revoke endpoints and not verified against tower's actual contract there.
+export interface InvitePermissionGrant {
+  grant: string
+  scope: 'tenant' | { application: string }
+  maxOutstanding: number | null
+}
+
 export interface InviteRequest {
   email: string
   application: string | null
-  permissions: PermissionGrant[]
+  permissions: InvitePermissionGrant[]
 }
 
 export interface InviteResponse {
