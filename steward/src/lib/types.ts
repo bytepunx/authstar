@@ -25,7 +25,9 @@ export interface Tenant {
 export interface TenantDetailResponse {
   slug: string
   name: string
-  domain: string
+  // ADR 0093: null while the tenant is domain-pending -- created but not
+  // yet completed via PATCH /tenants/:slug/domain.
+  domain: string | null
   status: 'active' | 'suspended' | 'deleted'
 }
 
