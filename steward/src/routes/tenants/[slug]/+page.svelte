@@ -7,7 +7,6 @@
   import type {
     Account,
     AccountListResponse,
-    InvitePermissionGrant,
     InviteRequest,
     InviteResponse,
     PermissionGrant,
@@ -33,7 +32,7 @@
   let searchError = $state<string | undefined>(undefined)
 
   let grantApplication = $state('')
-  let grantRole = $state('')
+  let grantGrant = $state('')
   let grantBusy = $state<string | undefined>(undefined)
   let grantError = $state<string | undefined>(undefined)
 
@@ -42,12 +41,12 @@
   // (provisioning.ts's FULL_TENANT_PERMISSIONS) -- this form is
   // specifically for onboarding tenant admins, not a general-purpose
   // product-invite UI with role/permission pickers.
-  const FULL_TENANT_PERMISSIONS: InvitePermissionGrant[] = [
+  const FULL_TENANT_PERMISSIONS: PermissionGrant[] = [
     'roles:manage', 'permissions:manage', 'invite:send', 'invite:code:issue',
     'accounts:manage', 'applications:manage', 'providers:manage',
     'contacts:read', 'contacts:erase', 'contacts:export',
     'erasure-requests:read', 'activity:read', 'tenant:manage',
-  ].map((grant) => ({ grant, scope: 'tenant', maxOutstanding: null }))
+  ].map((grant) => ({ grant, scope: 'tenant' as const, maxOutstanding: null }))
   let inviteEmail = $state('')
   let inviting = $state(false)
   let inviteError = $state<string | undefined>(undefined)
@@ -120,7 +119,11 @@
   async function grant(accountId: string) {
     grantBusy = accountId
     grantError = undefined
-    const body: PermissionGrant = { application: grantApplication || null, role: grantRole }
+    const body: PermissionGrant = {
+      grant: grantGrant,
+      scope: grantApplication ? { application: grantApplication } : 'tenant',
+      maxOutstanding: null,
+    }
     try {
       await apiCall(`/api/tenants/${encodeURIComponent(slug)}/accounts/${encodeURIComponent(accountId)}/permissions`, {
         method: 'POST',
@@ -134,12 +137,16 @@
     }
   }
 
-  async function revoke(accountId: string, grantKey: string) {
+  async function revoke(accountId: string, p: PermissionGrant) {
     grantBusy = accountId
     grantError = undefined
     try {
+      // tower reads scope from the query string, not the URL path
+      // (routes/accounts.ts's removalQuerySchema) -- `?scope=tenant` or
+      // `?applicationScope=<slug>`, never both.
+      const query = typeof p.scope === 'object' ? `?applicationScope=${encodeURIComponent(p.scope.application)}` : '?scope=tenant'
       await apiCall(
-        `/api/tenants/${encodeURIComponent(slug)}/accounts/${encodeURIComponent(accountId)}/permissions/${encodeURIComponent(grantKey)}`,
+        `/api/tenants/${encodeURIComponent(slug)}/accounts/${encodeURIComponent(accountId)}/permissions/${encodeURIComponent(p.grant)}${query}`,
         { method: 'DELETE' },
       )
       await loadHolders()
@@ -215,11 +222,11 @@
           <ul>
             {#each holder.permissions as p}
               <li>
-                {p.application ?? 'tenant-wide'}: {p.role}
+                {typeof p.scope === 'object' ? p.scope.application : 'tenant-wide'}: {p.grant}
                 <button
                   type="button"
                   disabled={grantBusy === holder.id}
-                  onclick={() => revoke(holder.id, `${p.application ?? ''}:${p.role}`)}
+                  onclick={() => revoke(holder.id, p)}
                 >
                   Revoke
                 </button>
@@ -245,8 +252,8 @@
     <div class="account-row">
       <span>{account.email ?? account.id}</span>
       <input type="text" placeholder="application slug (blank = tenant-wide)" bind:value={grantApplication} />
-      <input type="text" placeholder="role" bind:value={grantRole} />
-      <button type="button" disabled={grantBusy === account.id || !grantRole} onclick={() => grant(account.id)}>
+      <input type="text" placeholder="grant, e.g. tenant:manage" bind:value={grantGrant} />
+      <button type="button" disabled={grantBusy === account.id || !grantGrant} onclick={() => grant(account.id)}>
         Grant
       </button>
     </div>

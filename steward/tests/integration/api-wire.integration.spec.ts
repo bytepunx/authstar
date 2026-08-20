@@ -135,10 +135,14 @@ describe('steward server <-> fake tower, over real HTTP', () => {
   })
 
   it('grants and revokes a permission end to end, and reflects it in the accounts read', async () => {
+    // Real tower shape (routes/accounts.ts's permissionBodySchema):
+    // {grant, scope, maxOutstanding} -- application-scoped here to also
+    // exercise the applicationScope query param on revoke, not just the
+    // tenant-wide fallback.
     const grant = await fetch(`${steward.url}/api/tenants/acme/accounts/acc-2/permissions`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test', 'Content-Type': 'application/json' },
-      body: JSON.stringify({ application: null, role: 'billing' }),
+      body: JSON.stringify({ grant: 'billing:read', scope: { application: 'billing' }, maxOutstanding: null }),
     })
     expect(grant.status).toBe(200)
 
@@ -148,10 +152,13 @@ describe('steward server <-> fake tower, over real HTTP', () => {
     const afterGrantBody = (await afterGrant.json()) as Array<{ id: string; permissions: unknown[] }>
     expect(afterGrantBody.find((a) => a.id === 'acc-2')?.permissions).toHaveLength(1)
 
-    const revoke = await fetch(`${steward.url}/api/tenants/acme/accounts/acc-2/permissions/${encodeURIComponent(':billing')}`, {
-      method: 'DELETE',
-      headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test' },
-    })
+    const revoke = await fetch(
+      `${steward.url}/api/tenants/acme/accounts/acc-2/permissions/${encodeURIComponent('billing:read')}?applicationScope=billing`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test' },
+      },
+    )
     expect(revoke.status).toBe(204)
 
     const afterRevoke = await fetch(`${steward.url}/api/tenants/acme/accounts`, {

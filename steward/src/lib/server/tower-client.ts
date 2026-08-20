@@ -127,12 +127,18 @@ export function createTowerClient({ baseUrl, fetchImpl = fetch }: TowerClientOpt
       tenantSlug: string,
       accountId: string,
       grant: string,
+      // tower's real DELETE contract (routes/accounts.ts's
+      // removalQuerySchema) reads scope from the query string, not the URL
+      // path -- `scope: 'tenant'` or `applicationScope: '<slug>'`, never
+      // both.
+      scopeQuery: { scope?: 'tenant', applicationScope?: string },
     ): Promise<BackendResult<Account>> {
       return call<Account>({
         method: 'DELETE',
         path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/accounts/${encodeURIComponent(accountId)}/permissions/${encodeURIComponent(grant)}`,
         token,
         actorLabel,
+        query: scopeQuery,
       })
     },
 

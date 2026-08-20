@@ -67,9 +67,18 @@ export interface CreateTenantErrorBody {
   failedStep?: string
 }
 
+// Matches tower's real permission-grant shape exactly (accounts.ts's
+// `permissionBodySchema` / `account_actor.ts`'s `PermissionGrant`, and
+// invites.ts's own `permissionSchema` -- the same shape both places).
+// Previously this was wrongly declared as `{application, role}` here,
+// which never matched what tower's accounts grant/revoke endpoints
+// actually accept or return -- unnoticed because tests mocked the wrong
+// shape instead of tower's real one, the same class of bug already fixed
+// elsewhere in this file tonight (TenantListResponse, AccountListResponse).
 export interface PermissionGrant {
-  application: string | null
-  role: string
+  grant: string
+  scope: 'tenant' | { application: string }
+  maxOutstanding: number | null
 }
 
 export interface Account {
@@ -86,21 +95,10 @@ export interface Account {
 // detail page even for a tenant with real accounts.
 export type AccountListResponse = Account[]
 
-// Matches tower's real permission-grant shape for invite creation exactly
-// (routes/invites.ts's permissionSchema) -- distinct from, and not to be
-// confused with, this file's own `PermissionGrant` ({application, role}),
-// which is a different, pre-existing shape used by the accounts grant/
-// revoke endpoints and not verified against tower's actual contract there.
-export interface InvitePermissionGrant {
-  grant: string
-  scope: 'tenant' | { application: string }
-  maxOutstanding: number | null
-}
-
 export interface InviteRequest {
   email: string
   application: string | null
-  permissions: InvitePermissionGrant[]
+  permissions: PermissionGrant[]
 }
 
 export interface InviteResponse {

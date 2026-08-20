@@ -120,7 +120,7 @@ test.describe('Tenant Operator Context (Story 003 Admin Access, Story 005 Rotate
 
   test('shows existing permission holders', async ({ page }) => {
     await expect(page.getByText('admin@acme.test')).toBeVisible()
-    await expect(page.getByText('tenant-admin')).toBeVisible()
+    await expect(page.getByText('tenant:manage')).toBeVisible()
   })
 
   // ADR 0091: the tenant's admin console URL, derived from its domain --
@@ -145,11 +145,11 @@ test.describe('Tenant Operator Context (Story 003 Admin Access, Story 005 Rotate
     await page.getByRole('button', { name: 'Search', exact: true }).click()
     await expect(page.getByText('nobody@acme.test')).toBeVisible()
 
-    await page.getByPlaceholder('role').fill('billing')
+    await page.getByPlaceholder('grant, e.g. tenant:manage').fill('billing:read')
     await page.getByRole('button', { name: 'Grant' }).click()
 
     // Reflected back in "current permission holders" after the grant.
-    await expect(page.getByText('billing')).toBeVisible()
+    await expect(page.getByText('billing:read')).toBeVisible()
   })
 
   test('rotating keys requires a heavy, typed confirmation before submitting', async ({ page }) => {

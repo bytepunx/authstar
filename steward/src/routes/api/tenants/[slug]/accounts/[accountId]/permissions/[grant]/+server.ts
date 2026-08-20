@@ -12,12 +12,19 @@ export const DELETE: RequestHandler = async (event) => {
   const env = loadEnv()
   const tower = createTowerClient({ baseUrl: env.towerUrl, fetchImpl: event.fetch })
 
+  // tower's real scope encoding is a query string, not part of the URL
+  // path (routes/accounts.ts's removalQuerySchema) -- the caller tells us
+  // which one applies, since it already knows the grant it's revoking.
+  const applicationScope = event.url.searchParams.get('applicationScope') ?? undefined
+  const scopeQuery = applicationScope ? { applicationScope } : { scope: 'tenant' as const }
+
   const result = await tower.revokePermission(
     token,
     actorLabel!,
     event.params.slug!,
     event.params.accountId!,
     event.params.grant!,
+    scopeQuery,
   )
   return respondFromBackend(result)
 }

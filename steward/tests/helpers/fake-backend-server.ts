@@ -22,10 +22,16 @@ export interface FakeTenant {
   createdAt: string
 }
 
+export interface FakePermissionGrant {
+  grant: string
+  scope: 'tenant' | { application: string }
+  maxOutstanding: number | null
+}
+
 export interface FakeAccount {
   id: string
   email: string
-  permissions: Array<{ application: string | null; role: string }>
+  permissions: FakePermissionGrant[]
 }
 
 export interface FakeBackendState {
@@ -63,7 +69,7 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
     ],
     accounts: initial?.accounts ?? {
       acme: [
-        { id: 'acc-1', email: 'admin@acme.test', permissions: [{ application: null, role: 'tenant-admin' }] },
+        { id: 'acc-1', email: 'admin@acme.test', permissions: [{ grant: 'tenant:manage', scope: 'tenant', maxOutstanding: null }] },
         { id: 'acc-2', email: 'nobody@acme.test', permissions: [] },
       ],
     },
@@ -184,13 +190,19 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
           send(res, 404, { error: 'not found' })
           return
         }
-        const grant = (await readBody(req)) as { application: string | null; role: string }
+        // Real tower shape (routes/accounts.ts's permissionBodySchema):
+        // {grant, scope, maxOutstanding} -- not {application, role}.
+        const grant = (await readBody(req)) as FakePermissionGrant
         account.permissions.push(grant)
         send(res, 200, account)
         return
       }
 
-      // DELETE .../accounts/:accountId/permissions/:grant -- revoke
+      // DELETE .../accounts/:accountId/permissions/:grant -- revoke.
+      // Real tower shape: the grant string is the URL param; scope comes
+      // from the query string (`?scope=tenant` or `?applicationScope=`),
+      // not encoded into the param itself (routes/accounts.ts's
+      // removalQuerySchema).
       const revokeMatch = /^\/operator\/tenants\/([^/]+)\/accounts\/([^/]+)\/permissions\/([^/]+)$/.exec(url.pathname)
       if (method === 'DELETE' && revokeMatch) {
         if (!req.headers['x-operator-actor']) {
@@ -200,10 +212,15 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
         const [, slugRaw, accountIdRaw, grantRaw] = revokeMatch
         const slug = decodeURIComponent(slugRaw)
         const accountId = decodeURIComponent(accountIdRaw)
-        const grantKey = decodeURIComponent(grantRaw)
+        const grantName = decodeURIComponent(grantRaw)
+        const applicationScope = url.searchParams.get('applicationScope')
         const account = (state.accounts[slug] ?? []).find((a) => a.id === accountId)
         if (account) {
-          account.permissions = account.permissions.filter((p) => `${p.application ?? ''}:${p.role}` !== grantKey)
+          account.permissions = account.permissions.filter((p) => {
+            if (p.grant !== grantName) return true
+            const pApplication = typeof p.scope === 'object' ? p.scope.application : null
+            return pApplication !== applicationScope
+          })
         }
         send(res, 204)
         return
