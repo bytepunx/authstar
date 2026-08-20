@@ -1,9 +1,16 @@
 # ADR 0067: Tenant Creation and Provisioning API
 
-- **Status:** Accepted
+- **Status:** Accepted (`_admin` host convention superseded by [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md))
 - **Date:** 2026-08-01
 - **Affects:** tower, portcullis, herald
 - **Resolves the long-open item in:** [ADR 0021](0021-cli-operator-bootstrap.md)
+
+> **Superseded 2026-08-19:** the `admin.<slug>.<baseDomain>` host convention in step 4 below
+> doesn't work for an arbitrary number of tenants — the variable slug sits in the middle of the
+> hostname, which no DNS wildcard can cover. [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md)
+> replaces it with a required, globally-unique per-tenant `domain` and `authstar.<domain>` as the
+> reserved admin host. The rest of this ADR (the provisioning sequence, self-service/operator
+> auth split, idempotency model) is unaffected.
 
 ## Context
 

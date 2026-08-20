@@ -1,9 +1,15 @@
 # ADR 0044: `web`'s Three Surfaces and Distribution Model
 
-- **Status:** Accepted (mechanism corrected by [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md))
+- **Status:** Accepted (mechanism corrected by [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md); `_admin` reservation superseded by [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md))
 - **Date:** 2026-07-30
 - **Affects:** web, portcullis, tower
 
+> **Superseded 2026-08-19:** the reserved admin application's slug changes from `_admin` to
+> `authstar` (also now a reserved *tenant* slug, which `_admin` never needed to be), and its host
+> convention changes from `admin.<slug>.<baseDomain>` to `authstar.<tenant's own domain>` — see
+> [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md). The "auto-provisioned,
+> never-deletable, no special-casing" posture described below is unchanged.
+>
 > **Corrected 2026-08-01:** "full-page redirects" below is imprecise for how this actually
 > works — see [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md). Portcullis *proxies*
 > these reserved paths to `web` on whatever application's own host the user is already on; the

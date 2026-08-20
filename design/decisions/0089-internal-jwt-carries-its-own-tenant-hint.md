@@ -1,8 +1,17 @@
 # ADR 0089: The Internal JWT Carries Its Own Tenant Hint
 
-- **Status:** Accepted
+- **Status:** Accepted (JWKS URL construction superseded by [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md))
 - **Date:** 2026-08-14
 - **Affects:** portcullis, authstar-clients, tower, keep, herald, web
+
+> **Superseded 2026-08-19:** the `https://admin.<tenant-slug>.<baseDomain>/.well-known/
+> jwks.json` construction below assumed every tenant's host was mechanically derivable from its
+> slug via one shared `baseDomain` — it isn't, once tenants bring their own unrelated domains.
+> [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md) replaces the
+> `baseDomain` string `perTenantJwksKeyProvider` took with a tower-backed, cached slug→domain
+> resolver, and the URL becomes `https://authstar.<resolved domain>/.well-known/jwks.json`. Why
+> the tenant hint lives in the JWT's protected header at all (this ADR's actual subject, the
+> choice between a forwarded header and a self-contained hint) is unaffected.
 
 ## Context
 
