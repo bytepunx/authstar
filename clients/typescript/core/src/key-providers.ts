@@ -28,13 +28,12 @@ export function jwksKeyProvider(
   return createRemoteJWKSet(url instanceof URL ? url : new URL(url), options)
 }
 
-// Tenant slugs are already constrained to this shape everywhere else they appear as a
-// hostname component (ADR 0067's `admin.<slug>.<baseDomain>` provisioning convention) --
-// enforced again here because this value is read from the token's *unverified* header
-// (ADR 0089) and is about to be interpolated directly into a URL this process will fetch.
-// Without this check, a crafted header (no valid signature required to reach this code --
-// jwtVerify's getKey callback runs before signature verification) could redirect that
-// fetch to an attacker-chosen host, e.g. a `tenant` value containing a `/`. Rejecting
+// Enforced here because this value is read from the token's *unverified* header (ADR 0089)
+// and is about to be handed to `resolveDomain` and, from there, interpolated into a URL this
+// process will fetch. Without this check, a crafted header (no valid signature required to
+// reach this code -- jwtVerify's getKey callback runs before signature verification) could
+// pass a resolver implementation an unexpected value (e.g. a `tenant` containing a `/` or
+// `..`) it wasn't written to handle safely. Rejecting
 // anything that isn't a single valid DNS label closes that off.
 const TENANT_SLUG_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/
 
@@ -46,23 +45,32 @@ export interface PerTenantJwksKeyProviderOptions {
 /**
  * Verifies against a tenant resolved from the internal JWT's own `tenant` protected-header
  * field (ADR 0089), rather than one fixed JWKS URL -- the mechanism a non-Host-routed
- * service (tower/keep/herald) needs, since nothing about how a request arrives tells it
- * which tenant the token is for. Constructs
- * `https://admin.<tenant-slug>.<baseDomain>/.well-known/jwks.json` (the tenant's `_admin`
- * application host, ADR 0067) and delegates to a `createRemoteJWKSet` cached per tenant for
- * the life of the process, so a high-traffic tenant doesn't re-fetch its JWKS every request
- * (mirrors `jwksKeyProvider`'s own single-URL caching, just keyed per tenant here).
+ * service (tower/keep/herald/web) needs, since nothing about how a request arrives tells it
+ * which tenant the token is for. Constructs `https://authstar.<domain>/.well-known/
+ * jwks.json` (the tenant's reserved `authstar` application host, ADR 0091) and delegates to
+ * a `createRemoteJWKSet` cached per tenant for the life of the process, so a high-traffic
+ * tenant doesn't re-fetch its JWKS every request (mirrors `jwksKeyProvider`'s own single-URL
+ * caching, just keyed per tenant here).
+ *
+ * `resolveDomain` looks up that tenant's registered domain -- tenants bring their own,
+ * unrelated domains (ADR 0091), so there's no longer a formula from slug to host the way
+ * `admin.<slug>.<baseDomain>` used to be. Called at most once per tenant slug for the life of
+ * this provider (same cache as the JWKS fetch itself), so a network-backed resolver (e.g. one
+ * that calls tower) isn't a per-request cost. Returning `undefined` means the tenant is
+ * unknown to the resolver -- surfaced as `key-resolution-failed`, not `missing-claim`: the
+ * token itself is fine, the failure is this service's own inability to resolve where to look,
+ * the same distinction `jwksKeyProvider`'s network failures already get.
  *
  * Reading `protectedHeader.tenant` here happens *before* the signature is verified -- safe
  * for the same reason `kid`-based key selection already is (jose's own `getKey` doc comment:
  * "No token components have been verified at the time of this function call"). An unverified
  * hint is only ever used to pick which key to *attempt* verification with; a forged hint, a
  * forged signature, or a hint/signature mismatch all just fail verification the normal way.
- * See the ADR for the full justification, including why a portcullis-forwarded header was
+ * See ADR 0089 for the full justification, including why a portcullis-forwarded header was
  * rejected in favor of this.
  */
 export function perTenantJwksKeyProvider(
-  baseDomain: string,
+  resolveDomain: (tenantSlug: string) => string | undefined | Promise<string | undefined>,
   options?: PerTenantJwksKeyProviderOptions,
 ): JWTVerifyGetKey {
   const cache = new Map<string, JWTVerifyGetKey>()
@@ -74,7 +82,11 @@ export function perTenantJwksKeyProvider(
     }
     let getKey = cache.get(tenant)
     if (!getKey) {
-      const url = new URL(`https://admin.${tenant}.${baseDomain}/.well-known/jwks.json`)
+      const domain = await resolveDomain(tenant)
+      if (!domain) {
+        throw new AuthstarJwtError('key-resolution-failed', `no domain registered for tenant ${tenant}`)
+      }
+      const url = new URL(`https://authstar.${domain}/.well-known/jwks.json`)
       getKey = createRemoteJWKSet(url, options?.jwksOptions)
       cache.set(tenant, getKey)
     }
