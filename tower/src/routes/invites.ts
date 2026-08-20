@@ -93,9 +93,15 @@ const permissionSchema = {
 const createBodySchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['contactId'],
   properties: {
+    // ADR 0091: either works -- `contactId` for a caller that already
+    // resolved one (e.g. from the accounts-search UI), `email` for the
+    // common "invite someone who's never been seen before" case, which
+    // `GET .../contacts?email=` can't help with since it only *finds*, never
+    // creates. Mirrors provisioning.ts's own bootstrap-invite step exactly
+    // (`contactStore.upsert`), not a second contact-resolution mechanism.
     contactId: { type: 'string', minLength: 1 },
+    email: { type: 'string', minLength: 3 },
     application: { type: 'string', minLength: 1 },
     roles: { type: 'array', items: roleSchema },
     // Elevated-bootstrap case only (ADR 0021/0067) -- an ordinary admin
@@ -107,6 +113,7 @@ const createBodySchema = {
     permissions: { type: 'array', items: permissionSchema },
     expiresAt: { type: ['string', 'null'] },
   },
+  anyOf: [{ required: ['contactId'] }, { required: ['email'] }],
 } as const
 
 const organizationParamsSchema = {
@@ -231,7 +238,8 @@ async function getInvite(app: FastifyInstance, request: FastifyRequest, reply: F
 async function createInvite(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug } = request.params as { tenantSlug: string }
   const body = request.body as {
-    contactId: string
+    contactId?: string
+    email?: string
     application?: string
     roles?: Array<{ name: string, scope: Scope }>
     permissions?: PermissionGrant[]
@@ -245,18 +253,23 @@ async function createInvite(app: FastifyInstance, request: FastifyRequest, reply
     return reply.code(400).send({ error: 'roles must reference existing, active role definitions for this tenant' })
   }
 
+  // ADR 0091: `email` resolves (find-or-create, same as provisioning.ts's
+  // own bootstrap invite) to a contactId here -- the schema's `anyOf`
+  // guarantees at least one of the two is present.
+  const contactId = body.contactId ?? (await app.contactStore.upsert(tenantSlug, body.email!)).id
+
   const token = randomBytes(20).toString('hex')
   await app.consequent.handle(token, 'invite.create', {
     tenant: tenantSlug,
     application: body.application ?? null,
-    contactId: body.contactId,
+    contactId,
     roles: body.roles ?? [],
     permissions: body.permissions ?? [],
     expiresAt: body.expiresAt ?? null,
     actingAs: operatorActor(request),
   })
 
-  await publishInviteSent(app, tenantSlug, tenant.name, body.application ?? null, token, body.contactId)
+  await publishInviteSent(app, tenantSlug, tenant.name, body.application ?? null, token, contactId)
 
   const created = await fetchInvite(app, tenantSlug, token)
   return reply.code(201).send(toResponse(token, created!))

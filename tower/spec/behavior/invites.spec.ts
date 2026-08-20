@@ -97,6 +97,40 @@ describe('invites -- API contract', () => {
       expect(invite!.state.contactId).toBe(contact.id)
     })
 
+    it('accepts an email for a never-before-seen invitee, find-or-creating the contact (ADR 0091)', async () => {
+      await createTenant('acme')
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/tenants/acme/invites',
+        headers,
+        payload: { contactId: undefined, email: 'brand-new@acme.test' },
+      })
+
+      expect(response.statusCode).toBe(201)
+      const body = response.json()
+      expect(publisher.calls).toHaveLength(1)
+      const payload = publisher.calls[0].payload as { contactId: string }
+      expect(payload.contactId).toBeTruthy()
+
+      const invite = await consequent.fetch('invite', body.token)
+      expect(invite!.state.contactId).toBe(payload.contactId)
+
+      const contact = await app.contactStore.findByEmail('acme', 'brand-new@acme.test')
+      expect(contact?.id).toBe(payload.contactId)
+    })
+
+    it('rejects a body with neither contactId nor email', async () => {
+      await createTenant('acme')
+      const response = await app.inject({
+        method: 'POST',
+        url: '/tenants/acme/invites',
+        headers,
+        payload: {},
+      })
+      expect(response.statusCode).toBe(400)
+    })
+
     it('resolves the invite-sent host from the target application\'s own hosts when application is set', async () => {
       await createTenant('acme')
       const contact = await createContact('acme', 'invitee@acme.test')
