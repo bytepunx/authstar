@@ -36,7 +36,7 @@
     "fastify": "^5.0.0"
   },
   "devDependencies": {
-    "@bytepunx/authstar-core": "^0.3.0",
+    "@bytepunx/authstar-core": "^1.0.0",
     "@types/node": "^22.15.0",
     "fastify": "^5.6.1",
     "tsup": "^8.5.0",
