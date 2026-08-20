@@ -408,6 +408,140 @@ async fn login_redirects_to_provider_with_pkce_and_state() {
         .any(|c| c.starts_with("oauth2-pkce-verifier=")));
 }
 
+// ADR 0092: an invite token on the login-initiating request survives the
+// OAuth round trip via a short-lived cookie, and is forwarded to tower's
+// /identities/resolve on callback.
+
+#[tokio::test]
+async fn login_with_invite_param_sets_pending_invite_cookie() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/testidp/login?invite=inv-token-123")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    let cookies = set_cookie_headers(&response);
+    assert!(cookies
+        .iter()
+        .any(|c| c.starts_with("authstar-pending-invite=inv-token-123")));
+}
+
+#[tokio::test]
+async fn login_without_invite_param_sets_no_pending_invite_cookie() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/testidp/login")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    let cookies = set_cookie_headers(&response);
+    assert!(!cookies
+        .iter()
+        .any(|c| c.starts_with("authstar-pending-invite=")));
+}
+
+#[tokio::test]
+async fn select_page_with_invite_param_sets_pending_invite_cookie() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/select?invite=inv-token-456")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = harness.app.oneshot(req).await.unwrap();
+    let cookies = set_cookie_headers(&response);
+    assert!(cookies
+        .iter()
+        .any(|c| c.starts_with("authstar-pending-invite=inv-token-456")));
+}
+
+#[tokio::test]
+async fn callback_forwards_pending_invite_to_tower_and_clears_the_cookie() {
+    let harness = build_harness().await;
+    let req = Request::builder()
+        .uri("/oauth2/testidp/login?invite=inv-token-789")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+    let login_response = harness.app.clone().oneshot(req).await.unwrap();
+    let login_cookies = set_cookie_headers(&login_response);
+    let mut flow_cookies = HashMap::new();
+    flow_cookies.insert(
+        "oauth2-state".to_string(),
+        extract_cookie_value(&login_cookies, "oauth2-state"),
+    );
+    flow_cookies.insert(
+        "oauth2-pkce-verifier".to_string(),
+        extract_cookie_value(&login_cookies, "oauth2-pkce-verifier"),
+    );
+    flow_cookies.insert(
+        "authstar-pending-invite".to_string(),
+        extract_cookie_value(&login_cookies, "authstar-pending-invite"),
+    );
+    let state_value = flow_cookies.get("oauth2-state").unwrap().clone();
+
+    let req = Request::builder()
+        .uri(format!(
+            "/oauth2/testidp/callback?code=abc123&state={state_value}"
+        ))
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, cookie_header(&flow_cookies))
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FOUND);
+
+    // The pending-invite cookie is cleared regardless of outcome, same as
+    // the other single-attempt flow cookies.
+    let cookies = set_cookie_headers(&response);
+    assert!(cookies
+        .iter()
+        .any(|c| c.starts_with("authstar-pending-invite=") && c.contains("Max-Age=0")));
+
+    // tower actually received the redeem payload.
+    let requests = harness.tower_server.received_requests().await.unwrap();
+    let resolve_request = requests
+        .iter()
+        .find(|r| r.url.path() == "/identities/resolve")
+        .expect("no /identities/resolve request recorded");
+    let body: serde_json::Value = resolve_request.body_json().unwrap();
+    assert_eq!(
+        body["redeem"],
+        json!({ "type": "invite", "token": "inv-token-789" })
+    );
+}
+
+#[tokio::test]
+async fn callback_without_pending_invite_sends_no_redeem_field() {
+    let harness = build_harness().await;
+    let flow_cookies = perform_login(&harness.app).await;
+    let state_value = flow_cookies.get("oauth2-state").unwrap().clone();
+
+    let req = Request::builder()
+        .uri(format!(
+            "/oauth2/testidp/callback?code=abc123&state={state_value}"
+        ))
+        .header(header::HOST, "app.acme.test")
+        .header(header::COOKIE, cookie_header(&flow_cookies))
+        .body(Body::empty())
+        .unwrap();
+    let response = harness.app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::FOUND);
+
+    let requests = harness.tower_server.received_requests().await.unwrap();
+    let resolve_request = requests
+        .iter()
+        .find(|r| r.url.path() == "/identities/resolve")
+        .expect("no /identities/resolve request recorded");
+    let body: serde_json::Value = resolve_request.body_json().unwrap();
+    assert!(body.get("redeem").is_none());
+}
+
 #[tokio::test]
 async fn login_for_unknown_provider_is_404() {
     let harness = build_harness().await;

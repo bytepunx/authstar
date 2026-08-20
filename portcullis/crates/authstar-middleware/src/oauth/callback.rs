@@ -76,8 +76,11 @@ pub async fn callback_handler(
         return not_found();
     };
 
-    // These two flow cookies are always cleared, regardless of outcome — collected here and
-    // attached to whatever response we end up building.
+    // These flow cookies are always cleared, regardless of outcome — collected here and
+    // attached to whatever response we end up building. ADR 0092: a pending invite token
+    // (if any) is single-attempt, same as its own token semantics on tower's side already —
+    // read once here, cleared unconditionally, never re-forwarded on a later request.
+    let pending_invite = read_cookie_from_headers(&headers, "authstar-pending-invite");
     let mut expiring_cookies = vec![
         expired_cookie(
             "oauth2-state",
@@ -86,6 +89,11 @@ pub async fn callback_handler(
         ),
         expired_cookie(
             "oauth2-pkce-verifier",
+            &tenant.cookie.path,
+            Some(&tenant.cookie.domain),
+        ),
+        expired_cookie(
+            "authstar-pending-invite",
             &tenant.cookie.path,
             Some(&tenant.cookie.domain),
         ),
@@ -189,6 +197,7 @@ pub async fn callback_handler(
         &tenant.slug,
         &provider_name,
         &candidate_hashes,
+        pending_invite.as_deref(),
     )
     .await
     {

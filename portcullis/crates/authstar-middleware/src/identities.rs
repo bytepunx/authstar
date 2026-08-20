@@ -15,11 +15,25 @@ use serde::{Deserialize, Serialize};
 const RESOLVE_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase", tag = "type")]
+enum Redeem<'a> {
+    #[serde(rename = "invite")]
+    Invite { token: &'a str },
+}
+
+#[derive(Debug, Clone, Serialize)]
 struct ResolveRequestBody<'a> {
     tenant: &'a str,
     idp: &'a str,
     #[serde(rename = "identityHashes")]
     identity_hashes: &'a [String],
+    // ADR 0092: an invite token carried through the OAuth round trip via the
+    // `authstar-pending-invite` cookie (set at login initiation, read back
+    // here) -- tower's own `/identities/resolve` already applies this if
+    // present; portcullis previously never sent it at all, so no invite
+    // ever actually granted anything on redemption.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    redeem: Option<Redeem<'a>>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -46,6 +60,7 @@ pub async fn resolve_identity(
     tenant: &str,
     idp: &str,
     candidate_hashes: &[String],
+    invite_token: Option<&str>,
 ) -> Result<IdentityResolution, IdentityResolveError> {
     let url = format!(
         "{}/identities/resolve",
@@ -55,6 +70,7 @@ pub async fn resolve_identity(
         tenant,
         idp,
         identity_hashes: candidate_hashes,
+        redeem: invite_token.map(|token| Redeem::Invite { token }),
     };
 
     let response = client

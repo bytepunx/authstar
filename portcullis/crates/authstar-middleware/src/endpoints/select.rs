@@ -5,20 +5,36 @@
 
 use std::sync::Arc;
 
-use axum::extract::State;
+use axum::extract::{Query, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{Html, IntoResponse, Response};
+use serde::Deserialize;
 
+use crate::cookies::build_cookie;
 use crate::state::{HostResolutionError, PortcullisState};
+
+const INVITE_COOKIE_MAX_AGE: u64 = 300;
+
+#[derive(Debug, Deserialize)]
+pub struct SelectParams {
+    // ADR 0092: herald's own invite-sent email links here as
+    // `/oauth2/select?invite={token}` (see tower's seed-templates.ts). Set
+    // as a cookie right here rather than threaded through each rendered
+    // provider link -- it survives regardless of which link the user then
+    // clicks, same as `login_handler`'s own direct-hit handling of the same
+    // parameter.
+    invite: Option<String>,
+}
 
 pub async fn select_handler(
     State(state): State<Arc<PortcullisState>>,
+    Query(params): Query<SelectParams>,
     headers: HeaderMap,
 ) -> Response {
     let Some(host) = headers.get(header::HOST).and_then(|v| v.to_str().ok()) else {
         return not_found();
     };
-    let (_tenant, application) = match state.resolve_active_host(host) {
+    let (tenant, application) = match state.resolve_active_host(host) {
         Ok(pair) => pair,
         Err(HostResolutionError::NotFound) => return not_found(),
         Err(HostResolutionError::Suspended) => return service_unavailable(),
@@ -39,7 +55,23 @@ pub async fn select_handler(
         "<!doctype html><html><head><title>Sign in</title></head><body><ul>{links}</ul></body></html>"
     );
 
-    Html(body).into_response()
+    let mut response = Html(body).into_response();
+    if let Some(invite) = params.invite.as_deref().filter(|t| !t.is_empty()) {
+        let invite_cookie = build_cookie(
+            "authstar-pending-invite",
+            invite,
+            &tenant.cookie.path,
+            Some(&tenant.cookie.domain),
+            INVITE_COOKIE_MAX_AGE,
+            true,
+            tenant.cookie.secure,
+            cookie::SameSite::Lax,
+        );
+        if let Ok(value) = invite_cookie.parse() {
+            response.headers_mut().append(header::SET_COOKIE, value);
+        }
+    }
+    response
 }
 
 fn capitalize(s: &str) -> String {

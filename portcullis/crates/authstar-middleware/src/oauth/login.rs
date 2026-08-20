@@ -5,11 +5,12 @@
 use std::sync::Arc;
 
 use axum::body::Body;
-use axum::extract::{Path, State};
+use axum::extract::{Path, Query, State};
 use axum::http::{header, HeaderMap, StatusCode};
 use axum::response::{IntoResponse, Response};
 use base64::Engine;
 use rand::RngCore;
+use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use url::Url;
 use uuid::Uuid;
@@ -19,9 +20,20 @@ use crate::state::{HostResolutionError, PortcullisState};
 
 const FLOW_COOKIE_MAX_AGE: u64 = 300;
 
+#[derive(Debug, Deserialize)]
+pub struct LoginParams {
+    // ADR 0092: an invite token, if this login was initiated from an invite
+    // email's link (either directly, or forwarded here by `/oauth2/select`
+    // -- see `select.rs`). Carried through the OAuth round trip via a
+    // short-lived cookie, same pattern as `oauth2-state`/
+    // `oauth2-pkce-verifier` above; read back by the callback handler.
+    invite: Option<String>,
+}
+
 pub async fn login_handler(
     Path(provider_name): Path<String>,
     State(state): State<Arc<PortcullisState>>,
+    Query(params): Query<LoginParams>,
     headers: HeaderMap,
 ) -> Response {
     let Some(host) = headers.get(header::HOST).and_then(|v| v.to_str().ok()) else {
@@ -89,14 +101,25 @@ pub async fn login_handler(
         cookie::SameSite::Lax,
     );
 
-    Response::builder()
+    let mut builder = Response::builder()
         .status(StatusCode::FOUND)
         .header(header::LOCATION, auth_url)
         .header(header::SET_COOKIE, state_cookie)
-        .header(header::SET_COOKIE, verifier_cookie)
-        .body(Body::empty())
-        .unwrap()
-        .into_response()
+        .header(header::SET_COOKIE, verifier_cookie);
+    if let Some(invite) = params.invite.as_deref().filter(|t| !t.is_empty()) {
+        let invite_cookie = build_cookie(
+            "authstar-pending-invite",
+            invite,
+            &tenant.cookie.path,
+            Some(&tenant.cookie.domain),
+            FLOW_COOKIE_MAX_AGE,
+            true,
+            tenant.cookie.secure,
+            cookie::SameSite::Lax,
+        );
+        builder = builder.header(header::SET_COOKIE, invite_cookie);
+    }
+    builder.body(Body::empty()).unwrap().into_response()
 }
 
 fn generate_pkce_verifier() -> String {
