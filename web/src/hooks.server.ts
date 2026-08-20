@@ -13,18 +13,41 @@ import { createTowerClient } from '$lib/server/clients/tower'
 // header, set by portcullis at mint time -- `perTenantJwksKeyProvider`
 // reads it (before signature verification, the same safe pattern `kid`-
 // based key selection already relies on) to resolve
-// `https://admin.<tenant-slug>.<baseDomain>/.well-known/jwks.json` per
-// request. `AUTHSTAR_BASE_DOMAIN` configures it.
+// `https://authstar.<tenant's own domain>/.well-known/jwks.json` per
+// request (ADR 0091). A tenant's domain is no longer derivable from its
+// slug by formula (every tenant brings its own, unrelated domain) --
+// `perTenantJwksKeyProvider` takes a resolver function instead of a shared
+// `baseDomain` string as of `@bytepunx/authstar-core@0.3.0`. `resolveDomain`
+// below is backed by tower's own `GET /tenants/:slug` (the source of truth
+// for `domain`, and deliberately unauthenticated -- confirmed directly
+// against tower's `src/routes/tenants.ts`, no `preHandler` on the GET), with
+// a simple in-process cache since tenants are added infrequently.
 //
 // `INTERNAL_JWT_JWKS_URL`, if set, still takes precedence as a single fixed
 // JWKS endpoint via `jwksKeyProvider` -- this is what e2e/dev point at a
 // fixture server that doesn't (and shouldn't need to) stand up real
-// per-tenant subdomains; see playwright.config.ts.
+// per-tenant domains; see playwright.config.ts.
 const jwksUrl = env.INTERNAL_JWT_JWKS_URL
-const baseDomain = env.AUTHSTAR_BASE_DOMAIN
-const getKey = jwksUrl ? jwksKeyProvider(jwksUrl) : baseDomain ? perTenantJwksKeyProvider(baseDomain) : null
 
 const towerBaseUrl = env.TOWER_BASE_URL ?? 'http://tower.internal:3000'
+
+const tenantDomainCache = new Map<string, string>()
+async function resolveTenantDomain(tenantSlug: string): Promise<string | undefined> {
+	const cached = tenantDomainCache.get(tenantSlug)
+	if (cached) return cached
+	try {
+		const response = await fetch(`${towerBaseUrl}/tenants/${encodeURIComponent(tenantSlug)}`)
+		if (!response.ok) return undefined
+		const body = (await response.json()) as { domain?: string }
+		if (!body.domain) return undefined
+		tenantDomainCache.set(tenantSlug, body.domain)
+		return body.domain
+	} catch {
+		return undefined
+	}
+}
+
+const getKey = jwksUrl ? jwksKeyProvider(jwksUrl) : perTenantJwksKeyProvider(resolveTenantDomain)
 
 export const handle: Handle = async ({ event, resolve }) => {
 	const authorization = event.request.headers.get('authorization')
