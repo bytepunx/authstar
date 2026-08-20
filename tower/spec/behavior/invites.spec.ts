@@ -48,7 +48,7 @@ describe('invites -- API contract', () => {
   })
 
   async function createTenant(slug: string, name = 'Acme') {
-    await consequent.handle(slug, 'tenant.create', { slug, name, cookieDomain: `${slug}.authstar.app`, createdBy: 't' })
+    await consequent.handle(slug, 'tenant.create', { slug, name, domain: `${slug}.test`, cookieDomain: `${slug}.test`, createdBy: 't' })
   }
 
   async function createContact(tenantSlug: string, email: string) {
@@ -91,7 +91,7 @@ describe('invites -- API contract', () => {
       expect(payload.contactId).toBe(contact.id)
       const decrypted = decryptLikeHerald(heraldPrivateKey, JSON.parse(payload.encryptedPayload)) as { to: string, templateData: Record<string, unknown> }
       expect(decrypted.to).toBe('invitee@acme.test')
-      expect(decrypted.templateData).toMatchObject({ tenant: { name: 'Acme' }, token: body.token, adminHost: 'admin.acme.authstar.test' })
+      expect(decrypted.templateData).toMatchObject({ tenant: { name: 'Acme' }, token: body.token, adminHost: 'authstar.acme.test' })
 
       const invite = await consequent.fetch('invite', body.token)
       expect(invite!.state.contactId).toBe(contact.id)

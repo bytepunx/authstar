@@ -27,7 +27,6 @@ const actorsPath = path.join(path.dirname(fileURLToPath(import.meta.url)), '../.
 
 const provisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: true,
-  baseDomain: 'authstar.test',
   operatorToken: '',
   defaultProvider: { name: 'dex', clientId: 'c1', discoveryUrl: 'https://dex/.well-known', scope: ['openid'] },
   defaultProviderClientSecret: 'secret',
@@ -91,7 +90,7 @@ describe('provisioning + contacts -- real Postgres', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/tenants',
-      payload: { slug: 'acme-pg', name: 'Acme PG', adminEmail: 'admin@acme-pg.test' },
+      payload: { slug: 'acme-pg', name: 'Acme PG', domain: 'acme-pg.test', adminEmail: 'admin@acme-pg.test' },
     })
     expect(response.statusCode).toBe(201)
 

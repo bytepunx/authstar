@@ -35,7 +35,6 @@ async function flush() {
 
 const provisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: false,
-  baseDomain: 'authstar.test',
   operatorToken: 'op-secret',
   defaultProvider: { name: 'dex', clientId: 'c1', discoveryUrl: 'https://dex/.well-known', scope: ['openid'] },
   defaultProviderClientSecret: 'secret',
@@ -67,7 +66,7 @@ describe('tenant provisioning -> first-admin login -> enrichment -> entitlement 
       method: 'POST',
       url: '/tenants',
       headers: { authorization: 'Bearer op-secret' },
-      payload: { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' },
+      payload: { slug: 'acme', name: 'Acme', domain: 'acme.test', adminEmail: 'admin@acme.test' },
     })
     expect(create.statusCode).toBe(201)
 

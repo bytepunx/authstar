@@ -31,7 +31,6 @@ import registerOperatorRoutes from '../routes/operator.js'
 
 const defaultProvisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: true,
-  baseDomain: 'authstar.test',
   operatorToken: '',
   defaultProvider: { name: 'default', clientId: '', discoveryUrl: '', scope: [] },
   defaultProviderClientSecret: '',
@@ -55,13 +54,15 @@ export interface BuildAppOptions {
   // throwaway ephemeral key so every existing test keeps working, since
   // nothing decrypts it in this pilot slice's own test tiers.
   heraldPayloadKey?: HeraldPayloadKey
-  // Story 014's internal-JWT verification key. Defaults to
-  // `perTenantJwksKeyProvider(provisioningConfig.baseDomain)` -- the real,
-  // ADR-0089-driven resolution `src/server.ts` also gets by not overriding
-  // this -- since tower has no Host to resolve a tenant from itself. Tests
-  // override with a `staticKeyProvider` fixture (spec/lib/internal-jwt.ts)
-  // pinned to a locally-generated key, so they never make a real JWKS
-  // fetch.
+  // Story 014's internal-JWT verification key. Defaults to a
+  // `perTenantJwksKeyProvider` backed by a slug -> domain lookup against
+  // tower's own `tenant` actor (ADR 0091 -- tower already knows every
+  // tenant's domain, no need to call itself over HTTP), cached per-process
+  // since tenants are added infrequently. `src/server.ts` gets this by not
+  // overriding it, since tower has no Host to resolve a tenant from
+  // itself. Tests override with a `staticKeyProvider` fixture
+  // (spec/lib/internal-jwt.ts) pinned to a locally-generated key, so they
+  // never make a real JWKS fetch.
   authstarGetKey?: JWTVerifyGetKey
   // Real fastify-level SPIFFE mTLS for `/enrich`/`/identities/resolve`
   // (`src/lib/spiffe-mtls.ts`) -- both `tls` and `spiffeTrustDomain` must
@@ -109,7 +110,15 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('heraldPayloadKey', options.heraldPayloadKey ?? createEphemeralHeraldKey())
   app.decorate('spiffeTrustDomain', options.spiffeTrustDomain)
 
-  const authstarGetKey = options.authstarGetKey ?? perTenantJwksKeyProvider(provisioningConfig.baseDomain)
+  const domainCache = new Map<string, string>()
+  const resolveTenantDomain = async (slug: string): Promise<string | undefined> => {
+    if (domainCache.has(slug)) return domainCache.get(slug)
+    const instance = await options.consequent.fetch('tenant', slug)
+    const domain = (instance?.state as { domain?: string } | undefined)?.domain
+    if (domain) domainCache.set(slug, domain)
+    return domain
+  }
+  const authstarGetKey = options.authstarGetKey ?? perTenantJwksKeyProvider(resolveTenantDomain)
   // `required: false` -- Story 014's own posture is a uniform 403 from
   // `requirePermission` for every failure mode (missing/invalid/degraded
   // token, wrong grant alike), not this plugin's default 401. Routes with

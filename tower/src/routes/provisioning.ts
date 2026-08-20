@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import { jsonPatchAdd } from '@bytepunx/signet-client'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
 import type { ProviderState } from '../actors/provider_actor.js'
@@ -7,6 +8,17 @@ import type { InviteState } from '../actors/invite_actor.js'
 import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypto.js'
 import { randomEcPrivateKeyPem, randomSecret } from '../lib/tenant-keys.js'
 import { isOperatorRequest } from '../lib/operator-auth.js'
+import { searchCriteria } from '../lib/consequent-types.js'
+
+// ADR 0091: the internal application slug for the reserved admin surface
+// stays `_admin` (unchanged, invisible in any URL) -- only its *host*
+// changes, to `authstar.<tenant.domain>`. "authstar" itself becomes a
+// reserved word: no tenant or application may use it as a slug, since it's
+// now also a hostname label every tenant's admin host shares.
+const RESERVED_ADMIN_APPLICATION_SLUG = '_admin'
+const RESERVED_WORD = 'authstar'
+const WEB_UPSTREAM_BASE = 'http://web.authstar-platform.svc.cluster.local:3000'
+const DOMAIN_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/
 
 // Per design/stories/tower/012-tenant-creation-and-provisioning.md and ADR
 // 0067 -- the full provisioning sequence: validate slug -> create `tenant`
@@ -35,7 +47,6 @@ import { isOperatorRequest } from '../lib/operator-auth.js'
 
 export interface ProvisioningConfig {
   selfServiceEnabled: boolean
-  baseDomain: string
   operatorToken: string
   defaultProvider: { name: string, clientId: string, discoveryUrl: string, scope: string[] }
   defaultProviderClientSecret: string
@@ -57,20 +68,23 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/
 const createTenantBodySchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['slug', 'name', 'adminEmail'],
+  required: ['slug', 'name', 'domain', 'adminEmail'],
   properties: {
     slug: { type: 'string', minLength: 1, maxLength: 63 },
     name: { type: 'string', minLength: 1 },
+    // ADR 0091: every tenant's own, globally-unique domain -- no more
+    // auto-computed admin.<slug>.<baseDomain> fallback (see the ADR's
+    // "Resolved" section on why self-service tenants now require one too).
+    domain: { type: 'string', minLength: 1, maxLength: 255 },
     adminEmail: { type: 'string', minLength: 3 },
-    adminHost: { type: 'string' },
   },
 } as const
 
 interface CreateTenantBody {
   slug: string
   name: string
+  domain: string
   adminEmail: string
-  adminHost?: string
 }
 
 async function fetchState<T>(app: FastifyInstance, type: string, id: string): Promise<T | null> {
@@ -91,21 +105,45 @@ const provisioningRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     if (!SLUG_PATTERN.test(body.slug)) {
       return reply.code(400).send({ error: 'slug must match ^[a-z0-9-]+$' })
     }
+    if (body.slug === RESERVED_WORD) {
+      return reply.code(400).send({ error: `"${RESERVED_WORD}" is a reserved slug` })
+    }
 
-    const adminHost = isOperator && body.adminHost ? body.adminHost : `admin.${body.slug}.${config.baseDomain}`
+    const domain = body.domain.toLowerCase()
+    if (!DOMAIN_PATTERN.test(domain)) {
+      return reply.code(400).send({ error: 'domain must be a valid DNS hostname, e.g. "acme.io"' })
+    }
+
+    // Global domain-uniqueness check (ADR 0091) -- excludes this same slug
+    // so a retried request for an already-created tenant with the same
+    // domain converges normally, matching this route's existing
+    // check-then-act idempotency model (see the file header comment).
+    const domainHolders = await app.consequent.find('tenant', searchCriteria({ domain }))
+    if (domainHolders.some((i) => (i.state as unknown as TenantState).slug !== body.slug)) {
+      return reply.code(409).send({ error: `domain "${domain}" is already registered to another tenant` })
+    }
 
     // Step 1: create tenant (or reuse an already-created one -- retry safe).
     let tenant = await fetchState<TenantState>(app, 'tenant', body.slug)
     if (!tenant?.createdAt) {
-      const cookieDomain = `${body.slug}.${config.baseDomain}`
       await app.consequent.handle(body.slug, 'tenant.create', {
         slug: body.slug,
         name: body.name,
-        cookieDomain,
+        domain,
+        cookieDomain: domain,
         createdBy: isOperator ? 'operator' : 'self-service',
       })
       tenant = await fetchState<TenantState>(app, 'tenant', body.slug)
     }
+
+    // From here on, use the tenant's own *stored* domain, not the raw
+    // request value -- on a retry where a caller sent a different `domain`
+    // than the one this slug was actually created with, this keeps every
+    // downstream computation (admin host, cookie, portcullis registration)
+    // consistent with what tower's own state actually says, rather than
+    // with whatever happened to be in this particular retry's body.
+    const tenantDomain = tenant!.domain
+    const adminHost = `${RESERVED_WORD}.${tenantDomain}`
 
     // Step 2: seed the default provider from installation config.
     const providerKey = `${body.slug}:${config.defaultProvider.name}`
@@ -160,6 +198,55 @@ const provisioningRoutes: FastifyPluginAsync = async function (app: FastifyInsta
       await app.signetAdmin.pushSecret('portcullis', `tenant-${body.slug}-identity-hash-key-1`, randomSecret())
       await app.signetAdmin.pushSecret('tower', `tenant-${body.slug}-contact-hash-pepper`, randomSecret())
       await app.consequent.handle(body.slug, 'tenant.mark-secrets-provisioned', {})
+    }
+
+    // Step 4b (ADR 0091): register this tenant's full config with
+    // portcullis -- cookie/jwt/providers/identityHashKeyGenerations/
+    // applications, in one atomic JSON Patch `add` at `/tenants/<slug>`.
+    // Before this, provisioning only ever pushed *secrets* to portcullis;
+    // nothing ever told portcullis the tenant itself existed, so it was
+    // structurally invisible to real traffic no matter how much of the
+    // rest of this route succeeded. Uses `add` (RFC 6902 upsert-on-
+    // existing-key semantics) rather than per-field patches, since
+    // portcullis's `cookie`/`jwt`/`applications` are all required fields --
+    // any intermediate partially-populated state would fail its own
+    // validation.
+    if (!tenant?.portcullisRegistered) {
+      await app.signetAdmin.patchConfig('portcullis', [
+        jsonPatchAdd(`/tenants/${body.slug}`, {
+          status: 'active',
+          cookie: {
+            domain: tenantDomain,
+            path: '/',
+            maxAge: 604_800,
+            httpOnly: true,
+            secure: true,
+          },
+          jwt: {
+            issuer: `https://${tenantDomain}`,
+            audience: body.slug,
+            expiresIn: '168h',
+          },
+          identityHashKeyGenerations: [{ version: 1, effectiveFrom: new Date().toISOString() }],
+          providers: {
+            [config.defaultProvider.name]: {
+              clientId: config.defaultProvider.clientId,
+              discoveryUrl: config.defaultProvider.discoveryUrl,
+              scope: config.defaultProvider.scope,
+            },
+          },
+          applications: {
+            [RESERVED_ADMIN_APPLICATION_SLUG]: {
+              hosts: [adminHost],
+              server: { publicUrl: `https://${adminHost}` },
+              upstream: { base: WEB_UPSTREAM_BASE },
+              auth: { loginUrl: '/oauth2/select' },
+              providers: [config.defaultProvider.name],
+            },
+          },
+        }),
+      ])
+      await app.consequent.handle(body.slug, 'tenant.mark-portcullis-registered', {})
     }
 
     // Step 5: issue the first-admin invite -- Story 007's ordinary invite
@@ -223,7 +310,7 @@ const provisioningRoutes: FastifyPluginAsync = async function (app: FastifyInsta
       channel: 'email',
     })
 
-    return reply.code(201).send({ slug: body.slug, adminHost })
+    return reply.code(201).send({ slug: body.slug, domain: tenantDomain, adminHost })
   })
 }
 

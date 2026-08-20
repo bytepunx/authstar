@@ -208,6 +208,13 @@ const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInsta
       if (body.slug === '_admin') {
         return reply.code(400).send({ error: '"_admin" is a reserved slug' })
       }
+      // ADR 0091: "authstar" is reserved everywhere a slug appears --
+      // it's now also the fixed hostname label every tenant's admin
+      // surface uses (`authstar.<tenant.domain>`), so an ordinary
+      // application claiming it would be ambiguous.
+      if (body.slug === 'authstar') {
+        return reply.code(400).send({ error: '"authstar" is a reserved slug' })
+      }
 
       const hosts = body.hosts ?? []
       if (!publicUrlHostValid(hosts, body.publicUrl)) {

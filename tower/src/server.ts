@@ -123,7 +123,6 @@ async function main(): Promise<void> {
 
   const provisioningConfig: ProvisioningConfig = {
     selfServiceEnabled: Boolean((bundle.provisioning as Record<string, unknown> | undefined)?.selfServiceEnabled ?? false),
-    baseDomain: ((bundle.provisioning as Record<string, unknown> | undefined)?.baseDomain as string | undefined) ?? 'authstar.app',
     operatorToken: secrets.operatorToken ?? '',
     defaultProvider: ((bundle.provisioning as Record<string, unknown> | undefined)?.defaultProvider as ProvisioningConfig['defaultProvider'] | undefined) ?? {
       name: '', clientId: '', discoveryUrl: '', scope: [],

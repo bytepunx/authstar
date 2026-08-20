@@ -43,6 +43,11 @@ export interface TenantProviderRef {
 export interface TenantState {
   slug: string
   name: string
+  // ADR 0091: the tenant's own, globally-unique domain -- routing/cookie/JWKS
+  // hostnames are all built from this, not from the slug + a shared
+  // installation-wide baseDomain (that convention couldn't cover an
+  // arbitrary number of tenants; see the ADR for why).
+  domain: string
   status: 'active' | 'suspended' | 'deleted'
   cookie: TenantCookie
   seatLimit: number | null
@@ -58,11 +63,17 @@ export interface TenantState {
   // (and re-randomizing) secrets it already provisioned. Not present on
   // Story 011's original shape; additive.
   secretsProvisioned: boolean
+  // ADR 0091: flips true once this tenant's full config (cookie/jwt/
+  // providers/identityHashKeyGenerations/applications) has been pushed to
+  // portcullis's bundle via signetAdmin.patchConfig -- same
+  // retry-skips-redundant-work reasoning as secretsProvisioned above.
+  portcullisRegistered: boolean
 }
 
 interface CreateCommand {
   slug: string
   name: string
+  domain: string
   cookieDomain: string
   createdBy: string
 }
@@ -91,11 +102,14 @@ interface SetSeatLimitCommand {
 
 interface MarkSecretsProvisionedCommand {}
 
+interface MarkPortcullisRegisteredCommand {}
+
 function create(_tenant: TenantState, command: CreateCommand) {
   return {
     type: 'tenant.created',
     slug: command.slug,
     name: command.name,
+    domain: command.domain,
     cookieDomain: command.cookieDomain,
     createdBy: command.createdBy,
   }
@@ -195,9 +209,14 @@ function markSecretsProvisioned(_tenant: TenantState, _command: MarkSecretsProvi
   return { type: 'tenant.secrets-provisioned' }
 }
 
-function created(tenant: TenantState, event: { slug: string, name: string, cookieDomain: string, createdBy: string }) {
+function markPortcullisRegistered(_tenant: TenantState, _command: MarkPortcullisRegisteredCommand) {
+  return { type: 'tenant.portcullis-registered' }
+}
+
+function created(tenant: TenantState, event: { slug: string, name: string, domain: string, cookieDomain: string, createdBy: string }) {
   tenant.slug = event.slug
   tenant.name = event.name
+  tenant.domain = event.domain
   tenant.status = 'active'
   tenant.cookie = {
     domain: event.cookieDomain,
@@ -248,18 +267,23 @@ function secretsProvisioned(tenant: TenantState) {
   tenant.secretsProvisioned = true
 }
 
+function portcullisRegistered(tenant: TenantState) {
+  tenant.portcullisRegistered = true
+}
+
 export default function tenantActor() {
   return {
     actor: {
       namespace: 'tower',
       type: 'tenant',
       identifiedBy: 'slug',
-      searchableBy: ['status'],
+      searchableBy: ['status', 'domain'],
       aggregateFrom: ['application', 'provider'],
     },
     state: {
       slug: '',
       name: '',
+      domain: '',
       status: 'active',
       cookie: { domain: '', path: '/', maxAge: 604_800, httpOnly: true, secure: true },
       seatLimit: null,
@@ -269,6 +293,7 @@ export default function tenantActor() {
       createdAt: '',
       createdBy: '',
       secretsProvisioned: false,
+      portcullisRegistered: false,
     },
     commands: {
       create,
@@ -287,6 +312,7 @@ export default function tenantActor() {
       ],
       'set-seat-limit': setSeatLimit,
       'mark-secrets-provisioned': markSecretsProvisioned,
+      'mark-portcullis-registered': markPortcullisRegistered,
     },
     events: {
       created,
@@ -296,6 +322,7 @@ export default function tenantActor() {
       'provider-added': providerAdded,
       'seat-limit-set': seatLimitSet,
       'secrets-provisioned': secretsProvisioned,
+      'portcullis-registered': portcullisRegistered,
     },
   }
 }

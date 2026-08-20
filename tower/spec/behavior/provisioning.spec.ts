@@ -31,7 +31,6 @@ function decryptLikeHerald(privateKey: ReturnType<typeof generateKeyPairSync>['p
 
 const provisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: false,
-  baseDomain: 'authstar.test',
   operatorToken: 'op-secret',
   defaultProvider: {
     name: 'dex', clientId: 'client-1', discoveryUrl: 'https://dex.example/.well-known', scope: ['openid', 'email'],
@@ -74,7 +73,7 @@ describe('POST /tenants -- provisioning', () => {
     const response = await app.inject({
       method: 'POST',
       url: '/tenants',
-      payload: { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' },
+      payload: { slug: 'acme', name: 'Acme', domain: 'acme.io', adminEmail: 'admin@acme.test' },
     })
     expect(response.statusCode).toBe(403)
   })
@@ -84,7 +83,7 @@ describe('POST /tenants -- provisioning', () => {
       method: 'POST',
       url: '/tenants',
       headers: { 'x-operator-token': 'op-secret' },
-      payload: { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' },
+      payload: { slug: 'acme', name: 'Acme', domain: 'acme.io', adminEmail: 'admin@acme.test' },
     })
     expect(response.statusCode).toBe(403)
   })
@@ -94,9 +93,47 @@ describe('POST /tenants -- provisioning', () => {
       method: 'POST',
       url: '/tenants',
       headers: { authorization: 'Bearer op-secret' },
-      payload: { slug: 'Not_Valid!', name: 'Acme', adminEmail: 'admin@acme.test' },
+      payload: { slug: 'Not_Valid!', name: 'Acme', domain: 'acme.io', adminEmail: 'admin@acme.test' },
     })
     expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects "authstar" as a reserved slug', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'authstar', name: 'Nope', domain: 'nope.io', adminEmail: 'admin@nope.test' },
+    })
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects a malformed domain', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'acme', name: 'Acme', domain: 'not a domain', adminEmail: 'admin@acme.test' },
+    })
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('rejects a domain already registered to a different tenant', async () => {
+    const first = await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'acme', name: 'Acme', domain: 'acme.io', adminEmail: 'admin@acme.test' },
+    })
+    expect(first.statusCode).toBe(201)
+
+    const second = await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'other', name: 'Other', domain: 'acme.io', adminEmail: 'admin@other.test' },
+    })
+    expect(second.statusCode).toBe(409)
   })
 
   it('runs the full provisioning sequence for an operator-authenticated request', async () => {
@@ -104,13 +141,14 @@ describe('POST /tenants -- provisioning', () => {
       method: 'POST',
       url: '/tenants',
       headers: { authorization: 'Bearer op-secret' },
-      payload: { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' },
+      payload: { slug: 'acme', name: 'Acme', domain: 'acme.io', adminEmail: 'admin@acme.test' },
     })
 
     expect(response.statusCode).toBe(201)
     const body = response.json()
     expect(body.slug).toBe('acme')
-    expect(body.adminHost).toBe('admin.acme.authstar.test')
+    expect(body.domain).toBe('acme.io')
+    expect(body.adminHost).toBe('authstar.acme.io')
 
     // tenant created and marked as fully secret-provisioned
     const tenant = (await consequent.fetch('tenant', 'acme'))!.state as unknown as TenantState
@@ -124,7 +162,23 @@ describe('POST /tenants -- provisioning', () => {
     // _admin application auto-created
     const adminApp = await consequent.fetch('application', 'acme:_admin')
     expect(adminApp!.state.slug).toBe('_admin')
-    expect((adminApp!.state as { hosts: string[] }).hosts).toEqual(['admin.acme.authstar.test'])
+    expect((adminApp!.state as { hosts: string[] }).hosts).toEqual(['authstar.acme.io'])
+
+    // ADR 0091: the tenant's full config (cookie/jwt/providers/
+    // identityHashKeyGenerations/applications) registered with portcullis
+    // in one atomic patch -- previously nothing ever did this at all.
+    expect(signetAdmin.patchCalls).toHaveLength(1)
+    const [patchCall] = signetAdmin.patchCalls
+    expect(patchCall.targetService).toBe('portcullis')
+    expect(patchCall.operations).toHaveLength(1)
+    const [op] = patchCall.operations as Array<{ op: string, path: string, value: Record<string, unknown> }>
+    expect(op.op).toBe('add')
+    expect(op.path).toBe('/tenants/acme')
+    expect(op.value.cookie).toMatchObject({ domain: 'acme.io', httpOnly: true, secure: true })
+    expect(op.value.jwt).toMatchObject({ issuer: 'https://acme.io', audience: 'acme' })
+    expect(op.value.applications).toMatchObject({
+      _admin: { hosts: ['authstar.acme.io'], upstream: { base: expect.any(String) } },
+    })
 
     // four provisioning secrets + one provider secret pushed
     expect(signetAdmin.calls).toHaveLength(5)
@@ -195,7 +249,7 @@ describe('POST /tenants -- provisioning', () => {
     // `idempotencyKey` -- that's intentional message-routing metadata,
     // not a leak of the encrypted payload.)
     const { encryptedPayload, ...restOfMessage } = payload
-    expect(JSON.stringify(restOfMessage)).not.toContain('admin.acme.authstar.test')
+    expect(JSON.stringify(restOfMessage)).not.toContain('authstar.acme.io')
     const envelope = JSON.parse(encryptedPayload) as EncryptedEnvelope
     expect(Object.keys(envelope).sort()).toEqual(['authTag', 'ciphertext', 'iv', 'keyVersion', 'wrappedKey'])
 
@@ -208,12 +262,12 @@ describe('POST /tenants -- provisioning', () => {
     expect(decrypted.templateData).toEqual({
       tenant: { name: 'Acme' },
       token: expect.any(String),
-      adminHost: 'admin.acme.authstar.test',
+      adminHost: 'authstar.acme.io',
     })
   })
 
-  it('retrying the same request is idempotent -- no duplicate secret pushes or actor re-creation', async () => {
-    const payload = { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' }
+  it('retrying the same request is idempotent -- no duplicate secret pushes, patches, or actor re-creation', async () => {
+    const payload = { slug: 'acme', name: 'Acme', domain: 'acme.io', adminEmail: 'admin@acme.test' }
     const first = await app.inject({ method: 'POST', url: '/tenants', headers: { authorization: 'Bearer op-secret' }, payload })
     expect(first.statusCode).toBe(201)
 
@@ -221,8 +275,9 @@ describe('POST /tenants -- provisioning', () => {
     expect(second.statusCode).toBe(201)
     expect(second.json()).toEqual(first.json())
 
-    // Still exactly 5 secret pushes -- the retry skipped every already-done step.
+    // Still exactly 5 secret pushes and 1 config patch -- the retry skipped every already-done step.
     expect(signetAdmin.calls).toHaveLength(5)
+    expect(signetAdmin.patchCalls).toHaveLength(1)
   })
 
   it('allows unauthenticated requests when self-service is enabled', async () => {
@@ -232,23 +287,10 @@ describe('POST /tenants -- provisioning', () => {
     const response = await selfServiceApp.inject({
       method: 'POST',
       url: '/tenants',
-      payload: { slug: 'selfserve', name: 'Self Serve Co', adminEmail: 'admin@selfserve.test' },
+      payload: { slug: 'selfserve', name: 'Self Serve Co', domain: 'selfserve.io', adminEmail: 'admin@selfserve.test' },
     })
 
     expect(response.statusCode).toBe(201)
-    await selfServiceApp.close()
-  })
-
-  it('honors an operator-supplied adminHost but ignores it for non-operator callers', async () => {
-    const selfService = { ...provisioningConfig, selfServiceEnabled: true }
-    const { app: selfServiceApp } = await buildProvisioningApp(selfService)
-
-    const response = await selfServiceApp.inject({
-      method: 'POST',
-      url: '/tenants',
-      payload: { slug: 'ignored-host', name: 'Co', adminEmail: 'admin@co.test', adminHost: 'custom.example.com' },
-    })
-    expect(response.json().adminHost).toBe('admin.ignored-host.authstar.test')
     await selfServiceApp.close()
   })
 })

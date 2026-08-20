@@ -19,17 +19,14 @@ import { requireOperatorAuth, requireOperatorActor, operatorActor } from '../lib
 // bootstrap flow's fixed elevated-permissions set.
 //
 // **Not fully specified anywhere, this route's own reasonable
-// interpretation**: which host the invite-acceptance link points at.
-// Story 007's own "Not Covered Here" section explicitly punts on "how the
-// token actually survives... through the OAuth2 round-trip" as portcullis's
-// concern, but doesn't pin down which *host* herald's template should
-// render into the link for a non-bootstrap, non-`_admin` invite. This
+// interpretation**: which host the invite-acceptance link points at. This
 // route resolves it the same way `provisioning.ts`'s bootstrap flow does
-// when `application` is unset (tenant-wide → `admin.{tenantSlug}.
-// {baseDomain}`), and otherwise uses the target application's own primary
-// host (`hosts[0]`) -- falling back to the tenant admin host if that
-// application has none, rather than failing the whole request over a
-// template-rendering detail.
+// when `application` is unset (tenant-wide → `authstar.<tenant.domain>`,
+// ADR 0091), and otherwise uses the target application's own primary host
+// (`hosts[0]`) -- falling back to the tenant admin host if that application
+// has none, rather than failing the whole request over a
+// template-rendering detail. Invite-token survival through the OAuth round
+// trip itself is resolved by ADR 0092.
 //
 // Story 013: the "bootstrap path" for admin access ("issue an elevated
 // invite") reuses `POST`/`DELETE`/`PATCH` below via the operator tree --
@@ -170,8 +167,9 @@ function toResponse(token: string, state: InviteState) {
 
 // See this file's own header comment for the "which host" reasoning.
 async function resolveInviteHost(app: FastifyInstance, tenantSlug: string, application: string | null): Promise<string> {
-  const baseDomain = app.provisioningConfig.baseDomain
-  const tenantAdminHost = `admin.${tenantSlug}.${baseDomain}`
+  const tenantInstance = await app.consequent.fetch('tenant', tenantSlug)
+  const tenantDomain = (tenantInstance?.state as { domain?: string } | undefined)?.domain ?? ''
+  const tenantAdminHost = `authstar.${tenantDomain}`
   if (!application) return tenantAdminHost
   const instance = await app.consequent.fetch('application', `${tenantSlug}:${application}`)
   const state = instance?.state as unknown as ApplicationState | undefined
