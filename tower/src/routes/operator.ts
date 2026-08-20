@@ -31,7 +31,10 @@ const stuckQuerySchema = {
 } as const
 
 function tenantResponse(state: TenantState) {
-  return { slug: state.slug, name: state.name, status: state.status, createdAt: state.createdAt }
+  // `domain` (ADR 0091) included alongside the rest -- steward's tenant
+  // list/detail views need it to link an operator straight to
+  // authstar.<domain>, not just identify the tenant.
+  return { slug: state.slug, name: state.name, domain: state.domain, status: state.status, createdAt: state.createdAt }
 }
 
 // `tenant_actor.ts`'s own `searchableBy: ['status']` has no field that's
