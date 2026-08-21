@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib'
-import { gitOpsClient, type GitOpsServiceClient } from '@bytepunx/signet-client'
+import { gitOpsClient, encryptForSecret, type GitOpsServiceClient } from '@bytepunx/signet-client'
 import type { StripeConfigStore, TenantStripeConfig } from './stripe-config.js'
 
 // ADR 0052's real wiring for keep's own `stripe-config` route --
@@ -24,16 +24,21 @@ import type { StripeConfigStore, TenantStripeConfig } from './stripe-config.js'
 // a chance to trigger a restart) reflects the just-written value -- keep's
 // own PATCH/GET pair is commonly called back-to-back by web's admin UI.
 //
-// KNOWN GAP, carried over verbatim from tower's own `signet-admin.ts`
-// (same underlying mechanism, same caveat): signet's GitOps sync path is
-// designed around SOPS-encrypted secret files -- this pushes the secret
-// value as **plaintext** YAML inside the archive, not SOPS-encrypted.
-// Getting the encryption step right needs either shelling out to the real
-// `sops` CLI (not a dependency of this repo) or an in-process
-// age-encryption library; not resolved here. This wiring is real (real RPC,
-// real streaming, real auth) and has not been validated against a live
-// signet -- see TESTING.md and this project's final report for the
-// explicit scope note.
+// FIXED (was a known gap, carried over verbatim from tower's own
+// `signet-admin.ts` before *that* was fixed): this used to push the secret
+// value as plaintext YAML inside the archive, not SOPS-encrypted --
+// signetd's periodic gitops reconciler tries to SOPS-decrypt every tracked
+// secret path regardless of how it arrived, so a plaintext push appeared to
+// succeed but silently became permanently unreadable after the next
+// reconciliation cycle (bytepunx/signet-clients#49, same bug, same fix:
+// `encryptForSecret`, `@bytepunx/signet-client` >=0.6.0). `content` below is
+// now always real SOPS ciphertext.
+//
+// Also now checks `response.errors` (previously discarded entirely) --
+// signetd reports a rejected/unrecognised path as a *successful* RPC with
+// the problem described in `response.errors`, not as a transport error, so
+// checking only `err` missed exactly the same class of silent-no-op bug
+// tower's own `pushSecret` had.
 
 function secretKeyName(tenantSlug: string): string {
   return `stripe-secret-key-${tenantSlug}`
@@ -48,10 +53,11 @@ function webhookSecretKeyName(tenantSlug: string): string {
 // across services since these are two separate packages with no shared
 // internal library between them in this pilot slice, and the function is
 // small enough that the duplication cost is low compared to introducing a
-// cross-service dependency for it.
-function buildSecretArchive(key: string, value: string): Buffer {
+// cross-service dependency for it. `content` is `encryptForSecret`'s own
+// output (real SOPS ciphertext) -- never a raw plaintext value, same as
+// tower's own `buildSecretArchive`.
+function buildSecretArchive(key: string, content: Uint8Array): Buffer {
   const path = `secrets/${key}.yaml`
-  const content = Buffer.from(`value: ${JSON.stringify(value)}\n`, 'utf8')
 
   const header = Buffer.alloc(512)
   header.write(path, 0, 'utf8')
@@ -96,16 +102,32 @@ export function createSignetStripeConfigStore(opts: SignetStripeConfigStoreOptio
   const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token, plaintext: true })
   const secrets = new Map<string, string>(Object.entries(opts.initialSecrets))
 
-  function pushSecret(key: string, value: string): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-      const call = client.syncBundle((err) => {
-        if (err) reject(err)
-        else resolve()
+  async function pushSecret(key: string, value: string): Promise<void> {
+    // Fetched fresh on every call rather than cached -- infrequent calls
+    // (an operator setting Stripe config), and a stale cached key would
+    // encrypt to a recipient signetd's already rotated away from, same
+    // reasoning as tower's own `pushSecret`.
+    const sopsKey = await new Promise<string>((resolve, reject) => {
+      client.getSopsPublicKey({}, (err, response) => (err ? reject(err) : resolve(response.publicKey)))
+    })
+    const encrypted = await encryptForSecret(sopsKey, value)
+
+    await new Promise<void>((resolve, reject) => {
+      const call = client.syncBundle((err, response) => {
+        if (err) {
+          reject(err)
+          return
+        }
+        if (response.errors.length > 0) {
+          reject(new Error(`signet rejected stripe-config push for ${key}: ${response.errors.join('; ')}`))
+        } else {
+          resolve()
+        }
       })
       call.write({
         header: { secretsPath: 'secrets/', headSha: '', configPath: '' },
       } as never)
-      call.write({ data: buildSecretArchive(key, value) } as never)
+      call.write({ data: buildSecretArchive(key, encrypted) } as never)
       call.end()
     })
   }
