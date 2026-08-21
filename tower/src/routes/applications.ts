@@ -1,8 +1,9 @@
-import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
 import type { ProviderState } from '../actors/provider_actor.js'
 import { requirePermission } from '../lib/permissions.js'
+import { requireOperatorAuth, requireOperatorActor } from '../lib/operator-auth.js'
 import { createKeyedMutex } from '../lib/mutex.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 
@@ -151,6 +152,193 @@ async function exposedProvidersValid(app: FastifyInstance, tenantSlug: string, e
 // does not, by itself, prevent.
 const appMutex = createKeyedMutex()
 
+async function listApplications(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug } = request.params as { tenantSlug: string }
+  const { includeDeleted } = request.query as { includeDeleted?: string }
+
+  const tenant = await fetchTenant(app, tenantSlug)
+  if (!tenantExists(tenant)) return reply.code(404).send()
+
+  const instances = await app.consequent.find('application', searchCriteria({ tenant: tenantSlug }))
+  const states = instances.map((i) => i.state as unknown as ApplicationState)
+  return states
+    .filter((s) => s.slug !== '_admin')
+    .filter((s) => includeDeleted === 'true' || s.status !== 'deleted')
+    .map(toResponse)
+}
+
+async function getApplication(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
+  const state = await fetchApplication(app, tenantSlug, appSlug)
+  // Cross-tenant/nonexistent/`_admin` all collapse to 404 (ADR 0030's
+  // cross-tenant-is-404 rule; `_admin` is invisible to this route the
+  // same way it's excluded from the list).
+  if (!state || state.slug === '_admin') return reply.code(404).send()
+  return toResponse(state)
+}
+
+async function createApplication(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug } = request.params as { tenantSlug: string }
+  const body = request.body as { slug: string, name: string, hosts?: string[], publicUrl?: string, exposedProviders?: string[] }
+
+  const tenant = await fetchTenant(app, tenantSlug)
+  if (!tenantExists(tenant)) return reply.code(404).send()
+
+  if (!SLUG_PATTERN.test(body.slug)) {
+    return reply.code(400).send({ error: 'slug must match ^[a-z0-9-]+$' })
+  }
+  // `_admin` is auto-provisioned exactly once, at tenant creation (ADR
+  // 0067) -- never through this route, by anyone, at any time.
+  if (body.slug === '_admin') {
+    return reply.code(400).send({ error: '"_admin" is a reserved slug' })
+  }
+  // ADR 0091: "authstar" is reserved everywhere a slug appears --
+  // it's now also the fixed hostname label every tenant's admin
+  // surface uses (`authstar.<tenant.domain>`), so an ordinary
+  // application claiming it would be ambiguous.
+  if (body.slug === 'authstar') {
+    return reply.code(400).send({ error: '"authstar" is a reserved slug' })
+  }
+
+  const hosts = body.hosts ?? []
+  if (!publicUrlHostValid(hosts, body.publicUrl)) {
+    return reply.code(400).send({ error: 'publicUrl host must be present in hosts' })
+  }
+  if (!(await exposedProvidersValid(app, tenantSlug, body.exposedProviders))) {
+    return reply.code(400).send({ error: 'exposedProviders must reference existing, active providers for this tenant' })
+  }
+
+  // Everything from here down runs inside `appMutex` -- the
+  // duplicate-slug check is re-read fresh *inside* the lock (not
+  // reusing the `tenant` fetched above, which may already be stale by
+  // the time this request's turn comes up) since `consequent`'s own
+  // per-actor queue doesn't serialize the fetch step that check
+  // depends on (see `mutex.ts`'s header comment).
+  const outcome = await appMutex.runExclusive(tenantSlug, async () => {
+    const current = await fetchTenant(app, tenantSlug)
+    if (current.applications.some((a) => a.slug === body.slug)) {
+      return { rejected: true as const, status: 409, error: 'an application with this slug already exists for this tenant' }
+    }
+
+    const appKey = appKeyFor(tenantSlug, body.slug)
+    const existingApp = await app.consequent.fetch('application', appKey)
+    const existingAppState = existingApp?.state as unknown as ApplicationState | undefined
+    if (!existingAppState?.createdAt) {
+      await app.consequent.handle(appKey, 'application.create', {
+        tenant: tenantSlug,
+        slug: body.slug,
+        name: body.name,
+        hosts,
+        publicUrl: body.publicUrl ?? '',
+        exposedProviders: body.exposedProviders ?? [],
+      })
+    }
+
+    const results = await app.consequent.handle(tenantSlug, 'tenant.add-application', { slug: body.slug, name: body.name })
+    const rejection = results.find((r) => r?.rejected)
+    if (rejection) {
+      return { rejected: true as const, status: 409, error: rejection.reason?.message }
+    }
+
+    return { rejected: false as const }
+  })
+
+  if (outcome.rejected) {
+    return reply.code(outcome.status).send({ error: outcome.error })
+  }
+
+  await app.publisher.publish('application.created', {
+    tenant: tenantSlug, application: body.slug, name: body.name, status: 'active',
+  })
+
+  const created = await fetchApplication(app, tenantSlug, body.slug)
+  return reply.code(201).send(toResponse(created!))
+}
+
+async function patchApplication(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
+  const body = request.body as { name?: string, hosts?: string[], publicUrl?: string, exposedProviders?: string[], status?: 'suspended' }
+
+  const current = await fetchApplication(app, tenantSlug, appSlug)
+  if (!current || current.slug === '_admin') return reply.code(404).send()
+
+  if (body.hosts !== undefined || body.publicUrl !== undefined) {
+    const nextHosts = body.hosts ?? current.hosts
+    const nextPublicUrl = body.publicUrl ?? current.publicUrl
+    if (!publicUrlHostValid(nextHosts, nextPublicUrl)) {
+      return reply.code(400).send({ error: 'publicUrl host must be present in hosts' })
+    }
+  }
+  if (!(await exposedProvidersValid(app, tenantSlug, body.exposedProviders))) {
+    return reply.code(400).send({ error: 'exposedProviders must reference existing, active providers for this tenant' })
+  }
+
+  const appKey = appKeyFor(tenantSlug, appSlug)
+
+  if (body.name !== undefined || body.hosts !== undefined || body.publicUrl !== undefined || body.exposedProviders !== undefined) {
+    const results = await app.consequent.handle(appKey, 'application.update', {
+      name: body.name,
+      hosts: body.hosts,
+      publicUrl: body.publicUrl,
+      exposedProviders: body.exposedProviders,
+    })
+    const rejection = results.find((r) => r?.rejected)
+    if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+
+    // ADR 0047's outbound event, fired specifically for a `hosts` write
+    // (as opposed to name/publicUrl/exposedProviders alone) -- keep's
+    // reference cache only cares whether an application slug exists
+    // and is active, but the event family itself is `hosts-changed`
+    // per the story's own naming, so field presence (not a value diff)
+    // is what triggers it, matching this route's other publish sites.
+    if (body.hosts !== undefined) {
+      await app.publisher.publish('application.hosts-changed', {
+        tenant: tenantSlug, application: appSlug, name: body.name ?? current.name, status: current.status,
+      })
+    }
+  }
+
+  if (body.status === 'suspended') {
+    const results = await app.consequent.handle(appKey, 'application.suspend', {})
+    const rejection = results.find((r) => r?.rejected)
+    if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+
+    await app.publisher.publish('application.suspended', {
+      tenant: tenantSlug, application: appSlug, name: body.name ?? current.name, status: 'suspended',
+    })
+  }
+
+  const updated = await fetchApplication(app, tenantSlug, appSlug)
+  return toResponse(updated!)
+}
+
+// Soft alias for `PATCH { status: "deleted" }` (ADR 0051) -- not a row
+// removal, same resolve-then-direct-update path as PATCH above.
+async function deleteApplication(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
+  const current = await fetchApplication(app, tenantSlug, appSlug)
+  if (!current || current.slug === '_admin') return reply.code(404).send()
+
+  if (current.status === 'deleted') {
+    // Retry converges rather than erroring -- same "retry-same-request
+    // is the recovery model" convention `accounts.ts`'s no-op
+    // change-email path follows.
+    return toResponse(current)
+  }
+
+  const appKey = appKeyFor(tenantSlug, appSlug)
+  const results = await app.consequent.handle(appKey, 'application.delete', {})
+  const rejection = results.find((r) => r?.rejected)
+  if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+
+  await app.publisher.publish('application.deleted', {
+    tenant: tenantSlug, application: appSlug, name: current.name, status: 'deleted',
+  })
+
+  const updated = await fetchApplication(app, tenantSlug, appSlug)
+  return toResponse(updated!)
+}
+
 const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   // Per ADR 0051's screen design: `_admin` is excluded from this list
   // entirely, not just filtered -- it's system-managed, exposing it here
@@ -160,208 +348,70 @@ const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInsta
   app.get(
     '/tenants/:tenantSlug/applications',
     { schema: { params: tenantParamsSchema, querystring: listQuerySchema } },
-    async (request, reply) => {
-      const { tenantSlug } = request.params as { tenantSlug: string }
-      const { includeDeleted } = request.query as { includeDeleted?: string }
-
-      const tenant = await fetchTenant(app, tenantSlug)
-      if (!tenantExists(tenant)) return reply.code(404).send()
-
-      const instances = await app.consequent.find('application', searchCriteria({ tenant: tenantSlug }))
-      const states = instances.map((i) => i.state as unknown as ApplicationState)
-      return states
-        .filter((s) => s.slug !== '_admin')
-        .filter((s) => includeDeleted === 'true' || s.status !== 'deleted')
-        .map(toResponse)
-    },
+    (request, reply) => listApplications(app, request, reply),
   )
 
   app.get(
     '/tenants/:tenantSlug/applications/:appSlug',
     { schema: { params: appParamsSchema } },
-    async (request, reply) => {
-      const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
-      const state = await fetchApplication(app, tenantSlug, appSlug)
-      // Cross-tenant/nonexistent/`_admin` all collapse to 404 (ADR 0030's
-      // cross-tenant-is-404 rule; `_admin` is invisible to this route the
-      // same way it's excluded from the list).
-      if (!state || state.slug === '_admin') return reply.code(404).send()
-      return toResponse(state)
-    },
+    (request, reply) => getApplication(app, request, reply),
   )
 
   app.post(
     '/tenants/:tenantSlug/applications',
     { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('applications:manage') },
-    async (request, reply) => {
-      const { tenantSlug } = request.params as { tenantSlug: string }
-      const body = request.body as { slug: string, name: string, hosts?: string[], publicUrl?: string, exposedProviders?: string[] }
-
-      const tenant = await fetchTenant(app, tenantSlug)
-      if (!tenantExists(tenant)) return reply.code(404).send()
-
-      if (!SLUG_PATTERN.test(body.slug)) {
-        return reply.code(400).send({ error: 'slug must match ^[a-z0-9-]+$' })
-      }
-      // `_admin` is auto-provisioned exactly once, at tenant creation (ADR
-      // 0067) -- never through this route, by anyone, at any time.
-      if (body.slug === '_admin') {
-        return reply.code(400).send({ error: '"_admin" is a reserved slug' })
-      }
-      // ADR 0091: "authstar" is reserved everywhere a slug appears --
-      // it's now also the fixed hostname label every tenant's admin
-      // surface uses (`authstar.<tenant.domain>`), so an ordinary
-      // application claiming it would be ambiguous.
-      if (body.slug === 'authstar') {
-        return reply.code(400).send({ error: '"authstar" is a reserved slug' })
-      }
-
-      const hosts = body.hosts ?? []
-      if (!publicUrlHostValid(hosts, body.publicUrl)) {
-        return reply.code(400).send({ error: 'publicUrl host must be present in hosts' })
-      }
-      if (!(await exposedProvidersValid(app, tenantSlug, body.exposedProviders))) {
-        return reply.code(400).send({ error: 'exposedProviders must reference existing, active providers for this tenant' })
-      }
-
-      // Everything from here down runs inside `appMutex` -- the
-      // duplicate-slug check is re-read fresh *inside* the lock (not
-      // reusing the `tenant` fetched above, which may already be stale by
-      // the time this request's turn comes up) since `consequent`'s own
-      // per-actor queue doesn't serialize the fetch step that check
-      // depends on (see `mutex.ts`'s header comment).
-      const outcome = await appMutex.runExclusive(tenantSlug, async () => {
-        const current = await fetchTenant(app, tenantSlug)
-        if (current.applications.some((a) => a.slug === body.slug)) {
-          return { rejected: true as const, status: 409, error: 'an application with this slug already exists for this tenant' }
-        }
-
-        const appKey = appKeyFor(tenantSlug, body.slug)
-        const existingApp = await app.consequent.fetch('application', appKey)
-        const existingAppState = existingApp?.state as unknown as ApplicationState | undefined
-        if (!existingAppState?.createdAt) {
-          await app.consequent.handle(appKey, 'application.create', {
-            tenant: tenantSlug,
-            slug: body.slug,
-            name: body.name,
-            hosts,
-            publicUrl: body.publicUrl ?? '',
-            exposedProviders: body.exposedProviders ?? [],
-          })
-        }
-
-        const results = await app.consequent.handle(tenantSlug, 'tenant.add-application', { slug: body.slug, name: body.name })
-        const rejection = results.find((r) => r?.rejected)
-        if (rejection) {
-          return { rejected: true as const, status: 409, error: rejection.reason?.message }
-        }
-
-        return { rejected: false as const }
-      })
-
-      if (outcome.rejected) {
-        return reply.code(outcome.status).send({ error: outcome.error })
-      }
-
-      await app.publisher.publish('application.created', {
-        tenant: tenantSlug, application: body.slug, name: body.name, status: 'active',
-      })
-
-      const created = await fetchApplication(app, tenantSlug, body.slug)
-      return reply.code(201).send(toResponse(created!))
-    },
+    (request, reply) => createApplication(app, request, reply),
   )
 
   app.patch(
     '/tenants/:tenantSlug/applications/:appSlug',
     { schema: { params: appParamsSchema, body: patchBodySchema }, preHandler: requirePermission('applications:manage') },
-    async (request, reply) => {
-      const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
-      const body = request.body as { name?: string, hosts?: string[], publicUrl?: string, exposedProviders?: string[], status?: 'suspended' }
-
-      const current = await fetchApplication(app, tenantSlug, appSlug)
-      if (!current || current.slug === '_admin') return reply.code(404).send()
-
-      if (body.hosts !== undefined || body.publicUrl !== undefined) {
-        const nextHosts = body.hosts ?? current.hosts
-        const nextPublicUrl = body.publicUrl ?? current.publicUrl
-        if (!publicUrlHostValid(nextHosts, nextPublicUrl)) {
-          return reply.code(400).send({ error: 'publicUrl host must be present in hosts' })
-        }
-      }
-      if (!(await exposedProvidersValid(app, tenantSlug, body.exposedProviders))) {
-        return reply.code(400).send({ error: 'exposedProviders must reference existing, active providers for this tenant' })
-      }
-
-      const appKey = appKeyFor(tenantSlug, appSlug)
-
-      if (body.name !== undefined || body.hosts !== undefined || body.publicUrl !== undefined || body.exposedProviders !== undefined) {
-        const results = await app.consequent.handle(appKey, 'application.update', {
-          name: body.name,
-          hosts: body.hosts,
-          publicUrl: body.publicUrl,
-          exposedProviders: body.exposedProviders,
-        })
-        const rejection = results.find((r) => r?.rejected)
-        if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-
-        // ADR 0047's outbound event, fired specifically for a `hosts` write
-        // (as opposed to name/publicUrl/exposedProviders alone) -- keep's
-        // reference cache only cares whether an application slug exists
-        // and is active, but the event family itself is `hosts-changed`
-        // per the story's own naming, so field presence (not a value diff)
-        // is what triggers it, matching this route's other publish sites.
-        if (body.hosts !== undefined) {
-          await app.publisher.publish('application.hosts-changed', {
-            tenant: tenantSlug, application: appSlug, name: body.name ?? current.name, status: current.status,
-          })
-        }
-      }
-
-      if (body.status === 'suspended') {
-        const results = await app.consequent.handle(appKey, 'application.suspend', {})
-        const rejection = results.find((r) => r?.rejected)
-        if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-
-        await app.publisher.publish('application.suspended', {
-          tenant: tenantSlug, application: appSlug, name: body.name ?? current.name, status: 'suspended',
-        })
-      }
-
-      const updated = await fetchApplication(app, tenantSlug, appSlug)
-      return toResponse(updated!)
-    },
+    (request, reply) => patchApplication(app, request, reply),
   )
 
-  // Soft alias for `PATCH { status: "deleted" }` (ADR 0051) -- not a row
-  // removal, same resolve-then-direct-update path as PATCH above.
   app.delete(
     '/tenants/:tenantSlug/applications/:appSlug',
     { schema: { params: appParamsSchema }, preHandler: requirePermission('applications:manage') },
-    async (request, reply) => {
-      const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
-      const current = await fetchApplication(app, tenantSlug, appSlug)
-      if (!current || current.slug === '_admin') return reply.code(404).send()
+    (request, reply) => deleteApplication(app, request, reply),
+  )
 
-      if (current.status === 'deleted') {
-        // Retry converges rather than erroring -- same "retry-same-request
-        // is the recovery model" convention `accounts.ts`'s no-op
-        // change-email path follows.
-        return toResponse(current)
-      }
+  // Story 013: the operator tree -- same handlers, bearer-token auth
+  // instead of `permissions`. GET routes need only a valid operator token;
+  // mutating routes additionally require `X-Operator-Actor`, matching every
+  // other operator-tree pair in this codebase. Added for the same reason
+  // role-definitions.ts's own operator tree was (bytepunx/authstar-steward#1):
+  // steward authenticates as an operator, not a tenant-scoped
+  // `applications:manage` JWT, so its application-registration UI would
+  // 404 against this route tree without it -- surfaced while registering
+  // `loci` for the adopted `bytepunx` tenant (bytepunx/authstar-tower#3).
+  app.get(
+    '/operator/tenants/:tenantSlug/applications',
+    { schema: { params: tenantParamsSchema, querystring: listQuerySchema }, preHandler: requireOperatorAuth(app) },
+    (request, reply) => listApplications(app, request, reply),
+  )
 
-      const appKey = appKeyFor(tenantSlug, appSlug)
-      const results = await app.consequent.handle(appKey, 'application.delete', {})
-      const rejection = results.find((r) => r?.rejected)
-      if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+  app.get(
+    '/operator/tenants/:tenantSlug/applications/:appSlug',
+    { schema: { params: appParamsSchema }, preHandler: requireOperatorAuth(app) },
+    (request, reply) => getApplication(app, request, reply),
+  )
 
-      await app.publisher.publish('application.deleted', {
-        tenant: tenantSlug, application: appSlug, name: current.name, status: 'deleted',
-      })
+  app.post(
+    '/operator/tenants/:tenantSlug/applications',
+    { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => createApplication(app, request, reply),
+  )
 
-      const updated = await fetchApplication(app, tenantSlug, appSlug)
-      return toResponse(updated!)
-    },
+  app.patch(
+    '/operator/tenants/:tenantSlug/applications/:appSlug',
+    { schema: { params: appParamsSchema, body: patchBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => patchApplication(app, request, reply),
+  )
+
+  app.delete(
+    '/operator/tenants/:tenantSlug/applications/:appSlug',
+    { schema: { params: appParamsSchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => deleteApplication(app, request, reply),
   )
 }
 

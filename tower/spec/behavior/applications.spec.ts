@@ -418,3 +418,81 @@ describe('applications -- API contract', () => {
     })
   })
 })
+
+// Story 013's operator tree -- same handlers, bearer-token auth instead of
+// `applications:manage`. Added while registering `loci` for the adopted
+// `bytepunx` tenant (bytepunx/authstar-tower#3): steward calls this tree
+// with the shared operator token, not a tenant-scoped internal JWT, and this
+// route previously had no operator-tree registration at all (unlike
+// role-definitions.ts, fixed the same way for bytepunx/authstar-steward#1).
+describe('applications -- operator tree', () => {
+  let app: FastifyInstance
+  let consequent: ConsequentApi
+  let publisher: ReturnType<typeof createSpyPublisher>
+
+  beforeEach(async () => {
+    consequent = await buildInMemoryConsequent()
+    publisher = createSpyPublisher()
+    app = await buildApp({
+      consequent,
+      publisher,
+      provisioningConfig: {
+        selfServiceEnabled: false,
+        operatorToken: 'op-secret',
+        defaultProvider: { name: 'dex', clientId: 'c1', discoveryUrl: 'https://dex/.well-known', scope: ['openid'] },
+        defaultProviderClientSecret: 'secret',
+      },
+    })
+    await consequent.handle('acme', 'tenant.create', {
+      slug: 'acme', name: 'Acme', domain: 'acme.test', cookieDomain: 'acme.test', adminContactId: 'c-1', createdBy: 'test-harness',
+    })
+  })
+
+  afterEach(async () => {
+    await app.close()
+  })
+
+  it('GET /operator/tenants/:tenantSlug/applications requires a valid operator bearer token', async () => {
+    const response = await app.inject({ method: 'GET', url: '/operator/tenants/acme/applications' })
+    expect(response.statusCode).toBe(403)
+  })
+
+  it('GET /operator/tenants/:tenantSlug/applications lists applications with just the operator token, no X-Operator-Actor', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/operator/tenants/acme/applications',
+      headers: { authorization: 'Bearer op-secret' },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual([])
+  })
+
+  it('POST /operator/tenants/:tenantSlug/applications requires X-Operator-Actor', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/operator/tenants/acme/applications',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'loci', name: 'Loci' },
+    })
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('creates and deletes an application end to end via the operator tree', async () => {
+    const create = await app.inject({
+      method: 'POST',
+      url: '/operator/tenants/acme/applications',
+      headers: { authorization: 'Bearer op-secret', 'x-operator-actor': 'alice' },
+      payload: { slug: 'loci', name: 'Loci', hosts: ['loci.acme.test'] },
+    })
+    expect(create.statusCode).toBe(201)
+    expect(publisher.calls[0].routingKey).toBe('application.created')
+
+    const remove = await app.inject({
+      method: 'DELETE',
+      url: '/operator/tenants/acme/applications/loci',
+      headers: { authorization: 'Bearer op-secret', 'x-operator-actor': 'alice' },
+    })
+    expect(remove.statusCode).toBe(200)
+    expect(remove.json().status).toBe('deleted')
+  })
+})
