@@ -8,7 +8,7 @@ import type { InviteState } from '../actors/invite_actor.js'
 import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypto.js'
 import { randomEcPrivateKeyPem, randomSecret } from '../lib/tenant-keys.js'
 import { isOperatorRequest } from '../lib/operator-auth.js'
-import { searchCriteria } from '../lib/consequent-types.js'
+import { fetchState, validateDomain, domainAlreadyTaken, RESERVED_WORD, SLUG_PATTERN } from '../lib/tenant-validation.js'
 
 // ADR 0091: the internal application slug for the reserved admin surface
 // stays `_admin` (unchanged, invisible in any URL) -- only its *host*
@@ -16,9 +16,7 @@ import { searchCriteria } from '../lib/consequent-types.js'
 // reserved word: no tenant or application may use it as a slug, since it's
 // now also a hostname label every tenant's admin host shares.
 const RESERVED_ADMIN_APPLICATION_SLUG = '_admin'
-const RESERVED_WORD = 'authstar'
 const WEB_UPSTREAM_BASE = 'http://web.authstar-platform.svc.cluster.local:3000'
-const DOMAIN_PATTERN = /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/
 
 // Per design/stories/tower/012-tenant-creation-and-provisioning.md, ADR 0067,
 // and ADR 0091/0093 -- the full provisioning sequence: validate slug ->
@@ -69,8 +67,6 @@ const FULL_TENANT_PERMISSIONS = [
   'erasure-requests:read', 'activity:read', 'tenant:manage',
 ].map((grant) => ({ grant, scope: 'tenant' as const, maxOutstanding: null }))
 
-const SLUG_PATTERN = /^[a-z0-9-]+$/
-
 const createTenantBodySchema = {
   type: 'object',
   additionalProperties: false,
@@ -103,27 +99,6 @@ const setDomainBodySchema = {
 
 interface SetDomainBody {
   domain: string
-}
-
-async function fetchState<T>(app: FastifyInstance, type: string, id: string): Promise<T | null> {
-  const instance = await app.consequent.fetch(type, id)
-  return (instance?.state as unknown as T) ?? null
-}
-
-function validateDomain(rawDomain: string): string | { error: string } {
-  const domain = rawDomain.toLowerCase()
-  if (!DOMAIN_PATTERN.test(domain)) {
-    return { error: 'domain must be a valid DNS hostname, e.g. "acme.io"' }
-  }
-  return domain
-}
-
-async function domainAlreadyTaken(app: FastifyInstance, domain: string, ownSlug: string): Promise<boolean> {
-  // Excludes `ownSlug` so a retried request for an already-created tenant
-  // with the same domain converges normally, matching this route's
-  // existing check-then-act idempotency model.
-  const domainHolders = await app.consequent.find('tenant', searchCriteria({ domain }))
-  return domainHolders.some((i) => (i.state as unknown as TenantState).slug !== ownSlug)
 }
 
 // ADR 0091/0093: everything that needs a real hostname -- the `_admin`

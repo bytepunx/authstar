@@ -14,6 +14,7 @@ import { createEphemeralHeraldKey } from './herald-payload-crypto.js'
 import type { ProvisioningConfig } from '../routes/provisioning.js'
 import registerTenantRoutes from '../routes/tenants.js'
 import registerProvisioningRoutes from '../routes/provisioning.js'
+import registerAdoptTenantRoutes from '../routes/adopt-tenant.js'
 import registerEnrichRoutes from '../routes/enrich.js'
 import registerIdentitiesRoutes from '../routes/identities.js'
 import registerContactsRoutes from '../routes/contacts.js'
@@ -129,6 +130,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
 
   await app.register(registerTenantRoutes)
   await app.register(registerProvisioningRoutes)
+  await app.register(registerAdoptTenantRoutes)
   await app.register(registerEnrichRoutes)
   await app.register(registerIdentitiesRoutes)
   await app.register(registerContactsRoutes)
