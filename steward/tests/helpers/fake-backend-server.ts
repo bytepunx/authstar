@@ -34,9 +34,19 @@ export interface FakeAccount {
   permissions: FakePermissionGrant[]
 }
 
+export interface FakeRoleDefinition {
+  tenant: string
+  name: string
+  scope: 'tenant' | { application: string }
+  description: string
+  status: 'active' | 'retired'
+  createdAt: string
+}
+
 export interface FakeBackendState {
   tenants: FakeTenant[]
   accounts: Record<string, FakeAccount[]> // keyed by tenant slug
+  roleDefinitions: Record<string, FakeRoleDefinition[]> // keyed by tenant slug
   validToken: string
   rejectNextRotation?: boolean
 }
@@ -73,6 +83,7 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
         { id: 'acc-2', email: 'nobody@acme.test', permissions: [] },
       ],
     },
+    roleDefinitions: initial?.roleDefinitions ?? { acme: [] },
     validToken: initial?.validToken ?? 'valid-operator-token',
   }
 
@@ -257,6 +268,65 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
           rotated: body.keys.map((key) => ({ key, version: 2, effectiveFrom: new Date().toISOString() })),
           failed: [],
         })
+        return
+      }
+
+      // GET/POST .../role-definitions -- role definition catalog
+      // (authstar-steward#1). Real tower shape (routes/role-definitions.ts):
+      // list is a bare array; create/retire return one definition object,
+      // never wrapped.
+      const roleDefsMatch = /^\/operator\/tenants\/([^/]+)\/role-definitions$/.exec(url.pathname)
+      if (method === 'GET' && roleDefsMatch) {
+        const slug = decodeURIComponent(roleDefsMatch[1])
+        send(res, 200, state.roleDefinitions[slug] ?? [])
+        return
+      }
+      if (method === 'POST' && roleDefsMatch) {
+        if (!req.headers['x-operator-actor']) {
+          send(res, 400, { error: 'X-Operator-Actor required' })
+          return
+        }
+        const slug = decodeURIComponent(roleDefsMatch[1])
+        const body = (await readBody(req)) as { name: string; scope: 'tenant' | { application: string }; description?: string }
+        const existing = state.roleDefinitions[slug] ?? []
+        const dup = existing.some((d) => d.name === body.name && JSON.stringify(d.scope) === JSON.stringify(body.scope))
+        if (dup) {
+          send(res, 409, { error: 'role definition already exists for this name/scope' })
+          return
+        }
+        const def: FakeRoleDefinition = {
+          tenant: slug, name: body.name, scope: body.scope, description: body.description ?? '', status: 'active', createdAt: new Date().toISOString(),
+        }
+        state.roleDefinitions[slug] = [...existing, def]
+        send(res, 201, def)
+        return
+      }
+
+      // DELETE .../role-definitions/:id -- retire (soft alias for PATCH
+      // {status:'retired'}). Real tower's `:id` is the actor's own
+      // composite key (tenant:name or tenant:application:name, routes/
+      // role-definitions.ts's keyFor) -- the client computes this itself
+      // (tower-client.ts's retireRoleDefinition), not just the bare name.
+      const roleDefRetireMatch = /^\/operator\/tenants\/([^/]+)\/role-definitions\/([^/]+)$/.exec(url.pathname)
+      if (method === 'DELETE' && roleDefRetireMatch) {
+        if (!req.headers['x-operator-actor']) {
+          send(res, 400, { error: 'X-Operator-Actor required' })
+          return
+        }
+        const [, slugRaw, idRaw] = roleDefRetireMatch
+        const slug = decodeURIComponent(slugRaw)
+        const id = decodeURIComponent(idRaw)
+        const defs = state.roleDefinitions[slug] ?? []
+        const def = defs.find((d) => {
+          const dId = typeof d.scope === 'object' ? `${d.tenant}:${d.scope.application}:${d.name}` : `${d.tenant}:${d.name}`
+          return dId === id
+        })
+        if (!def) {
+          send(res, 404, { error: 'not found' })
+          return
+        }
+        def.status = 'retired'
+        send(res, 200, def)
         return
       }
 

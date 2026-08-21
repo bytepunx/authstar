@@ -67,6 +67,33 @@ export interface CreateTenantErrorBody {
   failedStep?: string
 }
 
+// Matches tower's real role-definition shape exactly (routes/
+// role-definitions.ts's `scopeSchema`/`toResponse`) -- `'tenant'` for a
+// tenant-wide role, or `{application}` scoped to one of the tenant's own
+// applications (tower validates that application exists and is active at
+// creation time, 400s otherwise).
+export type RoleDefinitionScope = 'tenant' | { application: string }
+
+export interface RoleDefinition {
+  tenant: string
+  name: string
+  scope: RoleDefinitionScope
+  description: string
+  status: 'active' | 'retired'
+  createdAt: string
+}
+
+// Matches tower's real GET /operator/tenants/:slug/role-definitions
+// response: a bare array (`states.map(toResponse)`), same shape convention
+// as AccountListResponse below -- no wrapper.
+export type RoleDefinitionListResponse = RoleDefinition[]
+
+export interface CreateRoleDefinitionRequest {
+  name: string
+  scope: RoleDefinitionScope
+  description?: string
+}
+
 // Matches tower's real permission-grant shape exactly (accounts.ts's
 // `permissionBodySchema` / `account_actor.ts`'s `PermissionGrant`, and
 // invites.ts's own `permissionSchema` -- the same shape both places).

@@ -8,11 +8,15 @@ import type {
   Account,
   AccountListResponse,
   ActivityListResponse,
+  CreateRoleDefinitionRequest,
   CreateTenantRequest,
   CreateTenantResponse,
   InviteRequest,
   InviteResponse,
   PermissionGrant,
+  RoleDefinition,
+  RoleDefinitionListResponse,
+  RoleDefinitionScope,
   RotateTenantKeysRequest,
   RotateTenantKeysResponse,
   StuckErasureRequestsResponse,
@@ -155,6 +159,61 @@ export function createTowerClient({ baseUrl, fetchImpl = fetch }: TowerClientOpt
         token,
         actorLabel,
         body,
+      })
+    },
+
+    // Role definition management (authstar-steward#1). NOTE: as of this
+    // writing, tower's role-definitions.ts registers only the tenant-scoped
+    // (permission-gated) tree, not an /operator/... equivalent -- unlike
+    // accounts.ts/invites.ts, which register both per ADR 0030's "operator
+    // tree wraps the same handlers, different auth middleware" pattern.
+    // These calls are written against the operator path tower *should*
+    // expose (matching every other proxy in this file) but will 404 until
+    // tower adds it.
+    listRoleDefinitions(
+      token: string,
+      tenantSlug: string,
+      params: { status?: 'active' | 'retired'; scope?: string } = {},
+    ): Promise<BackendResult<RoleDefinitionListResponse>> {
+      return call<RoleDefinitionListResponse>({
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/role-definitions`,
+        token,
+        query: { status: params.status, scope: params.scope },
+      })
+    },
+
+    createRoleDefinition(
+      token: string,
+      actorLabel: string,
+      tenantSlug: string,
+      body: CreateRoleDefinitionRequest,
+    ): Promise<BackendResult<RoleDefinition>> {
+      return call<RoleDefinition>({
+        method: 'POST',
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/role-definitions`,
+        token,
+        actorLabel,
+        body,
+      })
+    },
+
+    retireRoleDefinition(
+      token: string,
+      actorLabel: string,
+      tenantSlug: string,
+      name: string,
+      scope: RoleDefinitionScope,
+    ): Promise<BackendResult<RoleDefinition>> {
+      // Tower's toResponse (role-definitions.ts) never returns an `id` --
+      // the actor's own composite key (tenant:name or
+      // tenant:application:name, see that file's keyFor) *is* the id the
+      // DELETE route's :id param expects, computed the same way here.
+      const id = scope === 'tenant' ? `${tenantSlug}:${name}` : `${tenantSlug}:${scope.application}:${name}`
+      return call<RoleDefinition>({
+        method: 'DELETE',
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/role-definitions/${encodeURIComponent(id)}`,
+        token,
+        actorLabel,
       })
     },
 

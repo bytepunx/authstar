@@ -140,6 +140,21 @@ test.describe('Tenant Operator Context (Story 003 Admin Access, Story 005 Rotate
     await expect(page.getByText('Invite sent to new-admin@acme.test')).toBeVisible()
   })
 
+  // authstar-steward#1: role definition management.
+  test('creates and retires a role definition', async ({ page }) => {
+    await expect(page.getByText('No role definitions yet.')).toBeVisible()
+
+    await page.getByPlaceholder('role name, e.g. plan:family').fill('plan:family')
+    await page.getByPlaceholder('application slug (blank = tenant-wide)').fill('loci')
+    await page.getByRole('button', { name: 'Create', exact: true }).click()
+
+    await expect(page.getByText('loci: plan:family')).toBeVisible()
+    await expect(page.getByText('(active)')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Retire' }).click()
+    await expect(page.getByText('(retired)')).toBeVisible()
+  })
+
   test('grants a permission to an account found by email search', async ({ page }) => {
     await page.getByPlaceholder('account email').fill('nobody@acme.test')
     await page.getByRole('button', { name: 'Search', exact: true }).click()

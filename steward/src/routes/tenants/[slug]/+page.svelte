@@ -7,9 +7,12 @@
   import type {
     Account,
     AccountListResponse,
+    CreateRoleDefinitionRequest,
     InviteRequest,
     InviteResponse,
     PermissionGrant,
+    RoleDefinition,
+    RoleDefinitionListResponse,
     RotateTenantKeysResponse,
     TenantDetailResponse,
     TenantRotationKey,
@@ -52,6 +55,19 @@
   let inviteError = $state<string | undefined>(undefined)
   let inviteResult = $state<InviteResponse | undefined>(undefined)
 
+  // -- Role definitions (authstar-steward#1) ---------------------------
+  let roleDefinitions = $state<RoleDefinition[]>([])
+  let roleDefinitionsLoading = $state(false)
+  let roleDefinitionsError = $state<string | undefined>(undefined)
+
+  let newRoleName = $state('')
+  let newRoleApplication = $state('')
+  let creatingRole = $state(false)
+  let createRoleError = $state<string | undefined>(undefined)
+
+  let retiringRole = $state<string | undefined>(undefined)
+  let retireRoleError = $state<string | undefined>(undefined)
+
   onMount(() => {
     if (!session.connected) {
       goto('/connect')
@@ -59,6 +75,7 @@
     }
     void loadDetail()
     void loadHolders()
+    void loadRoleDefinitions()
   })
 
   async function loadDetail() {
@@ -97,6 +114,55 @@
       holdersError = err instanceof ApiError ? err.message : 'Failed to load admin access.'
     } finally {
       holdersLoading = false
+    }
+  }
+
+  async function loadRoleDefinitions() {
+    roleDefinitionsLoading = true
+    roleDefinitionsError = undefined
+    try {
+      roleDefinitions = await apiCall<RoleDefinitionListResponse>(`/api/tenants/${encodeURIComponent(slug)}/role-definitions`)
+    } catch (err) {
+      roleDefinitionsError = err instanceof ApiError ? err.message : 'Failed to load role definitions.'
+    } finally {
+      roleDefinitionsLoading = false
+    }
+  }
+
+  async function createRoleDefinition(event: SubmitEvent) {
+    event.preventDefault()
+    creatingRole = true
+    createRoleError = undefined
+    const body: CreateRoleDefinitionRequest = {
+      name: newRoleName,
+      scope: newRoleApplication ? { application: newRoleApplication } : 'tenant',
+    }
+    try {
+      await apiCall(`/api/tenants/${encodeURIComponent(slug)}/role-definitions`, { method: 'POST', body })
+      newRoleName = ''
+      newRoleApplication = ''
+      await loadRoleDefinitions()
+    } catch (err) {
+      createRoleError = err instanceof ApiError ? err.message : 'Failed to create role definition.'
+    } finally {
+      creatingRole = false
+    }
+  }
+
+  async function retireRoleDefinition(def: RoleDefinition) {
+    retiringRole = def.name
+    retireRoleError = undefined
+    try {
+      const query = typeof def.scope === 'object' ? `?applicationScope=${encodeURIComponent(def.scope.application)}` : ''
+      await apiCall(
+        `/api/tenants/${encodeURIComponent(slug)}/role-definitions/${encodeURIComponent(def.name)}${query}`,
+        { method: 'DELETE' },
+      )
+      await loadRoleDefinitions()
+    } catch (err) {
+      retireRoleError = err instanceof ApiError ? err.message : 'Failed to retire role definition.'
+    } finally {
+      retiringRole = undefined
     }
   }
 
@@ -334,6 +400,51 @@
         Failed to rotate: {rotateResult.failed.map((f) => `${f.key} (${f.error})`).join(', ')}.
       </p>
     {/if}
+  {/if}
+</section>
+
+<section>
+  <h2>Role Definitions</h2>
+
+  {#if roleDefinitionsError}
+    <p class="error" role="alert">{roleDefinitionsError}</p>
+  {/if}
+
+  {#if roleDefinitionsLoading}
+    <p>Loading...</p>
+  {:else}
+    <ul>
+      {#each roleDefinitions as def (def.name + JSON.stringify(def.scope))}
+        <li>
+          {typeof def.scope === 'object' ? def.scope.application : 'tenant-wide'}: {def.name}
+          ({def.status})
+          {#if def.status === 'active'}
+            <button
+              type="button"
+              disabled={retiringRole === def.name}
+              onclick={() => retireRoleDefinition(def)}
+            >
+              Retire
+            </button>
+          {/if}
+        </li>
+      {:else}
+        <li>No role definitions yet.</li>
+      {/each}
+    </ul>
+  {/if}
+  {#if retireRoleError}
+    <p class="error" role="alert">{retireRoleError}</p>
+  {/if}
+
+  <h3>Create a role definition</h3>
+  <form onsubmit={createRoleDefinition}>
+    <input type="text" placeholder="role name, e.g. plan:family" bind:value={newRoleName} required />
+    <input type="text" placeholder="application slug (blank = tenant-wide)" bind:value={newRoleApplication} />
+    <button type="submit" disabled={creatingRole || !newRoleName}>{creatingRole ? 'Creating...' : 'Create'}</button>
+  </form>
+  {#if createRoleError}
+    <p class="error" role="alert">{createRoleError}</p>
   {/if}
 </section>
 

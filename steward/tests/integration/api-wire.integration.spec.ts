@@ -167,4 +167,33 @@ describe('steward server <-> fake tower, over real HTTP', () => {
     const afterRevokeBody = (await afterRevoke.json()) as Array<{ id: string; permissions: unknown[] }>
     expect(afterRevokeBody.find((a) => a.id === 'acc-2')?.permissions).toHaveLength(0)
   })
+
+  it('creates, lists, and retires a role definition end to end (authstar-steward#1)', async () => {
+    const create = await fetch(`${steward.url}/api/tenants/acme/role-definitions`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: 'plan:family', scope: { application: 'loci' } }),
+    })
+    expect(create.status).toBe(201)
+    const created = (await create.json()) as { name: string; status: string }
+    expect(created.name).toBe('plan:family')
+    expect(created.status).toBe('active')
+
+    const list = await fetch(`${steward.url}/api/tenants/acme/role-definitions`, {
+      headers: { Authorization: `Bearer ${backend.state.validToken}` },
+    })
+    const listBody = (await list.json()) as Array<{ name: string }>
+    expect(listBody.map((d) => d.name)).toContain('plan:family')
+
+    const retire = await fetch(
+      `${steward.url}/api/tenants/acme/role-definitions/${encodeURIComponent('plan:family')}?applicationScope=loci`,
+      {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test' },
+      },
+    )
+    expect(retire.status).toBe(200)
+    const retired = (await retire.json()) as { status: string }
+    expect(retired.status).toBe('retired')
+  })
 })
