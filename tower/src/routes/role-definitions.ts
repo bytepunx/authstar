@@ -1,8 +1,9 @@
-import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
+import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
 import type { RoleDefinitionState } from '../actors/role_definition_actor.js'
 import { requirePermission } from '../lib/permissions.js'
+import { requireOperatorAuth, requireOperatorActor } from '../lib/operator-auth.js'
 import { createKeyedMutex } from '../lib/mutex.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 
@@ -133,140 +134,187 @@ function toResponse(state: RoleDefinitionState) {
 // same key can both see stale, before either has persisted.
 const roleDefinitionMutex = createKeyedMutex()
 
+async function listRoleDefinitions(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug } = request.params as { tenantSlug: string }
+  const { status, scope } = request.query as { status?: 'active' | 'retired', scope?: string }
+
+  const tenant = await fetchTenant(app, tenantSlug)
+  if (!tenantExists(tenant)) return reply.code(404).send()
+
+  const instances = await app.consequent.find('roleDefinition', searchCriteria({ tenant: tenantSlug }))
+  const states = instances.map((i) => i.state as unknown as RoleDefinitionState)
+  return states
+    .filter((s) => !status || s.status === status)
+    .filter((s) => {
+      if (!scope) return true
+      if (scope === 'tenant') return s.scope === 'tenant'
+      return typeof s.scope === 'object' && s.scope.application === scope
+    })
+    .map(toResponse)
+}
+
+async function getRoleDefinition(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
+  const state = await fetchRoleDefinition(app, tenantSlug, id)
+  if (!state) return reply.code(404).send()
+  return toResponse(state)
+}
+
+async function createRoleDefinition(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug } = request.params as { tenantSlug: string }
+  const body = request.body as { name: string, scope: Scope, description?: string }
+
+  const tenant = await fetchTenant(app, tenantSlug)
+  if (!tenantExists(tenant)) return reply.code(404).send()
+
+  if (!(await scopeApplicationValid(app, tenantSlug, body.scope))) {
+    return reply.code(400).send({ error: 'scope.application must reference an existing, active application for this tenant' })
+  }
+
+  const key = keyFor(tenantSlug, body.name, body.scope)
+  // Serialized per key -- `consequent`'s own per-actor queue doesn't cover
+  // the `getOrCreate` fetch the `doesNotExist` guard depends on (see
+  // `mutex.ts`'s header comment); without this, two concurrent creates for
+  // the same name+scope could both pass the guard.
+  const results = await roleDefinitionMutex.runExclusive(key, () => app.consequent.handle(key, 'roleDefinition.create', {
+    tenant: tenantSlug,
+    name: body.name,
+    scope: body.scope,
+    description: body.description ?? '',
+  }))
+  const rejection = results.find((r) => r?.rejected)
+  if (rejection) {
+    return reply.code(409).send({ error: rejection.reason?.message })
+  }
+
+  await app.publisher.publish('roleDefinition.created', {
+    tenant: tenantSlug, name: body.name, scope: body.scope, status: 'active',
+  })
+
+  const created = await fetchRoleDefinition(app, tenantSlug, key)
+  return reply.code(201).send(toResponse(created!))
+}
+
+async function patchRoleDefinition(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
+  const body = request.body as { description?: string, status?: 'retired' }
+
+  const current = await fetchRoleDefinition(app, tenantSlug, id)
+  if (!current) return reply.code(404).send()
+
+  if (body.description !== undefined) {
+    const results = await app.consequent.handle(id, 'roleDefinition.update', { description: body.description })
+    const rejection = results.find((r) => r?.rejected)
+    if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+  }
+
+  if (body.status === 'retired') {
+    const results = await app.consequent.handle(id, 'roleDefinition.retire', {})
+    const rejection = results.find((r) => r?.rejected)
+    if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+
+    await app.publisher.publish('roleDefinition.retired', {
+      tenant: tenantSlug, name: current.name, scope: current.scope, status: 'retired',
+    })
+  }
+
+  const updated = await fetchRoleDefinition(app, tenantSlug, id)
+  return toResponse(updated!)
+}
+
+// Soft alias for `PATCH { status: "retired" }` (ADR 0047/0053) -- existing
+// grants of an already-retired role stay intact as historical fact,
+// retiring only blocks future grants.
+async function deleteRoleDefinition(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
+  const current = await fetchRoleDefinition(app, tenantSlug, id)
+  if (!current) return reply.code(404).send()
+
+  if (current.status === 'retired') {
+    // Retry converges rather than erroring -- same "retry-same-request is
+    // the recovery model" convention `applications.ts`'s own DELETE follows.
+    return toResponse(current)
+  }
+
+  const results = await app.consequent.handle(id, 'roleDefinition.retire', {})
+  const rejection = results.find((r) => r?.rejected)
+  if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+
+  await app.publisher.publish('roleDefinition.retired', {
+    tenant: tenantSlug, name: current.name, scope: current.scope, status: 'retired',
+  })
+
+  const updated = await fetchRoleDefinition(app, tenantSlug, id)
+  return toResponse(updated!)
+}
+
 const roleDefinitionsRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.get(
     '/tenants/:tenantSlug/role-definitions',
     { schema: { params: tenantParamsSchema, querystring: listQuerySchema } },
-    async (request, reply) => {
-      const { tenantSlug } = request.params as { tenantSlug: string }
-      const { status, scope } = request.query as { status?: 'active' | 'retired', scope?: string }
-
-      const tenant = await fetchTenant(app, tenantSlug)
-      if (!tenantExists(tenant)) return reply.code(404).send()
-
-      const instances = await app.consequent.find('roleDefinition', searchCriteria({ tenant: tenantSlug }))
-      const states = instances.map((i) => i.state as unknown as RoleDefinitionState)
-      return states
-        .filter((s) => !status || s.status === status)
-        .filter((s) => {
-          if (!scope) return true
-          if (scope === 'tenant') return s.scope === 'tenant'
-          return typeof s.scope === 'object' && s.scope.application === scope
-        })
-        .map(toResponse)
-    },
+    (request, reply) => listRoleDefinitions(app, request, reply),
   )
 
   app.get(
     '/tenants/:tenantSlug/role-definitions/:id',
     { schema: { params: roleDefParamsSchema } },
-    async (request, reply) => {
-      const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
-      const state = await fetchRoleDefinition(app, tenantSlug, id)
-      if (!state) return reply.code(404).send()
-      return toResponse(state)
-    },
+    (request, reply) => getRoleDefinition(app, request, reply),
   )
 
   app.post(
     '/tenants/:tenantSlug/role-definitions',
     { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('roles:manage') },
-    async (request, reply) => {
-      const { tenantSlug } = request.params as { tenantSlug: string }
-      const body = request.body as { name: string, scope: Scope, description?: string }
-
-      const tenant = await fetchTenant(app, tenantSlug)
-      if (!tenantExists(tenant)) return reply.code(404).send()
-
-      if (!(await scopeApplicationValid(app, tenantSlug, body.scope))) {
-        return reply.code(400).send({ error: 'scope.application must reference an existing, active application for this tenant' })
-      }
-
-      const key = keyFor(tenantSlug, body.name, body.scope)
-      // Serialized per key -- `consequent`'s own per-actor queue doesn't
-      // cover the `getOrCreate` fetch the `doesNotExist` guard depends on
-      // (see `mutex.ts`'s header comment); without this, two concurrent
-      // creates for the same name+scope could both pass the guard.
-      const results = await roleDefinitionMutex.runExclusive(key, () => app.consequent.handle(key, 'roleDefinition.create', {
-        tenant: tenantSlug,
-        name: body.name,
-        scope: body.scope,
-        description: body.description ?? '',
-      }))
-      const rejection = results.find((r) => r?.rejected)
-      if (rejection) {
-        return reply.code(409).send({ error: rejection.reason?.message })
-      }
-
-      await app.publisher.publish('roleDefinition.created', {
-        tenant: tenantSlug, name: body.name, scope: body.scope, status: 'active',
-      })
-
-      const created = await fetchRoleDefinition(app, tenantSlug, key)
-      return reply.code(201).send(toResponse(created!))
-    },
+    (request, reply) => createRoleDefinition(app, request, reply),
   )
 
   app.patch(
     '/tenants/:tenantSlug/role-definitions/:id',
     { schema: { params: roleDefParamsSchema, body: patchBodySchema }, preHandler: requirePermission('roles:manage') },
-    async (request, reply) => {
-      const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
-      const body = request.body as { description?: string, status?: 'retired' }
-
-      const current = await fetchRoleDefinition(app, tenantSlug, id)
-      if (!current) return reply.code(404).send()
-
-      if (body.description !== undefined) {
-        const results = await app.consequent.handle(id, 'roleDefinition.update', { description: body.description })
-        const rejection = results.find((r) => r?.rejected)
-        if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-      }
-
-      if (body.status === 'retired') {
-        const results = await app.consequent.handle(id, 'roleDefinition.retire', {})
-        const rejection = results.find((r) => r?.rejected)
-        if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-
-        await app.publisher.publish('roleDefinition.retired', {
-          tenant: tenantSlug, name: current.name, scope: current.scope, status: 'retired',
-        })
-      }
-
-      const updated = await fetchRoleDefinition(app, tenantSlug, id)
-      return toResponse(updated!)
-    },
+    (request, reply) => patchRoleDefinition(app, request, reply),
   )
 
-  // Soft alias for `PATCH { status: "retired" }` (ADR 0047/0053) -- existing
-  // grants of an already-retired role stay intact as historical fact,
-  // retiring only blocks future grants.
   app.delete(
     '/tenants/:tenantSlug/role-definitions/:id',
     { schema: { params: roleDefParamsSchema }, preHandler: requirePermission('roles:manage') },
-    async (request, reply) => {
-      const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
-      const current = await fetchRoleDefinition(app, tenantSlug, id)
-      if (!current) return reply.code(404).send()
+    (request, reply) => deleteRoleDefinition(app, request, reply),
+  )
 
-      if (current.status === 'retired') {
-        // Retry converges rather than erroring -- same "retry-same-request
-        // is the recovery model" convention `applications.ts`'s own DELETE
-        // follows.
-        return toResponse(current)
-      }
+  // Story 013: the operator tree -- same handlers, bearer-token auth
+  // instead of `permissions`. GET routes need only a valid operator token
+  // (nothing to attribute); mutating routes additionally require
+  // `X-Operator-Actor`, matching every other operator-tree pair in this
+  // codebase (accounts.ts, invites.ts, providers.ts). Added per
+  // bytepunx/authstar-steward#1's own finding: steward authenticates as an
+  // operator, not a tenant-scoped `roles:manage` JWT, so its role-definition
+  // UI 404'd against this route tree until now.
+  app.get(
+    '/operator/tenants/:tenantSlug/role-definitions',
+    { schema: { params: tenantParamsSchema, querystring: listQuerySchema }, preHandler: requireOperatorAuth(app) },
+    (request, reply) => listRoleDefinitions(app, request, reply),
+  )
 
-      const results = await app.consequent.handle(id, 'roleDefinition.retire', {})
-      const rejection = results.find((r) => r?.rejected)
-      if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+  app.get(
+    '/operator/tenants/:tenantSlug/role-definitions/:id',
+    { schema: { params: roleDefParamsSchema }, preHandler: requireOperatorAuth(app) },
+    (request, reply) => getRoleDefinition(app, request, reply),
+  )
 
-      await app.publisher.publish('roleDefinition.retired', {
-        tenant: tenantSlug, name: current.name, scope: current.scope, status: 'retired',
-      })
+  app.post(
+    '/operator/tenants/:tenantSlug/role-definitions',
+    { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => createRoleDefinition(app, request, reply),
+  )
 
-      const updated = await fetchRoleDefinition(app, tenantSlug, id)
-      return toResponse(updated!)
-    },
+  app.patch(
+    '/operator/tenants/:tenantSlug/role-definitions/:id',
+    { schema: { params: roleDefParamsSchema, body: patchBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => patchRoleDefinition(app, request, reply),
+  )
+
+  app.delete(
+    '/operator/tenants/:tenantSlug/role-definitions/:id',
+    { schema: { params: roleDefParamsSchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => deleteRoleDefinition(app, request, reply),
   )
 }
 

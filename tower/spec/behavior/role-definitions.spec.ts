@@ -335,3 +335,80 @@ describe('role-definitions -- API contract', () => {
     })
   })
 })
+
+// Story 013's operator tree -- same handlers, bearer-token auth instead of
+// `roles:manage`. Added per bytepunx/authstar-steward#1: steward calls this
+// tree with the shared operator token, not a tenant-scoped internal JWT, and
+// this route previously had no operator-tree registration at all (unlike
+// accounts.ts/invites.ts/providers.ts, which all register both).
+describe('role-definitions -- operator tree', () => {
+  let app: FastifyInstance
+  let consequent: ConsequentApi
+  let publisher: ReturnType<typeof createSpyPublisher>
+
+  beforeEach(async () => {
+    consequent = await buildInMemoryConsequent()
+    publisher = createSpyPublisher()
+    app = await buildApp({
+      consequent,
+      publisher,
+      provisioningConfig: {
+        selfServiceEnabled: false,
+        operatorToken: 'op-secret',
+        defaultProvider: { name: 'dex', clientId: 'c1', discoveryUrl: 'https://dex/.well-known', scope: ['openid'] },
+        defaultProviderClientSecret: 'secret',
+      },
+    })
+    await consequent.handle('acme', 'tenant.create', {
+      slug: 'acme', name: 'Acme', domain: 'acme.test', cookieDomain: 'acme.test', adminContactId: 'c-1', createdBy: 'test-harness',
+    })
+  })
+
+  afterEach(async () => {
+    await app.close()
+  })
+
+  it('GET /operator/tenants/:tenantSlug/role-definitions requires a valid operator bearer token', async () => {
+    const response = await app.inject({ method: 'GET', url: '/operator/tenants/acme/role-definitions' })
+    expect(response.statusCode).toBe(403)
+  })
+
+  it('GET /operator/tenants/:tenantSlug/role-definitions lists definitions with just the operator token, no X-Operator-Actor', async () => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/operator/tenants/acme/role-definitions',
+      headers: { authorization: 'Bearer op-secret' },
+    })
+    expect(response.statusCode).toBe(200)
+    expect(response.json()).toEqual([])
+  })
+
+  it('POST /operator/tenants/:tenantSlug/role-definitions requires X-Operator-Actor', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/operator/tenants/acme/role-definitions',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { name: 'admin', scope: 'tenant' },
+    })
+    expect(response.statusCode).toBe(400)
+  })
+
+  it('creates and retires a role definition end to end via the operator tree', async () => {
+    const create = await app.inject({
+      method: 'POST',
+      url: '/operator/tenants/acme/role-definitions',
+      headers: { authorization: 'Bearer op-secret', 'x-operator-actor': 'alice' },
+      payload: { name: 'admin', scope: 'tenant' },
+    })
+    expect(create.statusCode).toBe(201)
+    expect(publisher.calls[0].routingKey).toBe('roleDefinition.created')
+
+    const retire = await app.inject({
+      method: 'DELETE',
+      url: `/operator/tenants/acme/role-definitions/${encodeURIComponent('acme:admin')}`,
+      headers: { authorization: 'Bearer op-secret', 'x-operator-actor': 'alice' },
+    })
+    expect(retire.statusCode).toBe(200)
+    expect(retire.json().status).toBe('retired')
+  })
+})
