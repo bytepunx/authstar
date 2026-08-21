@@ -7,6 +7,9 @@
   import type {
     Account,
     AccountListResponse,
+    Application,
+    ApplicationListResponse,
+    CreateApplicationRequest,
     CreateRoleDefinitionRequest,
     InviteRequest,
     InviteResponse,
@@ -21,7 +24,7 @@
   const slug = $derived(page.params.slug!)
 
   // -- Tenant detail (ADR 0091: domain -> authstar.<domain> admin URL) --
-  let domain = $state<string | undefined>(undefined)
+  let domain = $state<string | null | undefined>(undefined)
   let detailError = $state<string | undefined>(undefined)
 
   // -- Admin Access (Story 003) --------------------------------------
@@ -55,6 +58,20 @@
   let inviteError = $state<string | undefined>(undefined)
   let inviteResult = $state<InviteResponse | undefined>(undefined)
 
+  // -- Applications (bytepunx/authstar-tower#3's own prerequisite) ------
+  let applications = $state<Application[]>([])
+  let applicationsLoading = $state(false)
+  let applicationsError = $state<string | undefined>(undefined)
+
+  let newAppSlug = $state('')
+  let newAppName = $state('')
+  let newAppHosts = $state('')
+  let creatingApp = $state(false)
+  let createAppError = $state<string | undefined>(undefined)
+
+  let deletingApp = $state<string | undefined>(undefined)
+  let deleteAppError = $state<string | undefined>(undefined)
+
   // -- Role definitions (authstar-steward#1) ---------------------------
   let roleDefinitions = $state<RoleDefinition[]>([])
   let roleDefinitionsLoading = $state(false)
@@ -75,6 +92,7 @@
     }
     void loadDetail()
     void loadHolders()
+    void loadApplications()
     void loadRoleDefinitions()
   })
 
@@ -114,6 +132,50 @@
       holdersError = err instanceof ApiError ? err.message : 'Failed to load admin access.'
     } finally {
       holdersLoading = false
+    }
+  }
+
+  async function loadApplications() {
+    applicationsLoading = true
+    applicationsError = undefined
+    try {
+      applications = await apiCall<ApplicationListResponse>(`/api/tenants/${encodeURIComponent(slug)}/applications`)
+    } catch (err) {
+      applicationsError = err instanceof ApiError ? err.message : 'Failed to load applications.'
+    } finally {
+      applicationsLoading = false
+    }
+  }
+
+  async function createApplication(event: SubmitEvent) {
+    event.preventDefault()
+    creatingApp = true
+    createAppError = undefined
+    const hosts = newAppHosts.split(',').map((h) => h.trim()).filter((h) => h.length > 0)
+    const body: CreateApplicationRequest = { slug: newAppSlug, name: newAppName, hosts: hosts.length > 0 ? hosts : undefined }
+    try {
+      await apiCall(`/api/tenants/${encodeURIComponent(slug)}/applications`, { method: 'POST', body })
+      newAppSlug = ''
+      newAppName = ''
+      newAppHosts = ''
+      await loadApplications()
+    } catch (err) {
+      createAppError = err instanceof ApiError ? err.message : 'Failed to create application.'
+    } finally {
+      creatingApp = false
+    }
+  }
+
+  async function deleteApplication(app: Application) {
+    deletingApp = app.slug
+    deleteAppError = undefined
+    try {
+      await apiCall(`/api/tenants/${encodeURIComponent(slug)}/applications/${encodeURIComponent(app.slug)}`, { method: 'DELETE' })
+      await loadApplications()
+    } catch (err) {
+      deleteAppError = err instanceof ApiError ? err.message : 'Failed to delete application.'
+    } finally {
+      deletingApp = undefined
     }
   }
 
@@ -400,6 +462,56 @@
         Failed to rotate: {rotateResult.failed.map((f) => `${f.key} (${f.error})`).join(', ')}.
       </p>
     {/if}
+  {/if}
+</section>
+
+<section>
+  <h2>Applications</h2>
+
+  {#if applicationsError}
+    <p class="error" role="alert">{applicationsError}</p>
+  {/if}
+
+  {#if applicationsLoading}
+    <p>Loading...</p>
+  {:else}
+    <ul>
+      {#each applications as application (application.slug)}
+        <li>
+          {application.slug} -- {application.name} ({application.status})
+          {#if application.hosts.length > 0}
+            [{application.hosts.join(', ')}]
+          {/if}
+          {#if application.status !== 'deleted'}
+            <button
+              type="button"
+              disabled={deletingApp === application.slug}
+              onclick={() => deleteApplication(application)}
+            >
+              Delete
+            </button>
+          {/if}
+        </li>
+      {:else}
+        <li>No applications registered yet.</li>
+      {/each}
+    </ul>
+  {/if}
+  {#if deleteAppError}
+    <p class="error" role="alert">{deleteAppError}</p>
+  {/if}
+
+  <h3>Register an application</h3>
+  <form onsubmit={createApplication}>
+    <input type="text" placeholder="application slug, e.g. loci" bind:value={newAppSlug} required />
+    <input type="text" placeholder="display name" bind:value={newAppName} required />
+    <input type="text" placeholder="hosts, comma-separated (optional)" bind:value={newAppHosts} />
+    <button type="submit" disabled={creatingApp || !newAppSlug || !newAppName}>
+      {creatingApp ? 'Registering...' : 'Register'}
+    </button>
+  </form>
+  {#if createAppError}
+    <p class="error" role="alert">{createAppError}</p>
   {/if}
 </section>
 

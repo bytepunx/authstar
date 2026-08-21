@@ -94,6 +94,31 @@ export interface CreateRoleDefinitionRequest {
   description?: string
 }
 
+// Matches tower's real application shape exactly (routes/applications.ts's
+// `toResponse`) -- `_admin` is never included, excluded server-side.
+export interface Application {
+  tenant: string
+  slug: string
+  name: string
+  hosts: string[]
+  publicUrl: string
+  exposedProviders: string[]
+  status: 'active' | 'suspended' | 'deleted'
+  createdAt: string
+}
+
+// Matches tower's real GET /operator/tenants/:slug/applications response: a
+// bare array, same shape convention as RoleDefinitionListResponse above.
+export type ApplicationListResponse = Application[]
+
+export interface CreateApplicationRequest {
+  slug: string
+  name: string
+  hosts?: string[]
+  publicUrl?: string
+  exposedProviders?: string[]
+}
+
 // Matches tower's real permission-grant shape exactly (accounts.ts's
 // `permissionBodySchema` / `account_actor.ts`'s `PermissionGrant`, and
 // invites.ts's own `permissionSchema` -- the same shape both places).

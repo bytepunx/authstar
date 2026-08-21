@@ -8,6 +8,9 @@ import type {
   Account,
   AccountListResponse,
   ActivityListResponse,
+  Application,
+  ApplicationListResponse,
+  CreateApplicationRequest,
   CreateRoleDefinitionRequest,
   CreateTenantRequest,
   CreateTenantResponse,
@@ -162,14 +165,11 @@ export function createTowerClient({ baseUrl, fetchImpl = fetch }: TowerClientOpt
       })
     },
 
-    // Role definition management (authstar-steward#1). NOTE: as of this
-    // writing, tower's role-definitions.ts registers only the tenant-scoped
-    // (permission-gated) tree, not an /operator/... equivalent -- unlike
-    // accounts.ts/invites.ts, which register both per ADR 0030's "operator
-    // tree wraps the same handlers, different auth middleware" pattern.
-    // These calls are written against the operator path tower *should*
-    // expose (matching every other proxy in this file) but will 404 until
-    // tower adds it.
+    // Role definition management (authstar-steward#1). tower's
+    // role-definitions.ts registers both the tenant-scoped
+    // (permission-gated) tree and this operator tree, per ADR 0030's
+    // "operator tree wraps the same handlers, different auth middleware"
+    // pattern.
     listRoleDefinitions(
       token: string,
       tenantSlug: string,
@@ -236,6 +236,52 @@ export function createTowerClient({ baseUrl, fetchImpl = fetch }: TowerClientOpt
         path: '/operator/erasure-requests/stuck',
         token,
         query: { olderThanHours },
+      })
+    },
+
+    // Application registration (bytepunx/authstar-tower#3's own prerequisite:
+    // registering `loci` as an application under `bytepunx` before its
+    // scoped role definitions can be created). tower's applications.ts
+    // registers both the tenant-scoped (`applications:manage` JWT) tree and
+    // this operator tree.
+    listApplications(
+      token: string,
+      tenantSlug: string,
+      params: { includeDeleted?: boolean } = {},
+    ): Promise<BackendResult<ApplicationListResponse>> {
+      return call<ApplicationListResponse>({
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/applications`,
+        token,
+        query: { includeDeleted: params.includeDeleted ? 'true' : undefined },
+      })
+    },
+
+    createApplication(
+      token: string,
+      actorLabel: string,
+      tenantSlug: string,
+      body: CreateApplicationRequest,
+    ): Promise<BackendResult<Application>> {
+      return call<Application>({
+        method: 'POST',
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/applications`,
+        token,
+        actorLabel,
+        body,
+      })
+    },
+
+    deleteApplication(
+      token: string,
+      actorLabel: string,
+      tenantSlug: string,
+      appSlug: string,
+    ): Promise<BackendResult<Application>> {
+      return call<Application>({
+        method: 'DELETE',
+        path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/applications/${encodeURIComponent(appSlug)}`,
+        token,
+        actorLabel,
       })
     },
 
