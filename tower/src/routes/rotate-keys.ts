@@ -1,5 +1,5 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { jsonPatchAppend } from '@bytepunx/signet-client'
+import { jsonPatchAppend, jsonPatchRemove, jsonPatchTest } from '@bytepunx/signet-client'
 import { randomEcPrivateKeyPem, randomSecret } from '../lib/tenant-keys.js'
 import { isOperatorRequest } from '../lib/operator-auth.js'
 
@@ -33,13 +33,12 @@ import { isOperatorRequest } from '../lib/operator-auth.js'
 // ordering, never by exact value, so an arbitrary large integer works
 // identically to a small sequential one.
 //
-// Pruning generations past their retention window is NOT done here -- ADR
-// 0080 describes pruning "at rotation time," but doing that safely requires
-// knowing the current array's exact contents (to remove the right entries by
-// index), which hits the same missing-read-access gap version numbering
-// sidesteps. Deferred as a known, documented gap rather than implemented
-// unsafely; generations simply accumulate until pruning is designed
-// (tracked alongside the read-access question).
+// Pruning generations past their retention window, at rotation time, per
+// ADR 0080 -- this needed a way to read the current array's exact contents
+// first (to remove stale entries by index without guessing), which is what
+// signet's GitOpsService.GetServiceConfig RPC (bytepunx/signet#38,
+// bytepunx/authstar-tower#2) exists for; see `signetAdmin.getConfig`'s own
+// doc comment.
 
 const rotateKeysParamsSchema = {
   type: 'object',
@@ -77,6 +76,70 @@ interface RotationFailure {
   error: string
 }
 
+interface KeyGeneration {
+  version: number
+  effectiveFrom: string
+}
+
+const GENERATIONS_FIELD: Record<RotatableKey, string> = {
+  session: 'sessionKeyGenerations',
+  internal: 'internalKeyGenerations',
+  'identity-hash': 'identityHashKeyGenerations',
+}
+
+// Internal keys have no cookie -- ADR 0088's fixed 300s buffer (60s token TTL
+// plus clock skew), not a config-derived value. Session/identity-hash
+// retention instead follows the tenant's own cookie.maxAge (ADR 0080),
+// falling back to the 604800s (7-day) default portcullis itself uses when a
+// tenant hasn't set one explicitly.
+const INTERNAL_KEY_RETENTION_SECONDS = 300
+const DEFAULT_COOKIE_MAX_AGE_SECONDS = 604_800
+
+function retentionSecondsFor(key: RotatableKey, tenant: Record<string, unknown> | undefined): number {
+  if (key === 'internal') return INTERNAL_KEY_RETENTION_SECONDS
+  const maxAge = (tenant?.cookie as { maxAge?: number } | undefined)?.maxAge
+  return typeof maxAge === 'number' ? maxAge : DEFAULT_COOKIE_MAX_AGE_SECONDS
+}
+
+// Removes generations past their retention window -- never the current
+// (highest-version) generation, regardless of age, since that's the one
+// actively signing/verifying. Each removal is paired with a `test` (RFC
+// 6902 section 4.6) against the exact snapshot `getConfig` just read: if
+// the live document has since diverged (a concurrent rotation elsewhere
+// changed this same array), the whole patch fails atomically instead of
+// removing the wrong index -- safer than silently corrupting the array,
+// and the next rotation's prune pass will simply retry against a fresh
+// read. Removed in descending index order so earlier indices stay valid
+// as later ones are spliced out.
+async function pruneStaleGenerations(app: FastifyInstance, tenantSlug: string, key: RotatableKey, currentVersion: number): Promise<void> {
+  const config = await app.signetAdmin.getConfig('portcullis')
+  if (!config) return // domain-pending tenant (ADR 0093) -- nothing provisioned to prune yet
+
+  const content = config.content as { tenants?: Record<string, Record<string, unknown>> }
+  const tenant = content.tenants?.[tenantSlug]
+  const field = GENERATIONS_FIELD[key]
+  const generations = (tenant?.[field] as KeyGeneration[] | undefined) ?? []
+  if (generations.length === 0) return
+
+  const currentMaxVersion = Math.max(currentVersion, ...generations.map((generation) => generation.version))
+  const cutoff = currentVersion - retentionSecondsFor(key, tenant)
+  const stale = generations
+    .map((generation, index) => ({ generation, index }))
+    .filter(({ generation }) => generation.version !== currentMaxVersion && generation.version < cutoff)
+    .sort((a, b) => b.index - a.index)
+
+  if (stale.length === 0) return
+
+  const path = `/tenants/${tenantSlug}/${field}`
+  await app.signetAdmin.patchConfig(
+    'portcullis',
+    stale.flatMap(({ generation, index }) => [
+      jsonPatchTest(`${path}/${index}`, generation),
+      jsonPatchRemove(`${path}/${index}`),
+    ]),
+  )
+}
+
 async function rotateOne(app: FastifyInstance, tenantSlug: string, key: RotatableKey): Promise<RotationResult> {
   const version = Math.floor(Date.now() / 1000)
   const effectiveFrom = new Date(version * 1000).toISOString()
@@ -100,6 +163,17 @@ async function rotateOne(app: FastifyInstance, tenantSlug: string, key: Rotatabl
         jsonPatchAppend(`/tenants/${tenantSlug}/identityHashKeyGenerations`, { version, effectiveFrom }),
       ])
       break
+  }
+
+  // Pruning is a follow-up cleanup step on an already-succeeded rotation --
+  // the new key is live either way, so a prune failure (e.g. a concurrent
+  // rotation's `test` guard tripping) is logged and swallowed rather than
+  // reported as a rotation failure; the next rotation's prune pass will
+  // simply retry against a fresh read.
+  try {
+    await pruneStaleGenerations(app, tenantSlug, key, version)
+  } catch (err) {
+    app.log.error({ err, tenantSlug, key }, 'pruning past-retention key generations failed')
   }
 
   return { key, version, effectiveFrom }

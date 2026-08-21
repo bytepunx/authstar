@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createPrivateKey } from 'node:crypto'
+import { jsonPatchAdd } from '@bytepunx/signet-client'
 import type { FastifyInstance } from 'fastify'
 import buildApp from '../../src/lib/build-app.js'
 import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
@@ -26,6 +27,19 @@ describe('POST /operator/tenants/:tenantSlug/rotate-keys', () => {
   beforeEach(async () => {
     const consequent = await buildInMemoryConsequent()
     signetAdmin = createSpySignetAdmin()
+    // Seeds the tenant document a real provisioning flow would already have
+    // created (ADR 0080's version-1 legacy generation baseline) -- appending
+    // to `.../sessionKeyGenerations/-` (RFC 6902) requires the array to
+    // already exist at that path, same as real signet's PatchServiceConfig.
+    await signetAdmin.patchConfig('portcullis', [
+      jsonPatchAdd('/tenants/acme', {
+        cookie: { maxAge: 604_800 },
+        sessionKeyGenerations: [],
+        internalKeyGenerations: [],
+        identityHashKeyGenerations: [],
+      }),
+    ])
+    signetAdmin.patchCalls.length = 0 // seeding isn't part of what tests assert on
     app = await buildApp({ consequent, signetAdmin, provisioningConfig })
   })
 
@@ -159,5 +173,102 @@ describe('POST /operator/tenants/:tenantSlug/rotate-keys', () => {
     expect(response.json().rotated).toHaveLength(3)
     expect(signetAdmin.calls).toHaveLength(3)
     expect(signetAdmin.patchCalls).toHaveLength(3)
+  })
+
+  describe('pruning past-retention generations (bytepunx/authstar-tower#2)', () => {
+    it('prunes a session key generation past the tenant cookie.maxAge window, keeping the current one', async () => {
+      const now = Math.floor(Date.now() / 1000)
+      const stale = { version: now - 700_000, effectiveFrom: new Date((now - 700_000) * 1000).toISOString() }
+      const fresh = { version: now - 100, effectiveFrom: new Date((now - 100) * 1000).toISOString() }
+      await signetAdmin.patchConfig('portcullis', [
+        jsonPatchAdd('/tenants/acme/sessionKeyGenerations', [stale, fresh]),
+      ])
+      signetAdmin.patchCalls.length = 0
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/acme/rotate-keys',
+        headers: { authorization: 'Bearer op-secret' },
+        payload: { keys: ['session'] },
+      })
+
+      expect(response.statusCode).toBe(200)
+      // One patch for the rotation's own append, a second for the prune's test+remove.
+      expect(signetAdmin.patchCalls).toHaveLength(2)
+      const prunePatch = signetAdmin.patchCalls[1]
+      expect(prunePatch.operations.map((op) => op.op)).toEqual(['test', 'remove'])
+      expect(prunePatch.operations[0].path).toBe('/tenants/acme/sessionKeyGenerations/0')
+
+      const config = await signetAdmin.getConfig('portcullis')
+      const generations = (config!.content as { tenants: { acme: { sessionKeyGenerations: Array<{ version: number }> } } })
+        .tenants.acme.sessionKeyGenerations
+      expect(generations).toHaveLength(2) // "fresh" plus the just-rotated generation
+      expect(generations.some((g) => g.version === stale.version)).toBe(false)
+      expect(generations.some((g) => g.version === fresh.version)).toBe(true)
+    })
+
+    it('never prunes the current (highest-version) generation, regardless of age', async () => {
+      const now = Math.floor(Date.now() / 1000)
+      const ancient = { version: now - 10_000_000, effectiveFrom: new Date((now - 10_000_000) * 1000).toISOString() }
+      await signetAdmin.patchConfig('portcullis', [
+        jsonPatchAdd('/tenants/acme/sessionKeyGenerations', [ancient]),
+      ])
+      signetAdmin.patchCalls.length = 0
+
+      // Rotating internal keys shouldn't touch the session generations array at all.
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/acme/rotate-keys',
+        headers: { authorization: 'Bearer op-secret' },
+        payload: { keys: ['internal'] },
+      })
+
+      expect(response.statusCode).toBe(200)
+      const config = await signetAdmin.getConfig('portcullis')
+      const generations = (config!.content as { tenants: { acme: { sessionKeyGenerations: Array<{ version: number }> } } })
+        .tenants.acme.sessionKeyGenerations
+      // Untouched: the ancient session generation is still the sole (and thus
+      // current, highest-version) entry in its own array, never pruned by an
+      // unrelated internal-key rotation.
+      expect(generations).toEqual([ancient])
+    })
+
+    it('prunes internal key generations using the fixed 300s window, ignoring a much larger cookie.maxAge', async () => {
+      const now = Math.floor(Date.now() / 1000)
+      const stale = { version: now - 400, effectiveFrom: new Date((now - 400) * 1000).toISOString() }
+      await signetAdmin.patchConfig('portcullis', [
+        jsonPatchAdd('/tenants/acme/cookie', { maxAge: 999_999_999 }),
+        jsonPatchAdd('/tenants/acme/internalKeyGenerations', [stale]),
+      ])
+      signetAdmin.patchCalls.length = 0
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/acme/rotate-keys',
+        headers: { authorization: 'Bearer op-secret' },
+        payload: { keys: ['internal'] },
+      })
+
+      expect(response.statusCode).toBe(200)
+      expect(signetAdmin.patchCalls).toHaveLength(2)
+
+      const config = await signetAdmin.getConfig('portcullis')
+      const generations = (config!.content as { tenants: { acme: { internalKeyGenerations: Array<{ version: number }> } } })
+        .tenants.acme.internalKeyGenerations
+      expect(generations).toHaveLength(1) // only the just-rotated generation remains
+      expect(generations.some((g) => g.version === stale.version)).toBe(false)
+    })
+
+    it('does not issue a second patch when nothing is stale', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/acme/rotate-keys',
+        headers: { authorization: 'Bearer op-secret' },
+        payload: { keys: ['identity-hash'] },
+      })
+
+      expect(response.statusCode).toBe(200)
+      expect(signetAdmin.patchCalls).toHaveLength(1)
+    })
   })
 })

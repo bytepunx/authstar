@@ -19,6 +19,18 @@ export interface SignetAdmin {
    * exists yet for targetService (signet's own PatchServiceConfig contract).
    */
   patchConfig(targetService: 'tower' | 'portcullis', operations: adminv1.JsonPatchOperation[]): Promise<void>
+  /**
+   * Reads targetService's current plain config document and version
+   * (bytepunx/signet#38's "worth a real answer" open question, answered by
+   * a dedicated admin-side read RPC -- see signet's own GetServiceConfig
+   * doc comment). Returns null if no config document exists yet, rather
+   * than throwing -- "nothing to read yet" is a normal state for a
+   * domain-pending tenant (ADR 0093), not an error condition callers need
+   * to handle specially. Used by rotate-keys.ts to prune past-retention
+   * generations, which -- unlike patchConfig's append case -- needs to know
+   * current array contents first (bytepunx/authstar-tower#2).
+   */
+  getConfig(targetService: 'tower' | 'portcullis'): Promise<{ content: unknown, version: number } | null>
 }
 
 export interface SignetAdminOptions {
@@ -163,6 +175,30 @@ export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
         )
       })
     },
+    getConfig(targetService) {
+      return new Promise((resolve, reject) => {
+        client.getServiceConfig(
+          { namespace: opts.namespace, service: targetService },
+          (err, response) => {
+            // gRPC's NotFound (code 5) is signet's documented "no config
+            // document exists yet" outcome, not a transport/programming
+            // error -- resolve to null so callers (rotate-keys.ts's
+            // pruning step) treat a domain-pending tenant the same
+            // ordinary way patchConfig's own doc comment already frames
+            // it, rather than needing their own NotFound-detection logic.
+            if (err) {
+              if ((err as { code?: number }).code === 5) {
+                resolve(null)
+              } else {
+                reject(err)
+              }
+              return
+            }
+            resolve({ content: response.content, version: response.version })
+          },
+        )
+      })
+    },
   }
 }
 
@@ -172,5 +208,6 @@ export function createNoopSignetAdmin(): SignetAdmin {
   return {
     async pushSecret() {},
     async patchConfig() {},
+    async getConfig() { return null },
   }
 }
