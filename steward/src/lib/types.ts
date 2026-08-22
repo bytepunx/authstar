@@ -149,7 +149,12 @@ export type AccountListResponse = Account[]
 
 export interface InviteRequest {
   email: string
-  application: string | null
+  // Omit entirely for a tenant-wide invite -- tower's own createBodySchema
+  // (routes/invites.ts) types this as a plain optional `string`, not
+  // nullable; sending `application: null` fails AJV validation ("must NOT
+  // have fewer than 1 characters", its generic message for a non-string
+  // value against a minLength-constrained string schema).
+  application?: string
   permissions: PermissionGrant[]
 }
 

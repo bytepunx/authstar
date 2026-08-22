@@ -244,7 +244,18 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
           send(res, 400, { error: 'X-Operator-Actor required' })
           return
         }
-        const body = (await readBody(req)) as { email: string }
+        const body = (await readBody(req)) as { email: string; application?: unknown }
+        // Mirrors tower's real createBodySchema (routes/invites.ts): `application`
+        // is a plain optional `string`, never nullable -- a tenant-wide invite
+        // omits the field entirely rather than sending `null`. Steward's own
+        // "Invite an admin" form used to send `application: null` explicitly,
+        // which tower's real AJV validation rejects with a 400 ("must NOT have
+        // fewer than 1 characters"); this fake used to accept it silently,
+        // so e2e coverage never caught the bug.
+        if ('application' in body && body.application !== undefined && (typeof body.application !== 'string' || body.application.length < 1)) {
+          send(res, 400, { error: 'body/application must NOT have fewer than 1 characters' })
+          return
+        }
         send(res, 201, { id: 'inv-' + Math.random().toString(36).slice(2, 8), email: body.email })
         return
       }

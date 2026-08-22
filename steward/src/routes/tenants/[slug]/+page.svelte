@@ -111,7 +111,7 @@
     inviting = true
     inviteError = undefined
     inviteResult = undefined
-    const body: InviteRequest = { email: inviteEmail, application: null, permissions: FULL_TENANT_PERMISSIONS }
+    const body: InviteRequest = { email: inviteEmail, permissions: FULL_TENANT_PERMISSIONS }
     try {
       inviteResult = await apiCall<InviteResponse>(`/api/tenants/${encodeURIComponent(slug)}/invites`, { method: 'POST', body })
       inviteEmail = ''
