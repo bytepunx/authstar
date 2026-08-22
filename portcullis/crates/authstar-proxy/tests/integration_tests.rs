@@ -94,6 +94,7 @@ fn build_state(application: ApplicationRuntime) -> Arc<PortcullisState> {
         enricher: Arc::new(NeverEnricher),
         tower_http_client: reqwest::Client::new(),
         tower_base_url: String::new(),
+        keep_base_url: String::new(),
     })
 }
 

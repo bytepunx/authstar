@@ -31,6 +31,13 @@ pub struct Bundle {
     /// tenant-scoped address) rather than inventing a different mechanism — see TESTING.md.
     #[serde(default)]
     pub tower_upstream: Option<WebUpstreamConfig>,
+    /// Installation-wide address of `keep`, used to forward Stripe webhook deliveries
+    /// (`POST /_authstar/webhooks/stripe`) to keep's own `/_authstar/webhooks/stripe` route.
+    /// Follows `webUpstream`/`towerUpstream`'s own precedent exactly -- an installation-wide,
+    /// non-tenant-scoped address, optional so a bundle without it still parses (the route
+    /// simply 502s, matching `towerUpstream`'s own missing-config posture).
+    #[serde(default)]
+    pub keep_upstream: Option<WebUpstreamConfig>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

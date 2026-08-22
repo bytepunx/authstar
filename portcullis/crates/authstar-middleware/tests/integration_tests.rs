@@ -216,6 +216,7 @@ async fn build_state_with_enricher_base(
         http_client,
         enricher,
         identities_tower_base.to_string(),
+        String::new(),
     )
     .await;
     assert!(
@@ -1096,6 +1097,7 @@ async fn build_rotated_keys_harness() -> (Router, String, String, String, String
         http_client,
         Arc::new(UnreachableEnricher),
         "http://tower.invalid".to_string(),
+        String::new(),
     )
     .await;
     assert!(

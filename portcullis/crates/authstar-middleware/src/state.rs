@@ -101,6 +101,13 @@ pub struct PortcullisState {
     /// Base URL portcullis calls tower at directly (`/identities/resolve` at login, `/enrich`
     /// via the enricher) — reached over SPIFFE mTLS in production via `tower_http_client`.
     pub tower_base_url: String,
+    /// Base URL portcullis forwards Stripe webhook deliveries to (`webhooks::stripe_webhook_handler`).
+    /// Reached over plain in-cluster HTTP via `http_client` -- unlike tower, keep never
+    /// terminates SPIFFE mTLS itself, so the narrower `http_client` (already used for plain
+    /// public-CA-verified TLS elsewhere) is the correct client here too: its TLS settings are
+    /// simply inert against a plain `http://` address, and introducing a third client for this
+    /// one call would add no real separation of concerns.
+    pub keep_base_url: String,
 }
 
 /// Every local route (the gate's proxy fallback, and every portcullis-owned `/oauth2/*` /
@@ -250,6 +257,7 @@ pub async fn build_state(
     tower_http_client: reqwest::Client,
     enricher: Arc<dyn ClaimsEnricher>,
     tower_base_url: String,
+    keep_base_url: String,
 ) -> (PortcullisState, Vec<StartupWarning>) {
     let mut warnings = Vec::new();
 
@@ -428,6 +436,7 @@ pub async fn build_state(
         enricher,
         tower_http_client,
         tower_base_url,
+        keep_base_url,
     };
 
     (state, warnings)

@@ -17,7 +17,7 @@ use std::time::Duration;
 use authstar_config::validate::validate_bundle;
 use authstar_config::{BootstrapEnv, SignetSource};
 use authstar_middleware::enricher::{ClaimsEnricher, TowerClaimsEnricher};
-use authstar_middleware::router::{apply_auth_gate, apply_cors, oauth_routes};
+use authstar_middleware::router::{apply_auth_gate, apply_cors, oauth_routes, webhook_routes};
 use authstar_middleware::state::{build_state, PortcullisState};
 use authstar_proxy::proxy::proxy_handler;
 use axum::Router;
@@ -151,6 +151,18 @@ async fn main() {
         tower_base_url.clone(),
     ));
 
+    let keep_base_url = fetched
+        .config
+        .keep_upstream
+        .as_ref()
+        .map(|k| k.address.clone())
+        .unwrap_or_default();
+    if keep_base_url.is_empty() {
+        tracing::warn!(
+            "no keepUpstream configured in bundle — Stripe webhook forwarding will always 503"
+        );
+    }
+
     let (state, warnings) = build_state(
         fetched.config,
         fetched.secrets,
@@ -158,6 +170,7 @@ async fn main() {
         tower_http_client,
         enricher,
         tower_base_url,
+        keep_base_url,
     )
     .await;
 
@@ -226,7 +239,10 @@ fn build_app(state: Arc<PortcullisState>) -> Router {
     let proxy_router: Router<Arc<PortcullisState>> = Router::new().fallback(proxy_handler);
     let proxy_router = apply_auth_gate(proxy_router, state.clone());
 
-    let app: Router<Arc<PortcullisState>> = Router::new().merge(oauth_routes()).merge(proxy_router);
+    let app: Router<Arc<PortcullisState>> = Router::new()
+        .merge(oauth_routes())
+        .merge(webhook_routes())
+        .merge(proxy_router);
     let app = apply_cors(app, state.clone());
     app.with_state(state)
 }
