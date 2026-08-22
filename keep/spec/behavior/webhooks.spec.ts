@@ -257,6 +257,72 @@ describe('stripe webhook handling -- API contract', () => {
     })
   })
 
+  describe('customer.subscription.paused / .resumed', () => {
+    it('revokes granted roles on pause, without touching price or canceling the subscription', async () => {
+      await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_pause_1',
+        customer: 'cus_pause_1',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+        metadata: { scope: JSON.stringify({ account: 'acct_pause_1' }) },
+      }))
+      t.publisher.published.length = 0
+
+      const response = await post(stripeEventPayload('customer.subscription.paused', {
+        id: 'sub_pause_1',
+        customer: 'cus_pause_1',
+        status: 'paused',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+      }))
+      expect(response.statusCode).toBe(200)
+
+      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_pause_1', headers: readHeaders })
+      expect(sub.json().status).toBe('paused')
+      expect(sub.json().stripePriceId).toBe('price_basic')
+
+      const revoked = t.publisher.published.filter((e) => e.type === 'entitlement.role-revoked')
+      expect(revoked).toHaveLength(1)
+      expect((revoked[0] as { role: { name: string } }).role.name).toBe('member')
+    })
+
+    it('re-grants roles on resume', async () => {
+      await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_resume_1',
+        customer: 'cus_resume_1',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+        metadata: { scope: JSON.stringify({ account: 'acct_resume_1' }) },
+      }))
+      await post(stripeEventPayload('customer.subscription.paused', {
+        id: 'sub_resume_1',
+        customer: 'cus_resume_1',
+        status: 'paused',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+      }))
+      t.publisher.published.length = 0
+
+      const response = await post(stripeEventPayload('customer.subscription.resumed', {
+        id: 'sub_resume_1',
+        customer: 'cus_resume_1',
+        status: 'active',
+        current_period_end: 1_700_200_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+      }))
+      expect(response.statusCode).toBe(200)
+
+      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_resume_1', headers: readHeaders })
+      expect(sub.json().status).toBe('active')
+
+      const granted = t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')
+      expect(granted).toHaveLength(1)
+      expect((granted[0] as { role: { name: string } }).role.name).toBe('member')
+    })
+  })
+
   describe('charge.refunded', () => {
     it('creates a refund record and publishes no entitlement event -- visibility only', async () => {
       const response = await post(stripeEventPayload('charge.refunded', {

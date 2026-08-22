@@ -247,6 +247,47 @@ async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: 
   }
 }
 
+// `customer.subscription.paused`/`.resumed` -- Stripe's `pause_collection`
+// state (a subscription stays otherwise intact, billing simply stops,
+// distinct from cancellation). Unlike `onSubscriptionUpdated`, whose role
+// diffing is keyed entirely off a *price* change, pause/resume never touch
+// price -- so update-record-then-diff-by-price would silently grant/revoke
+// nothing. Deliberately unconditional revoke/grant against the plan
+// mapping's full `grantedRoles`, matching the same posture
+// `onInvoicePaymentFailed`/`onDisputeCreated`/`onDisputeClosed` already use
+// for other status-only degrade/restore transitions.
+async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
+  const existing = await findSubscription(app, sub.id)
+  const scope = existing?.scope ?? readScope(sub.metadata, { tenant })
+
+  await app.consequent.handle(sub.id, 'subscription.update', {
+    status: sub.status,
+    currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
+  })
+
+  const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
+  const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
+  if (mapping) {
+    await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-revoked')
+  }
+}
+
+async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
+  const existing = await findSubscription(app, sub.id)
+  const scope = existing?.scope ?? readScope(sub.metadata, { tenant })
+
+  await app.consequent.handle(sub.id, 'subscription.update', {
+    status: sub.status,
+    currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
+  })
+
+  const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
+  const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
+  if (mapping) {
+    await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-granted')
+  }
+}
+
 // `invoice.payment_failed` -- Story 002 calls out "a tunable attempt-count
 // threshold, not fixed here." This pilot slice degrades immediately on the
 // first failure rather than tracking an attempt count across invoices --
@@ -360,6 +401,12 @@ async function handleStripeEvent(app: FastifyInstance, tenant: string, event: St
       return
     case 'customer.subscription.deleted':
       await onSubscriptionDeleted(app, tenant, object as StripeSubscriptionObject)
+      return
+    case 'customer.subscription.paused':
+      await onSubscriptionPaused(app, tenant, object as StripeSubscriptionObject)
+      return
+    case 'customer.subscription.resumed':
+      await onSubscriptionResumed(app, tenant, object as StripeSubscriptionObject)
       return
     case 'invoice.payment_failed':
       await onInvoicePaymentFailed(app, tenant, object as StripeInvoiceObject)

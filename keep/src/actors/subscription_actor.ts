@@ -7,7 +7,7 @@
 // state changes are exclusively webhook-driven (ADR 0053).
 
 export type SubscriptionScope = { account: string } | { tenant: string }
-export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'trialing'
+export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'trialing' | 'paused'
 
 export interface SubscriptionState {
   stripeSubscriptionId: string
