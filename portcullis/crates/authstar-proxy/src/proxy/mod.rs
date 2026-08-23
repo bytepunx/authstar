@@ -165,10 +165,23 @@ fn build_forwarded_headers(
     }
 
     append_forwarded_for(&mut headers, client_addr.ip().to_string());
-    headers.insert(
-        HeaderName::from_static("x-forwarded-proto"),
-        HeaderValue::from_static("http"),
-    );
+    // Preserve whatever the edge in front of us already reported (Cloudflare
+    // sets this on every request that reaches cloudflared) rather than
+    // overwriting it -- this was previously hardcoded to "http"
+    // unconditionally, which was simply wrong: every real client request
+    // reaches us over HTTPS at Cloudflare's own edge (TLS terminates there,
+    // not at portcullis), so telling upstream "http" made every
+    // upstream-side origin/scheme check (e.g. SvelteKit adapter-node's
+    // default CSRF-origin check) see a scheme that never matched what the
+    // browser actually used. "https" is the correct fallback for this
+    // deployment's only real ingress path; a value already present from the
+    // edge takes precedence if for some reason one exists.
+    if !headers.contains_key(HeaderName::from_static("x-forwarded-proto")) {
+        headers.insert(
+            HeaderName::from_static("x-forwarded-proto"),
+            HeaderValue::from_static("https"),
+        );
+    }
     if let Ok(value) = HeaderValue::from_str(inbound_host) {
         headers.insert(HeaderName::from_static("x-forwarded-host"), value);
     }

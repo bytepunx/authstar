@@ -132,8 +132,13 @@ async fn forwards_to_catch_all_base_with_headers() {
                 .get("x-forwarded-host")
                 .map(|v| v.to_str().unwrap().to_string())
                 .unwrap_or_default();
+            let xfp = req
+                .headers
+                .get("x-forwarded-proto")
+                .map(|v| v.to_str().unwrap().to_string())
+                .unwrap_or_default();
             ResponseTemplate::new(200)
-                .set_body_string(format!("auth={has_auth} xff={xff} xfh={xfh}"))
+                .set_body_string(format!("auth={has_auth} xff={xff} xfh={xfh} xfp={xfp}"))
         })
         .mount(&upstream)
         .await;
@@ -162,6 +167,50 @@ async fn forwards_to_catch_all_base_with_headers() {
     assert!(body_str.contains("auth=true"));
     assert!(body_str.contains("xff=true"));
     assert!(body_str.contains("xfh=app.acme.test"));
+    // Every real client request reaches portcullis over HTTPS at Cloudflare's
+    // own edge (TLS terminates there, not at portcullis) -- "https" is the
+    // correct default for this deployment's only real ingress path.
+    // Regression: this was previously hardcoded to "http" unconditionally,
+    // which broke SvelteKit adapter-node's default CSRF-origin check on the
+    // `web` upstream.
+    assert!(body_str.contains("xfp=https"));
+}
+
+#[tokio::test]
+async fn preserves_an_existing_inbound_x_forwarded_proto() {
+    let upstream = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/dashboard"))
+        .respond_with(move |req: &WiremockRequest| {
+            let xfp = req
+                .headers
+                .get("x-forwarded-proto")
+                .map(|v| v.to_str().unwrap().to_string())
+                .unwrap_or_default();
+            ResponseTemplate::new(200).set_body_string(format!("xfp={xfp}"))
+        })
+        .mount(&upstream)
+        .await;
+
+    let application = test_application(upstream.uri(), IndexMap::new());
+    let state = build_state(application);
+    let app = app_with_forward_context(state, Some("internal-token-abc".to_string()));
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header("x-forwarded-proto", "http")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    let body = http_body_util::BodyExt::collect(response.into_body())
+        .await
+        .unwrap()
+        .to_bytes();
+    let body_str = String::from_utf8(body.to_vec()).unwrap();
+    assert!(body_str.contains("xfp=http"));
 }
 
 #[tokio::test]
