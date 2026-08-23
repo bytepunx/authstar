@@ -47,11 +47,23 @@
   // (provisioning.ts's FULL_TENANT_PERMISSIONS) -- this form is
   // specifically for onboarding tenant admins, not a general-purpose
   // product-invite UI with role/permission pickers.
+  // Kept in sync with tower's own FULL_TENANT_PERMISSIONS (routes/
+  // provisioning.ts) -- every tenant-scoped grant except
+  // organization:manage/organization-billing:manage (org-scoped, held by
+  // end-user accounts, never tenant admins). Was missing
+  // billing:manage/billing:read/communication-types:manage/
+  // communications:read/opt-outs:manage/sending-config:manage/
+  // analytics:read/suppressions:manage entirely until found live -- a
+  // first-admin invite sent from this form could do everything except touch
+  // billing or comms config.
   const FULL_TENANT_PERMISSIONS: PermissionGrant[] = [
     'roles:manage', 'permissions:manage', 'invite:send', 'invite:code:issue',
     'accounts:manage', 'applications:manage', 'providers:manage',
     'contacts:read', 'contacts:erase', 'contacts:export',
     'erasure-requests:read', 'activity:read', 'tenant:manage',
+    'billing:manage', 'billing:read', 'communication-types:manage',
+    'communications:read', 'opt-outs:manage', 'sending-config:manage',
+    'analytics:read', 'suppressions:manage',
   ].map((grant) => ({ grant, scope: 'tenant' as const, maxOutstanding: null }))
   let inviteEmail = $state('')
   let inviting = $state(false)
