@@ -12,10 +12,13 @@ import type { ProvisioningConfig } from '../../src/routes/provisioning.js'
 // whole-tenant replace -- so it never risks an adopted tenant's other
 // hand-authored applications.
 
+// defaultProvider is deliberately NOT "google" -- bytepunx's own registered
+// provider (set up via `adopt`, below) -- to prove admin-console.ts uses the
+// tenant's own registration, not tower's installation-wide default.
 const provisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: false,
   operatorToken: 'op-secret',
-  defaultProvider: { name: 'google', clientId: 'client-1', discoveryUrl: 'https://accounts.google.com', scope: ['openid', 'email'] },
+  defaultProvider: { name: 'dex', clientId: 'client-1', discoveryUrl: 'https://dex.example/.well-known', scope: ['openid'] },
   defaultProviderClientSecret: 'provider-secret-value',
 }
 
@@ -87,15 +90,44 @@ describe('POST /operator/tenants/:tenantSlug/admin-console', () => {
     expect(patch.operations).toHaveLength(1)
     expect(patch.operations[0].op).toBe('add')
     expect(patch.operations[0].path).toBe('/tenants/bytepunx/applications/_admin')
-    const value = patch.operations[0].value as { hosts: string[] }
+    const value = patch.operations[0].value as { hosts: string[], providers: string[] }
     expect(value.hosts).toEqual(['authstar.bytepunx.com'])
+    // The tenant's own registered provider ("google", from `adopt`) -- not
+    // provisioningConfig.defaultProvider, which this fixture deliberately
+    // sets to something else below to prove the distinction.
+    expect(value.providers).toEqual(['google'])
 
     // Zero secret pushes -- this route (like adopt) never touches signet
     // secrets, only tower's own bookkeeping and a scoped config patch.
     expect(signetAdmin.calls).toHaveLength(0)
   })
 
-  it('is idempotent -- retrying after the _admin app already exists is a 200 no-op', async () => {
+  it('uses the tenant\'s own registered provider, not the installation-wide default', async () => {
+    await app.inject({
+      method: 'POST',
+      url: '/operator/tenants/bytepunx/adopt',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: adoptBody,
+    })
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/operator/tenants/bytepunx/admin-console',
+      headers: { authorization: 'Bearer op-secret' },
+    })
+    expect(response.statusCode).toBe(201)
+
+    const patch = signetAdmin.patchCalls[0]
+    const value = patch.operations[0].value as { providers: string[] }
+    // provisioningConfig.defaultProvider.name is "dex" in this fixture
+    // (below) -- if this route used that instead of bytepunx's own "google"
+    // registration, the admin console would have zero working login
+    // providers.
+    expect(value.providers).not.toContain('dex')
+    expect(value.providers).toEqual(['google'])
+  })
+
+  it('self-corrects the portcullis patch on retry, even though the tower application already exists', async () => {
     await app.inject({
       method: 'POST',
       url: '/operator/tenants/bytepunx/adopt',
@@ -115,7 +147,12 @@ describe('POST /operator/tenants/:tenantSlug/admin-console', () => {
       headers: { authorization: 'Bearer op-secret' },
     })
     expect(response.statusCode).toBe(200)
-    expect(signetAdmin.patchCalls).toHaveLength(0)
+    // Still re-sent, not skipped -- this is what makes the route
+    // self-healing if the providers list was ever wrong (exactly what
+    // happened live: an earlier version of this route used
+    // provisioningConfig.defaultProvider instead of the tenant's own
+    // registration).
+    expect(signetAdmin.patchCalls).toHaveLength(1)
   })
 
   it('rejects a domain-pending tenant (no domain to build an admin host from)', async () => {

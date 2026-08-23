@@ -2,8 +2,10 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { jsonPatchAdd } from '@bytepunx/signet-client'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
+import type { ProviderState } from '../actors/provider_actor.js'
 import { isOperatorRequest } from '../lib/operator-auth.js'
 import { fetchState } from '../lib/tenant-validation.js'
+import { searchCriteria } from '../lib/consequent-types.js'
 import { RESERVED_ADMIN_APPLICATION_SLUG, WEB_UPSTREAM_BASE } from './provisioning.js'
 
 // ADR 0096: completes the `_admin` console for a tenant adopted via
@@ -47,42 +49,56 @@ const adminConsoleRoutes: FastifyPluginAsync = async function (app: FastifyInsta
       const adminHost = `authstar.${tenant.domain}`
       const adminAppKey = `${tenantSlug}:${RESERVED_ADMIN_APPLICATION_SLUG}`
 
-      const existingAdminApp = await fetchState<ApplicationState>(app, 'application', adminAppKey)
-      if (existingAdminApp?.createdAt) {
-        return reply.code(200).send({ slug: tenantSlug, adminHost })
-      }
+      // The tenant's own registered, active providers -- NOT
+      // `provisioningConfig.defaultProvider` (tower's installation-wide
+      // default, only relevant to *new* self-service tenants at creation
+      // time). An adopted tenant like bytepunx has its own provider(s)
+      // registered via `POST /operator/tenants/:slug/adopt`, which may not
+      // match the installation default at all -- using the wrong name here
+      // silently produces an admin console with zero working login
+      // providers (portcullis's own `working_providers()` filter finds no
+      // match between the application's `providers` list and the tenant's
+      // actually-resolved ones).
+      const providerInstances = await app.consequent.find('provider', searchCriteria({ tenant: tenantSlug, status: 'active' }))
+      const providerNames = providerInstances.map((i) => (i.state as unknown as ProviderState).name)
 
-      await app.consequent.handle(adminAppKey, 'application.create', {
-        tenant: tenantSlug,
-        slug: RESERVED_ADMIN_APPLICATION_SLUG,
-        name: `${tenant.name} Admin`,
-        hosts: [adminHost],
-        exposedProviders: [app.provisioningConfig.defaultProvider.name],
-      })
-      try {
-        await app.consequent.handle(tenantSlug, 'tenant.add-application', {
+      const existingAdminApp = await fetchState<ApplicationState>(app, 'application', adminAppKey)
+      if (!existingAdminApp?.createdAt) {
+        await app.consequent.handle(adminAppKey, 'application.create', {
+          tenant: tenantSlug,
           slug: RESERVED_ADMIN_APPLICATION_SLUG,
           name: `${tenant.name} Admin`,
+          hosts: [adminHost],
+          exposedProviders: providerNames,
         })
-      } catch {
-        // Best-effort convenience mirror onto tenant's own embedded array --
-        // never blocks, same as provisioning.ts's own equivalent step.
+        try {
+          await app.consequent.handle(tenantSlug, 'tenant.add-application', {
+            slug: RESERVED_ADMIN_APPLICATION_SLUG,
+            name: `${tenant.name} Admin`,
+          })
+        } catch {
+          // Best-effort convenience mirror onto tenant's own embedded array --
+          // never blocks, same as provisioning.ts's own equivalent step.
+        }
       }
 
       // Scoped add -- only this one application key, never `/tenants/<slug>`
       // itself. This is the entire reason this route exists instead of
-      // reusing completeDomainDependentProvisioning.
+      // reusing completeDomainDependentProvisioning. Always (re)sent, even
+      // on a retry against an already-created tower application, so a stale
+      // or wrong `providers` list self-corrects rather than requiring a
+      // separate repair path.
       await app.signetAdmin.patchConfig('portcullis', [
         jsonPatchAdd(`/tenants/${tenantSlug}/applications/${RESERVED_ADMIN_APPLICATION_SLUG}`, {
           hosts: [adminHost],
           server: { publicUrl: `https://${adminHost}` },
           upstream: { base: WEB_UPSTREAM_BASE },
           auth: { loginUrl: '/oauth2/select' },
-          providers: [app.provisioningConfig.defaultProvider.name],
+          providers: providerNames,
         }),
       ])
 
-      return reply.code(201).send({ slug: tenantSlug, adminHost })
+      return reply.code(existingAdminApp?.createdAt ? 200 : 201).send({ slug: tenantSlug, adminHost })
     },
   )
 }
