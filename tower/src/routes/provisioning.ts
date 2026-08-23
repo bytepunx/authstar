@@ -60,11 +60,26 @@ export interface ProvisioningConfig {
 // grants in full (Story 005's closed permission vocabulary) -- the same
 // "manage everything in this tenant" set ADR 0021's operator-issued
 // elevated invites use.
+// Every tenant-scoped grant in PERMISSION_CATALOG (lib/permissions.ts) except
+// `organization:manage`/`organization-billing:manage`, which are org-scoped
+// and held by end-user accounts, never tenant admins (see that catalog's own
+// comment). Found incomplete live, the hard way: this set was missing
+// `billing:manage`/`billing:read`/`communication-types:manage`/
+// `communications:read`/`opt-outs:manage`/`sending-config:manage`/
+// `analytics:read`/`suppressions:manage` entirely -- a first-admin invite
+// issued before this fix could do everything *except* touch billing or
+// comms config, despite this constant's own name and stated purpose ("the
+// same 'manage everything in this tenant' set"). Those eight grants were
+// added to the catalog after this constant was originally written and never
+// backfilled.
 const FULL_TENANT_PERMISSIONS = [
   'roles:manage', 'permissions:manage', 'invite:send', 'invite:code:issue',
   'accounts:manage', 'applications:manage', 'providers:manage',
   'contacts:read', 'contacts:erase', 'contacts:export',
   'erasure-requests:read', 'activity:read', 'tenant:manage',
+  'billing:manage', 'billing:read', 'communication-types:manage',
+  'communications:read', 'opt-outs:manage', 'sending-config:manage',
+  'analytics:read', 'suppressions:manage',
 ].map((grant) => ({ grant, scope: 'tenant' as const, maxOutstanding: null }))
 
 const createTenantBodySchema = {
