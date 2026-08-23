@@ -15,8 +15,8 @@ import { fetchState, validateDomain, domainAlreadyTaken, RESERVED_WORD, SLUG_PAT
 // changes, to `authstar.<tenant.domain>`. "authstar" itself becomes a
 // reserved word: no tenant or application may use it as a slug, since it's
 // now also a hostname label every tenant's admin host shares.
-const RESERVED_ADMIN_APPLICATION_SLUG = '_admin'
-const WEB_UPSTREAM_BASE = 'http://web.authstar-platform.svc.cluster.local:3000'
+export const RESERVED_ADMIN_APPLICATION_SLUG = '_admin'
+export const WEB_UPSTREAM_BASE = 'http://web.authstar-platform.svc.cluster.local:3000'
 
 // Per design/stories/tower/012-tenant-creation-and-provisioning.md, ADR 0067,
 // and ADR 0091/0093 -- the full provisioning sequence: validate slug ->
