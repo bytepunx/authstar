@@ -97,7 +97,13 @@ const enrichRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
       grantedRoles: filterRolesForApplication(account.grantedRoles, body.application),
       trialRoles: filterRolesForApplication(account.trialRoles, body.application),
       trialExpiresAt: account.trialExpiresAt ?? null,
-      permissions: account.permissions,
+      // Portcullis's `AllowOutcome.permissions` (and every downstream
+      // `requirePermission` check) expects the closed grant-name vocabulary
+      // as flat strings, not the `PermissionGrant` objects the account
+      // actor stores internally -- sending the objects raw fails
+      // `serde_json` deserialization on portcullis's side, which then
+      // fail-opens to a degraded token with empty permissions/roles.
+      permissions: account.permissions.map((p) => p.grant),
       usage: account.usage.filter((u) => u.application === body.application),
     })
   })

@@ -33,6 +33,11 @@ describe('POST /enrich', () => {
     if (overrides.suspend) {
       await consequent.handle(accountId, 'account.suspend', {})
     }
+    if (overrides.permissions) {
+      for (const permission of overrides.permissions as Array<{ grant: string, scope: string, maxOutstanding: null }>) {
+        await consequent.handle(accountId, 'account.grant-permission', { permission })
+      }
+    }
   }
 
   async function seedIdentity(hash: string, accountId: string) {
@@ -84,6 +89,30 @@ describe('POST /enrich', () => {
     expect(body.grantedRoles.sort()).toEqual(['editor', 'member'])
     expect(body.trialRoles).toEqual([])
     expect(body.trialExpiresAt).toBeNull()
+  })
+
+  it('returns permissions as a flat array of grant strings, not PermissionGrant objects', async () => {
+    // Regression test: portcullis's `AllowOutcome.permissions` (enricher.rs)
+    // is `Vec<String>` -- sending the account's raw `PermissionGrant` objects
+    // fails serde deserialization on portcullis's side, which silently
+    // fail-opens to a degraded token with empty permissions/roles.
+    await seedAccount('acct-1', {
+      permissions: [
+        { grant: 'billing:manage', scope: 'tenant', maxOutstanding: null },
+        { grant: 'billing:read', scope: 'tenant', maxOutstanding: null },
+      ],
+    })
+    await seedIdentity('hash-1', 'acct-1')
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/enrich',
+      payload: { tenant: 'acme', idp: 'dex', identityHash: 'hash-1', email: '', application: 'app1' },
+    })
+
+    expect(response.statusCode).toBe(200)
+    const body = response.json()
+    expect(body.permissions.sort()).toEqual(['billing:manage', 'billing:read'])
   })
 
   it('rejects a request missing required fields at the schema level', async () => {
