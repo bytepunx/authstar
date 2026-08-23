@@ -130,6 +130,13 @@ async function main(): Promise<void> {
   const rabbitmqUrl = (bundle.rabbitmqUrl as string | undefined) ?? secrets.rabbitmqUrl
   if (!dbConnectionString) throw new Error('signet bundle missing dbConnectionString')
   if (!rabbitmqUrl) throw new Error('signet bundle missing rabbitmqUrl')
+  // ADR 0089's tenant-JWKS resolution needs herald's own copy of
+  // towerBaseUrl -- same bundle field name keep's own server.ts reads,
+  // same reasoning (tower is the one service that actually owns the
+  // tenant actor, so it's the source of truth for a tenant's registered
+  // domain).
+  const towerBaseUrl = (bundle.towerBaseUrl as string | undefined) ?? secrets.towerBaseUrl
+  if (!towerBaseUrl) throw new Error('signet bundle missing towerBaseUrl')
   // ADR 0081: herald's own narrow, self-bundle-scoped GitOpsService admin
   // token, and the shared operator-token value (ADR 0021/0045) -- same
   // delivery pattern tower's own tokens use, herald just receives both
@@ -177,10 +184,17 @@ async function main(): Promise<void> {
   // fails closed with a clear error rather than silently pretending to
   // send, and retries/dead-lettering behave exactly as they would for any
   // other permanent send failure.
-  // ADR 0089's tenant-JWKS resolution needs herald's own copy of
-  // `baseDomain` -- same bundle field name tower's `ProvisioningConfig.
-  // baseDomain` reads, same fallback.
-  const baseDomain = (bundle.baseDomain as string | undefined) ?? 'authstar.app'
+  // See towerBaseUrl above -- resolves each tenant's own registered domain
+  // against tower the first time that tenant's slug is seen;
+  // perTenantJwksKeyProvider caches the result for the life of the
+  // process, so this is at most one HTTP round trip per tenant, not per
+  // request.
+  const resolveTenantDomain = async (tenantSlug: string): Promise<string | undefined> => {
+    const response = await fetch(`${towerBaseUrl}/tenants/${tenantSlug}`)
+    if (!response.ok) return undefined
+    const state = (await response.json()) as { domain?: string }
+    return state.domain
+  }
 
   const signetAdmin = createSignetAdmin({ address: adminAddress, token: signetAdminToken, namespace })
 
@@ -188,7 +202,7 @@ async function main(): Promise<void> {
     consequent,
     payloadKeyring,
     unsubscribeKeyring,
-    baseDomain,
+    resolveTenantDomain,
     signetAdmin,
     operatorToken,
     logger: true,

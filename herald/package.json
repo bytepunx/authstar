@@ -21,7 +21,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@bytepunx/authstar-fastify": "^0.2.1",
+    "@bytepunx/authstar-fastify": "^1.0.0",
     "@bytepunx/signet-client": "^0.6.0",
     "@fastify/swagger": "^9.0.0",
     "amqp-connection-manager": "^5.0.0",
