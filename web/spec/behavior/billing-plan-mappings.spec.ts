@@ -81,6 +81,37 @@ describe('billing/plan-mappings/new create action', () => {
 		})
 	})
 
+	it('splits only on the first colon -- a role name that itself contains one is preserved whole', async () => {
+		// Regression test: role names are an open, app-owned vocabulary that
+		// routinely contain colons (e.g. tower's real "plan:business"/
+		// "plan:family" roles) -- naively splitting each "application:role"
+		// entry on every colon silently truncated the role to just "plan".
+		const keep = createFakeKeepClient()
+		const session = fakeSession({ permissions: ['billing:manage'] })
+
+		try {
+			await newActions.default({
+				request: formRequest({
+					stripePriceId: 'price_business',
+					name: 'Business',
+					grantedRoles: 'loci:plan:business',
+				}),
+				locals: { session, clients: { keep } },
+			} as Parameters<typeof newActions.default>[0])
+			expect.unreachable('expected a redirect')
+		} catch (err) {
+			expect(isRedirect(err)).toBe(true)
+		}
+
+		expect(keep.createPlanMapping).toHaveBeenCalledWith('acme', {
+			stripePriceId: 'price_business',
+			name: 'Business',
+			seatLimit: null,
+			grantedRoles: [{ application: 'loci', role: 'plan:business' }],
+			meter: null,
+		})
+	})
+
 	it('rejects a malformed granted-role entry without calling keep', async () => {
 		const keep = createFakeKeepClient()
 		const session = fakeSession({ permissions: ['billing:manage'] })

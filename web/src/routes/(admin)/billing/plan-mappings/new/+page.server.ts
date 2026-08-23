@@ -9,16 +9,21 @@ export const load: PageServerLoad = async ({ locals }) => {
 	return {}
 }
 
-// "loci:plan-family,loci:plan-business" -> [{application: 'loci', role:
-// 'plan-family'}, {application: 'loci', role: 'plan-business'}] -- same
+// "loci:plan:family,loci:plan:business" -> [{application: 'loci', role:
+// 'plan:family'}, {application: 'loci', role: 'plan:business'}] -- same
 // comma-separated-list convention the applications/new form already uses
-// for hosts/exemptPaths/etc.
+// for hosts/exemptPaths/etc. Splits only on the FIRST colon in each entry --
+// role names are an open, app-owned vocabulary (ADR 0069) that routinely
+// contain colons themselves (e.g. tower's own "plan:business"), so
+// `entry.split(':')` would silently truncate those at the second colon.
 function parseGrantedRoles(value: FormDataEntryValue | null): { roles: GrantedRole[]; invalid: string[] } {
 	if (typeof value !== 'string' || value.trim() === '') return { roles: [], invalid: [] }
 	const roles: GrantedRole[] = []
 	const invalid: string[] = []
 	for (const entry of value.split(',').map((e) => e.trim()).filter(Boolean)) {
-		const [application, role] = entry.split(':').map((s) => s.trim())
+		const sep = entry.indexOf(':')
+		const application = sep === -1 ? '' : entry.slice(0, sep).trim()
+		const role = sep === -1 ? '' : entry.slice(sep + 1).trim()
 		if (!application || !role) {
 			invalid.push(entry)
 			continue

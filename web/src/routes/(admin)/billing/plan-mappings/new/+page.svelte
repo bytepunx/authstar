@@ -32,7 +32,7 @@
 		<input
 			name="grantedRoles"
 			value={form?.values?.grantedRoles ?? ''}
-			placeholder="loci:plan-family, loci:plan-business"
+			placeholder="loci:plan:family, loci:plan:business"
 			class="rounded border border-slate-300 px-2 py-1"
 		/>
 		{#if form?.fieldErrors?.grantedRoles}<span class="text-red-600">{form.fieldErrors.grantedRoles}</span>{/if}
