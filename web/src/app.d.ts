@@ -1,5 +1,6 @@
 import type { Session } from '$lib/server/session'
 import type { TowerClient } from '$lib/server/clients/tower'
+import type { KeepClient } from '$lib/server/clients/keep'
 
 // See https://svelte.dev/docs/kit/types#app.d.ts
 declare global {
@@ -19,6 +20,7 @@ declare global {
 			// can substitute fakes without touching route code.
 			clients: {
 				tower: TowerClient
+				keep: KeepClient
 			}
 		}
 		// interface PageData {}

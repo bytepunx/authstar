@@ -3,6 +3,7 @@ import { jwksKeyProvider, perTenantJwksKeyProvider } from '@bytepunx/authstar-co
 import { env } from '$env/dynamic/private'
 import { InvalidInternalJwtError, verifyInternalJwt } from '$lib/server/jwt'
 import { createTowerClient } from '$lib/server/clients/tower'
+import { createKeepClient } from '$lib/server/clients/keep'
 
 // ADR 0089: `web` is a single shared deployment serving every tenant, with
 // no Host-based signal of its own -- there is no mechanism that would ever
@@ -30,6 +31,7 @@ import { createTowerClient } from '$lib/server/clients/tower'
 const jwksUrl = env.INTERNAL_JWT_JWKS_URL
 
 const towerBaseUrl = env.TOWER_BASE_URL ?? 'http://tower.internal:3000'
+const keepBaseUrl = env.KEEP_BASE_URL ?? 'http://keep.internal:3000'
 
 const tenantDomainCache = new Map<string, string>()
 async function resolveTenantDomain(tenantSlug: string): Promise<string | undefined> {
@@ -68,6 +70,11 @@ export const handle: Handle = async ({ event, resolve }) => {
 	event.locals.clients = {
 		tower: createTowerClient({
 			baseUrl: towerBaseUrl,
+			authorization: token,
+			fetch: event.fetch,
+		}),
+		keep: createKeepClient({
+			baseUrl: keepBaseUrl,
 			authorization: token,
 			fetch: event.fetch,
 		}),
