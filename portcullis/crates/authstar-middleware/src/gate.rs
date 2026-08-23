@@ -51,6 +51,7 @@ pub async fn auth_gate(
         Some(h) => h.to_string(),
         None => return not_found(),
     };
+    tracing::info!(TEMP_DIAG = true, method = %req.method(), path = %req.uri().path(), %host, "auth_gate reached");
 
     let (tenant, application) = match state.resolve_active_host(&host) {
         Ok(pair) => pair,
