@@ -162,10 +162,18 @@ async function main(): Promise<void> {
   }, ROLE_REFERENCE_REFRESH_INTERVAL_MS)
   roleReferenceRefreshTimer.unref()
 
-  // ADR 0089's tenant-JWKS resolution needs keep's own copy of `baseDomain`
-  // -- same bundle field name tower's `ProvisioningConfig.baseDomain`
-  // reads, same fallback.
-  const baseDomain = (bundle.baseDomain as string | undefined) ?? 'authstar.app'
+  // ADR 0089's tenant-JWKS resolution: keep has no Host to resolve a
+  // tenant from itself, so it looks up each tenant's own registered domain
+  // against tower (the one service that actually owns the tenant actor)
+  // the first time that tenant's slug is seen -- `perTenantJwksKeyProvider`
+  // caches the result for the life of the process, so this is at most one
+  // HTTP round trip per tenant, not per request.
+  const resolveTenantDomain = async (tenantSlug: string): Promise<string | undefined> => {
+    const response = await fetch(`${towerBaseUrl}/tenants/${tenantSlug}`)
+    if (!response.ok) return undefined
+    const state = (await response.json()) as { domain?: string }
+    return state.domain
+  }
 
   const app = await buildApp({
     consequent,
@@ -175,7 +183,7 @@ async function main(): Promise<void> {
     roleBackfill,
     entitlements,
     sequences,
-    baseDomain,
+    resolveTenantDomain,
     logger: true,
   })
 

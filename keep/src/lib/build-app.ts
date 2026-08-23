@@ -33,11 +33,13 @@ export interface BuildAppOptions {
   logger?: boolean
   // Story 007's internal-JWT verification key -- keep has no Host to
   // resolve a tenant from itself (one shared deployment for every tenant,
-  // ADR 0089), so this defaults to `perTenantJwksKeyProvider(baseDomain)`,
-  // which reads the tenant hint off the token's own protected header
-  // instead. Tests override with a `staticKeyProvider` fixture pinned to a
+  // ADR 0089), so this defaults to `perTenantJwksKeyProvider(resolveTenantDomain)`,
+  // which reads the tenant hint off the token's own protected header and
+  // looks up that tenant's own registered domain (tenants bring their own,
+  // unrelated domains -- there's no formula from slug to host). Tests
+  // override with a `staticKeyProvider` fixture pinned to a
   // locally-generated keypair, so they never make a real JWKS fetch.
-  baseDomain?: string
+  resolveTenantDomain?: (tenantSlug: string) => string | undefined | Promise<string | undefined>
   authstarGetKey?: JWTVerifyGetKey
 }
 
@@ -86,7 +88,8 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('entitlements', options.entitlements)
   app.decorate('sequences', options.sequences ?? createInMemorySequenceProvider())
 
-  const authstarGetKey = options.authstarGetKey ?? perTenantJwksKeyProvider(options.baseDomain ?? 'authstar.test')
+  const authstarGetKey = options.authstarGetKey
+    ?? perTenantJwksKeyProvider(options.resolveTenantDomain ?? (() => undefined))
   // `required: false` -- same posture as tower's own build-app.ts:
   // `requirePermission` decides every failure mode as one generic 403, not
   // this plugin's default 401. `POST /tenants/:tenantSlug/usage-records`
