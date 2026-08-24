@@ -227,6 +227,103 @@ async fn build_state_with_enricher_base(
     Arc::new(state)
 }
 
+/// Same tenant as [`build_state_with_enricher_base`] (same session/internal keys, so a cookie
+/// signed for "app.acme.test" verifies just as well here -- ADR 0015's shared `.{domain}` SSO
+/// cookie is tenant-scoped, not application-scoped, by design), plus a second application
+/// ("raw.acme.test") with no `providers`/`auth.loginUrl` configured at all and fully exempt --
+/// modelling bytepunx's own real `argocd`/`writingdesk` applications, raw passthrough upstreams
+/// with no relationship to authstar's login system whatsoever.
+async fn build_state_with_raw_exempt_app(oidc_base: &str, tower_base: &str) -> Arc<PortcullisState> {
+    let session_key = generate_pem_key();
+    let internal_key = generate_pem_key();
+    let identity_hash_key = "identity-hash-key-material";
+
+    let bundle_json = json!({
+        "tenants": {
+            "acme": {
+                "status": "active",
+                "providers": {
+                    "testidp": {
+                        "clientId": "client-123",
+                        "discoveryUrl": oidc_base,
+                        "scope": ["openid", "email"],
+                    }
+                },
+                "cookie": {
+                    "domain": "app.acme.test",
+                    "path": "/",
+                    "maxAge": 604800,
+                    "httpOnly": true,
+                    "secure": false,
+                },
+                "jwt": {
+                    "issuer": "authstar",
+                    "audience": "acme",
+                    "expiresIn": "168h",
+                },
+                "identityHashKeyGenerations": [
+                    { "version": 1 }
+                ],
+                "applications": {
+                    "app": {
+                        "hosts": ["app.acme.test"],
+                        "server": { "publicUrl": "http://app.acme.test" },
+                        "upstream": {
+                            "base": "http://upstream.invalid",
+                            "routes": {},
+                            "timeout": 30,
+                        },
+                        "cors": { "origin": "https://allowed.example.com" },
+                        "exempt": ["/health", "/api/public/*"],
+                        "providers": ["testidp"],
+                    },
+                    "raw": {
+                        "hosts": ["raw.acme.test"],
+                        "server": { "publicUrl": "http://raw.acme.test" },
+                        "upstream": {
+                            "base": "http://raw-upstream.invalid",
+                            "routes": {},
+                            "timeout": 30,
+                        },
+                        "exempt": ["/*"],
+                    }
+                }
+            }
+        },
+        "secrets": {
+            "tenant-acme-session-key": b64(&session_key),
+            "tenant-acme-internal-key": b64(&internal_key),
+            "tenant-acme-identity-hash-key-1": b64(identity_hash_key),
+            "tenant-acme-provider-testidp-client-secret": b64("provider-client-secret"),
+        }
+    });
+
+    let config: Bundle = serde_json::from_value(bundle_json.clone()).unwrap();
+    let secrets = RawSecrets::from_bundle_json(&bundle_json).unwrap();
+    let http_client = reqwest::Client::new();
+    let enricher: Arc<dyn ClaimsEnricher> = Arc::new(TowerClaimsEnricher::new(
+        http_client.clone(),
+        tower_base.to_string(),
+    ));
+
+    let (state, warnings) = build_state(
+        config,
+        secrets,
+        http_client.clone(),
+        http_client,
+        enricher,
+        tower_base.to_string(),
+        String::new(),
+    )
+    .await;
+    assert!(
+        warnings.is_empty(),
+        "expected no startup warnings, got: {:?}",
+        warnings.iter().map(|w| w.to_string()).collect::<Vec<_>>()
+    );
+    Arc::new(state)
+}
+
 /// A stub "upstream" handler standing in for the real reverse-proxy forwarding logic (tested
 /// separately, with its own routing concerns, in authstar-proxy). Reflects whether an internal
 /// token was attached so gate behavior can be asserted on directly.
@@ -766,6 +863,86 @@ async fn authenticated_exempt_route_still_gets_internal_token() {
     assert_eq!(
         response.headers().get("x-internal-token-present").unwrap(),
         "true"
+    );
+}
+
+#[tokio::test]
+async fn exempt_route_on_an_app_with_no_login_url_never_gets_a_token_even_with_a_valid_session() {
+    // Regression: a visitor holding a valid session cookie for one application (minted while
+    // logging into "app.acme.test", a real authstar-integrated app) must never have that
+    // identity forwarded to a completely different, raw-passthrough application sharing the
+    // same tenant's cookie domain (ADR 0015) just because the cookie happens to verify --
+    // "raw.acme.test" never established an authstar login flow of its own (no providers, no
+    // auth.loginUrl) and has no idea what to do with an Authorization header carrying someone
+    // else's internal JWT. This is exactly what broke ArgoCD's own session handling in
+    // production: portcullis attached a real internal token to every request reaching the
+    // fully-exempt, non-authstar-aware argocd application whenever the visitor also held a live
+    // bytepunx admin-console session, and ArgoCD's server tried to verify that token as its own,
+    // saw an issuer that wasn't "argocd", and permanently bounced real logins back to its own
+    // login screen.
+    let oidc_server = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/.well-known/openid-configuration"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "authorization_endpoint": format!("{}/authorize", oidc_server.uri()),
+            "token_endpoint": format!("{}/token", oidc_server.uri()),
+            "userinfo_endpoint": format!("{}/userinfo", oidc_server.uri()),
+        })))
+        .mount(&oidc_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/token"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "access_token": "test-access-token",
+        })))
+        .mount(&oidc_server)
+        .await;
+    Mock::given(method("GET"))
+        .and(path("/userinfo"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "email": "user@example.com",
+            "sub": "provider-sub-123",
+        })))
+        .mount(&oidc_server)
+        .await;
+
+    let tower_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/identities/resolve"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accountId": "acct-1",
+            "isNewAccount": false,
+        })))
+        .mount(&tower_server)
+        .await;
+    Mock::given(method("POST"))
+        .and(path("/enrich"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "accountId": "acct-1",
+            "grantedRoles": ["member"],
+            "trialRoles": [],
+            "trialExpiresAt": null,
+            "usage": {},
+        })))
+        .mount(&tower_server)
+        .await;
+
+    let state = build_state_with_raw_exempt_app(&oidc_server.uri(), &tower_server.uri()).await;
+    let app = build_app(state);
+
+    let jwt = login_and_get_session_cookie(&app).await;
+
+    let req = Request::builder()
+        .uri("/anything")
+        .header(header::HOST, "raw.acme.test")
+        .header(header::COOKIE, format!("jwt={jwt}"))
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-internal-token-present").unwrap(),
+        "false"
     );
 }
 

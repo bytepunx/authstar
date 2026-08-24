@@ -66,8 +66,26 @@ pub async fn auth_gate(
         .map(|pq| pq.as_str().to_string())
         .unwrap_or_else(|| path.clone());
 
-    let session = try_verify_session(tenant, req.headers());
     let exempt = is_exempt(&path, &application.exempt);
+
+    // An application with no `login_url` (argocd/writingdesk in bytepunx's own tenant config,
+    // for instance) never established an authstar login flow of its own -- it's a raw
+    // passthrough upstream with no idea what an authstar-internal JWT even is. Enriching and
+    // attaching one anyway just because the *visitor* happens to also hold a valid session
+    // cookie for some *other*, unrelated application sharing this tenant's cookie domain
+    // (ADR 0015's shared `.{domain}` SSO cookie) leaked that token to a foreign system as an
+    // `Authorization: Bearer` header on every request -- ArgoCD, in particular, tried to parse
+    // it as its own session token, saw an issuer that wasn't its own, and misrouted into its
+    // (unconfigured) SSO-verification path, permanently bouncing real, valid ArgoCD logins back
+    // to the login screen for as long as the visitor's authstar session cookie stayed live.
+    // "an exempt route is never blocked, at worst it's forwarded anonymously" (this module's own
+    // header comment) means anonymously -- no identity forwarded at all -- for an app that was
+    // never wired into authstar's login system in the first place, not merely "not blocked."
+    if exempt && application.login_url.is_none() {
+        return forward_without_token(tenant, application, req, next).await;
+    }
+
+    let session = try_verify_session(tenant, req.headers());
 
     if let Some(claims) = session {
         let ctx = EnrichmentContext {
