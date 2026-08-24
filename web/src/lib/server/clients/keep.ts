@@ -35,6 +35,17 @@ export interface PlanMappingInput {
 	meter?: string | null
 }
 
+// stripePriceId (and the unitAmount/currency/interval keep resolves from it
+// at creation) is deliberately absent here -- it's the mapping's own
+// identity, not an editable field; retire and create a new mapping to
+// change which Stripe price is involved.
+export interface PlanMappingUpdate {
+	name?: string
+	seatLimit?: number | null
+	grantedRoles?: GrantedRole[]
+	meter?: string | null
+}
+
 export interface StripeConfigStatus {
 	configured: boolean
 }
@@ -60,7 +71,9 @@ export interface KeepClient {
 	getStripeConfig(tenantSlug: string): Promise<StripeConfigStatus | null>
 	setStripeConfig(tenantSlug: string, input: StripeConfigInput): Promise<StripeConfigStatus>
 	listPlanMappings(tenantSlug: string, status?: 'active' | 'retired' | 'all'): Promise<PlanMapping[]>
+	getPlanMapping(tenantSlug: string, id: string): Promise<PlanMapping | null>
 	createPlanMapping(tenantSlug: string, input: PlanMappingInput): Promise<PlanMapping>
+	updatePlanMapping(tenantSlug: string, id: string, input: PlanMappingUpdate): Promise<PlanMapping>
 	retirePlanMapping(tenantSlug: string, id: string): Promise<PlanMapping>
 }
 
@@ -117,8 +130,19 @@ export function createKeepClient(options: CreateKeepClientOptions): KeepClient {
 			const query = status ? `?status=${status}` : ''
 			return request('GET', `/tenants/${tenantSlug}/plan-mappings${query}`)
 		},
+		async getPlanMapping(tenantSlug, id) {
+			try {
+				return await request<PlanMapping>('GET', `/tenants/${tenantSlug}/plan-mappings/${id}`)
+			} catch (err) {
+				if (err instanceof KeepNotFoundError) return null
+				throw err
+			}
+		},
 		createPlanMapping(tenantSlug, input) {
 			return request('POST', `/tenants/${tenantSlug}/plan-mappings`, input)
+		},
+		updatePlanMapping(tenantSlug, id, input) {
+			return request('PATCH', `/tenants/${tenantSlug}/plan-mappings/${id}`, input)
 		},
 		async retirePlanMapping(tenantSlug, id) {
 			return request('DELETE', `/tenants/${tenantSlug}/plan-mappings/${id}`)

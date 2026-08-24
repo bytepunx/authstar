@@ -38,10 +38,7 @@
 					</td>
 					<td class="py-2">{mapping.seatLimit ?? '-'}</td>
 					<td class="py-2">
-						<form method="POST" action="?/retire">
-							<input type="hidden" name="id" value={mapping.id} />
-							<button type="submit" class="text-sm text-red-700 underline">Retire</button>
-						</form>
+						<a href={`/billing/plan-mappings/${mapping.id}`} class="text-sm text-slate-900 underline">Edit</a>
 					</td>
 				</tr>
 			{/each}

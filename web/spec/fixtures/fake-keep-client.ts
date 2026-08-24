@@ -5,6 +5,7 @@ import {
 	type KeepClient,
 	type PlanMapping,
 	type PlanMappingInput,
+	type PlanMappingUpdate,
 	type StripeConfigInput,
 } from '../../src/lib/server/clients/keep'
 
@@ -54,6 +55,21 @@ export function createFakeKeepClient(options: FakeKeepClientOptions = {}) {
 			}
 			mappings.set(created.id, created)
 			return created
+		}),
+		getPlanMapping: vi.fn(async (_tenantSlug: string, id: string) => mappings.get(id) ?? null),
+		updatePlanMapping: vi.fn(async (_tenantSlug: string, id: string, input: PlanMappingUpdate) => {
+			if (options.rejectMutations) throw new KeepRequestError('rejected', 409)
+			const existing = mappings.get(id)
+			if (!existing) throw new KeepNotFoundError(`no such plan mapping: ${id}`)
+			const updated: PlanMapping = {
+				...existing,
+				...(input.name !== undefined ? { name: input.name } : {}),
+				...(input.seatLimit !== undefined ? { seatLimit: input.seatLimit } : {}),
+				...(input.grantedRoles !== undefined ? { grantedRoles: input.grantedRoles } : {}),
+				...(input.meter !== undefined ? { meter: input.meter } : {}),
+			}
+			mappings.set(id, updated)
+			return updated
 		}),
 		retirePlanMapping: vi.fn(async (_tenantSlug: string, id: string) => {
 			const existing = mappings.get(id)

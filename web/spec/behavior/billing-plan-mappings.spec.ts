@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { isHttpError, isRedirect } from '@sveltejs/kit'
-import { actions, load } from '../../src/routes/(admin)/billing/plan-mappings/+page.server'
+import { load } from '../../src/routes/(admin)/billing/plan-mappings/+page.server'
 import { actions as newActions } from '../../src/routes/(admin)/billing/plan-mappings/new/+page.server'
+import { actions as detailActions, load as loadDetail } from '../../src/routes/(admin)/billing/plan-mappings/[id]/+page.server'
 import { createFakeKeepClient, fakePlanMapping } from '../fixtures/fake-keep-client'
 import { fakeSession } from '../fixtures/fake-session'
 
@@ -36,15 +37,85 @@ describe('billing/plan-mappings list load', () => {
 	})
 })
 
-describe('billing/plan-mappings retire action', () => {
-	it('retires the given mapping by id', async () => {
+describe('billing/plan-mappings/[id] detail load', () => {
+	it('returns the mapping by id', async () => {
+		const keep = createFakeKeepClient({ planMappings: [fakePlanMapping({ id: 'pm_1', name: 'Family' })] })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+
+		const result = await loadDetail({
+			locals: { session, clients: { keep } },
+			params: { id: 'pm_1' },
+		} as Parameters<typeof loadDetail>[0])
+		expect(result.planMapping.name).toBe('Family')
+	})
+
+	it('404s for an unknown id', async () => {
+		const keep = createFakeKeepClient()
+		const session = fakeSession({ permissions: ['billing:manage'] })
+
+		try {
+			await loadDetail({
+				locals: { session, clients: { keep } },
+				params: { id: 'pm_missing' },
+			} as Parameters<typeof loadDetail>[0])
+			expect.unreachable('expected load to throw a 404')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(404)
+		}
+	})
+})
+
+describe('billing/plan-mappings/[id] update action', () => {
+	it('updates name/seatLimit/grantedRoles/meter, never touching stripePriceId', async () => {
+		const keep = createFakeKeepClient({ planMappings: [fakePlanMapping({ id: 'pm_1', stripePriceId: 'price_original' })] })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+
+		const result = await detailActions.update({
+			request: formRequest({ name: 'Renamed', grantedRoles: 'loci:plan:business', seatLimit: '5', meter: 'seats' }),
+			locals: { session, clients: { keep } },
+			params: { id: 'pm_1' },
+		} as Parameters<typeof detailActions.update>[0])
+
+		expect(result).toEqual({ success: true })
+		expect(keep.updatePlanMapping).toHaveBeenCalledWith('acme', 'pm_1', {
+			name: 'Renamed',
+			seatLimit: 5,
+			grantedRoles: [{ application: 'loci', role: 'plan:business' }],
+			meter: 'seats',
+		})
+	})
+
+	it('rejects a submission missing name', async () => {
 		const keep = createFakeKeepClient({ planMappings: [fakePlanMapping({ id: 'pm_1' })] })
 		const session = fakeSession({ permissions: ['billing:manage'] })
 
-		await actions.retire({
-			request: formRequest({ id: 'pm_1' }),
+		const result = await detailActions.update({
+			request: formRequest({ name: '' }),
 			locals: { session, clients: { keep } },
-		} as Parameters<typeof actions.retire>[0])
+			params: { id: 'pm_1' },
+		} as Parameters<typeof detailActions.update>[0])
+
+		expect(result?.status).toBe(400)
+		expect(result?.data?.fieldErrors).toMatchObject({ name: expect.any(String) })
+		expect(keep.updatePlanMapping).not.toHaveBeenCalled()
+	})
+})
+
+describe('billing/plan-mappings/[id] retire action', () => {
+	it('retires the mapping and redirects to the list', async () => {
+		const keep = createFakeKeepClient({ planMappings: [fakePlanMapping({ id: 'pm_1' })] })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+
+		try {
+			await detailActions.retire({
+				locals: { session, clients: { keep } },
+				params: { id: 'pm_1' },
+			} as Parameters<typeof detailActions.retire>[0])
+			expect.unreachable('expected a redirect')
+		} catch (err) {
+			expect(isRedirect(err)).toBe(true)
+		}
 
 		expect(keep.retirePlanMapping).toHaveBeenCalledWith('acme', 'pm_1')
 	})
