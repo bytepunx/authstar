@@ -13,7 +13,7 @@ import { createIdGenerator } from './lib/ids.js'
 import { startEntitlementConsumer } from './lib/entitlement-consumer.js'
 import { startErasureAckConsumer } from './lib/erasure-ack-consumer.js'
 import { createEphemeralHeraldKey, heraldKeyFromPem, type HeraldPayloadKey } from './lib/herald-payload-crypto.js'
-import { fetchServerCredentials } from './lib/spiffe-mtls.js'
+import { fetchServerCredentials, watchSVIDRotation } from './lib/spiffe-mtls.js'
 import type { ProvisioningConfig } from './routes/provisioning.js'
 
 // Production entrypoint. Follows the fetch-once/watch/restart-lock pattern
@@ -185,6 +185,7 @@ async function main(): Promise<void> {
   const port = Number(process.env.PORT ?? 8080)
   await app.listen({ port, host: '0.0.0.0' })
   app.log.info(`tower listening on :${port} (signet config version ${bundleResponse.configVersion})`)
+  watchSVIDRotation(app.server as unknown as { setSecureContext: (ctx: { cert: string; key: string; ca: string }) => void })
 
   // Race our own shutdown signal against signet's coordinated-restart wait
   // so a stuck `waitForRestart` (an anomaly portcullis's own live-cluster

@@ -28,12 +28,9 @@ export interface SpiffeServerCredentials {
 // unix socket, the same one `dialWorkload` connects through for tower's
 // own outbound signet dialing -- this is the separate, inbound-facing
 // half: tower's own server identity, not a client dial). Resolves on the
-// *first* message from the (indefinitely-streaming) `FetchX509SVID` RPC --
-// certificate rotation is handled by re-fetching at process restart, the
-// same "no hot-reload, a bundle/config change triggers a clean exit and
-// lets Kubernetes restart into a fresh fetch" posture `server.ts`'s own
-// header comment already documents for signet, not a new pattern this
-// introduces.
+// *first* message from the indefinitely-streaming `FetchX509SVID` RPC.
+// Call `watchSVIDRotation` after the server starts listening to keep the
+// certificate live beyond the initial SVID's TTL (SPIRE's default: 4h).
 export async function fetchServerCredentials(): Promise<SpiffeServerCredentials> {
   const client = createClient()
   const rpc = client.fetchX509SVID({})
@@ -52,6 +49,35 @@ export async function fetchServerCredentials(): Promise<SpiffeServerCredentials>
     return { cert, key, ca }
   }
   throw new Error('SPIFFE Workload API closed its FetchX509SVID stream without ever returning an SVID')
+}
+
+// Keeps the server certificate live by consuming the SPIRE Workload API's
+// indefinitely-streaming FetchX509SVID RPC and calling setSecureContext on
+// each push. SPIRE rotates SVIDs at ~50% of their TTL (default 4h, so ~2h
+// intervals), always pushing the successor before the current one expires.
+// Call once immediately after app.listen() resolves -- the first push
+// (SPIRE's current SVID, the same one fetchServerCredentials already loaded)
+// is applied redundantly but harmlessly. If the stream ever closes, the
+// process exits so Kubernetes restarts into a fresh fetch.
+export function watchSVIDRotation(httpsServer: { setSecureContext: (ctx: { cert: string; key: string; ca: string }) => void }): void {
+  const client = createClient()
+  const rpc = client.fetchX509SVID({})
+  void (async () => {
+    for await (const message of rpc.responses) {
+      if (message.svids.length === 0) continue
+      const svid = message.svids[0]
+      const cert = parseCertificateBundle(svid.x509Svid).toString('pem-chain')
+      const key = createPrivateKey({ key: Buffer.from(svid.x509SvidKey), format: 'der', type: 'pkcs8' })
+        .export({ format: 'pem', type: 'pkcs8' }) as string
+      const ca = parseCertificateBundle(svid.bundle).toString('pem-chain')
+      httpsServer.setSecureContext({ cert, key, ca })
+    }
+    process.stderr.write('SPIFFE Workload API closed FetchX509SVID stream -- cannot rotate certificates; exiting\n')
+    process.exit(1)
+  })().catch((err) => {
+    process.stderr.write(`SVID rotation watch failed -- exiting: ${err}\n`)
+    process.exit(1)
+  })
 }
 
 function extractSpiffeId(subjectaltname: string | undefined): string | undefined {
