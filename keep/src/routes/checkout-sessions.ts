@@ -5,6 +5,7 @@ import type { CustomerState } from '../actors/customer_actor.js'
 import { scopesEqual, type Scope } from '../lib/scope.js'
 import { requirePermission } from '../lib/permissions.js'
 
+
 // Per design/stories/keep/003-plan-mappings-checkout-and-billing-reads.md
 // ("Checkout Sessions"). Resolves the matching `customer` record (Story
 // 001) for the given scope *before* creating the session -- a second
@@ -62,9 +63,18 @@ async function findExistingCustomer(app: FastifyInstance, tenantSlug: string, sc
 }
 
 const checkoutSessionRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/tenants/:tenantSlug/checkout-sessions', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
+  // ADR 0070 self-action: an account can create a checkout session scoped to
+  // itself without `billing:manage`. Org/tenant-scoped checkouts still require it.
+  app.post('/tenants/:tenantSlug/checkout-sessions', { schema: { params: tenantParamsSchema, body: createBodySchema } }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const body = request.body as { planMappingId: string, scope: Scope, customerEmail?: string, successUrl: string, cancelUrl: string }
+
+    const claims = request.authstar
+    const isSelfAction = 'account' in body.scope && claims?.accountId === body.scope.account
+    if (!isSelfAction) {
+      const authorized = claims?.enrichmentStatus === 'ok' && claims.permissions.includes('billing:manage')
+      if (!authorized) return reply.code(403).send({ error: 'forbidden' })
+    }
 
     const mappingInstance = await app.consequent.fetch('planMapping', body.planMappingId)
     const mapping = mappingInstance!.state as unknown as PlanMappingState
