@@ -31,7 +31,6 @@ pub async fn stripe_webhook_handler(
     let Some(host) = headers.get(header::HOST).and_then(|v| v.to_str().ok()) else {
         return not_found();
     };
-    tracing::info!(TEMP_DIAG = true, %host, "stripe_webhook_handler reached");
     let (tenant, _application) = match state.resolve_active_host(host) {
         Ok(pair) => pair,
         Err(HostResolutionError::NotFound) => return not_found(),
