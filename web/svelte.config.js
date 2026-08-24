@@ -12,6 +12,18 @@ const config = {
     alias: {
       $widgets: 'src/widgets',
     },
+    paths: {
+      // SvelteKit's default (true) emits relative asset URLs
+      // (`../_app/...`) so one build can be served from an unknown mount
+      // path -- doesn't apply here, since every tenant's `_admin`
+      // application is always served at its own domain's root. Relative
+      // mode miscounted the `../` depth needed for
+      // /billing/plan-mappings/new (3 segments) -- the first route this
+      // deep to actually get exercised -- landing the browser on
+      // /billing/_app/... (404) instead of /_app/.... Absolute paths sidestep
+      // that whole class of depth-counting bug.
+      relative: false,
+    },
   },
 }
 
