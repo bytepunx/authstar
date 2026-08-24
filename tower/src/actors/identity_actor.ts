@@ -4,7 +4,7 @@
 // computed *only* by portcullis; tower never sees the raw `idp_sub` or
 // computes the hash itself, only stores/looks up by it.
 //
-// `identifiedBy: 'identityId'` (a freshly generated id, `ids.nextIdentityId()`
+// `identifiedBy: 'id'` (a freshly generated id, `ids.nextIdentityId()`
 // -- see `account_actor.ts`'s identical `accountId` pattern), NOT
 // `identityHash` directly. `identityHash` is a `searchableBy` field instead.
 // This actor's id used to *be* the raw hash, but `consequent-postgres`
@@ -21,6 +21,13 @@
 // independently recomputed by another service, unlike `identityHash`, which
 // portcullis computes and tower only ever looks up by).
 //
+// `identifiedBy: 'id'` (not `'identityId'`) because consequent-postgres's
+// search adapter always reads `state.id` when updating the search index --
+// `state[identifiedBy]` is set by the core dispatcher, but the adapter
+// only looks at `.id`. Using `'id'` keeps the two in sync without patching
+// the adapter. The field carries the same generated identityId value either
+// way; no application code reads `state.id` by name.
+//
 // No `email` field -- PII lives only on `contact` (see
 // `src/lib/contact-store.ts`), joined via `account.contactId`, per ADR
 // 0023/0027's removal of email from this actor.
@@ -31,6 +38,7 @@
 // (`/enrich`, `/identities/resolve`) to distinguish "no such identity" from
 // "identity resolves to this account".
 export interface IdentityState {
+  id: string
   identityHash: string
   tenant: string
   idp: string
@@ -66,10 +74,11 @@ export default function identityActor() {
     actor: {
       namespace: 'tower',
       type: 'identity',
-      identifiedBy: 'identityId',
+      identifiedBy: 'id',
       searchableBy: ['identityHash', 'tenant', 'idp', 'accountId'],
     },
     state: {
+      id: '',
       identityHash: '',
       tenant: '',
       idp: '',
