@@ -78,6 +78,17 @@ impl TenantRuntime {
     }
 }
 
+/// The purpose-built `reqwest::Client`s `build_state` wires into `PortcullisState`, grouped into
+/// one parameter so the function's own signature doesn't grow unboundedly as a new specialized
+/// client is added (clippy's `too_many_arguments` -- each of these three clients has its own
+/// separately-documented reason it can't be shared with the others; see each field's doc comment
+/// on `PortcullisState` itself).
+pub struct HttpClients {
+    pub http_client: reqwest::Client,
+    pub proxy_http_client: reqwest::Client,
+    pub tower_http_client: reqwest::Client,
+}
+
 pub struct PortcullisState {
     pub tenants: IndexMap<String, TenantRuntime>,
     /// Precomputed at startup: `host -> (tenant_slug, application_slug)`. Story 013 requires
@@ -265,13 +276,16 @@ impl std::fmt::Display for StartupWarning {
 pub async fn build_state(
     bundle: Bundle,
     secrets: RawSecrets,
-    http_client: reqwest::Client,
-    proxy_http_client: reqwest::Client,
-    tower_http_client: reqwest::Client,
+    clients: HttpClients,
     enricher: Arc<dyn ClaimsEnricher>,
     tower_base_url: String,
     keep_base_url: String,
 ) -> (PortcullisState, Vec<StartupWarning>) {
+    let HttpClients {
+        http_client,
+        proxy_http_client,
+        tower_http_client,
+    } = clients;
     let mut warnings = Vec::new();
 
     // Discovery runs once, concurrently, across every tenant/provider pair in the whole bundle.

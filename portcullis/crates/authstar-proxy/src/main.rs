@@ -18,7 +18,7 @@ use authstar_config::validate::validate_bundle;
 use authstar_config::{BootstrapEnv, SignetSource};
 use authstar_middleware::enricher::{ClaimsEnricher, TowerClaimsEnricher};
 use authstar_middleware::router::{apply_auth_gate, apply_cors, oauth_routes, webhook_routes};
-use authstar_middleware::state::{build_state, PortcullisState};
+use authstar_middleware::state::{build_state, HttpClients, PortcullisState};
 use authstar_proxy::proxy::proxy_handler;
 use axum::Router;
 use tokio_util::sync::CancellationToken;
@@ -180,9 +180,11 @@ async fn main() {
     let (state, warnings) = build_state(
         fetched.config,
         fetched.secrets,
-        http_client,
-        proxy_http_client,
-        tower_http_client,
+        HttpClients {
+            http_client,
+            proxy_http_client,
+            tower_http_client,
+        },
         enricher,
         tower_base_url,
         keep_base_url,

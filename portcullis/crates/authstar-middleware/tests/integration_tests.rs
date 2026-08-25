@@ -14,7 +14,7 @@ use authstar_config::RawSecrets;
 use authstar_middleware::enricher::{ClaimsEnricher, TowerClaimsEnricher, UnreachableEnricher};
 use authstar_middleware::gate::auth_gate;
 use authstar_middleware::router::{apply_auth_gate, apply_cors, oauth_routes};
-use authstar_middleware::state::{build_state, PortcullisState};
+use authstar_middleware::state::{build_state, HttpClients, PortcullisState};
 use axum::body::Body;
 use axum::http::{header, Request, StatusCode};
 use axum::middleware::from_fn_with_state;
@@ -212,9 +212,11 @@ async fn build_state_with_enricher_base(
     let (state, warnings) = build_state(
         config,
         secrets,
-        http_client.clone(),
-        http_client.clone(),
-        http_client,
+        HttpClients {
+            http_client: http_client.clone(),
+            proxy_http_client: http_client.clone(),
+            tower_http_client: http_client,
+        },
         enricher,
         identities_tower_base.to_string(),
         String::new(),
@@ -310,9 +312,11 @@ async fn build_state_with_raw_exempt_app(oidc_base: &str, tower_base: &str) -> A
     let (state, warnings) = build_state(
         config,
         secrets,
-        http_client.clone(),
-        http_client.clone(),
-        http_client,
+        HttpClients {
+            http_client: http_client.clone(),
+            proxy_http_client: http_client.clone(),
+            tower_http_client: http_client,
+        },
         enricher,
         tower_base.to_string(),
         String::new(),
@@ -1272,9 +1276,11 @@ async fn build_rotated_keys_harness() -> (Router, String, String, String, String
     let (state, warnings) = build_state(
         config,
         secrets,
-        http_client.clone(),
-        http_client.clone(),
-        http_client,
+        HttpClients {
+            http_client: http_client.clone(),
+            proxy_http_client: http_client.clone(),
+            tower_http_client: http_client,
+        },
         Arc::new(UnreachableEnricher),
         "http://tower.invalid".to_string(),
         String::new(),
