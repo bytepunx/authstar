@@ -114,6 +114,20 @@ async fn main() {
         }
     };
 
+    // Redirects disabled: see `PortcullisState::proxy_http_client`'s own doc comment. Used only
+    // by `proxy_handler`'s reverse-proxy fallback, never for OIDC/webhook calls.
+    let proxy_http_client = match reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .redirect(reqwest::redirect::Policy::none())
+        .build()
+    {
+        Ok(c) => c,
+        Err(e) => {
+            tracing::error!(error = %e, "failed to build proxy http client");
+            std::process::exit(1);
+        }
+    };
+
     // SPIFFE mTLS, not plain TLS: presents portcullis's own SVID and validates the peer's,
     // exactly like the signet bundle fetch above (`SignetSource::dial`) — see
     // `authstar_config::mtls` for the implementation and TESTING.md for how it's verified.
@@ -167,6 +181,7 @@ async fn main() {
         fetched.config,
         fetched.secrets,
         http_client,
+        proxy_http_client,
         tower_http_client,
         enricher,
         tower_base_url,

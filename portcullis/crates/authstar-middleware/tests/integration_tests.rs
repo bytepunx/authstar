@@ -213,6 +213,7 @@ async fn build_state_with_enricher_base(
         config,
         secrets,
         http_client.clone(),
+        http_client.clone(),
         http_client,
         enricher,
         identities_tower_base.to_string(),
@@ -309,6 +310,7 @@ async fn build_state_with_raw_exempt_app(oidc_base: &str, tower_base: &str) -> A
     let (state, warnings) = build_state(
         config,
         secrets,
+        http_client.clone(),
         http_client.clone(),
         http_client,
         enricher,
@@ -1270,6 +1272,7 @@ async fn build_rotated_keys_harness() -> (Router, String, String, String, String
     let (state, warnings) = build_state(
         config,
         secrets,
+        http_client.clone(),
         http_client.clone(),
         http_client,
         Arc::new(UnreachableEnricher),

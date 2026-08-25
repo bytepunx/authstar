@@ -82,6 +82,7 @@ fn test_state(keep_base_url: String) -> Arc<PortcullisState> {
         host_index,
         web_upstream: None,
         http_client: reqwest::Client::new(),
+        proxy_http_client: reqwest::Client::new(),
         enricher: Arc::new(NeverEnricher),
         tower_http_client: reqwest::Client::new(),
         tower_base_url: String::new(),

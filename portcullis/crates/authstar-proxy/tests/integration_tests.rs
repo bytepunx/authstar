@@ -91,6 +91,10 @@ fn build_state(application: ApplicationRuntime) -> Arc<PortcullisState> {
         host_index,
         web_upstream: None,
         http_client: reqwest::Client::new(),
+        proxy_http_client: reqwest::Client::builder()
+            .redirect(reqwest::redirect::Policy::none())
+            .build()
+            .unwrap(),
         enricher: Arc::new(NeverEnricher),
         tower_http_client: reqwest::Client::new(),
         tower_base_url: String::new(),
@@ -350,4 +354,46 @@ async fn options_method_is_forwarded_like_any_other_when_no_cors_layer_present()
 
     let response = app.oneshot(req).await.unwrap();
     assert_eq!(response.status(), StatusCode::NO_CONTENT);
+}
+
+#[tokio::test]
+async fn passes_a_3xx_from_upstream_straight_through_instead_of_following_it() {
+    // Regression: `proxy_handler` used to follow a redirect from upstream (e.g. SvelteKit's own
+    // `redirect(303, ...)` after a completed Stripe Checkout session, or any other upstream
+    // redirect) itself via reqwest's default redirect policy, re-sending the follow-up request
+    // with the *original* upstream's `Host` header override still attached. Against a real
+    // cross-origin target (checkout.stripe.com) that produced a Host-header-routed edge (Fastly)
+    // rejecting the request outright ("Requested host does not match any SAN") -- the browser
+    // never saw the redirect at all. The fix (`PortcullisState::proxy_http_client`, built with
+    // `redirect::Policy::none()`) requires the 3xx and its `Location` to reach the browser
+    // unchanged, which this test asserts directly against a mock upstream.
+    let upstream = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/account"))
+        .respond_with(
+            ResponseTemplate::new(303).insert_header("location", "https://checkout.stripe.com/c/pay/cs_live_abc123"),
+        )
+        .mount(&upstream)
+        .await;
+
+    let application = test_application(upstream.uri(), IndexMap::new());
+    let state = build_state(application);
+    let app = app_with_forward_context(state, None);
+
+    let req = Request::builder()
+        .method("POST")
+        .uri("/account")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::SEE_OTHER);
+    assert_eq!(
+        response
+            .headers()
+            .get(header::LOCATION)
+            .and_then(|v| v.to_str().ok()),
+        Some("https://checkout.stripe.com/c/pay/cs_live_abc123")
+    );
 }

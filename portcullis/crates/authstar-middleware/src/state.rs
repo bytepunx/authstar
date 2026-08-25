@@ -92,6 +92,18 @@ pub struct PortcullisState {
     /// SPIFFE mTLS-configured client has no public root store and presents a client certificate
     /// no OIDC provider expects, so the two must stay separate clients.
     pub http_client: reqwest::Client,
+    /// Client for `proxy_handler`'s reverse-proxy fallback to an application's own upstream
+    /// (e.g. loci-web) only. Must never follow redirects itself: `reqwest`'s default policy
+    /// (follow up to 10 redirects) is correct for the OIDC/webhook calls `http_client` makes, but
+    /// wrong for a reverse proxy — a 3xx from upstream (e.g. SvelteKit's `redirect(303, ...)` for
+    /// a completed Stripe Checkout session) must reach the browser unchanged so *it* makes the
+    /// follow-up request with a Host/SNI it resolves fresh from the redirect target. Following it
+    /// here instead re-sent the follow-up request carrying `proxy_handler`'s own
+    /// `Host: web.loci.svc.cluster.local` override (set for the *original* upstream) against
+    /// `checkout.stripe.com`'s real IP, which Stripe's edge (Host-header-routed, multi-tenant)
+    /// rejected as "Requested host does not match any Subject Alternative Names (SANs)" —
+    /// reproduced directly against production, not a client-side DNS artifact as first suspected.
+    pub proxy_http_client: reqwest::Client,
     pub enricher: Arc<dyn ClaimsEnricher>,
     /// Client for calls to tower directly (`/identities/resolve` at login; `/enrich` also uses
     /// this client, via `TowerClaimsEnricher`'s own `client` field, constructed from a clone of
@@ -254,6 +266,7 @@ pub async fn build_state(
     bundle: Bundle,
     secrets: RawSecrets,
     http_client: reqwest::Client,
+    proxy_http_client: reqwest::Client,
     tower_http_client: reqwest::Client,
     enricher: Arc<dyn ClaimsEnricher>,
     tower_base_url: String,
@@ -433,6 +446,7 @@ pub async fn build_state(
         host_index,
         web_upstream: bundle.web_upstream,
         http_client,
+        proxy_http_client,
         enricher,
         tower_http_client,
         tower_base_url,

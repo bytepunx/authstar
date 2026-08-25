@@ -112,7 +112,7 @@ pub async fn proxy_handler(
 
     let timeout = Duration::from_secs(application.upstream.timeout);
     let result = state
-        .http_client
+        .proxy_http_client
         .request(reqwest_method, &upstream_url)
         .headers(reqwest_headers)
         .body(body_bytes)
