@@ -130,30 +130,40 @@ function diffRoles(previous: GrantedRole[], next: GrantedRole[]): { granted: Gra
   }
 }
 
-// ADR 0090 leaves organization-scoped entitlement fan-out genuinely
-// undesigned: tower's entitlement-consumer (ADR 0031) only knows how to
-// grant a role to one specific account or every account in a tenant --
-// "grant this role to every member of organization X" needs its own
-// design pass (which member(s)? all of them, only managers?) this ADR
-// never took. Skip publishing rather than guess at semantics; the
-// customer/subscription actors themselves are still created/updated
-// correctly either way (see callers) -- only the tower-facing role
-// fan-out is deferred.
 function isEntitlementScope(scope: Scope): scope is { account: string } | { tenant: string } {
   return 'account' in scope || 'tenant' in scope
 }
 
+// ADR 0098: resolves any `Scope` into the concrete `{account}|{tenant}`
+// scope(s) that should actually receive entitlement events -- `{account}`/
+// `{tenant}` pass through unchanged; `{organization}` resolves to one
+// `{account: managerId}` per the organization's current managers
+// (`app.organizationManagers`, kept current by
+// `organization-reference-consumer.ts`). This is where organization
+// semantics get resolved into concrete accounts *before* any entitlement
+// event is constructed -- `EntitlementScope`/tower's own
+// `entitlement-consumer.ts` stay `{account}|{tenant}`-only and never need
+// to know organizations exist at all. An organization with zero managers
+// (or one keep's cache hasn't heard about yet -- see ADR 0098's accepted
+// backfill limitation) simply resolves to no targets; nothing rejects.
+async function resolveEntitlementTargets(app: FastifyInstance, scope: Scope): Promise<Array<{ account: string } | { tenant: string }>> {
+  if (isEntitlementScope(scope)) return [scope]
+  return app.organizationManagers.get(scope.organization).map((accountId) => ({ account: accountId }))
+}
+
 async function publishRoleEvents(app: FastifyInstance, tenant: string, scope: Scope, roles: GrantedRole[], eventType: 'entitlement.role-granted' | 'entitlement.role-revoked') {
-  if (!isEntitlementScope(scope)) return
-  for (const role of roles) {
-    const sequence = await app.sequences.next(tenant, scope)
-    await app.entitlements.publish({
-      type: eventType,
-      tenant,
-      scope,
-      sequence,
-      role: { name: role.role, scope: role.application },
-    })
+  const targets = await resolveEntitlementTargets(app, scope)
+  for (const target of targets) {
+    for (const role of roles) {
+      const sequence = await app.sequences.next(tenant, target)
+      await app.entitlements.publish({
+        type: eventType,
+        tenant,
+        scope: target,
+        sequence,
+        role: { name: role.role, scope: role.application },
+      })
+    }
   }
 }
 
@@ -198,9 +208,9 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
     await app.consequent.handle(trial.id, 'trial.convert', {})
   }
 
-  if (isEntitlementScope(scope)) {
-    const sequence = await app.sequences.next(tenant, scope)
-    await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence })
+  for (const target of await resolveEntitlementTargets(app, scope)) {
+    const sequence = await app.sequences.next(tenant, target)
+    await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope: target, sequence })
   }
 
   if (mapping) {

@@ -3,6 +3,7 @@ import type { StripeClientFactory } from './stripe-client.js'
 import type { StripeConfigStore } from './stripe-config.js'
 import type { RoleReferenceCache } from './role-reference-cache.js'
 import type { RoleReferenceBackfill } from './role-reference-backfill.js'
+import type { OrganizationManagerCache } from './organization-manager-cache.js'
 import type { EntitlementPublisher, SequenceProvider } from './entitlement-publisher.js'
 
 declare module 'fastify' {
@@ -12,6 +13,7 @@ declare module 'fastify' {
     stripeConfig: StripeConfigStore
     roleCache: RoleReferenceCache
     roleBackfill: RoleReferenceBackfill
+    organizationManagers: OrganizationManagerCache
     entitlements: EntitlementPublisher
     sequences: SequenceProvider
   }

@@ -165,6 +165,74 @@ describe('stripe webhook handling -- API contract', () => {
     })
   })
 
+  // ADR 0098: organization-scoped subscriptions resolve entitlement fan-out
+  // to the organization's current managers (from `t.organizationManagers`,
+  // seeded here the same way production's organization-reference-consumer.ts
+  // would), not to every member -- and not to nobody, which was the prior
+  // behavior this ADR fixes.
+  describe('organization-scoped subscription activation (ADR 0098)', () => {
+    it('publishes one role-granted per role per manager, not once for the organization', async () => {
+      t.organizationManagers.addManager('org_1', 'mgr_1')
+      t.organizationManagers.addManager('org_1', 'mgr_2')
+
+      const response = await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_org_1',
+        customer: 'cus_org_1',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+        metadata: { scope: JSON.stringify({ organization: 'org_1' }) },
+      }))
+      expect(response.statusCode).toBe(200)
+
+      const roleGrants = t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')
+      expect(roleGrants).toHaveLength(2)
+      const scopes = roleGrants.map((e) => (e as unknown as { scope: { account: string } }).scope.account).sort()
+      expect(scopes).toEqual(['mgr_1', 'mgr_2'])
+
+      const convertedToPaid = t.publisher.published.filter((e) => e.type === 'entitlement.converted-to-paid')
+      expect(convertedToPaid).toHaveLength(2)
+    })
+
+    it('publishes nothing for an organization keep has no manager-cache entry for yet -- not an error', async () => {
+      const response = await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_org_2',
+        customer: 'cus_org_2',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+        metadata: { scope: JSON.stringify({ organization: 'org_unknown' }) },
+      }))
+      expect(response.statusCode).toBe(200)
+      expect(t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')).toHaveLength(0)
+    })
+
+    it('revokes from every manager on cancellation', async () => {
+      t.organizationManagers.addManager('org_3', 'mgr_3')
+      await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_org_3',
+        customer: 'cus_org_3',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+        metadata: { scope: JSON.stringify({ organization: 'org_3' }) },
+      }))
+
+      const response = await post(stripeEventPayload('customer.subscription.deleted', {
+        id: 'sub_org_3',
+        customer: 'cus_org_3',
+        status: 'canceled',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+      }))
+      expect(response.statusCode).toBe(200)
+
+      const revoked = t.publisher.published.filter((e) => e.type === 'entitlement.role-revoked')
+      expect(revoked).toHaveLength(1)
+      expect((revoked[0] as unknown as { scope: { account: string } }).scope.account).toBe('mgr_3')
+    })
+  })
+
   describe('checkout.session.completed', () => {
     it('retrieves the full subscription via the Stripe client and processes it the same as customer.subscription.created', async () => {
       t.stripeState.subscriptions.set('sub_cs_1', {
