@@ -138,6 +138,8 @@ export interface TowerClient {
 	addOrganizationManager(tenantSlug: string, organizationId: string, accountId: string): Promise<Organization>
 	removeOrganizationManager(tenantSlug: string, organizationId: string, accountId: string): Promise<Organization>
 	removeOrganizationMember(tenantSlug: string, organizationId: string, accountId: string): Promise<void>
+	grantBillingAccess(tenantSlug: string, organizationId: string, accountId: string): Promise<void>
+	revokeBillingAccess(tenantSlug: string, organizationId: string, accountId: string): Promise<void>
 	createOrganizationInvite(
 		tenantSlug: string,
 		organizationId: string,
@@ -224,6 +226,12 @@ export function createTowerClient(options: CreateTowerClientOptions): TowerClien
 		},
 		async removeOrganizationMember(tenantSlug, organizationId, accountId) {
 			await request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}`)
+		},
+		async grantBillingAccess(tenantSlug, organizationId, accountId) {
+			await request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}/billing-access`)
+		},
+		async revokeBillingAccess(tenantSlug, organizationId, accountId) {
+			await request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}/billing-access`)
 		},
 		createOrganizationInvite(tenantSlug, organizationId, input) {
 			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/invites`, input)

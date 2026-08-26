@@ -94,6 +94,61 @@ describe('organizations/[organizationId] removeManager action', () => {
 	})
 })
 
+describe('organizations/[organizationId] grantBillingAccess action (ADR 0098)', () => {
+	it('grants organization-billing:manage to a member', async () => {
+		const tower = createFakeTowerClient({
+			organizations: [fakeOrganization({ organizationId: 'org-1', managers: ['acct-1'] })],
+			accounts: [account({ accountId: 'acct-2' })],
+		})
+		const result = await actions.grantBillingAccess({
+			request: formRequest({ accountId: 'acct-2' }),
+			locals: { session: fakeSession({ permissions: ['billing:manage'] }), clients: { tower } },
+			params: { organizationId: 'org-1' },
+		} as Parameters<typeof actions.grantBillingAccess>[0])
+
+		expect(result?.success).toBe(true)
+		expect(tower.grantBillingAccess).toHaveBeenCalledWith('acme', 'org-1', 'acct-2')
+	})
+
+	it('400s with no accountId, never calling tower', async () => {
+		const tower = createFakeTowerClient({ organizations: [fakeOrganization()] })
+		const result = await actions.grantBillingAccess({
+			request: formRequest({}),
+			locals: { session: fakeSession({ permissions: ['billing:manage'] }), clients: { tower } },
+			params: { organizationId: 'org-1' },
+		} as Parameters<typeof actions.grantBillingAccess>[0])
+		expect(result?.status).toBe(400)
+		expect(tower.grantBillingAccess).not.toHaveBeenCalled()
+	})
+
+	it('surfaces a tower rejection as a form error', async () => {
+		const tower = createFakeTowerClient({ organizations: [fakeOrganization()], rejectMutations: true })
+		const result = await actions.grantBillingAccess({
+			request: formRequest({ accountId: 'acct-2' }),
+			locals: { session: fakeSession({ permissions: ['billing:manage'] }), clients: { tower } },
+			params: { organizationId: 'org-1' },
+		} as Parameters<typeof actions.grantBillingAccess>[0])
+		expect(result?.status).toBe(409)
+	})
+})
+
+describe('organizations/[organizationId] revokeBillingAccess action (ADR 0098)', () => {
+	it('revokes organization-billing:manage from a member', async () => {
+		const tower = createFakeTowerClient({
+			organizations: [fakeOrganization({ organizationId: 'org-1', managers: ['acct-1'] })],
+			accounts: [account({ accountId: 'acct-2' })],
+		})
+		const result = await actions.revokeBillingAccess({
+			request: formRequest({ accountId: 'acct-2' }),
+			locals: { session: fakeSession({ permissions: ['billing:manage'] }), clients: { tower } },
+			params: { organizationId: 'org-1' },
+		} as Parameters<typeof actions.revokeBillingAccess>[0])
+
+		expect(result?.success).toBe(true)
+		expect(tower.revokeBillingAccess).toHaveBeenCalledWith('acme', 'org-1', 'acct-2')
+	})
+})
+
 describe('organizations/[organizationId] removeMember action', () => {
 	it('removes a plain member', async () => {
 		const tower = createFakeTowerClient({

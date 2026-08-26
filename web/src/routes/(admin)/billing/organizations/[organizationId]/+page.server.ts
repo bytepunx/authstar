@@ -76,6 +76,44 @@ export const actions: Actions = {
 		}
 	},
 
+	// ADR 0098: delegates the narrower organization-billing:manage right to
+	// a plain member without making them a co-manager. Tower itself gates
+	// this on the caller holding organization:manage for this org (or
+	// accounts:manage) -- a 403 here means the signed-in operator's own
+	// session doesn't have it, not a problem with the target account.
+	grantBillingAccess: async ({ request, locals, params }) => {
+		const session = requireSection(locals.session, 'billing')
+		const form = await request.formData()
+		const accountId = String(form.get('accountId') ?? '').trim()
+		if (!accountId) {
+			return fail(400, { formError: 'accountId is required' })
+		}
+		try {
+			await locals.clients.tower.grantBillingAccess(session.tenantSlug, params.organizationId, accountId)
+			return { success: true }
+		} catch (err) {
+			if (err instanceof TowerRequestError) {
+				return fail(err.status >= 500 ? 502 : 409, { formError: 'tower rejected this -- is that account a member of this organization?' })
+			}
+			throw err
+		}
+	},
+
+	revokeBillingAccess: async ({ request, locals, params }) => {
+		const session = requireSection(locals.session, 'billing')
+		const form = await request.formData()
+		const accountId = String(form.get('accountId') ?? '')
+		try {
+			await locals.clients.tower.revokeBillingAccess(session.tenantSlug, params.organizationId, accountId)
+			return { success: true }
+		} catch (err) {
+			if (err instanceof TowerRequestError) {
+				return fail(err.status >= 500 ? 502 : 409, { formError: 'tower rejected this revoke' })
+			}
+			throw err
+		}
+	},
+
 	// No contact-search UI exists anywhere in this app yet (no Accounts/
 	// Identity screen is built) -- contactId is a raw text field for now,
 	// same limitation every other not-yet-built admin surface in this

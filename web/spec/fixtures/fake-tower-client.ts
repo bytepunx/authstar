@@ -121,6 +121,20 @@ export function createFakeTowerClient(options: FakeTowerClientOptions = {}) {
 			const account = accounts.get(accountId)
 			if (account) account.organizationId = null
 		}),
+		grantBillingAccess: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string) => {
+			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
+			const org = organizations.get(organizationId)
+			if (!org) throw new TowerNotFoundError(`no such organization: ${organizationId}`)
+			const account = accounts.get(accountId)
+			if (!account || account.organizationId !== organizationId) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
+		}),
+		revokeBillingAccess: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string) => {
+			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
+			const org = organizations.get(organizationId)
+			if (!org) throw new TowerNotFoundError(`no such organization: ${organizationId}`)
+			const account = accounts.get(accountId)
+			if (!account || account.organizationId !== organizationId) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
+		}),
 		createOrganizationInvite: vi.fn(
 			async (
 				tenantSlug: string,

@@ -77,6 +77,32 @@
 </section>
 
 <section class="mt-8 max-w-2xl">
+	<h2 class="text-lg font-semibold">Billing access</h2>
+	<p class="text-sm text-slate-600">
+		A narrower right than co-manager -- reaches keep's Billing Portal for this organization's
+		subscription without granting anything else (ADR 0090/0098). Only a manager can grant or
+		revoke it. There's no read-back of who currently holds it yet (tower's account listing
+		doesn't expose permissions) -- grant/revoke act blind, same as a fresh page load would show.
+	</p>
+	<div class="mt-2 flex flex-col gap-2 sm:flex-row">
+		<form method="POST" action="?/grantBillingAccess" class="flex items-end gap-2">
+			<label class="flex flex-col gap-1 text-sm">
+				Grant to
+				<input name="accountId" placeholder="accountId" class="rounded border border-slate-300 px-2 py-1" />
+			</label>
+			<button type="submit" class="rounded border border-slate-300 px-3 py-1.5 text-sm">Grant</button>
+		</form>
+		<form method="POST" action="?/revokeBillingAccess" class="flex items-end gap-2">
+			<label class="flex flex-col gap-1 text-sm">
+				Revoke from
+				<input name="accountId" placeholder="accountId" class="rounded border border-slate-300 px-2 py-1" />
+			</label>
+			<button type="submit" class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700">Revoke</button>
+		</form>
+	</div>
+</section>
+
+<section class="mt-8 max-w-2xl">
 	<h2 class="text-lg font-semibold">Invite a new member</h2>
 	<form method="POST" action="?/invite" class="mt-2 flex flex-col gap-4">
 		<label class="flex flex-col gap-1 text-sm">
