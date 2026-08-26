@@ -93,6 +93,11 @@ async function createOrganization(app: FastifyInstance, request: FastifyRequest,
   const organizationId = app.ids.nextOrganizationId()
   await app.consequent.handle(organizationId, 'organization.create', { organizationId, tenant: tenantSlug, name, creatorAccountId: claims.accountId })
   await app.consequent.handle(claims.accountId, 'account.join-organization', { organizationId })
+  // ADR 0098: the creator becomes the first `managers[]` entry above, but that's
+  // membership only -- grant the permission too, or they could never actually pass
+  // `requireOrganizationManager()` on their own newly-created organization.
+  await app.consequent.handle(claims.accountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
+  await app.publisher.publish('organization.manager-added', { organizationId, tenant: tenantSlug, accountId: claims.accountId })
   return reply.code(201).send(toResponse(await fetchOrganization(app, organizationId)))
 }
 
@@ -126,19 +131,49 @@ async function addManager(app: FastifyInstance, request: FastifyRequest, reply: 
   }
 
   await app.consequent.handle(organizationId, 'organization.add-manager', { accountId })
+  // ADR 0098: grant `organization:manage` alongside the membership change --
+  // see `createOrganization`'s identical comment for why this can't be skipped.
+  await app.consequent.handle(accountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
+  await app.publisher.publish('organization.manager-added', { organizationId, tenant: tenantSlug, accountId })
   return toResponse(await fetchOrganization(app, organizationId))
+}
+
+// ADR 0098: `organization.remove-manager` can produce either a plain removal
+// or (if `accountId` was the sole remaining manager with a successor
+// designated) a succession -- diffing `managers[]` before/after the command,
+// rather than inspecting the produced event directly, handles both outcomes
+// uniformly: whoever left loses `organization:manage`/`organization-billing:
+// manage`, whoever newly arrived (a promoted successor, if any) gains
+// `organization:manage`.
+async function revokeManagerPermissions(app: FastifyInstance, accountId: string) {
+  await app.consequent.handle(accountId, 'account.revoke-permission', { permission: { grant: 'organization:manage', scope: 'organization' } })
+  await app.consequent.handle(accountId, 'account.revoke-permission', { permission: { grant: 'organization-billing:manage', scope: 'organization' } })
 }
 
 async function removeManager(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug, organizationId, accountId } = request.params as { tenantSlug: string, organizationId: string, accountId: string }
 
-  const org = await fetchOrganization(app, organizationId)
-  if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
+  const before = await fetchOrganization(app, organizationId)
+  if (!organizationExists(before) || before.tenant !== tenantSlug) return reply.code(404).send()
 
   const results = await app.consequent.handle(organizationId, 'organization.remove-manager', { accountId })
   const rejection = results.find((r) => r?.rejected)
   if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-  return toResponse(await fetchOrganization(app, organizationId))
+
+  const after = await fetchOrganization(app, organizationId)
+  const departed = before.managers.filter((m) => !after.managers.includes(m))
+  const arrived = after.managers.filter((m) => !before.managers.includes(m))
+  for (const departedAccountId of departed) {
+    await revokeManagerPermissions(app, departedAccountId)
+    await app.publisher.publish('organization.manager-removed', { organizationId, tenant: tenantSlug, accountId: departedAccountId })
+  }
+  for (const successorAccountId of arrived) {
+    await app.consequent.handle(successorAccountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
+  }
+  if (departed.length > 0 && arrived.length > 0) {
+    await app.publisher.publish('organization.manager-succeeded', { organizationId, tenant: tenantSlug, departingAccountId: departed[0], successorAccountId: arrived[0] })
+  }
+  return toResponse(after)
 }
 
 async function removeMember(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
@@ -204,7 +239,41 @@ async function promoteSuccessor(app: FastifyInstance, request: FastifyRequest, r
   const results = await app.consequent.handle(organizationId, 'organization.promote-successor', { accountId })
   const rejection = results.find((r) => r?.rejected)
   if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-  return toResponse(await fetchOrganization(app, organizationId))
+
+  const after = await fetchOrganization(app, organizationId)
+  const successorAccountId = after.managers.find((m) => !org.managers.includes(m))
+  await revokeManagerPermissions(app, accountId)
+  if (successorAccountId) {
+    await app.consequent.handle(successorAccountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
+    await app.publisher.publish('organization.manager-succeeded', { organizationId, tenant: tenantSlug, departingAccountId: accountId, successorAccountId })
+  }
+  return toResponse(after)
+}
+
+async function grantBillingAccess(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, organizationId, accountId } = request.params as { tenantSlug: string, organizationId: string, accountId: string }
+
+  const org = await fetchOrganization(app, organizationId)
+  if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
+
+  const target = await fetchAccount(app, accountId)
+  if (!accountExists(target) || target.organizationId !== organizationId) return reply.code(404).send()
+
+  await app.consequent.handle(accountId, 'account.grant-permission', { permission: { grant: 'organization-billing:manage', scope: 'organization', maxOutstanding: null } })
+  return reply.code(204).send()
+}
+
+async function revokeBillingAccess(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, organizationId, accountId } = request.params as { tenantSlug: string, organizationId: string, accountId: string }
+
+  const org = await fetchOrganization(app, organizationId)
+  if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
+
+  const target = await fetchAccount(app, accountId)
+  if (!accountExists(target) || target.organizationId !== organizationId) return reply.code(404).send()
+
+  await app.consequent.handle(accountId, 'account.revoke-permission', { permission: { grant: 'organization-billing:manage', scope: 'organization' } })
+  return reply.code(204).send()
 }
 
 const organizationRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
@@ -236,6 +305,22 @@ const organizationRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     '/tenants/:tenantSlug/organizations/:organizationId/managers/:accountId',
     { schema: { params: managerParamsSchema }, preHandler: requireSelfOrOrganizationManager() },
     (request, reply) => removeManager(app, request, reply),
+  )
+
+  // ADR 0098: the delegation route ADR 0090 described in prose but never
+  // specified -- a holder of `organization:manage` can grant/revoke the
+  // narrower `organization-billing:manage` right to a fellow member without
+  // making them a co-manager.
+  app.post(
+    '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/billing-access',
+    { schema: { params: managerParamsSchema }, preHandler: requireOrganizationManager() },
+    (request, reply) => grantBillingAccess(app, request, reply),
+  )
+
+  app.delete(
+    '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/billing-access',
+    { schema: { params: managerParamsSchema }, preHandler: requireOrganizationManager() },
+    (request, reply) => revokeBillingAccess(app, request, reply),
   )
 
   app.delete(

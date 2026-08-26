@@ -168,6 +168,12 @@ async function redeemInvite(app: FastifyInstance, token: string, accountId: stri
     await app.consequent.handle(accountId, 'account.join-organization', { organizationId: invite.organizationId })
     if (invite.organizationRole === 'manager') {
       await app.consequent.handle(invite.organizationId, 'organization.add-manager', { accountId })
+      // ADR 0098: membership in `managers[]` and holding the `organization:manage`
+      // permission are two independently-tracked facts -- grant it here too, same
+      // as the direct add-manager route does, or this manager could never actually
+      // pass `requireOrganizationManager()`.
+      await app.consequent.handle(accountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
+      await app.publisher.publish('organization.manager-added', { organizationId: invite.organizationId, tenant: invite.tenant, accountId })
     }
   }
   return true
