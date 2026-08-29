@@ -30,24 +30,23 @@ export function requirePermission(grant: string): preHandlerHookHandler {
 }
 
 /**
- * ADR 0090: gates keep's Billing Portal session route. Accepts either of
- * tower's two organization-scoped grants (`organization:manage` -- full
- * control -- or the narrower `organization-billing:manage`, which can
- * reach the Portal but can't grant/revoke that right to others). An
- * account belongs to at most one organization at a time, so no scope
- * object is needed on the grant itself (see tower's
- * account_actor.ts's own PermissionGrant.scope comment) -- but the
- * caller's `organizationId` claim must still match the route's
- * `{organizationId}` param, so a holder of either grant for a *different*
- * organization can't reach this one.
+ * ADR 0100: gates keep's Billing Portal session route. An account can
+ * belong to more than one organization now, each with its own independent
+ * membership roles -- so this looks up the caller's membership entry for
+ * *this specific* organization (the route's `{organizationId}` param) and
+ * checks it holds `billingAdmin` (full control) or `billingViewer`
+ * (read-only, admitted here too since a view-only Billing Portal surface
+ * doesn't exist yet to gate more narrowly -- the role is seeded regardless,
+ * ready for that later).
  */
 export function requireOrganizationAccess(paramName = 'organizationId'): preHandlerHookHandler {
   return async (request, reply) => {
     const claims = request.authstar
     const params = request.params as Record<string, string>
-    const authorized = claims?.enrichmentStatus === 'ok'
-      && claims.organizationId === params[paramName]
-      && (claims.permissions.includes('organization:manage') || claims.permissions.includes('organization-billing:manage'))
+    const membership = claims?.enrichmentStatus === 'ok'
+      ? claims.organizationMemberships.find((m) => m.organizationId === params[paramName])
+      : undefined
+    const authorized = Boolean(membership && (membership.roles.includes('billingAdmin') || membership.roles.includes('billingViewer')))
     if (!authorized) {
       return reply.code(403).send({ error: 'forbidden' })
     }

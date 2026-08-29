@@ -10,8 +10,6 @@ import { createSignetStripeConfigStore } from './lib/signet-stripe-config-store.
 import { createRoleReferenceCache } from './lib/role-reference-cache.js'
 import { startRoleReferenceConsumer } from './lib/role-reference-consumer.js'
 import { createTowerReferenceClient, createRoleReferenceBackfill } from './lib/role-reference-backfill.js'
-import { createOrganizationManagerCache } from './lib/organization-manager-cache.js'
-import { startOrganizationReferenceConsumer } from './lib/organization-reference-consumer.js'
 import { createAmqpEntitlementPublisher, ENTITLEMENT_EXCHANGE } from './lib/amqp-entitlement-publisher.js'
 import { createConsequentSequenceProvider } from './lib/consequent-sequence-provider.js'
 
@@ -153,15 +151,6 @@ async function main(): Promise<void> {
   await amqpChannel.bindQueue(roleReferenceQueue.queue, ENTITLEMENT_EXCHANGE, 'roleDefinition.#')
   await startRoleReferenceConsumer(amqpChannel, roleReferenceQueue.queue, roleCache)
 
-  // ADR 0098: organization manager fan-out cache, same exchange/queue
-  // convention as the role-reference consumer above -- see
-  // organization-manager-cache.ts's own header comment for why there's no
-  // backfill counterpart yet (deliberate, not an oversight).
-  const organizationManagers = createOrganizationManagerCache()
-  const organizationReferenceQueue = await amqpChannel.assertQueue('keep.organization-reference', { durable: true })
-  await amqpChannel.bindQueue(organizationReferenceQueue.queue, ENTITLEMENT_EXCHANGE, 'organization.#')
-  await startOrganizationReferenceConsumer(amqpChannel, organizationReferenceQueue.queue, organizationManagers)
-
   // ADR 0047's "periodically re-run as a safety net" -- `unref()` so this
   // timer never keeps the process alive on its own, cleared explicitly on
   // shutdown below regardless.
@@ -192,7 +181,6 @@ async function main(): Promise<void> {
     stripeConfig,
     roleCache,
     roleBackfill,
-    organizationManagers,
     entitlements,
     sequences,
     resolveTenantDomain,

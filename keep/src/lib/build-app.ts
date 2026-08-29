@@ -6,8 +6,6 @@ import type { StripeConfigStore } from './stripe-config.js'
 import type { RoleReferenceCache } from './role-reference-cache.js'
 import type { RoleReferenceBackfill } from './role-reference-backfill.js'
 import { createNoopRoleReferenceBackfill } from './role-reference-backfill.js'
-import type { OrganizationManagerCache } from './organization-manager-cache.js'
-import { createOrganizationManagerCache } from './organization-manager-cache.js'
 import type { EntitlementPublisher, SequenceProvider } from './entitlement-publisher.js'
 import { createInMemorySequenceProvider } from './entitlement-publisher.js'
 import registerPlanMappingRoutes from '../routes/plan-mappings.js'
@@ -30,13 +28,6 @@ export interface BuildAppOptions {
   // directly and has no tower to poll) keeps working unchanged; `server.ts`
   // supplies the real one.
   roleBackfill?: RoleReferenceBackfill
-  // ADR 0098: keep's local cache of each organization's current managers[],
-  // kept current by `organization-reference-consumer.ts`. Defaults to a
-  // fresh empty cache (not a "noop" variant like `roleBackfill`'s -- there's
-  // no async work to skip, an empty cache just resolves every organization
-  // to zero managers, which is the correct behavior when nothing's wired it
-  // up yet). Tests that care pre-seed one directly via `addManager`.
-  organizationManagers?: OrganizationManagerCache
   entitlements: EntitlementPublisher
   sequences?: SequenceProvider
   logger?: boolean
@@ -94,7 +85,6 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('stripeConfig', options.stripeConfig)
   app.decorate('roleCache', options.roleCache)
   app.decorate('roleBackfill', options.roleBackfill ?? createNoopRoleReferenceBackfill())
-  app.decorate('organizationManagers', options.organizationManagers ?? createOrganizationManagerCache())
   app.decorate('entitlements', options.entitlements)
   app.decorate('sequences', options.sequences ?? createInMemorySequenceProvider())
 

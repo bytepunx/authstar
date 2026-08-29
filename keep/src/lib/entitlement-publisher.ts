@@ -11,7 +11,12 @@
 // not implemented in this pilot slice -- see TESTING.md) would wrap
 // `amqplib`/`amqp-connection-manager` per design/docs/tech-stack.md.
 
-export type EntitlementScope = { account: string } | { tenant: string }
+// ADR 0100: {organization} publishes straight to the organization itself
+// (tower's organization.grant-role/revoke-role/set-seat-limit, consumed in
+// entitlement-consumer.ts) -- no fan-out to individual accounts. This is
+// what keeps org-purchased entitlement on the organization record only,
+// never merged onto any member's own account.roles.
+export type EntitlementScope = { account: string } | { tenant: string } | { organization: string }
 
 export interface RoleGrantedEvent {
   type: 'entitlement.role-granted'
@@ -39,7 +44,8 @@ export interface ConvertedToPaidEvent {
 export interface SeatLimitChangedEvent {
   type: 'entitlement.seat-limit-changed'
   tenant: string
-  scope: { tenant: string }
+  // Never {account} -- an individual account has no seats to limit.
+  scope: { tenant: string } | { organization: string }
   sequence: number
   seatLimit: number
 }
@@ -100,7 +106,9 @@ export interface SequenceProvider {
 }
 
 export function scopeKey(scope: EntitlementScope): string {
-  return 'account' in scope ? `account:${scope.account}` : `tenant:${scope.tenant}`
+  if ('account' in scope) return `account:${scope.account}`
+  if ('organization' in scope) return `organization:${scope.organization}`
+  return `tenant:${scope.tenant}`
 }
 
 export function createInMemorySequenceProvider(): SequenceProvider {

@@ -111,7 +111,7 @@ describe('stripe webhook handling -- API contract', () => {
       expect(sequences).toEqual([...sequences].sort((a, b) => a - b))
     })
 
-    it('publishes seat-limit-changed for a tenant-scoped subscription (seatLimit is only meaningful for tenant scope)', async () => {
+    it('publishes seat-limit-changed for a tenant-scoped subscription (never for account scope -- an individual has no seats)', async () => {
       await post(stripeEventPayload('customer.subscription.created', {
         id: 'sub_seat',
         customer: 'cus_seat',
@@ -165,16 +165,14 @@ describe('stripe webhook handling -- API contract', () => {
     })
   })
 
-  // ADR 0098: organization-scoped subscriptions resolve entitlement fan-out
-  // to the organization's current managers (from `t.organizationManagers`,
-  // seeded here the same way production's organization-reference-consumer.ts
-  // would), not to every member -- and not to nobody, which was the prior
-  // behavior this ADR fixes.
-  describe('organization-scoped subscription activation (ADR 0098)', () => {
-    it('publishes one role-granted per role per manager, not once for the organization', async () => {
-      t.organizationManagers.addManager('org_1', 'mgr_1')
-      t.organizationManagers.addManager('org_1', 'mgr_2')
-
+  // ADR 0100: an organization-scoped subscription publishes straight to the
+  // organization itself -- no fan-out to its members, no manager-cache
+  // lookup (that whole mechanism, ADR 0098, is retired). This is what keeps
+  // org-purchased entitlement off any individual member's own
+  // account.roles -- tower's entitlement-consumer.ts appends it to
+  // organization.grantedRoles instead.
+  describe('organization-scoped subscription activation (ADR 0100)', () => {
+    it('publishes role-granted/converted-to-paid/seat-limit-changed with organization scope, no fan-out', async () => {
       const response = await post(stripeEventPayload('customer.subscription.created', {
         id: 'sub_org_1',
         customer: 'cus_org_1',
@@ -186,29 +184,20 @@ describe('stripe webhook handling -- API contract', () => {
       expect(response.statusCode).toBe(200)
 
       const roleGrants = t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')
-      expect(roleGrants).toHaveLength(2)
-      const scopes = roleGrants.map((e) => (e as unknown as { scope: { account: string } }).scope.account).sort()
-      expect(scopes).toEqual(['mgr_1', 'mgr_2'])
+      expect(roleGrants).toHaveLength(1)
+      expect((roleGrants[0] as unknown as { scope: { organization: string } }).scope.organization).toBe('org_1')
 
       const convertedToPaid = t.publisher.published.filter((e) => e.type === 'entitlement.converted-to-paid')
-      expect(convertedToPaid).toHaveLength(2)
+      expect(convertedToPaid).toHaveLength(1)
+      expect((convertedToPaid[0] as unknown as { scope: { organization: string } }).scope.organization).toBe('org_1')
+
+      const seatEvent = t.publisher.published.find((e) => e.type === 'entitlement.seat-limit-changed')
+      expect(seatEvent).toBeDefined()
+      expect((seatEvent as unknown as { scope: { organization: string } }).scope.organization).toBe('org_1')
+      expect((seatEvent as { seatLimit: number }).seatLimit).toBe(5)
     })
 
-    it('publishes nothing for an organization keep has no manager-cache entry for yet -- not an error', async () => {
-      const response = await post(stripeEventPayload('customer.subscription.created', {
-        id: 'sub_org_2',
-        customer: 'cus_org_2',
-        status: 'active',
-        current_period_end: 1_700_000_000,
-        items: { data: [{ price: { id: 'price_basic' } }] },
-        metadata: { scope: JSON.stringify({ organization: 'org_unknown' }) },
-      }))
-      expect(response.statusCode).toBe(200)
-      expect(t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')).toHaveLength(0)
-    })
-
-    it('revokes from every manager on cancellation', async () => {
-      t.organizationManagers.addManager('org_3', 'mgr_3')
+    it('revokes with organization scope on cancellation', async () => {
       await post(stripeEventPayload('customer.subscription.created', {
         id: 'sub_org_3',
         customer: 'cus_org_3',
@@ -229,7 +218,7 @@ describe('stripe webhook handling -- API contract', () => {
 
       const revoked = t.publisher.published.filter((e) => e.type === 'entitlement.role-revoked')
       expect(revoked).toHaveLength(1)
-      expect((revoked[0] as unknown as { scope: { account: string } }).scope.account).toBe('mgr_3')
+      expect((revoked[0] as unknown as { scope: { organization: string } }).scope.organization).toBe('org_3')
     })
   })
 

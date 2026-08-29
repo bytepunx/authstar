@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import buildTestApp, { type TestApp } from '../lib/test-app.js'
 
-// Behavior tier: design/decisions/0090-organizations-shared-billing-
-// administration-and-succession.md. No customer-creation route exists in
-// keep (Story 001/002 -- a `customer` record is only ever created by
+// Behavior tier: design/decisions/0100-organization-membership-and-open-
+// role-catalog.md (supersedes ADR 0090). No customer-creation route exists
+// in keep (Story 001/002 -- a `customer` record is only ever created by
 // webhook handling on a completed checkout), so tests create one directly
-// via `consequent.handle()`, same convention used throughout this
-// codebase for actors with no direct-creation route.
+// via `consequent.handle()`, same convention used throughout this codebase
+// for actors with no direct-creation route.
 
-describe('portal sessions -- API contract (ADR 0090)', () => {
+describe('portal sessions -- API contract (ADR 0100)', () => {
   let t: TestApp
 
   beforeEach(async () => {
@@ -29,9 +29,9 @@ describe('portal sessions -- API contract (ADR 0090)', () => {
     })
   }
 
-  it('creates a real portal session for an organization with an existing stripe customer', async () => {
+  it('creates a real portal session for a billingAdmin', async () => {
     await createOrgCustomer('org-1', 'cus_org1')
-    const headers = await t.headers({ organizationId: 'org-1', permissions: ['organization:manage'] })
+    const headers = await t.headers({ organizationMemberships: [{ organizationId: 'org-1', roles: ['member', 'billingAdmin'] }] })
 
     const response = await t.app.inject({
       method: 'POST',
@@ -46,9 +46,9 @@ describe('portal sessions -- API contract (ADR 0090)', () => {
     expect(t.stripeState.portalSessions[0]).toEqual({ stripeCustomerId: 'cus_org1', returnUrl: 'https://acme.example.com/account' })
   })
 
-  it('works for a holder of the narrower organization-billing:manage grant too', async () => {
+  it('works for the narrower billingViewer role too', async () => {
     await createOrgCustomer('org-1', 'cus_org1')
-    const headers = await t.headers({ organizationId: 'org-1', permissions: ['organization-billing:manage'] })
+    const headers = await t.headers({ organizationMemberships: [{ organizationId: 'org-1', roles: ['member', 'billingViewer'] }] })
 
     const response = await t.app.inject({
       method: 'POST',
@@ -60,7 +60,7 @@ describe('portal sessions -- API contract (ADR 0090)', () => {
   })
 
   it('returns 404 when the organization has no stripe customer yet', async () => {
-    const headers = await t.headers({ organizationId: 'org-1', permissions: ['organization:manage'] })
+    const headers = await t.headers({ organizationMemberships: [{ organizationId: 'org-1', roles: ['member', 'billingAdmin'] }] })
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/organizations/org-1/portal-sessions',
@@ -81,7 +81,7 @@ describe('portal sessions -- API contract (ADR 0090)', () => {
       scope: { organization: 'org-1' },
       stripeCustomerId: 'cus_org1',
     })
-    const headers = await unconfigured.headers({ organizationId: 'org-1', permissions: ['organization:manage'] })
+    const headers = await unconfigured.headers({ organizationMemberships: [{ organizationId: 'org-1', roles: ['member', 'billingAdmin'] }] })
     const response = await unconfigured.app.inject({
       method: 'POST',
       url: '/tenants/acme/organizations/org-1/portal-sessions',
@@ -92,9 +92,9 @@ describe('portal sessions -- API contract (ADR 0090)', () => {
     await unconfigured.app.close()
   })
 
-  it('rejects 403 for a caller with neither organization grant', async () => {
+  it('rejects 403 for a plain member with neither billing role', async () => {
     await createOrgCustomer('org-1', 'cus_org1')
-    const headers = await t.headers({ organizationId: 'org-1' })
+    const headers = await t.headers({ organizationMemberships: [{ organizationId: 'org-1', roles: ['member'] }] })
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/organizations/org-1/portal-sessions',
@@ -104,9 +104,9 @@ describe('portal sessions -- API contract (ADR 0090)', () => {
     expect(response.statusCode).toBe(403)
   })
 
-  it('rejects 403 for a grant holder whose organizationId claim is for a *different* organization', async () => {
+  it('rejects 403 for a billingAdmin of a *different* organization', async () => {
     await createOrgCustomer('org-1', 'cus_org1')
-    const headers = await t.headers({ organizationId: 'org-2', permissions: ['organization:manage'] })
+    const headers = await t.headers({ organizationMemberships: [{ organizationId: 'org-2', roles: ['member', 'billingAdmin'] }] })
     const response = await t.app.inject({
       method: 'POST',
       url: '/tenants/acme/organizations/org-1/portal-sessions',

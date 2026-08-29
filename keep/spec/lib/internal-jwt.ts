@@ -17,7 +17,7 @@ export interface InternalTokenOverrides {
   tenant?: string
   enrichmentStatus?: EnrichmentStatus
   accountId?: string
-  organizationId?: string
+  organizationMemberships?: Array<{ organizationId: string, roles: string[] }>
   roles?: string[]
   permissions?: string[]
 }
@@ -45,7 +45,7 @@ export async function createInternalJwtFixture(): Promise<InternalJwtFixture> {
         identityHash: overrides.identityHash ?? 'abc123',
         enrichmentStatus: overrides.enrichmentStatus ?? 'ok',
         accountId: overrides.accountId,
-        organizationId: overrides.organizationId,
+        organizationMemberships: overrides.organizationMemberships ?? [],
         roles: overrides.roles ?? [],
         permissions: overrides.permissions ?? [],
       })
