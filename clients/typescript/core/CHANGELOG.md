@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/bytepunx/authstar-clients/compare/core-v1.0.0...core-v2.0.0) (2026-08-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **core:** InternalClaims.organizationId (an optional single id) is replaced by organizationMemberships: Array<{ organizationId, roles }>. An account can belong to more than one organization, each conferring its own independent role list (ADR 0100) -- callers must look up the relevant entry in the array instead of comparing against a single flat id. Always present (empty array), matching roles/ permissions' existing convention.
+
+### Features
+
+* **core:** InternalClaims.organizationMemberships replaces organizationId ([b8028fa](https://github.com/bytepunx/authstar-clients/commit/b8028fa8354a7d6ed9dd540cb25bbe1a2a5a8a5b))
+
 ## [1.0.0](https://github.com/bytepunx/authstar-clients/compare/core-v0.3.0...core-v1.0.0) (2026-08-20)
 
 
