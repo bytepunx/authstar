@@ -23,6 +23,7 @@ test('getEmail reads sub off an InternalClaims', () => {
     identityHash: 'abc123',
     tenant: 'acme',
     enrichmentStatus: 'ok',
+    organizationMemberships: [],
     roles: [],
     permissions: [],
     iat: 0,

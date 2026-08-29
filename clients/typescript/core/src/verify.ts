@@ -90,6 +90,19 @@ export interface VerifyInternalJwtOptions {
  * against authstar-middleware's own InternalClaims struct) -- multi-tenancy is
  * entirely the caller's responsibility, via which tenant's `getKey` it supplies.
  */
+// Defensive parse, same posture as the `roles`/`permissions` array fallbacks
+// below -- a malformed or missing claim degrades to "no memberships" rather
+// than throwing, matching this function's own "verify signature, then be
+// lenient about payload shape" contract elsewhere.
+function parseOrganizationMemberships(value: unknown): InternalClaims['organizationMemberships'] {
+  if (!Array.isArray(value)) return []
+  return value.filter((m): m is { organizationId: string, roles: string[] } =>
+    typeof m === 'object' && m !== null
+    && typeof (m as { organizationId?: unknown }).organizationId === 'string'
+    && Array.isArray((m as { roles?: unknown }).roles),
+  )
+}
+
 export async function verifyInternalJwt(
   token: string,
   getKey: JWTVerifyGetKey,
@@ -124,7 +137,7 @@ export async function verifyInternalJwt(
     tenant,
     enrichmentStatus: enrichmentStatus as EnrichmentStatus,
     accountId: typeof payload.accountId === 'string' ? payload.accountId : undefined,
-    organizationId: typeof payload.organizationId === 'string' ? payload.organizationId : undefined,
+    organizationMemberships: parseOrganizationMemberships(payload.organizationMemberships),
     roles: Array.isArray(payload.roles) ? (payload.roles as string[]) : [],
     permissions: Array.isArray(payload.permissions) ? (payload.permissions as string[]) : [],
     usage: payload.usage,

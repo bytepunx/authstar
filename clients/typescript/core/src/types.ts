@@ -48,13 +48,16 @@ export interface InternalClaims {
   /** Absent when enrichmentStatus is "degraded", or when tower reports no account yet. */
   accountId?: string
   /**
-   * The account's organization, if it belongs to one (ADR 0090). An account belongs to at
-   * most one organization at a time, so unlike `roles`/`permissions` this needs no
-   * accompanying scope object -- holding an organization-scoped permission at all
-   * unambiguously means "for this organization." Absent when enrichmentStatus is
-   * "degraded", or when the account isn't a member of any organization.
+   * Every organization this account currently belongs to, each with its own `roles` --
+   * an open, catalog-validated vocabulary (design/decisions/0100-organization-
+   * membership-and-scoped-entitlements.md), not a fixed enum, so a new distinction
+   * (e.g. a billing-view-only role) never needs another breaking change here. An
+   * account can belong to more than one organization at once, each conferring
+   * different standing (ADR 0100 supersedes ADR 0090's one-org-per-account limit).
+   * Always present; empty array when enrichmentStatus is "degraded" or the account
+   * belongs to no organization.
    */
-  organizationId?: string
+  organizationMemberships: Array<{ organizationId: string, roles: string[] }>
   /** Open, app-owned vocabulary (ADR 0069). Always present; empty when enrichmentStatus is "degraded". */
   roles: string[]
   /**

@@ -113,6 +113,57 @@ test('verifyInternalJwt accepts an "ok" enrichment token and returns roles', asy
   assert.deepEqual(claims.permissions, ['tenant:manage'])
   assert.equal(claims.isNewAccount, true)
   assert.equal(claims.tenant, 'acme')
+  assert.deepEqual(claims.organizationMemberships, [])
+})
+
+test('verifyInternalJwt returns organizationMemberships (ADR 0100) -- an account can belong to more than one', async () => {
+  const { getKey, kid, privateKey } = await generateTestKey()
+  const now = Math.floor(Date.now() / 1000)
+  const token = await new SignJWT({
+    sub: 'admin@example.com',
+    idp: 'dex',
+    identityHash: 'abc123',
+    enrichmentStatus: 'ok',
+    accountId: 'acct-1',
+    roles: [],
+    permissions: [],
+    organizationMemberships: [
+      { organizationId: 'org-1', roles: ['member', 'manager'] },
+      { organizationId: 'org-2', roles: ['member'] },
+    ],
+  })
+    .setProtectedHeader({ alg: 'ES256', kid, tenant: 'acme' })
+    .setIssuedAt(now)
+    .setExpirationTime(now + 60)
+    .sign(privateKey)
+
+  const claims = await verifyInternalJwt(token, getKey)
+  assert.deepEqual(claims.organizationMemberships, [
+    { organizationId: 'org-1', roles: ['member', 'manager'] },
+    { organizationId: 'org-2', roles: ['member'] },
+  ])
+})
+
+test('verifyInternalJwt drops a malformed organizationMemberships entry rather than throwing', async () => {
+  const { getKey, kid, privateKey } = await generateTestKey()
+  const now = Math.floor(Date.now() / 1000)
+  const token = await new SignJWT({
+    sub: 'admin@example.com',
+    idp: 'dex',
+    identityHash: 'abc123',
+    enrichmentStatus: 'ok',
+    accountId: 'acct-1',
+    roles: [],
+    permissions: [],
+    organizationMemberships: [{ organizationId: 'org-1', roles: ['member'] }, { organizationId: 42, roles: 'not-an-array' }, 'not-an-object'],
+  })
+    .setProtectedHeader({ alg: 'ES256', kid, tenant: 'acme' })
+    .setIssuedAt(now)
+    .setExpirationTime(now + 60)
+    .sign(privateKey)
+
+  const claims = await verifyInternalJwt(token, getKey)
+  assert.deepEqual(claims.organizationMemberships, [{ organizationId: 'org-1', roles: ['member'] }])
 })
 
 test('verifyInternalJwt accepts a "degraded" token with empty roles/permissions, not as an error', async () => {
@@ -136,6 +187,7 @@ test('verifyInternalJwt accepts a "degraded" token with empty roles/permissions,
   assert.equal(claims.accountId, undefined)
   assert.deepEqual(claims.roles, [])
   assert.deepEqual(claims.permissions, [])
+  assert.deepEqual(claims.organizationMemberships, [])
   assert.equal(claims.tenant, 'acme')
 })
 
