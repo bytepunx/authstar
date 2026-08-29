@@ -1,95 +1,96 @@
-# Story 015 — Organization Lifecycle: Manager Permissions and Billing-Access Delegation
+# Story 015 — Organization Lifecycle: Multi-Org Membership and an Open Role Catalog
 
 **Epic:** Billing
 **Repo:** tower
-**Status:** Draft
-**Fills a gap [ADR 0090](../../decisions/0090-organizations-shared-billing-administration-and-succession.md)
-left as prose only. New — tower's side of the routes [ADR 0098](../../decisions/0098-organization-permission-lifecycle.md)
-specifies.** Per [ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0031](../../decisions/0031-keep-tower-entitlement-events.md),
-[ADR 0090](../../decisions/0090-organizations-shared-billing-administration-and-succession.md),
-[ADR 0098](../../decisions/0098-organization-permission-lifecycle.md).
-**Depends on:** [Story 001](001-actor-definitions.md)'s `organization` shape (introduced by ADR
-0090, not its own story — this is the first story to actually cover organizations end to end).
+**Status:** Shipped
+**Per:** [ADR 0100](../../decisions/0100-organization-membership-and-open-role-catalog.md) (supersedes
+[ADR 0090](../../decisions/0090-organizations-shared-billing-administration-and-succession.md)/
+[ADR 0098](../../decisions/0098-organization-permission-lifecycle.md), which this story's own first
+draft was written against — see git history for that version).
+**Depends on:** [Story 001](001-actor-definitions.md), [Story 006](006-role-definitions.md)'s
+`roleDefinition`/`rolesValid` mechanism (reused for organization-scope roles, not duplicated).
 
-This story exists because no prior story ever documented organization management — only ADR
-0090's prose did, and auditing the shipped code found that gap let a real correctness bug ship
-silently (see ADR 0098's Context section).
+Rewritten in full once ADR 0100 replaced the manager-list/two-catalog-permission model this
+story's first draft covered with multi-org membership and an open, catalog-validated org-role
+vocabulary.
 
 ---
 
-## Organization Creation and Membership
+## Organization Roles — An Open Catalog, Not a Fixed Enum
+
+- [x] `roleDefinition`'s `scope` accepts `'organization'` alongside `'tenant'`/`{application}`,
+      keyed `${tenantSlug}:organization:${name}`.
+- [x] Four defaults seed per tenant at provisioning time — `manager`, `member`, `billingAdmin`,
+      `billingViewer` — and are protected from retirement (`role_definition_actor.ts`'s `retire`
+      command rejects these four specifically).
+- [x] A tenant can define further org-scope roles the same way it defines app-scope ones
+      (`POST /tenants/{tenantSlug}/role-definitions`).
+
+## `organizationMembership` — the Sole Source of Truth for Standing
+
+- [x] One record per (account, organization) pair, `searchableBy: ['tenant', 'accountId',
+      'organizationId']` — an account can hold any number of these. `roles` is validated against
+      the org-scope role catalog at write time (`organizationRolesValid`); every membership always
+      includes `'member'`.
+- [x] `organization` itself carries only `{organizationId, tenant, name, grantedRoles, seatLimit}`
+      — `grantedRoles`/`seatLimit` populated only by keep's entitlement events
+      (`lib/entitlement-consumer.ts`), never by any route in this file.
 
 ### `POST /tenants/{tenantSlug}/organizations` — create
 
-- [x] Already implemented (`routes/organizations.ts`, `createOrganization`). Creates the
-      `organization` actor with the caller as the first `managers[]` entry, dispatches
-      `account.join-organization` for the caller.
-- [ ] **Gap being fixed**: also grants `organization:manage` to the caller in the same request
-      (`account.grant-permission`), so the creator can actually pass `requireOrganizationManager()`
-      afterward. Previously this never happened — the creator became a manager in name only.
+- [x] Self-service, no permission required. Creates the organization and a membership record with
+      `roles: ['manager', 'member']` for the caller. No "already belongs to an organization" block
+      — membership is many-to-many now.
 
-### `add-manager` / `remove-manager`
+### Roster and role management
 
-- [x] Already implemented — mutate `organization.managers[]`.
-- [ ] **Gap being fixed**: `add-manager` also grants `organization:manage` to the newly added
-      account; `remove-manager` also revokes `organization:manage`, and revokes
-      `organization-billing:manage` too if the removed account held it (ADR 0098).
-- [ ] Both publish a new AMQP event on success — `organization.manager-added` /
-      `organization.manager-removed` — `{ organizationId, tenant, accountId }`, same convention as
-      `role-definitions.ts`'s `roleDefinition.created` publish call.
+- [x] `GET .../organizations/{organizationId}/members` — any member can list the full roster
+      (gated by `requireOrganizationMember`).
+- [x] `POST .../organizations/{organizationId}/members` — a manager adds an existing account
+      directly (`{accountId, roles?}`), gated by the organization's seat limit (`null` means one
+      seat, the creator only).
+- [x] `POST`/`DELETE .../members/{accountId}/roles[/​{role}]` — a manager grants/revokes *any*
+      org-scope role for an existing member, validated against the catalog. This one generic pair
+      replaces ADR 0098's separate billing-access delegation route entirely — `billingAdmin`/
+      `billingViewer` are just roles now.
+- [x] `DELETE .../members/{accountId}` — removes a membership entirely (self-service for voluntary
+      departure, or a manager acting on someone else).
 
-### Succession (`manager-succeeded`)
+### Succession
 
-- [x] Already implemented — both trigger paths (voluntary last-manager departure, operator-mediated
-      incapacitation claim) reach the same underlying transition.
-- [ ] **Gap being fixed**: the promoted successor is granted `organization:manage` the same way a
-      normal `add-manager` grants it; the departing manager's `organization:manage` (and
-      `organization-billing:manage`, if held) are revoked the same way `remove-manager` revokes
-      them.
-- [ ] Publishes `organization.manager-succeeded` — `{ organizationId, tenant, departingAccountId,
-      successorAccountId }`.
+- [x] `PUT`/`DELETE .../members/{accountId}/successor` — strictly self-only, no manager or
+      tenant-admin override.
+- [x] `guardLastManager` (shared by role-revoke and full-removal): if the target is the
+      organization's only active manager, requires a designated successor (whose own membership
+      must still be active) before allowing the change — auto-promotes the successor's membership
+      to `manager` when it fires.
+- [x] `POST /operator/.../members/{accountId}/promote-successor` — the incapacitation/death path,
+      unreachable by any self-service caller. Unlike the guard above, works on *any* manager, not
+      only a sole remaining one; the departing membership loses `manager` standing but stays a
+      plain member.
 
-### Invite redemption with `organizationRole: 'manager'`
+### Invites
 
-- [x] Already implemented (`identities.ts`'s `redeemInvite`) — dispatches
-      `organization.add-manager` when the redeemed invite specifies it.
-- [ ] **Gap being fixed**: also grants `organization:manage` to the redeeming account, same as the
-      direct `add-manager` route does.
+- [x] `POST /tenants/{tenantSlug}/organizations/{organizationId}/invites` — `organizationRole` is
+      any valid org-scope role name (not a fixed `member`/`manager` enum), and accepts either
+      `contactId` or `email` (find-or-create), matching the general invite route's own fallback.
+- [x] Redemption (`identities.ts`) creates a membership record gated by the same seat-limit check
+      `addMember` uses — silently skips on exhaustion, per Story 007's "mismatch is not an error"
+      posture, never failing the whole login.
 
----
+### Account deletion
 
-## Billing-Access Delegation
-
-### `POST /tenants/{tenantSlug}/organizations/{organizationId}/members/{accountId}/billing-access` — grant
-
-- [ ] Gated by `requireOrganizationManager()` — the caller must hold `organization:manage` for
-      *this* organization (not merely any organization).
-- [ ] `{accountId}` must already be a member of the organization (`account.organizationId ===
-      organizationId`) — 404 if not.
-- [ ] Grants `organization-billing:manage` (`account.grant-permission`, `scope: 'organization'`) to
-      the target account. Does **not** imply `organization:manage` — matches ADR 0090's original
-      framing that this is a narrower right a manager can delegate without also making someone a
-      co-manager.
-
-### `DELETE` — same path, revoke
-
-- [ ] Same gating and membership precondition; revokes `organization-billing:manage` from the
-      target account (`account.revoke-permission`). No-op (200, not an error) if the target didn't
-      hold it — same idempotent-revoke convention `account.revoke-permission` already follows
-      elsewhere in this codebase.
+- [x] Revokes every active membership across every organization the deleted account belonged to,
+      with best-effort succession per membership (never blocking the deletion itself). An
+      organization left with zero managers is a real, accepted terminal state requiring operator
+      intervention.
 
 ---
 
 ## Not Covered Here
 
-- Entitlement fan-out for organization-scoped subscriptions (who receives roles when an
-  organization's Stripe subscription activates) — that's keep's side of ADR 0098, not a tower
-  route.
-- A customer-facing (non-admin-dashboard) UI for any of this — `web`'s admin UI already covers the
-  manager/member/billing-access management surface (this story's routes are what it calls). A
-  brandable, hosted customer-facing surface is a separate, still-proposed idea
-  ([ADR 0099](../../decisions/0099-hosted-tenant-brandable-ui-surfaces.md)).
-- Backfilling `organization:manage` for any organization/manager that predates this story shipping
-  — per ADR 0098, this is treated as a non-issue since the grant never worked before now, so there
-  is no real prior state to reconcile.
+- Entitlement publishing for organization-scoped subscriptions (keep's side) — see ADR 0100's own
+  Decision section and `keep`'s `webhooks.ts`.
+- The embeddable, brandable customer-facing UI for this surface — see
+  [ADR 0099](../../decisions/0099-hosted-tenant-brandable-ui-surfaces.md) and its concrete
+  implementation in `authstar/web`'s `(embed)` route group.
