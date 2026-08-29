@@ -8,7 +8,7 @@ import { defineConfig } from 'tsup'
 export default defineConfig({
   entry: ['src/index.ts'],
   format: ['esm'],
-  dts: { resolve: ['@bytepunx/authstar-core'] },
+  dts: { resolve: true },
   sourcemap: true,
   clean: true,
   noExternal: ['@bytepunx/authstar-core'],
