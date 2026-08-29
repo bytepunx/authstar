@@ -8,7 +8,7 @@ import type { PermissionGrant } from '../actors/account_actor.js'
 import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypto.js'
 import { requirePermission, requireOrganizationManager } from '../lib/permissions.js'
 import { searchCriteria } from '../lib/consequent-types.js'
-import { rolesValid, type Scope } from '../lib/role-definition-lookup.js'
+import { rolesValid, organizationRolesValid, type Scope } from '../lib/role-definition-lookup.js'
 import { requireOperatorAuth, requireOperatorActor, operatorActor } from '../lib/operator-auth.js'
 
 // Per design/stories/tower/007-invites-and-invite-codes.md. The
@@ -125,12 +125,19 @@ const organizationParamsSchema = {
 const createOrganizationInviteBodySchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['contactId', 'organizationRole'],
+  required: ['organizationRole'],
   properties: {
     contactId: { type: 'string', minLength: 1 },
-    organizationRole: { type: 'string', enum: ['member', 'manager'] },
+    email: { type: 'string', minLength: 3 },
+    // ADR 0100: any org-scope role name (validated against the tenant's
+    // roleDefinition catalog at write time), not a fixed 'member'|'manager'
+    // enum -- the invitee always ends up a 'member' regardless (see
+    // organizations.ts's own `rolesForNewMembership`), this is what's
+    // layered on top.
+    organizationRole: { type: 'string', minLength: 1 },
     expiresAt: { type: ['string', 'null'] },
   },
+  anyOf: [{ required: ['contactId'] }, { required: ['email'] }],
 } as const
 
 const patchBodySchema = {
@@ -275,15 +282,16 @@ async function createInvite(app: FastifyInstance, request: FastifyRequest, reply
   return reply.code(201).send(toResponse(token, created!))
 }
 
-// ADR 0090: an org manager's own invite-creation path -- narrower than
+// ADR 0100: an org manager's own invite-creation path -- narrower than
 // createInvite above (no application/roles/general permissions), reusing
 // the same invite actor and herald-publish machinery. `organizationRole`
-// is the only thing this invite grants: 'manager' promotes the invitee to
-// a co-manager on redemption, matching the same authority `POST .../
-// organizations/{id}/managers` already gives an org manager directly.
+// is any org-scope role name (validated against the tenant's roleDefinition
+// catalog); the invitee always ends up a plain 'member' too on redemption
+// (organizations.ts's `rolesForNewMembership`), same as every other path
+// onto the roster.
 async function createOrganizationInvite(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug, organizationId } = request.params as { tenantSlug: string, organizationId: string }
-  const body = request.body as { contactId: string, organizationRole: 'member' | 'manager', expiresAt?: string | null }
+  const body = request.body as { contactId?: string, email?: string, organizationRole: string, expiresAt?: string | null }
 
   const tenant = await fetchTenant(app, tenantSlug)
   if (!tenantExists(tenant)) return reply.code(404).send()
@@ -292,11 +300,20 @@ async function createOrganizationInvite(app: FastifyInstance, request: FastifyRe
   const org = orgInstance?.state as unknown as OrganizationState | undefined
   if (!org?.createdAt || org.tenant !== tenantSlug) return reply.code(404).send()
 
+  if (!(await organizationRolesValid(app, tenantSlug, [body.organizationRole]))) {
+    return reply.code(400).send({ error: 'organizationRole must reference an existing, active organization role definition for this tenant' })
+  }
+
+  // ADR 0091: `email` resolves (find-or-create) to a contactId here, same
+  // as `createInvite`'s own identical fallback -- the schema's `anyOf`
+  // guarantees at least one of the two is present.
+  const contactId = body.contactId ?? (await app.contactStore.upsert(tenantSlug, body.email!)).id
+
   const token = randomBytes(20).toString('hex')
   await app.consequent.handle(token, 'invite.create', {
     tenant: tenantSlug,
     application: null,
-    contactId: body.contactId,
+    contactId,
     roles: [],
     permissions: [],
     organizationId,
@@ -305,7 +322,7 @@ async function createOrganizationInvite(app: FastifyInstance, request: FastifyRe
     actingAs: operatorActor(request),
   })
 
-  await publishInviteSent(app, tenantSlug, tenant.name, null, token, body.contactId)
+  await publishInviteSent(app, tenantSlug, tenant.name, null, token, contactId)
 
   const created = await fetchInvite(app, tenantSlug, token)
   return reply.code(201).send(toResponse(token, created!))

@@ -29,16 +29,9 @@ export interface RoleGrant {
 // structurally. Story 007's invite-code `maxOutstanding` enforcement
 // (`routes/invite-codes.ts`) is the first caller that needs to, hence the
 // real type now.
-// `scope` gains `'organization'` (ADR 0090) alongside the pre-existing
-// `'tenant'`/`{application}` -- unlike those, an organization-scoped grant
-// needs no id in the scope value itself, because an account belongs to at
-// most one organization at a time (account_actor.ts's own `organizationId`
-// field): holding an organization-scoped permission at all unambiguously
-// means "for my own org," disambiguated downstream via the caller's
-// `organizationId` claim, not by anything stored here.
 export interface PermissionGrant {
   grant: string
-  scope: 'tenant' | 'organization' | { application: string }
+  scope: 'tenant' | { application: string }
   maxOutstanding: number | null
 }
 
@@ -60,12 +53,6 @@ export interface AccountState {
   trialExpiresAt: string | null
   permissions: PermissionGrant[]
   usage: UsageRecord[]
-  // ADR 0090: at most one organization at a time -- same single-tenant-
-  // per-account constraint `tenant` above already has, extended one level.
-  // This is the pointer side of the relationship; `organization` itself
-  // holds no reverse member list (see organization_actor.ts's own header
-  // comment).
-  organizationId: string | null
   createdAt: string
 }
 
@@ -96,7 +83,7 @@ interface GrantPermissionCommand {
 }
 
 interface RevokePermissionCommand {
-  permission: { grant: string, scope: 'tenant' | 'organization' | { application: string } }
+  permission: { grant: string, scope: 'tenant' | { application: string } }
   actingAs?: string
 }
 
@@ -112,23 +99,11 @@ interface ChangeEmailCommand {
   actingAs?: string
 }
 
-interface JoinOrganizationCommand {
-  organizationId: string
-}
-
-interface LeaveOrganizationCommand {
-  actingAs?: string
-}
-
 interface StatusChangeCommand {
   actingAs?: string
 }
 
-// Widened to accept `'organization'` too (PermissionGrant.scope, ADR 0090)
-// -- shared between sameRole (whose RoleGrant.scope never includes it) and
-// samePermission (which can pass it), so the parameter type must cover
-// both callers' actual value spaces.
-function scopeKey(scope: 'tenant' | 'organization' | { application: string }): string {
+function scopeKey(scope: 'tenant' | { application: string }): string {
   return typeof scope === 'string' ? scope : `application:${scope.application}`
 }
 
@@ -140,7 +115,7 @@ function sameRole(a: RoleGrant, b: RoleGrant): boolean {
 // one scope" -- i.e. `(grant, scope)` together are the real identity, not
 // `grant` alone. Matches `sameRole`'s own composite-scope equality
 // reasoning exactly.
-function samePermission(a: { grant: string, scope: 'tenant' | 'organization' | { application: string } }, b: { grant: string, scope: 'tenant' | 'organization' | { application: string } }): boolean {
+function samePermission(a: { grant: string, scope: 'tenant' | { application: string } }, b: { grant: string, scope: 'tenant' | { application: string } }): boolean {
   return a.grant === b.grant && scopeKey(a.scope) === scopeKey(b.scope)
 }
 
@@ -191,23 +166,6 @@ function revokePermission(_account: AccountState, command: RevokePermissionComma
 // hash itself (no signet pepper access at this layer).
 function changeEmail(_account: AccountState, command: ChangeEmailCommand) {
   return { type: 'account.contact-changed', contactId: command.contactId, ...actingAsFields(command) }
-}
-
-// ADR 0090: dispatched either from org-invite redemption (identities.ts)
-// or directly by an org manager adding an existing account. The route
-// layer is responsible for confirming the account isn't already in a
-// *different* organization before dispatching -- this actor has no
-// visibility into `organization` state to check that itself.
-function joinOrganization(_account: AccountState, command: JoinOrganizationCommand) {
-  return { type: 'account.organization-joined', organizationId: command.organizationId }
-}
-
-// No target organizationId needed -- this always clears whatever the
-// account's current one is. Naturally idempotent: leaving while already
-// unaffiliated is a harmless no-op (mirrors contactChanged's own
-// re-setting-the-same-value tolerance).
-function leaveOrganization(_account: AccountState, command: LeaveOrganizationCommand) {
-  return { type: 'account.organization-left', ...actingAsFields(command) }
 }
 
 function updateUsage(_account: AccountState, command: UpdateUsageCommand) {
@@ -275,7 +233,6 @@ function created(account: AccountState, event: CreateCommand) {
   account.trialExpiresAt = null
   account.permissions = []
   account.usage = []
-  account.organizationId = null
   account.createdAt = new Date(0).toISOString() // replaced by consequent's own event timestamp on read
 }
 
@@ -319,7 +276,7 @@ function permissionGranted(account: AccountState, event: { permission: Permissio
 
 // Idempotent -- a no-op if the matching `(grant, scope)` is already absent
 // (e.g. a redelivered revoke arriving after another already processed it).
-function permissionRevoked(account: AccountState, event: { permission: { grant: string, scope: 'tenant' | 'organization' | { application: string } } }) {
+function permissionRevoked(account: AccountState, event: { permission: { grant: string, scope: 'tenant' | { application: string } } }) {
   account.permissions = account.permissions.filter((p) => !samePermission(p, event.permission))
 }
 
@@ -358,21 +315,13 @@ function contactChanged(account: AccountState, event: { contactId: string }) {
   account.contactId = event.contactId
 }
 
-function organizationJoined(account: AccountState, event: { organizationId: string }) {
-  account.organizationId = event.organizationId
-}
-
-function organizationLeft(account: AccountState) {
-  account.organizationId = null
-}
-
 export default function accountActor() {
   return {
     actor: {
       namespace: 'tower',
       type: 'account',
       identifiedBy: 'accountId',
-      searchableBy: ['tenant', 'contactId', 'status', 'organizationId'],
+      searchableBy: ['tenant', 'contactId', 'status'],
     },
     state: {
       accountId: '',
@@ -385,7 +334,6 @@ export default function accountActor() {
       trialExpiresAt: null,
       permissions: [],
       usage: [],
-      organizationId: null,
       createdAt: '',
     },
     commands: {
@@ -397,8 +345,6 @@ export default function accountActor() {
       'revoke-permission': revokePermission,
       'update-usage': updateUsage,
       'change-email': changeEmail,
-      'join-organization': joinOrganization,
-      'leave-organization': leaveOrganization,
       suspend: [
         { when: isActive, then: suspend },
         rejectSuspend,
@@ -421,8 +367,6 @@ export default function accountActor() {
       'permission-revoked': permissionRevoked,
       'usage-updated': usageUpdated,
       'contact-changed': contactChanged,
-      'organization-joined': organizationJoined,
-      'organization-left': organizationLeft,
       suspended,
       activated,
       deleted,

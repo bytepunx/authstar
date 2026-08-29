@@ -9,6 +9,21 @@ import { encryptForHerald, serializeEnvelope } from '../lib/herald-payload-crypt
 import { randomEcPrivateKeyPem, randomSecret } from '../lib/tenant-keys.js'
 import { isOperatorRequest } from '../lib/operator-auth.js'
 import { fetchState, validateDomain, domainAlreadyTaken, RESERVED_WORD, SLUG_PATTERN } from '../lib/tenant-validation.js'
+import { roleDefinitionKey } from '../lib/role-definition-lookup.js'
+
+// design/decisions/0100-organization-membership-and-scoped-entitlements.md:
+// every tenant gets these four organization-scope role definitions seeded
+// unconditionally at creation -- role_definition_actor.ts's own `retire`
+// command refuses to retire any of them. `manager`/`member` are tower's own
+// org-administration primitive; `billingAdmin`/`billingViewer` are keep's
+// Billing Portal access levels. A tenant can still define additional
+// org-scope roles beyond these four the normal way.
+const DEFAULT_ORGANIZATION_ROLES: ReadonlyArray<{ name: string, description: string }> = [
+  { name: 'manager', description: 'Full control of the organization -- add/remove co-managers, invite/remove members, set a successor.' },
+  { name: 'member', description: 'Belongs to the organization; no administrative rights.' },
+  { name: 'billingAdmin', description: 'Can manage the organization’s shared subscription (keep’s Billing Portal).' },
+  { name: 'billingViewer', description: 'Can view the organization’s shared subscription, read-only.' },
+]
 
 // ADR 0091: the internal application slug for the reserved admin surface
 // stays `_admin` (unchanged, invisible in any URL) -- only its *host*
@@ -334,6 +349,22 @@ const provisioningRoutes: FastifyPluginAsync = async function (app: FastifyInsta
         await app.consequent.handle(body.slug, 'tenant.add-provider', { name: config.defaultProvider.name })
       } catch {
         // Best-effort, see above.
+      }
+    }
+
+    // Step 2.5: seed the four built-in organization-scope role definitions.
+    // Doesn't need a domain -- runs regardless of provisioning state, same
+    // idempotent check-then-act shape as the provider seed above.
+    for (const role of DEFAULT_ORGANIZATION_ROLES) {
+      const key = roleDefinitionKey(body.slug, role.name, 'organization')
+      const existing = await fetchState<{ createdAt: string }>(app, 'roleDefinition', key)
+      if (!existing?.createdAt) {
+        await app.consequent.handle(key, 'roleDefinition.create', {
+          tenant: body.slug,
+          name: role.name,
+          scope: 'organization',
+          description: role.description,
+        })
       }
     }
 

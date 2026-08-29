@@ -4,10 +4,15 @@
 // 2026-08-05 amendment note).
 //
 // `identifiedBy: 'key'`, purely positional, no static tags: `${tenant}:
-// ${name}` when `scope === 'tenant'`, `${tenant}:${appSlug}:${name}` when
-// `scope === {application: appSlug}` -- disambiguated by segment count
-// alone, safe because none of `tenant`/`appSlug`/`name` can contain the `:`
-// delimiter (same slug character set ADR 0002 established elsewhere), and a
+// ${name}` when `scope === 'tenant'`, `${tenant}:organization:${name}` when
+// `scope === 'organization'` (design/decisions/0100-...), `${tenant}:
+// ${appSlug}:${name}` when `scope === {application: appSlug}` --
+// disambiguated by segment count alone (the organization case reuses the
+// application case's two-segment shape with a literal `organization` where
+// an app slug would go -- `applications.ts` rejects `organization` as an
+// application slug for exactly this reason, same as it already rejects
+// `_admin`), safe because none of `tenant`/`appSlug`/`name` can contain the
+// `:` delimiter (same slug character set ADR 0002 established elsewhere), and a
 // caller always already knows `scope` from the role grant it's validating,
 // so nothing ever needs to parse an ambiguous key back into parts. Callers
 // (routes/role-definitions.ts) compute this key themselves before calling
@@ -34,7 +39,7 @@
 export interface RoleDefinitionState {
   tenant: string
   name: string
-  scope: 'tenant' | { application: string }
+  scope: 'tenant' | 'organization' | { application: string }
   description: string
   status: 'active' | 'retired'
   createdAt: string
@@ -43,7 +48,7 @@ export interface RoleDefinitionState {
 interface CreateCommand {
   tenant: string
   name: string
-  scope: 'tenant' | { application: string }
+  scope: 'tenant' | 'organization' | { application: string }
   description: string
 }
 
@@ -82,7 +87,29 @@ function isActive(state: RoleDefinitionState) {
   return state.status === 'active'
 }
 
-function retire() {
+// Baked into authstar itself (design/decisions/0100-organization-membership-
+// and-scoped-entitlements.md) -- every tenant gets these seeded at
+// provisioning time (routes/provisioning.ts) and can define more org-scope
+// roles beyond them the same way app-scope ones are defined, but these four
+// specifically are never retirable: `manager`/`member` are tower's own
+// org-administration primitive (requireOrganizationManager/Member check for
+// them directly), `billingAdmin`/`billingViewer` are keep's Billing Portal
+// access levels.
+const PROTECTED_ORGANIZATION_ROLES = new Set(['manager', 'member', 'billingAdmin', 'billingViewer'])
+
+// Command `then` handlers for an already-existing actor receive the full
+// instance wrapper (`{state, actor, ...}`), not the state alone -- the same
+// asymmetry organization_actor.ts's own header comment documents (confirmed
+// directly against consequent's `apply.js`). `when` guards (like `isActive`
+// above) receive raw state; `then` handlers here do not.
+interface ActorInstance {
+  state: RoleDefinitionState
+}
+
+function retire(instance: ActorInstance) {
+  if (instance.state.scope === 'organization' && PROTECTED_ORGANIZATION_ROLES.has(instance.state.name)) {
+    return Promise.reject(new Error('this organization role is built into authstar and cannot be retired'))
+  }
   return { type: 'roleDefinition.retired' }
 }
 

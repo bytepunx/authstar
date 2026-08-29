@@ -1,17 +1,22 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import type { OrganizationState } from '../actors/organization_actor.js'
+import type { OrganizationMembershipState } from '../actors/organization_membership_actor.js'
 import type { AccountState } from '../actors/account_actor.js'
 import { requireOrganizationManager, requireOrganizationMember, requireSelfOrOrganizationManager, requireSelf, requirePermission } from '../lib/permissions.js'
-import { requireOperatorAuth, requireOperatorActor, operatorActor } from '../lib/operator-auth.js'
+import { requireOperatorAuth, requireOperatorActor } from '../lib/operator-auth.js'
 import { searchCriteria } from '../lib/consequent-types.js'
+import { organizationRolesValid } from '../lib/role-definition-lookup.js'
 
-// Per design/decisions/0090-organizations-shared-billing-administration-
-// and-succession.md. Story 013's operator-tree-wraps-same-handlers
-// pattern (ADR 0030) applies here too, with one exception:
-// `promote-successor` has no tenant-scoped counterpart at all -- it's the
-// operator-mediated incapacitation/death path, deliberately unreachable
-// by any self-service caller including an org's own manager (see the
-// route registration at the bottom).
+// Per design/decisions/0100-organization-membership-and-open-role-catalog.md
+// (supersedes ADR 0090/0098's `organization.managers[]`/`.successors` and
+// the two-catalog-permission mechanism). Membership -- and standing within
+// it -- lives entirely on `organizationMembership` records, one per
+// (account, organization) pair; an account can hold any number of them.
+// Story 013's operator-tree-wraps-same-handlers pattern (ADR 0030) still
+// applies, with the same one exception ADR 0090 already carved out:
+// `promote-successor` has no tenant-scoped counterpart -- it's the
+// operator-mediated incapacitation/death path, unreachable by any
+// self-service caller including an org's own manager.
 
 const tenantParamsSchema = {
   type: 'object',
@@ -25,10 +30,16 @@ const organizationParamsSchema = {
   properties: { tenantSlug: { type: 'string' }, organizationId: { type: 'string' } },
 } as const
 
-const managerParamsSchema = {
+const memberParamsSchema = {
   type: 'object',
   required: ['tenantSlug', 'organizationId', 'accountId'],
   properties: { tenantSlug: { type: 'string' }, organizationId: { type: 'string' }, accountId: { type: 'string' } },
+} as const
+
+const memberRoleParamsSchema = {
+  type: 'object',
+  required: ['tenantSlug', 'organizationId', 'accountId', 'role'],
+  properties: { tenantSlug: { type: 'string' }, organizationId: { type: 'string' }, accountId: { type: 'string' }, role: { type: 'string' } },
 } as const
 
 const createBodySchema = {
@@ -38,11 +49,21 @@ const createBodySchema = {
   properties: { name: { type: 'string', minLength: 1 } },
 } as const
 
-const accountIdBodySchema = {
+const addMemberBodySchema = {
   type: 'object',
   additionalProperties: false,
   required: ['accountId'],
-  properties: { accountId: { type: 'string', minLength: 1 } },
+  properties: {
+    accountId: { type: 'string', minLength: 1 },
+    roles: { type: 'array', items: { type: 'string', minLength: 1 } },
+  },
+} as const
+
+const grantRoleBodySchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['role'],
+  properties: { role: { type: 'string', minLength: 1 } },
 } as const
 
 const successorBodySchema = {
@@ -75,29 +96,94 @@ function toResponse(state: OrganizationState) {
   return rest
 }
 
+function membershipToResponse(state: OrganizationMembershipState) {
+  const { createdAt: _createdAt, status: _status, ...rest } = state
+  return rest
+}
+
+// Active memberships for one organization -- the roster `GET .../members`
+// returns, and the pool `guardLastManager`/seat-limit checks count against.
+async function fetchMemberships(app: FastifyInstance, tenantSlug: string, organizationId: string): Promise<OrganizationMembershipState[]> {
+  const instances = await app.consequent.find('organizationMembership', searchCriteria({ tenant: tenantSlug, organizationId }))
+  return instances
+    .map((i) => i.state as unknown as OrganizationMembershipState)
+    .filter((m) => m.status === 'active')
+}
+
+async function findMembership(app: FastifyInstance, tenantSlug: string, organizationId: string, accountId: string): Promise<OrganizationMembershipState | null> {
+  const instances = await app.consequent.find('organizationMembership', searchCriteria({ tenant: tenantSlug, organizationId, accountId }))
+  const active = instances.map((i) => i.state as unknown as OrganizationMembershipState).find((m) => m.status === 'active')
+  return active ?? null
+}
+
+function organizationManagers(memberships: OrganizationMembershipState[]): OrganizationMembershipState[] {
+  return memberships.filter((m) => m.roles.includes('manager'))
+}
+
+// Every membership always includes 'member' (organization_membership_actor.ts's
+// own invariant, enforced here at the route layer, not the actor) --
+// 'manager'/other org roles are layered on top, never held alone.
+function rolesForNewMembership(extra: string[]): string[] {
+  const unique = new Set(['member', ...extra])
+  return [...unique]
+}
+
+// ADR 0100: the same last-manager-with-successor-fallback rule ADR 0090
+// originally described, now checked across sibling `organizationMembership`
+// records instead of one actor's own `managers[]` array. Called before
+// actually removing 'manager' standing from `membership` (whether via a
+// role revoke or a full membership revoke) -- a no-op unless `membership`
+// is genuinely the organization's *only* active manager.
+async function guardLastManager(
+  app: FastifyInstance,
+  tenantSlug: string,
+  organizationId: string,
+  membership: OrganizationMembershipState,
+): Promise<{ ok: true } | { ok: false, status: number, error: string }> {
+  const memberships = await fetchMemberships(app, tenantSlug, organizationId)
+  const managers = organizationManagers(memberships)
+  const isSoleManager = managers.length === 1 && managers[0]!.membershipId === membership.membershipId
+  if (!isSoleManager) return { ok: true }
+
+  if (!membership.successorAccountId) {
+    return { ok: false, status: 409, error: 'cannot remove the only remaining manager without a designated successor' }
+  }
+  const successor = memberships.find((m) => m.accountId === membership.successorAccountId)
+  if (!successor) {
+    return { ok: false, status: 409, error: 'designated successor is no longer a member of this organization' }
+  }
+  await app.consequent.handle(successor.membershipId, 'organizationMembership.grant-role', { role: 'manager' })
+  await app.publisher.publish('organization.manager-succeeded', {
+    organizationId,
+    tenant: tenantSlug,
+    departingAccountId: membership.accountId,
+    successorAccountId: successor.accountId,
+  })
+  return { ok: true }
+}
+
 async function createOrganization(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug } = request.params as { tenantSlug: string }
   const { name } = request.body as { name: string }
 
   // Self-service: any authenticated caller can create an organization, no
-  // special permission needed -- but they may not already belong to one
-  // (an account belongs to at most one at a time, ADR 0090).
+  // special permission needed. Unlike ADR 0090, an account may already
+  // belong to other organizations -- membership is many-to-many now.
   const claims = request.authstar
   if (!(claims?.enrichmentStatus === 'ok' && claims.accountId)) {
     return reply.code(403).send({ error: 'forbidden' })
   }
-  if (claims.organizationId) {
-    return reply.code(409).send({ error: 'account already belongs to an organization' })
-  }
 
   const organizationId = app.ids.nextOrganizationId()
-  await app.consequent.handle(organizationId, 'organization.create', { organizationId, tenant: tenantSlug, name, creatorAccountId: claims.accountId })
-  await app.consequent.handle(claims.accountId, 'account.join-organization', { organizationId })
-  // ADR 0098: the creator becomes the first `managers[]` entry above, but that's
-  // membership only -- grant the permission too, or they could never actually pass
-  // `requireOrganizationManager()` on their own newly-created organization.
-  await app.consequent.handle(claims.accountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
-  await app.publisher.publish('organization.manager-added', { organizationId, tenant: tenantSlug, accountId: claims.accountId })
+  await app.consequent.handle(organizationId, 'organization.create', { organizationId, tenant: tenantSlug, name })
+  const membershipId = app.ids.nextOrganizationMembershipId()
+  await app.consequent.handle(membershipId, 'organizationMembership.create', {
+    membershipId,
+    tenant: tenantSlug,
+    accountId: claims.accountId,
+    organizationId,
+    roles: rolesForNewMembership(['manager']),
+  })
   return reply.code(201).send(toResponse(await fetchOrganization(app, organizationId)))
 }
 
@@ -109,71 +195,100 @@ async function getOrganization(app: FastifyInstance, request: FastifyRequest, re
 }
 
 // Tenant-admin only (accounts:manage, same gate listAccounts already uses)
-// -- an ordinary org member has no legitimate reason to enumerate every
-// other organization in the tenant, only their own (reachable directly by
-// id, gated by requireOrganizationMember instead).
+// -- an ordinary member has no legitimate reason to enumerate every other
+// organization in the tenant, only the ones they belong to.
 async function listOrganizations(app: FastifyInstance, request: FastifyRequest) {
   const { tenantSlug } = request.params as { tenantSlug: string }
   const instances = await app.consequent.find('organization', searchCriteria({ tenant: tenantSlug }))
   return instances.map((i) => toResponse(i.state as unknown as OrganizationState))
 }
 
-async function addManager(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+async function listMembers(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug, organizationId } = request.params as { tenantSlug: string, organizationId: string }
-  const { accountId } = request.body as { accountId: string }
+  const org = await fetchOrganization(app, organizationId)
+  if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
+
+  const memberships = await fetchMemberships(app, tenantSlug, organizationId)
+  return memberships.map(membershipToResponse)
+}
+
+// Direct add of an existing account (as opposed to invite-and-redeem,
+// routes/invites.ts's `createOrganizationInvite`) -- same seat-limit gate
+// as redemption (identities.ts), since this is another path onto the
+// roster. `null` seatLimit means one seat, the creator only (ADR 0100).
+async function addMember(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, organizationId } = request.params as { tenantSlug: string, organizationId: string }
+  const { accountId, roles } = request.body as { accountId: string, roles?: string[] }
 
   const org = await fetchOrganization(app, organizationId)
   if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
 
   const target = await fetchAccount(app, accountId)
-  if (!accountExists(target) || target.organizationId !== organizationId) {
-    return reply.code(409).send({ error: 'account is not a member of this organization' })
+  if (!accountExists(target) || target.tenant !== tenantSlug) return reply.code(404).send()
+
+  const existing = await findMembership(app, tenantSlug, organizationId, accountId)
+  if (existing) return reply.code(409).send({ error: 'account is already a member of this organization' })
+
+  if (!(await organizationRolesValid(app, tenantSlug, roles))) {
+    return reply.code(400).send({ error: 'roles must reference existing, active organization role definitions for this tenant' })
   }
 
-  await app.consequent.handle(organizationId, 'organization.add-manager', { accountId })
-  // ADR 0098: grant `organization:manage` alongside the membership change --
-  // see `createOrganization`'s identical comment for why this can't be skipped.
-  await app.consequent.handle(accountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
-  await app.publisher.publish('organization.manager-added', { organizationId, tenant: tenantSlug, accountId })
-  return toResponse(await fetchOrganization(app, organizationId))
+  const memberships = await fetchMemberships(app, tenantSlug, organizationId)
+  const seatLimit = org.seatLimit ?? 1
+  if (memberships.length >= seatLimit) {
+    return reply.code(409).send({ error: 'organization has reached its seat limit' })
+  }
+
+  const membershipId = app.ids.nextOrganizationMembershipId()
+  await app.consequent.handle(membershipId, 'organizationMembership.create', {
+    membershipId,
+    tenant: tenantSlug,
+    accountId,
+    organizationId,
+    roles: rolesForNewMembership(roles ?? []),
+  })
+  return reply.code(201).send(membershipToResponse(await fetchMembershipById(app, membershipId)))
 }
 
-// ADR 0098: `organization.remove-manager` can produce either a plain removal
-// or (if `accountId` was the sole remaining manager with a successor
-// designated) a succession -- diffing `managers[]` before/after the command,
-// rather than inspecting the produced event directly, handles both outcomes
-// uniformly: whoever left loses `organization:manage`/`organization-billing:
-// manage`, whoever newly arrived (a promoted successor, if any) gains
-// `organization:manage`.
-async function revokeManagerPermissions(app: FastifyInstance, accountId: string) {
-  await app.consequent.handle(accountId, 'account.revoke-permission', { permission: { grant: 'organization:manage', scope: 'organization' } })
-  await app.consequent.handle(accountId, 'account.revoke-permission', { permission: { grant: 'organization-billing:manage', scope: 'organization' } })
+async function fetchMembershipById(app: FastifyInstance, id: string): Promise<OrganizationMembershipState> {
+  const instance = await app.consequent.fetch('organizationMembership', id)
+  return instance!.state as unknown as OrganizationMembershipState
 }
 
-async function removeManager(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+async function grantRole(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug, organizationId, accountId } = request.params as { tenantSlug: string, organizationId: string, accountId: string }
+  const { role } = request.body as { role: string }
 
-  const before = await fetchOrganization(app, organizationId)
-  if (!organizationExists(before) || before.tenant !== tenantSlug) return reply.code(404).send()
+  const org = await fetchOrganization(app, organizationId)
+  if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
 
-  const results = await app.consequent.handle(organizationId, 'organization.remove-manager', { accountId })
-  const rejection = results.find((r) => r?.rejected)
-  if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+  const membership = await findMembership(app, tenantSlug, organizationId, accountId)
+  if (!membership) return reply.code(404).send({ error: 'account is not a member of this organization' })
 
-  const after = await fetchOrganization(app, organizationId)
-  const departed = before.managers.filter((m) => !after.managers.includes(m))
-  const arrived = after.managers.filter((m) => !before.managers.includes(m))
-  for (const departedAccountId of departed) {
-    await revokeManagerPermissions(app, departedAccountId)
-    await app.publisher.publish('organization.manager-removed', { organizationId, tenant: tenantSlug, accountId: departedAccountId })
+  if (!(await organizationRolesValid(app, tenantSlug, [role]))) {
+    return reply.code(400).send({ error: 'role must reference an existing, active organization role definition for this tenant' })
   }
-  for (const successorAccountId of arrived) {
-    await app.consequent.handle(successorAccountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
+
+  await app.consequent.handle(membership.membershipId, 'organizationMembership.grant-role', { role })
+  return membershipToResponse(await fetchMembershipById(app, membership.membershipId))
+}
+
+async function revokeRole(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug, organizationId, accountId, role } = request.params as { tenantSlug: string, organizationId: string, accountId: string, role: string }
+
+  const org = await fetchOrganization(app, organizationId)
+  if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
+
+  const membership = await findMembership(app, tenantSlug, organizationId, accountId)
+  if (!membership) return reply.code(404).send({ error: 'account is not a member of this organization' })
+
+  if (role === 'manager') {
+    const guard = await guardLastManager(app, tenantSlug, organizationId, membership)
+    if (!guard.ok) return reply.code(guard.status).send({ error: guard.error })
   }
-  if (departed.length > 0 && arrived.length > 0) {
-    await app.publisher.publish('organization.manager-succeeded', { organizationId, tenant: tenantSlug, departingAccountId: departed[0], successorAccountId: arrived[0] })
-  }
-  return toResponse(after)
+
+  await app.consequent.handle(membership.membershipId, 'organizationMembership.revoke-role', { role })
+  return membershipToResponse(await fetchMembershipById(app, membership.membershipId))
 }
 
 async function removeMember(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
@@ -182,19 +297,15 @@ async function removeMember(app: FastifyInstance, request: FastifyRequest, reply
   const org = await fetchOrganization(app, organizationId)
   if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
 
-  const target = await fetchAccount(app, accountId)
-  if (!accountExists(target) || target.organizationId !== organizationId) return reply.code(404).send()
+  const membership = await findMembership(app, tenantSlug, organizationId, accountId)
+  if (!membership) return reply.code(404).send()
 
-  // A manager being removed as a member first goes through the same
-  // last-manager-with-successor-fallback rule remove-manager enforces --
-  // membership can't be pulled out from under that guard by going through
-  // this route instead.
-  if (org.managers.includes(accountId)) {
-    const results = await app.consequent.handle(organizationId, 'organization.remove-manager', { accountId })
-    const rejection = results.find((r) => r?.rejected)
-    if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
+  if (membership.roles.includes('manager')) {
+    const guard = await guardLastManager(app, tenantSlug, organizationId, membership)
+    if (!guard.ok) return reply.code(guard.status).send({ error: guard.error })
   }
-  await app.consequent.handle(accountId, 'account.leave-organization', { actingAs: operatorActor(request) })
+
+  await app.consequent.handle(membership.membershipId, 'organizationMembership.revoke', {})
   return reply.code(204).send()
 }
 
@@ -205,15 +316,18 @@ async function setSuccessor(app: FastifyInstance, request: FastifyRequest, reply
   const org = await fetchOrganization(app, organizationId)
   if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
 
-  const successor = await fetchAccount(app, successorAccountId)
-  if (!accountExists(successor) || successor.organizationId !== organizationId) {
+  const membership = await findMembership(app, tenantSlug, organizationId, accountId)
+  if (!membership) return reply.code(404).send()
+
+  const successor = await findMembership(app, tenantSlug, organizationId, successorAccountId)
+  if (!successor) {
     return reply.code(409).send({ error: 'successor must already be a member of this organization' })
   }
 
-  const results = await app.consequent.handle(organizationId, 'organization.set-successor', { accountId, successorAccountId })
+  const results = await app.consequent.handle(membership.membershipId, 'organizationMembership.set-successor', { successorAccountId })
   const rejection = results.find((r) => r?.rejected)
   if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-  return toResponse(await fetchOrganization(app, organizationId))
+  return membershipToResponse(await fetchMembershipById(app, membership.membershipId))
 }
 
 async function clearSuccessor(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
@@ -222,58 +336,50 @@ async function clearSuccessor(app: FastifyInstance, request: FastifyRequest, rep
   const org = await fetchOrganization(app, organizationId)
   if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
 
-  await app.consequent.handle(organizationId, 'organization.clear-successor', { accountId })
-  return toResponse(await fetchOrganization(app, organizationId))
+  const membership = await findMembership(app, tenantSlug, organizationId, accountId)
+  if (!membership) return reply.code(404).send()
+
+  await app.consequent.handle(membership.membershipId, 'organizationMembership.clear-successor', {})
+  return membershipToResponse(await fetchMembershipById(app, membership.membershipId))
 }
 
-// Operator-only (ADR 0090's incapacitation/death path) -- no request body,
-// deliberately: the successor is already pre-designated, the operator's
-// only job is identifying which manager is being succeeded (the URL) after
-// verifying, out-of-band, that succession is actually warranted.
+// Operator-only (ADR 0090's incapacitation/death path, carried over
+// unchanged) -- no request body, deliberately: the successor is already
+// pre-designated, the operator's only job is identifying which manager is
+// being succeeded (the URL) after verifying, out-of-band, that succession
+// is actually warranted. Unlike `guardLastManager`, this works on *any*
+// manager, not only a sole remaining one -- incapacitation targets a
+// specific person regardless of how many co-managers remain, and the
+// departing membership keeps its plain 'member' standing rather than being
+// fully revoked.
 async function promoteSuccessor(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug, organizationId, accountId } = request.params as { tenantSlug: string, organizationId: string, accountId: string }
 
   const org = await fetchOrganization(app, organizationId)
   if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
 
-  const results = await app.consequent.handle(organizationId, 'organization.promote-successor', { accountId })
-  const rejection = results.find((r) => r?.rejected)
-  if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
-
-  const after = await fetchOrganization(app, organizationId)
-  const successorAccountId = after.managers.find((m) => !org.managers.includes(m))
-  await revokeManagerPermissions(app, accountId)
-  if (successorAccountId) {
-    await app.consequent.handle(successorAccountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
-    await app.publisher.publish('organization.manager-succeeded', { organizationId, tenant: tenantSlug, departingAccountId: accountId, successorAccountId })
+  const membership = await findMembership(app, tenantSlug, organizationId, accountId)
+  if (!membership || !membership.roles.includes('manager')) {
+    return reply.code(409).send({ error: 'account is not an active manager of this organization' })
   }
-  return toResponse(after)
-}
+  if (!membership.successorAccountId) {
+    return reply.code(409).send({ error: 'no successor designated' })
+  }
+  const successor = await findMembership(app, tenantSlug, organizationId, membership.successorAccountId)
+  if (!successor) {
+    return reply.code(409).send({ error: 'designated successor is no longer a member of this organization' })
+  }
 
-async function grantBillingAccess(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
-  const { tenantSlug, organizationId, accountId } = request.params as { tenantSlug: string, organizationId: string, accountId: string }
-
-  const org = await fetchOrganization(app, organizationId)
-  if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
-
-  const target = await fetchAccount(app, accountId)
-  if (!accountExists(target) || target.organizationId !== organizationId) return reply.code(404).send()
-
-  await app.consequent.handle(accountId, 'account.grant-permission', { permission: { grant: 'organization-billing:manage', scope: 'organization', maxOutstanding: null } })
-  return reply.code(204).send()
-}
-
-async function revokeBillingAccess(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
-  const { tenantSlug, organizationId, accountId } = request.params as { tenantSlug: string, organizationId: string, accountId: string }
-
-  const org = await fetchOrganization(app, organizationId)
-  if (!organizationExists(org) || org.tenant !== tenantSlug) return reply.code(404).send()
-
-  const target = await fetchAccount(app, accountId)
-  if (!accountExists(target) || target.organizationId !== organizationId) return reply.code(404).send()
-
-  await app.consequent.handle(accountId, 'account.revoke-permission', { permission: { grant: 'organization-billing:manage', scope: 'organization' } })
-  return reply.code(204).send()
+  await app.consequent.handle(successor.membershipId, 'organizationMembership.grant-role', { role: 'manager' })
+  await app.consequent.handle(membership.membershipId, 'organizationMembership.revoke-role', { role: 'manager' })
+  await app.consequent.handle(membership.membershipId, 'organizationMembership.clear-successor', {})
+  await app.publisher.publish('organization.manager-succeeded', {
+    organizationId,
+    tenant: tenantSlug,
+    departingAccountId: accountId,
+    successorAccountId: successor.accountId,
+  })
+  return membershipToResponse(await fetchMembershipById(app, successor.membershipId))
 }
 
 const organizationRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
@@ -295,49 +401,45 @@ const organizationRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     (request, reply) => getOrganization(app, request, reply),
   )
 
+  app.get(
+    '/tenants/:tenantSlug/organizations/:organizationId/members',
+    { schema: { params: organizationParamsSchema }, preHandler: requireOrganizationMember() },
+    (request, reply) => listMembers(app, request, reply),
+  )
+
   app.post(
-    '/tenants/:tenantSlug/organizations/:organizationId/managers',
-    { schema: { params: organizationParamsSchema, body: accountIdBodySchema }, preHandler: requireOrganizationManager() },
-    (request, reply) => addManager(app, request, reply),
+    '/tenants/:tenantSlug/organizations/:organizationId/members',
+    { schema: { params: organizationParamsSchema, body: addMemberBodySchema }, preHandler: requireOrganizationManager() },
+    (request, reply) => addMember(app, request, reply),
+  )
+
+  app.post(
+    '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/roles',
+    { schema: { params: memberParamsSchema, body: grantRoleBodySchema }, preHandler: requireOrganizationManager() },
+    (request, reply) => grantRole(app, request, reply),
   )
 
   app.delete(
-    '/tenants/:tenantSlug/organizations/:organizationId/managers/:accountId',
-    { schema: { params: managerParamsSchema }, preHandler: requireSelfOrOrganizationManager() },
-    (request, reply) => removeManager(app, request, reply),
-  )
-
-  // ADR 0098: the delegation route ADR 0090 described in prose but never
-  // specified -- a holder of `organization:manage` can grant/revoke the
-  // narrower `organization-billing:manage` right to a fellow member without
-  // making them a co-manager.
-  app.post(
-    '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/billing-access',
-    { schema: { params: managerParamsSchema }, preHandler: requireOrganizationManager() },
-    (request, reply) => grantBillingAccess(app, request, reply),
-  )
-
-  app.delete(
-    '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/billing-access',
-    { schema: { params: managerParamsSchema }, preHandler: requireOrganizationManager() },
-    (request, reply) => revokeBillingAccess(app, request, reply),
+    '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/roles/:role',
+    { schema: { params: memberRoleParamsSchema }, preHandler: requireOrganizationManager() },
+    (request, reply) => revokeRole(app, request, reply),
   )
 
   app.delete(
     '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId',
-    { schema: { params: managerParamsSchema }, preHandler: requireOrganizationManager() },
+    { schema: { params: memberParamsSchema }, preHandler: requireSelfOrOrganizationManager() },
     (request, reply) => removeMember(app, request, reply),
   )
 
   app.put(
-    '/tenants/:tenantSlug/organizations/:organizationId/managers/:accountId/successor',
-    { schema: { params: managerParamsSchema, body: successorBodySchema }, preHandler: requireSelf() },
+    '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/successor',
+    { schema: { params: memberParamsSchema, body: successorBodySchema }, preHandler: requireSelf() },
     (request, reply) => setSuccessor(app, request, reply),
   )
 
   app.delete(
-    '/tenants/:tenantSlug/organizations/:organizationId/managers/:accountId/successor',
-    { schema: { params: managerParamsSchema }, preHandler: requireSelf() },
+    '/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/successor',
+    { schema: { params: memberParamsSchema }, preHandler: requireSelf() },
     (request, reply) => clearSuccessor(app, request, reply),
   )
 
@@ -346,8 +448,8 @@ const organizationRoutes: FastifyPluginAsync = async function (app: FastifyInsta
   // this for themselves or a peer, since that would defeat the entire
   // point of requiring out-of-band human verification first.
   app.post(
-    '/operator/tenants/:tenantSlug/organizations/:organizationId/managers/:accountId/promote-successor',
-    { schema: { params: managerParamsSchema }, preHandler: requireOperatorActor(app) },
+    '/operator/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/promote-successor',
+    { schema: { params: memberParamsSchema }, preHandler: requireOperatorActor(app) },
     (request, reply) => promoteSuccessor(app, request, reply),
   )
 
@@ -372,35 +474,49 @@ const organizationRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     (request, reply) => getOrganization(app, request, reply),
   )
 
+  app.get(
+    '/operator/tenants/:tenantSlug/organizations/:organizationId/members',
+    { schema: { params: organizationParamsSchema }, preHandler: requireOperatorAuth(app) },
+    (request, reply) => listMembers(app, request, reply),
+  )
+
   app.post(
-    '/operator/tenants/:tenantSlug/organizations/:organizationId/managers',
-    { schema: { params: organizationParamsSchema, body: accountIdBodySchema }, preHandler: requireOperatorActor(app) },
-    (request, reply) => addManager(app, request, reply),
+    '/operator/tenants/:tenantSlug/organizations/:organizationId/members',
+    { schema: { params: organizationParamsSchema, body: addMemberBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => addMember(app, request, reply),
+  )
+
+  app.post(
+    '/operator/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/roles',
+    { schema: { params: memberParamsSchema, body: grantRoleBodySchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => grantRole(app, request, reply),
   )
 
   app.delete(
-    '/operator/tenants/:tenantSlug/organizations/:organizationId/managers/:accountId',
-    { schema: { params: managerParamsSchema }, preHandler: requireOperatorActor(app) },
-    (request, reply) => removeManager(app, request, reply),
+    '/operator/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/roles/:role',
+    { schema: { params: memberRoleParamsSchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => revokeRole(app, request, reply),
   )
 
   app.delete(
     '/operator/tenants/:tenantSlug/organizations/:organizationId/members/:accountId',
-    { schema: { params: managerParamsSchema }, preHandler: requireOperatorActor(app) },
+    { schema: { params: memberParamsSchema }, preHandler: requireOperatorActor(app) },
     (request, reply) => removeMember(app, request, reply),
   )
 
   app.put(
-    '/operator/tenants/:tenantSlug/organizations/:organizationId/managers/:accountId/successor',
-    { schema: { params: managerParamsSchema, body: successorBodySchema }, preHandler: requireOperatorActor(app) },
+    '/operator/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/successor',
+    { schema: { params: memberParamsSchema, body: successorBodySchema }, preHandler: requireOperatorActor(app) },
     (request, reply) => setSuccessor(app, request, reply),
   )
 
   app.delete(
-    '/operator/tenants/:tenantSlug/organizations/:organizationId/managers/:accountId/successor',
-    { schema: { params: managerParamsSchema }, preHandler: requireOperatorActor(app) },
+    '/operator/tenants/:tenantSlug/organizations/:organizationId/members/:accountId/successor',
+    { schema: { params: memberParamsSchema }, preHandler: requireOperatorActor(app) },
     (request, reply) => clearSuccessor(app, request, reply),
   )
 }
 
 export default organizationRoutes
+
+export { fetchMemberships, findMembership, organizationManagers, guardLastManager, rolesForNewMembership }

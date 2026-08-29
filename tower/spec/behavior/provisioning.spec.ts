@@ -280,6 +280,32 @@ describe('POST /tenants -- provisioning', () => {
     expect(signetAdmin.patchCalls).toHaveLength(1)
   })
 
+  it('seeds the four built-in organization-scope role definitions (ADR 0100)', async () => {
+    const response = await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' },
+    })
+    expect(response.statusCode).toBe(201)
+
+    for (const name of ['manager', 'member', 'billingAdmin', 'billingViewer']) {
+      const instance = await consequent.fetch('roleDefinition', `acme:organization:${name}`)
+      expect(instance!.state.status).toBe('active')
+      expect(instance!.state.scope).toBe('organization')
+    }
+  })
+
+  it('is idempotent seeding organization roles on a retried provisioning request', async () => {
+    const payload = { slug: 'acme', name: 'Acme', adminEmail: 'admin@acme.test' }
+    await app.inject({ method: 'POST', url: '/tenants', headers: { authorization: 'Bearer op-secret' }, payload })
+    const second = await app.inject({ method: 'POST', url: '/tenants', headers: { authorization: 'Bearer op-secret' }, payload })
+    expect(second.statusCode).toBe(201)
+
+    const instance = await consequent.fetch('roleDefinition', 'acme:organization:manager')
+    expect(instance!.state.status).toBe('active')
+  })
+
   it('allows unauthenticated requests when self-service is enabled', async () => {
     const selfService = { ...provisioningConfig, selfServiceEnabled: true }
     const { app: selfServiceApp } = await buildProvisioningApp(selfService)

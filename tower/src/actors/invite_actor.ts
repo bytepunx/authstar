@@ -24,7 +24,7 @@ export interface InviteState {
   // `POST .../organizations/{id}/managers` grants directly), not a general
   // permissions grant that needs operator mediation.
   organizationId: string | null
-  organizationRole: 'member' | 'manager' | null
+  organizationRole: string | null
   status: 'pending' | 'accepted' | 'revoked' | 'expired'
   createdAt: string
   expiresAt: string | null
@@ -37,7 +37,7 @@ interface CreateCommand {
   roles: InviteState['roles']
   permissions: PermissionGrant[]
   organizationId?: string | null
-  organizationRole?: 'member' | 'manager' | null
+  organizationRole?: string | null
   expiresAt: string | null
   actingAs?: string
 }

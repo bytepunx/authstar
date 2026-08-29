@@ -3,8 +3,10 @@ import type { IdentityState } from '../actors/identity_actor.js'
 import type { AccountState } from '../actors/account_actor.js'
 import type { InviteState } from '../actors/invite_actor.js'
 import type { InviteCodeState } from '../actors/invite_code_actor.js'
+import type { OrganizationState } from '../actors/organization_actor.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 import { requireSpiffePeer } from '../lib/spiffe-mtls.js'
+import { fetchMemberships, findMembership, rolesForNewMembership } from './organizations.js'
 
 // Per design/stories/tower/003-identity-resolution-at-login.md,
 // 007-invites-and-invite-codes.md, and ADR 0027/0028. Called by
@@ -158,22 +160,31 @@ async function redeemInvite(app: FastifyInstance, token: string, accountId: stri
     ...invite.permissions.map((permission) => app.consequent.handle(accountId, 'account.grant-permission', { permission })),
   ])
 
-  // ADR 0090: same "mismatch is not an error, login proceeds anyway"
-  // posture -- an account already belonging to a *different* organization
-  // silently skips this rather than failing the whole login. An account
-  // belongs to at most one organization at a time, so re-redeeming the
-  // same invite (or one for the org it's already in) is naturally
-  // idempotent via organization.add-manager's own set-membership handler.
-  if (invite.organizationId && (!account.organizationId || account.organizationId === invite.organizationId)) {
-    await app.consequent.handle(accountId, 'account.join-organization', { organizationId: invite.organizationId })
-    if (invite.organizationRole === 'manager') {
-      await app.consequent.handle(invite.organizationId, 'organization.add-manager', { accountId })
-      // ADR 0098: membership in `managers[]` and holding the `organization:manage`
-      // permission are two independently-tracked facts -- grant it here too, same
-      // as the direct add-manager route does, or this manager could never actually
-      // pass `requireOrganizationManager()`.
-      await app.consequent.handle(accountId, 'account.grant-permission', { permission: { grant: 'organization:manage', scope: 'organization', maxOutstanding: null } })
-      await app.publisher.publish('organization.manager-added', { organizationId: invite.organizationId, tenant: invite.tenant, accountId })
+  // ADR 0100: same "mismatch is not an error, login proceeds anyway"
+  // posture -- a seat-limit-exhausted organization silently skips this
+  // rather than failing the whole login (Story 007's own rule, extended).
+  // Re-redeeming the same invite (or one for an org already joined) is
+  // naturally idempotent -- `findMembership` short-circuits if a record
+  // already exists, no duplicate created.
+  if (invite.organizationId) {
+    const existing = await findMembership(app, invite.tenant, invite.organizationId, accountId)
+    if (!existing) {
+      const orgInstance = await app.consequent.fetch('organization', invite.organizationId)
+      const org = orgInstance?.state as unknown as OrganizationState | undefined
+      if (org?.createdAt) {
+        const memberships = await fetchMemberships(app, invite.tenant, invite.organizationId)
+        const seatLimit = org.seatLimit ?? 1
+        if (memberships.length < seatLimit) {
+          const membershipId = app.ids.nextOrganizationMembershipId()
+          await app.consequent.handle(membershipId, 'organizationMembership.create', {
+            membershipId,
+            tenant: invite.tenant,
+            accountId,
+            organizationId: invite.organizationId,
+            roles: rolesForNewMembership(invite.organizationRole ? [invite.organizationRole] : []),
+          })
+        }
+      }
     }
   }
   return true

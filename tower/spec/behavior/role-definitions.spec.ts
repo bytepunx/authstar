@@ -97,6 +97,22 @@ describe('role-definitions -- API contract', () => {
       expect(instance!.state.status).toBe('active')
     })
 
+    it('creates an organization-scoped role definition (ADR 0100)', async () => {
+      await createTenant('acme')
+      const response = await app.inject({
+        method: 'POST',
+        url: '/tenants/acme/role-definitions',
+        headers,
+        payload: { name: 'contentEditor', scope: 'organization' },
+      })
+
+      expect(response.statusCode).toBe(201)
+      expect(response.json().scope).toBe('organization')
+
+      const instance = await consequent.fetch('roleDefinition', 'acme:organization:contentEditor')
+      expect(instance!.state.status).toBe('active')
+    })
+
     it('rejects an application-scoped role referencing an unknown application', async () => {
       await createTenant('acme')
       const response = await app.inject({
@@ -332,6 +348,32 @@ describe('role-definitions -- API contract', () => {
     it('rejects with 403 when no bearer token is presented', async () => {
       const response = await app.inject({ method: 'DELETE', url: `/tenants/acme/role-definitions/${encodeURIComponent('acme:admin')}` })
       expect(response.statusCode).toBe(403)
+    })
+  })
+
+  describe('the four built-in organization roles (ADR 0100) cannot be retired', () => {
+    it.each(['manager', 'member', 'billingAdmin', 'billingViewer'])('rejects retiring "%s"', async (name) => {
+      await createTenant('acme')
+      await consequent.handle(`acme:organization:${name}`, 'roleDefinition.create', {
+        tenant: 'acme', name, scope: 'organization', description: 'built in',
+      })
+
+      const response = await app.inject({ method: 'DELETE', url: `/tenants/acme/role-definitions/${encodeURIComponent(`acme:organization:${name}`)}`, headers })
+      expect(response.statusCode).toBe(409)
+
+      const instance = await consequent.fetch('roleDefinition', `acme:organization:${name}`)
+      expect(instance!.state.status).toBe('active')
+    })
+
+    it('a tenant-defined custom organization role (not one of the four) can still be retired normally', async () => {
+      await createTenant('acme')
+      await consequent.handle('acme:organization:contentEditor', 'roleDefinition.create', {
+        tenant: 'acme', name: 'contentEditor', scope: 'organization', description: 'custom',
+      })
+
+      const response = await app.inject({ method: 'DELETE', url: `/tenants/acme/role-definitions/${encodeURIComponent('acme:organization:contentEditor')}`, headers })
+      expect(response.statusCode).toBe(200)
+      expect(response.json().status).toBe('retired')
     })
   })
 })

@@ -199,6 +199,14 @@ async function createApplication(app: FastifyInstance, request: FastifyRequest, 
   if (body.slug === 'authstar') {
     return reply.code(400).send({ error: '"authstar" is a reserved slug' })
   }
+  // design/decisions/0100-...: the `roleDefinition` key scheme reuses the
+  // application-scope's two-segment shape (`${tenant}:${slug}:${name}`) for
+  // organization-scope role definitions too, with the literal `organization`
+  // where a slug would go -- an app actually named `organization` would
+  // collide with every org-scope role definition's key.
+  if (body.slug === 'organization') {
+    return reply.code(400).send({ error: '"organization" is a reserved slug' })
+  }
 
   const hosts = body.hosts ?? []
   if (!publicUrlHostValid(hosts, body.publicUrl)) {

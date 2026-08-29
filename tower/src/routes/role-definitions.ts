@@ -6,6 +6,7 @@ import { requirePermission } from '../lib/permissions.js'
 import { requireOperatorAuth, requireOperatorActor } from '../lib/operator-auth.js'
 import { createKeyedMutex } from '../lib/mutex.js'
 import { searchCriteria } from '../lib/consequent-types.js'
+import { roleDefinitionKey, type Scope } from '../lib/role-definition-lookup.js'
 
 // Per design/decisions/0047-application-and-role-slug-validation.md and
 // design/stories/tower/001-actor-definitions.md's `roleDefinition` section.
@@ -45,7 +46,7 @@ const listQuerySchema = {
 
 const scopeSchema = {
   oneOf: [
-    { type: 'string', enum: ['tenant'] },
+    { type: 'string', enum: ['tenant', 'organization'] },
     {
       type: 'object',
       additionalProperties: false,
@@ -80,12 +81,6 @@ const patchBodySchema = {
   },
 } as const
 
-type Scope = 'tenant' | { application: string }
-
-function keyFor(tenantSlug: string, name: string, scope: Scope): string {
-  return scope === 'tenant' ? `${tenantSlug}:${name}` : `${tenantSlug}:${scope.application}:${name}`
-}
-
 async function fetchTenant(app: FastifyInstance, tenantSlug: string): Promise<TenantState> {
   const instance = await app.consequent.fetch('tenant', tenantSlug)
   return instance!.state as unknown as TenantState
@@ -110,7 +105,7 @@ async function fetchRoleDefinition(app: FastifyInstance, tenantSlug: string, id:
 // accepted (same bar `applications.ts`'s own `exposedProviders` validation
 // already applies for the analogous provider-reference check).
 async function scopeApplicationValid(app: FastifyInstance, tenantSlug: string, scope: Scope): Promise<boolean> {
-  if (scope === 'tenant') return true
+  if (scope === 'tenant' || scope === 'organization') return true
   const instance = await app.consequent.fetch('application', `${tenantSlug}:${scope.application}`)
   const state = instance?.state as unknown as ApplicationState | undefined
   return Boolean(state?.createdAt) && state?.status === 'active'
@@ -148,6 +143,7 @@ async function listRoleDefinitions(app: FastifyInstance, request: FastifyRequest
     .filter((s) => {
       if (!scope) return true
       if (scope === 'tenant') return s.scope === 'tenant'
+      if (scope === 'organization') return s.scope === 'organization'
       return typeof s.scope === 'object' && s.scope.application === scope
     })
     .map(toResponse)
@@ -171,7 +167,7 @@ async function createRoleDefinition(app: FastifyInstance, request: FastifyReques
     return reply.code(400).send({ error: 'scope.application must reference an existing, active application for this tenant' })
   }
 
-  const key = keyFor(tenantSlug, body.name, body.scope)
+  const key = roleDefinitionKey(tenantSlug, body.name, body.scope)
   // Serialized per key -- `consequent`'s own per-actor queue doesn't cover
   // the `getOrCreate` fetch the `doesNotExist` guard depends on (see
   // `mutex.ts`'s header comment); without this, two concurrent creates for

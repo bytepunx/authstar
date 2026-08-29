@@ -1,9 +1,19 @@
 import type { FastifyInstance, FastifyPluginAsync, FastifyReply, FastifyRequest } from 'fastify'
 import type { AccountState, RoleGrant, PermissionGrant } from '../actors/account_actor.js'
-import type { OrganizationState } from '../actors/organization_actor.js'
 import { requirePermission, requireSelfOrPermission, PERMISSION_CATALOG } from '../lib/permissions.js'
 import { searchCriteria } from '../lib/consequent-types.js'
-import { rolesValid, type Scope } from '../lib/role-definition-lookup.js'
+import { rolesValid } from '../lib/role-definition-lookup.js'
+import { fetchMemberships, organizationManagers } from './organizations.js'
+import type { OrganizationMembershipState } from '../actors/organization_membership_actor.js'
+
+// Account-level role/permission grants are never organization-scoped
+// (design/decisions/0100-...: org-granted roles live on `organization`/
+// `organizationMembership`, never merged onto `account.roles`) -- narrower
+// than `role-definition-lookup.ts`'s own `Scope`, which also covers
+// organization-scope role *definitions* elsewhere in the catalog.
+// `scopeSchema` below already enforces this at the JSON-schema level; this
+// type just keeps that guarantee visible to the compiler too.
+type AccountGrantScope = 'tenant' | { application: string }
 import { requireOperatorAuth, requireOperatorActor, operatorActor } from '../lib/operator-auth.js'
 
 // Per design/stories/tower/005-accounts-roles-and-permissions.md and ADR
@@ -54,12 +64,6 @@ const listQuerySchema = {
   properties: {
     email: { type: 'string', minLength: 3 },
     status: { type: 'string', enum: ['active', 'suspended', 'deleted'] },
-    // ADR 0090 -- lists an organization's plain membership (not just its
-    // managers, which the organization's own GET already returns). Still
-    // gated by accounts:manage like every other list-accounts query mode;
-    // a non-admin org manager listing their own org's roster is a
-    // separate, not-yet-built self-service capability.
-    organizationId: { type: 'string', minLength: 1 },
   },
 } as const
 
@@ -126,7 +130,7 @@ const permissionParamsSchema = {
   properties: { tenantSlug: { type: 'string' }, accountId: { type: 'string' }, grant: { type: 'string' } },
 } as const
 
-function scopeFromQuery(query: { scope?: string, applicationScope?: string }): Scope {
+function scopeFromQuery(query: { scope?: string, applicationScope?: string }): AccountGrantScope {
   return query.applicationScope ? { application: query.applicationScope } : 'tenant'
 }
 
@@ -151,7 +155,7 @@ function toResponse(state: AccountState) {
 
 async function listAccounts(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug } = request.params as { tenantSlug: string }
-  const { email, status, organizationId } = request.query as { email?: string, status?: AccountState['status'], organizationId?: string }
+  const { email, status } = request.query as { email?: string, status?: AccountState['status'] }
 
   if (email !== undefined) {
     // ADR 0023/0051: resolving an email to an account necessarily
@@ -175,7 +179,6 @@ async function listAccounts(app: FastifyInstance, request: FastifyRequest, reply
 
   const criteria: Record<string, unknown> = { tenant: tenantSlug }
   if (status) criteria.status = status
-  if (organizationId) criteria.organizationId = organizationId
   const instances = await app.consequent.find('account', searchCriteria(criteria))
   return instances.map((i) => toResponse(i.state as unknown as AccountState))
 }
@@ -187,29 +190,37 @@ async function getAccount(app: FastifyInstance, request: FastifyRequest, reply: 
   return toResponse(state)
 }
 
-// ADR 0090: an account being deleted (business offboarding, not GDPR
-// erasure -- see this file's own header comment) may be a manager of an
-// organization. Departure and deletion get the *same* auto-succession
-// treatment first (organization.remove-manager already contains that
-// logic, see organization_actor.ts) -- but unlike voluntary departure,
-// a rejection here (the sole manager with no successor designated) can't
-// just leave the deleted account listed as manager: they're already gone
-// and can't functionally hold the role. Falls back to the internal-only
-// force-remove-manager command, which never rejects -- the organization
-// ends up with zero managers, a real, accepted edge case (the ADR's own
-// wording) needing operator intervention, not a reason to fail the
-// deletion itself. Membership is detached either way, manager or not.
-async function detachFromOrganizationOnDelete(app: FastifyInstance, account: AccountState) {
-  if (!account.organizationId) return
-  const orgInstance = await app.consequent.fetch('organization', account.organizationId)
-  const org = orgInstance?.state as unknown as OrganizationState | undefined
-  if (org?.managers.includes(account.accountId)) {
-    const results = await app.consequent.handle(account.organizationId, 'organization.remove-manager', { accountId: account.accountId })
-    if (results.find((r) => r?.rejected)) {
-      await app.consequent.handle(account.organizationId, 'organization.force-remove-manager', { accountId: account.accountId })
+// ADR 0100: an account being deleted (business offboarding, not GDPR
+// erasure -- see this file's own header comment) may belong to any number
+// of organizations, and be a manager of some of them. Every active
+// membership is revoked; a membership holding 'manager' gets the same
+// auto-succession attempt `organizations.ts`'s own `guardLastManager` makes
+// -- but unlike a self-service or peer-initiated removal, this never
+// rejects: the account is already gone and can't functionally hold the
+// role regardless. An organization left with zero managers (no successor
+// designated, or the successor is no longer a member) is a real, accepted
+// edge case needing operator intervention, not a reason to fail the
+// deletion itself.
+async function detachFromOrganizationsOnDelete(app: FastifyInstance, account: AccountState) {
+  const instances = await app.consequent.find('organizationMembership', searchCriteria({ tenant: account.tenant, accountId: account.accountId }))
+  const memberships = instances
+    .map((i) => i.state as unknown as OrganizationMembershipState)
+    .filter((m) => m.status === 'active')
+
+  for (const membership of memberships) {
+    if (membership.roles.includes('manager')) {
+      const siblings = await fetchMemberships(app, membership.tenant, membership.organizationId)
+      const managers = organizationManagers(siblings)
+      const isSoleManager = managers.length === 1 && managers[0]!.membershipId === membership.membershipId
+      if (isSoleManager && membership.successorAccountId) {
+        const successor = siblings.find((m) => m.accountId === membership.successorAccountId)
+        if (successor) {
+          await app.consequent.handle(successor.membershipId, 'organizationMembership.grant-role', { role: 'manager' })
+        }
+      }
     }
+    await app.consequent.handle(membership.membershipId, 'organizationMembership.revoke', {})
   }
-  await app.consequent.handle(account.accountId, 'account.leave-organization', {})
 }
 
 async function patchAccount(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
@@ -225,7 +236,7 @@ async function patchAccount(app: FastifyInstance, request: FastifyRequest, reply
   if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
 
   if (status === 'deleted') {
-    await detachFromOrganizationOnDelete(app, current)
+    await detachFromOrganizationsOnDelete(app, current)
   }
 
   return toResponse(await fetchAccount(app, accountId))
@@ -281,7 +292,7 @@ async function changeEmail(app: FastifyInstance, request: FastifyRequest, reply:
 
 async function grantRole(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
   const { tenantSlug, accountId } = request.params as { tenantSlug: string, accountId: string }
-  const body = request.body as { name: string, scope: Scope }
+  const body = request.body as { name: string, scope: AccountGrantScope }
 
   const current = await fetchAccount(app, accountId)
   if (!exists(current) || current.tenant !== tenantSlug) return reply.code(404).send()

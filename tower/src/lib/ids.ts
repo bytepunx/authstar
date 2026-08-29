@@ -13,6 +13,7 @@ export interface IdGenerator {
   nextAccountId(): string
   nextIdentityId(): string
   nextOrganizationId(): string
+  nextOrganizationMembershipId(): string
 }
 
 export function createIdGenerator(nodeIdentifier = 'tower'): IdGenerator {
@@ -21,5 +22,6 @@ export function createIdGenerator(nodeIdentifier = 'tower'): IdGenerator {
     nextAccountId: () => provider(),
     nextIdentityId: () => provider(),
     nextOrganizationId: () => provider(),
+    nextOrganizationMembershipId: () => provider(),
   }
 }

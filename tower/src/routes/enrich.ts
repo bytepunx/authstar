@@ -1,6 +1,7 @@
 import type { FastifyInstance, FastifyPluginAsync, RouteShorthandOptions } from 'fastify'
 import type { IdentityState } from '../actors/identity_actor.js'
 import type { AccountState } from '../actors/account_actor.js'
+import type { OrganizationMembershipState } from '../actors/organization_membership_actor.js'
 import { filterRolesForApplication } from '../lib/roles.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 import { requireSpiffePeer } from '../lib/spiffe-mtls.js'
@@ -66,6 +67,19 @@ async function fetchAccount(app: FastifyInstance, accountId: string): Promise<Ac
   return state
 }
 
+// ADR 0100: every organization this account currently belongs to, each
+// with its own independent `roles` -- forwarded onto the internal JWT's
+// `organizationMemberships` claim unchanged, portcullis never interprets
+// it (see enricher.rs's own `AllowOutcome.organization_memberships` doc
+// comment).
+async function fetchOrganizationMemberships(app: FastifyInstance, tenant: string, accountId: string): Promise<Array<{ organizationId: string, roles: string[] }>> {
+  const instances = await app.consequent.find('organizationMembership', searchCriteria({ tenant, accountId }))
+  return instances
+    .map((i) => i.state as unknown as OrganizationMembershipState)
+    .filter((m) => m.status === 'active')
+    .map((m) => ({ organizationId: m.organizationId, roles: m.roles }))
+}
+
 const enrichRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   const routeOptions: RouteShorthandOptions = {
     schema: { body: enrichBodySchema },
@@ -93,7 +107,7 @@ const enrichRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     return reply.code(200).send({
       outcome: 'allow',
       accountId: account.accountId,
-      organizationId: account.organizationId ?? null,
+      organizationMemberships: await fetchOrganizationMemberships(app, body.tenant, account.accountId),
       grantedRoles: filterRolesForApplication(account.grantedRoles, body.application),
       trialRoles: filterRolesForApplication(account.trialRoles, body.application),
       trialExpiresAt: account.trialExpiresAt ?? null,
