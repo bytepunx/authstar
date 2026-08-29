@@ -1,6 +1,6 @@
 # ADR 0090: Organizations — Shared Billing Administration and Succession
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0100](0100-organization-membership-and-open-role-catalog.md)
 - **Date:** 2026-08-17
 - **Affects:** tower, keep
 - **Constrained by:** [ADR 0069](0069-role-interpretation-is-application-owned.md) (billing administration cannot be modeled as a `role` — see Context)

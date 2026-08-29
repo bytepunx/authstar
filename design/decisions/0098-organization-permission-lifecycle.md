@@ -1,6 +1,6 @@
 # ADR 0098: Organization Permission Lifecycle and Entitlement Fan-Out
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR 0100](0100-organization-membership-and-open-role-catalog.md)
 - **Date:** 2026-08-25
 - **Affects:** tower, keep
 - **Supersedes:** none (extends [ADR 0090](0090-organizations-shared-billing-administration-and-succession.md) — that ADR is not being reversed, this closes gaps it left open)
