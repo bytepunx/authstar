@@ -1,5 +1,16 @@
 # Changelog
 
+## [2.0.0](https://github.com/bytepunx/authstar-clients/compare/fastify-v1.0.0...fastify-v2.0.0) (2026-08-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **fastify:** fastify fully bundles core's source at build time (tsup --noExternal), so request.authstar's decorated shape changes to match core 2.0.0 -- organizationMemberships replaces organizationId, same breaking change, just carried through the bundle rather than fastify's own source changing.
+
+### Features
+
+* **fastify:** rebuild and republish against core 2.0.0 ([3e4f742](https://github.com/bytepunx/authstar-clients/commit/3e4f74247924a8ddb570b1de1e85834cba04e189))
+
 ## [1.0.0](https://github.com/bytepunx/authstar-clients/compare/fastify-v0.2.2...fastify-v1.0.0) (2026-08-20)
 
 
