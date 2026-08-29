@@ -2,7 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse, type Server } 
 import { readFile } from 'node:fs/promises'
 import { extname, join } from 'node:path'
 import { SignJWT, exportJWK, generateKeyPair } from 'jose'
-import type { AccountSummary, ApplicationDetail, Organization, OrganizationInvite } from '../../src/lib/server/clients/tower'
+import type { ApplicationDetail, Organization, OrganizationInvite, OrganizationMembership, OrganizationRoleDefinition } from '../../src/lib/server/clients/tower'
 
 // A small, real HTTP stand-in for tower's application routes (tower Story
 // 004) plus tower's public pre-tenant `/tenants` ingress (Story 010's
@@ -49,16 +49,24 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 	const applications = new Map<string, Map<string, ApplicationDetail>>()
 	let nextCredentialId = 1
 
-	// ADR 0090 -- a bare-bones stand-in for tower's organizations, accounts,
-	// and organization-invites surfaces. Like the rest of this fixture, it
-	// doesn't enforce tower's own business rules (e.g. the sole-manager/no-
-	// successor removal guard) -- those are proven at tower's own behavior
-	// tier. This is only here to prove `web`'s admin UI wiring works over
-	// real HTTP end to end.
+	// ADR 0100 -- a bare-bones stand-in for tower's organizations,
+	// organizationMembership records, and organization-invites surfaces.
+	// Like the rest of this fixture, it doesn't enforce tower's own
+	// business rules (e.g. the sole-manager/no-successor removal guard) --
+	// those are proven at tower's own behavior tier. This is only here to
+	// prove `web`'s admin UI wiring works over real HTTP end to end.
 	const organizations = new Map<string, Map<string, Organization>>()
-	const accounts = new Map<string, Map<string, AccountSummary>>()
+	const memberships = new Map<string, Map<string, OrganizationMembership>>()
 	const organizationInvites: OrganizationInvite[] = []
 	let nextOrganizationId = 1
+	let nextMembershipId = 1
+
+	const ORGANIZATION_ROLE_CATALOG: OrganizationRoleDefinition[] = [
+		{ name: 'manager', scope: 'organization', status: 'active' },
+		{ name: 'member', scope: 'organization', status: 'active' },
+		{ name: 'billingAdmin', scope: 'organization', status: 'active' },
+		{ name: 'billingViewer', scope: 'organization', status: 'active' },
+	]
 
 	function tenantStore(tenant: string): Map<string, ApplicationDetail> {
 		let store = applications.get(tenant)
@@ -78,13 +86,17 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 		return store
 	}
 
-	function accountStore(tenant: string): Map<string, AccountSummary> {
-		let store = accounts.get(tenant)
+	function membershipStore(tenant: string): Map<string, OrganizationMembership> {
+		let store = memberships.get(tenant)
 		if (!store) {
 			store = new Map()
-			accounts.set(tenant, store)
+			memberships.set(tenant, store)
 		}
 		return store
+	}
+
+	function findMembership(tenant: string, organizationId: string, accountId: string): OrganizationMembership | undefined {
+		return [...membershipStore(tenant).values()].find((m) => m.organizationId === organizationId && m.accountId === accountId)
 	}
 
 	function send(res: ServerResponse, status: number, body?: unknown) {
@@ -135,21 +147,32 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 			applications.clear()
 			nextCredentialId = 1
 			organizations.clear()
-			accounts.clear()
+			memberships.clear()
 			organizationInvites.length = 0
 			nextOrganizationId = 1
+			nextMembershipId = 1
 			send(res, 204)
 			return
 		}
 
-		// Test-only: seed account rows directly. Real tower only ever creates
-		// an account via identity/invite redemption, which this fixture
-		// doesn't model -- e2e specs need a way to get a member onto an
-		// organization's roster without walking that whole flow first.
-		if (req.method === 'POST' && url.pathname === '/__seed/accounts') {
-			const body = (await readJsonBody(req)) as { tenant?: string; accounts?: AccountSummary[] }
-			const store = accountStore(String(body.tenant ?? ''))
-			for (const account of body.accounts ?? []) store.set(account.accountId, account)
+		// Test-only: seed membership rows directly. Real tower only ever
+		// creates one via organization creation or invite redemption, which
+		// this fixture doesn't model -- e2e specs need a way to get a member
+		// onto an organization's roster without walking that whole flow first.
+		if (req.method === 'POST' && url.pathname === '/__seed/memberships') {
+			const body = (await readJsonBody(req)) as { tenant?: string; memberships?: Array<Partial<OrganizationMembership>> }
+			const store = membershipStore(String(body.tenant ?? ''))
+			for (const m of body.memberships ?? []) {
+				const membershipId = String(m.membershipId ?? `membership_${nextMembershipId++}`)
+				store.set(membershipId, {
+					membershipId,
+					tenant: String(body.tenant ?? ''),
+					accountId: String(m.accountId ?? ''),
+					organizationId: String(m.organizationId ?? ''),
+					roles: m.roles ?? ['member'],
+					successorAccountId: m.successorAccountId ?? null,
+				})
+			}
 			send(res, 204)
 			return
 		}
@@ -213,7 +236,7 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 		}
 
 		// /tenants/:tenant/applications[...], /tenants/:tenant/organizations[...],
-		// /tenants/:tenant/accounts
+		// /tenants/:tenant/role-definitions
 		if (segments[0] === 'tenants' && segments[1]) {
 			const tenant = segments[1]
 
@@ -344,12 +367,10 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 				}
 			}
 
-			if (segments[2] === 'accounts' && segments.length === 3 && req.method === 'GET') {
-				const organizationId = url.searchParams.get('organizationId')
-				const store = accountStore(tenant)
-				const results = [...store.values()].filter(
-					(account) => !organizationId || account.organizationId === organizationId,
-				)
+			if (segments[2] === 'role-definitions' && segments.length === 3 && req.method === 'GET') {
+				const scope = url.searchParams.get('scope')
+				const status = url.searchParams.get('status')
+				const results = ORGANIZATION_ROLE_CATALOG.filter((r) => (!scope || r.scope === scope) && (!status || r.status === status))
 				send(res, 200, results)
 				return
 			}
@@ -369,8 +390,8 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 						organizationId,
 						tenant,
 						name: String(body.name ?? ''),
-						managers: body.managers ?? [],
-						successors: body.successors ?? {},
+						grantedRoles: body.grantedRoles ?? [],
+						seatLimit: body.seatLimit ?? null,
 					}
 					store.set(organizationId, created)
 					send(res, 201, created)
@@ -388,40 +409,43 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 					return
 				}
 
-				if (organizationId && segments[4] === 'managers') {
-					const existing = store.get(organizationId)
-					if (!existing) {
-						send(res, 404, { error: 'not found' })
-						return
-					}
-					if (segments.length === 5 && req.method === 'POST') {
-						const body = await readJsonBody(req)
-						const accountId = String(body.accountId ?? '')
-						if (!existing.managers.includes(accountId)) existing.managers.push(accountId)
-						const accountsForTenant = accountStore(tenant)
-						const account = accountsForTenant.get(accountId)
-						accountsForTenant.set(accountId, { accountId, status: 'active', ...account, organizationId })
-						send(res, 200, existing)
-						return
-					}
-					const managerAccountId = segments[5]
-					if (managerAccountId && segments.length === 6 && req.method === 'DELETE') {
-						existing.managers = existing.managers.filter((id) => id !== managerAccountId)
-						send(res, 200, existing)
-						return
-					}
-				}
-
 				if (organizationId && segments[4] === 'members') {
+					if (segments.length === 5 && req.method === 'GET') {
+						const roster = [...membershipStore(tenant).values()].filter((m) => m.organizationId === organizationId)
+						send(res, 200, roster)
+						return
+					}
+
 					const memberAccountId = segments[5]
-					if (memberAccountId && segments.length === 6 && req.method === 'DELETE') {
-						const existing = store.get(organizationId)
-						if (!existing) {
+
+					if (memberAccountId && segments[6] === 'roles') {
+						const membership = findMembership(tenant, organizationId, memberAccountId)
+						if (!membership) {
 							send(res, 404, { error: 'not found' })
 							return
 						}
-						existing.managers = existing.managers.filter((id) => id !== memberAccountId)
-						accountStore(tenant).delete(memberAccountId)
+						if (segments.length === 7 && req.method === 'POST') {
+							const body = await readJsonBody(req)
+							const role = String(body.role ?? '')
+							if (!membership.roles.includes(role)) membership.roles = [...membership.roles, role]
+							send(res, 200, membership)
+							return
+						}
+						const role = segments[7]
+						if (role && segments.length === 8 && req.method === 'DELETE') {
+							membership.roles = membership.roles.filter((r) => r !== decodeURIComponent(role))
+							send(res, 200, membership)
+							return
+						}
+					}
+
+					if (memberAccountId && segments.length === 6 && req.method === 'DELETE') {
+						const membership = findMembership(tenant, organizationId, memberAccountId)
+						if (!membership) {
+							send(res, 404, { error: 'not found' })
+							return
+						}
+						membershipStore(tenant).delete(membership.membershipId)
 						send(res, 204)
 						return
 					}
@@ -435,13 +459,14 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 					}
 					const body = (await readJsonBody(req)) as {
 						contactId?: string
-						organizationRole?: 'member' | 'manager'
+						email?: string
+						organizationRole?: string
 						expiresAt?: string | null
 					}
 					const invite: OrganizationInvite = {
 						token: `invite_${organizationInvites.length + 1}`,
 						tenant,
-						contactId: String(body.contactId ?? ''),
+						contactId: String(body.contactId ?? `contact-for-${body.email ?? ''}`),
 						organizationId,
 						organizationRole: body.organizationRole ?? 'member',
 						status: 'pending',

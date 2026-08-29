@@ -76,28 +76,40 @@ export interface ApplicationUpdateInput {
 	status?: 'active' | 'suspended' | 'deleted'
 }
 
-// ADR 0090 (design/decisions/0090-organizations-shared-billing-
-// administration-and-succession.md). `successors` is keyed by each
-// manager's own accountId -- read-only here (successor designation is
-// strictly self-only in tower, no tenant-admin override, ADR 0090's own
-// wording: "a manager cannot set another manager's successor" -- this
-// admin surface can view who's designated, never change it).
+// ADR 0100 (design/decisions/0100-organization-membership-and-open-role-
+// catalog.md, supersedes ADR 0090). `grantedRoles`/`seatLimit` are
+// populated only by keep's entitlement events, never by any route here
+// directly -- read-only in this client, same as tower itself treats them.
 export interface Organization {
 	organizationId: string
 	tenant: string
 	name: string
-	managers: string[]
-	successors: Record<string, string>
+	grantedRoles: Array<{ application: string; role: string }>
+	seatLimit: number | null
 }
 
-// A minimal account projection -- no PII (contactId, and therefore email,
-// is never returned by tower's own account responses, ADR 0023). Just
-// enough to list an organization's plain membership alongside its
-// managers.
-export interface AccountSummary {
+// One (account, organization) membership record -- the roster
+// `listOrganizationMembers` returns. `roles` is the open, catalog-
+// validated org-role vocabulary (`listOrganizationRoleCatalog`), always
+// including 'member'; `successorAccountId` is only meaningful while
+// 'manager' is among `roles`, and is self-service-only in tower (no
+// tenant-admin override -- "a manager cannot set another manager's
+// successor" -- this admin surface can view who's designated, never
+// change it).
+export interface OrganizationMembership {
+	membershipId: string
+	tenant: string
 	accountId: string
-	status: 'active' | 'suspended' | 'deleted'
-	organizationId: string | null
+	organizationId: string
+	roles: string[]
+	successorAccountId: string | null
+}
+
+export interface OrganizationRoleDefinition {
+	name: string
+	scope: 'organization'
+	status: 'active' | 'retired'
+	description?: string
 }
 
 export interface OrganizationInvite {
@@ -105,7 +117,7 @@ export interface OrganizationInvite {
 	tenant: string
 	contactId: string
 	organizationId: string | null
-	organizationRole: 'member' | 'manager' | null
+	organizationRole: string | null
 	status: 'pending' | 'accepted' | 'revoked' | 'expired'
 	createdAt: string
 	expiresAt: string | null
@@ -134,16 +146,15 @@ export interface TowerClient {
 	revokeUsageCredential(tenantSlug: string, slug: string, credentialId: string): Promise<void>
 	listOrganizations(tenantSlug: string): Promise<Organization[]>
 	getOrganization(tenantSlug: string, organizationId: string): Promise<Organization>
-	listOrganizationMembers(tenantSlug: string, organizationId: string): Promise<AccountSummary[]>
-	addOrganizationManager(tenantSlug: string, organizationId: string, accountId: string): Promise<Organization>
-	removeOrganizationManager(tenantSlug: string, organizationId: string, accountId: string): Promise<Organization>
+	listOrganizationMembers(tenantSlug: string, organizationId: string): Promise<OrganizationMembership[]>
+	listOrganizationRoleCatalog(tenantSlug: string): Promise<OrganizationRoleDefinition[]>
+	grantOrganizationRole(tenantSlug: string, organizationId: string, accountId: string, role: string): Promise<OrganizationMembership>
+	revokeOrganizationRole(tenantSlug: string, organizationId: string, accountId: string, role: string): Promise<OrganizationMembership>
 	removeOrganizationMember(tenantSlug: string, organizationId: string, accountId: string): Promise<void>
-	grantBillingAccess(tenantSlug: string, organizationId: string, accountId: string): Promise<void>
-	revokeBillingAccess(tenantSlug: string, organizationId: string, accountId: string): Promise<void>
 	createOrganizationInvite(
 		tenantSlug: string,
 		organizationId: string,
-		input: { contactId: string; organizationRole: 'member' | 'manager'; expiresAt?: string | null },
+		input: { contactId?: string; email?: string; organizationRole: string; expiresAt?: string | null },
 	): Promise<OrganizationInvite>
 }
 
@@ -216,22 +227,19 @@ export function createTowerClient(options: CreateTowerClientOptions): TowerClien
 			return request('GET', `/tenants/${tenantSlug}/organizations/${organizationId}`)
 		},
 		listOrganizationMembers(tenantSlug, organizationId) {
-			return request('GET', `/tenants/${tenantSlug}/accounts?organizationId=${encodeURIComponent(organizationId)}`)
+			return request('GET', `/tenants/${tenantSlug}/organizations/${organizationId}/members`)
 		},
-		addOrganizationManager(tenantSlug, organizationId, accountId) {
-			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/managers`, { accountId })
+		listOrganizationRoleCatalog(tenantSlug) {
+			return request('GET', `/tenants/${tenantSlug}/role-definitions?scope=organization&status=active`)
 		},
-		removeOrganizationManager(tenantSlug, organizationId, accountId) {
-			return request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/managers/${accountId}`)
+		grantOrganizationRole(tenantSlug, organizationId, accountId, role) {
+			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}/roles`, { role })
+		},
+		revokeOrganizationRole(tenantSlug, organizationId, accountId, role) {
+			return request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}/roles/${encodeURIComponent(role)}`)
 		},
 		async removeOrganizationMember(tenantSlug, organizationId, accountId) {
 			await request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}`)
-		},
-		async grantBillingAccess(tenantSlug, organizationId, accountId) {
-			await request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}/billing-access`)
-		},
-		async revokeBillingAccess(tenantSlug, organizationId, accountId) {
-			await request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}/billing-access`)
 		},
 		createOrganizationInvite(tenantSlug, organizationId, input) {
 			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/invites`, input)

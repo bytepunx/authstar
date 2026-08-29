@@ -4,11 +4,11 @@ import { load } from '../../src/routes/(admin)/billing/organizations/+page.serve
 import { createFakeTowerClient, fakeOrganization } from '../fixtures/fake-tower-client'
 import { fakeSession } from '../fixtures/fake-session'
 
-// Behavior tier: ADR 0090's organizations list, exercised by calling the
+// Behavior tier: ADR 0100's organizations list, exercised by calling the
 // generated `load` function directly -- same pattern as the applications
 // list's own contract test.
 
-describe('organizations list load -- ADR 0090', () => {
+describe('organizations list load -- ADR 0100', () => {
 	it('returns the tenant\'s organizations from tower', async () => {
 		const tower = createFakeTowerClient({
 			organizations: [fakeOrganization({ organizationId: 'org-1', name: 'Acme Corp' }), fakeOrganization({ organizationId: 'org-2', name: 'Widget Co' })],
@@ -21,14 +21,6 @@ describe('organizations list load -- ADR 0090', () => {
 
 		expect(result.organizations.map((o) => o.organizationId)).toEqual(['org-1', 'org-2'])
 		expect(tower.listOrganizations).toHaveBeenCalledWith('acme')
-	})
-
-	it('is reachable by a caller holding only organization:manage, no billing:read/manage at all', async () => {
-		const tower = createFakeTowerClient({ organizations: [fakeOrganization()] })
-		const session = fakeSession({ permissions: ['organization:manage'] })
-
-		const result = await load({ locals: { session, clients: { tower } } } as Parameters<typeof load>[0])
-		expect(result.organizations).toHaveLength(1)
 	})
 
 	it('403s an account with neither billing nor organization permissions', async () => {

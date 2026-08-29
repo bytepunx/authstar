@@ -25,7 +25,7 @@
     "test:watch": "vitest --config vitest.config.ts"
   },
   "dependencies": {
-    "@bytepunx/authstar-core": "^1.0.0",
+    "@bytepunx/authstar-core": "^2.0.0",
     "@sveltejs/adapter-node": "^5.5.7",
     "jose": "^6.2.8"
   },

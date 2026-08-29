@@ -19,7 +19,7 @@
 		<thead>
 			<tr class="border-b border-slate-200 text-slate-500">
 				<th class="py-2">Name</th>
-				<th class="py-2">Managers</th>
+				<th class="py-2">Seat limit</th>
 			</tr>
 		</thead>
 		<tbody>
@@ -28,7 +28,7 @@
 					<td class="py-2">
 						<a href={`/billing/organizations/${org.organizationId}`} class="text-slate-900 underline">{org.name}</a>
 					</td>
-					<td class="py-2">{org.managers.length}</td>
+					<td class="py-2">{org.seatLimit ?? '1 (unpaid)'}</td>
 				</tr>
 			{/each}
 		</tbody>

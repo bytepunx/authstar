@@ -35,11 +35,14 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
 		id: 'billing',
 		label: 'Billing',
 		href: '/billing',
-		// ADR 0090's two organization-scoped permissions live here too -- an
-		// account holding only one of those (no billing:read/manage at all)
-		// is still the intended audience for this section's Organizations
-		// page, not a tenant billing admin.
-		permissions: ['billing:read', 'billing:manage', 'organization:manage', 'organization-billing:manage'],
+		// ADR 0100 retires ADR 0090/0098's organization:manage/organization-
+		// billing:manage catalog permissions -- org standing is a membership
+		// role now (claims.organizationMemberships), not a tenant-wide
+		// permissions grant, so it no longer belongs in this list. This
+		// (admin) surface is tenant-staff-only by design (an ordinary org
+		// manager is a customer, not tenant staff) -- the customer-facing
+		// counterpart is the embeddable (embed) org-management surface.
+		permissions: ['billing:read', 'billing:manage'],
 	},
 	{
 		id: 'communications',

@@ -2,12 +2,13 @@ import { vi } from 'vitest'
 import {
 	TowerNotFoundError,
 	TowerRequestError,
-	type AccountSummary,
 	type ApplicationDetail,
 	type ApplicationInput,
 	type ApplicationUpdateInput,
 	type Organization,
 	type OrganizationInvite,
+	type OrganizationMembership,
+	type OrganizationRoleDefinition,
 	type TowerClient,
 } from '../../src/lib/server/clients/tower'
 
@@ -23,10 +24,18 @@ export interface FakeTowerClientOptions {
 	applications?: ApplicationDetail[]
 	providers?: { name: string; label: string }[]
 	organizations?: Organization[]
-	accounts?: AccountSummary[]
+	memberships?: OrganizationMembership[]
+	roleCatalog?: OrganizationRoleDefinition[]
 	/** Force every mutating call to fail as tower would reject it (409). */
 	rejectMutations?: boolean
 }
+
+const DEFAULT_ORGANIZATION_ROLE_CATALOG: OrganizationRoleDefinition[] = [
+	{ name: 'manager', scope: 'organization', status: 'active' },
+	{ name: 'member', scope: 'organization', status: 'active' },
+	{ name: 'billingAdmin', scope: 'organization', status: 'active' },
+	{ name: 'billingViewer', scope: 'organization', status: 'active' },
+]
 
 export function createFakeTowerClient(options: FakeTowerClientOptions = {}) {
 	const store = new Map<string, ApplicationDetail>()
@@ -37,9 +46,14 @@ export function createFakeTowerClient(options: FakeTowerClientOptions = {}) {
 	]
 	const organizations = new Map<string, Organization>()
 	for (const org of options.organizations ?? []) organizations.set(org.organizationId, org)
-	const accounts = new Map<string, AccountSummary>()
-	for (const account of options.accounts ?? []) accounts.set(account.accountId, account)
+	const memberships = new Map<string, OrganizationMembership>()
+	for (const membership of options.memberships ?? []) memberships.set(membership.membershipId, membership)
+	const roleCatalog = options.roleCatalog ?? DEFAULT_ORGANIZATION_ROLE_CATALOG
 	const organizationInvites: OrganizationInvite[] = []
+
+	function membershipFor(organizationId: string, accountId: string): OrganizationMembership | undefined {
+		return [...memberships.values()].find((m) => m.organizationId === organizationId && m.accountId === accountId)
+	}
 
 	const client: TowerClient = {
 		listApplications: vi.fn(async () =>
@@ -97,55 +111,40 @@ export function createFakeTowerClient(options: FakeTowerClientOptions = {}) {
 			return org
 		}),
 		listOrganizationMembers: vi.fn(async (_tenantSlug: string, organizationId: string) =>
-			[...accounts.values()].filter((a) => a.organizationId === organizationId),
+			[...memberships.values()].filter((m) => m.organizationId === organizationId),
 		),
-		addOrganizationManager: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string) => {
+		listOrganizationRoleCatalog: vi.fn(async () => roleCatalog),
+		grantOrganizationRole: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string, role: string) => {
 			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
-			const org = organizations.get(organizationId)
-			if (!org) throw new TowerNotFoundError(`no such organization: ${organizationId}`)
-			if (!org.managers.includes(accountId)) org.managers = [...org.managers, accountId]
-			return org
+			const membership = membershipFor(organizationId, accountId)
+			if (!membership) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
+			if (!membership.roles.includes(role)) membership.roles = [...membership.roles, role]
+			return membership
 		}),
-		removeOrganizationManager: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string) => {
+		revokeOrganizationRole: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string, role: string) => {
 			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
-			const org = organizations.get(organizationId)
-			if (!org) throw new TowerNotFoundError(`no such organization: ${organizationId}`)
-			org.managers = org.managers.filter((m) => m !== accountId)
-			return org
+			const membership = membershipFor(organizationId, accountId)
+			if (!membership) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
+			membership.roles = membership.roles.filter((r) => r !== role)
+			return membership
 		}),
 		removeOrganizationMember: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string) => {
 			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
-			const org = organizations.get(organizationId)
-			if (!org) throw new TowerNotFoundError(`no such organization: ${organizationId}`)
-			org.managers = org.managers.filter((m) => m !== accountId)
-			const account = accounts.get(accountId)
-			if (account) account.organizationId = null
-		}),
-		grantBillingAccess: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string) => {
-			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
-			const org = organizations.get(organizationId)
-			if (!org) throw new TowerNotFoundError(`no such organization: ${organizationId}`)
-			const account = accounts.get(accountId)
-			if (!account || account.organizationId !== organizationId) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
-		}),
-		revokeBillingAccess: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string) => {
-			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
-			const org = organizations.get(organizationId)
-			if (!org) throw new TowerNotFoundError(`no such organization: ${organizationId}`)
-			const account = accounts.get(accountId)
-			if (!account || account.organizationId !== organizationId) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
+			const membership = membershipFor(organizationId, accountId)
+			if (!membership) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
+			memberships.delete(membership.membershipId)
 		}),
 		createOrganizationInvite: vi.fn(
 			async (
 				tenantSlug: string,
 				organizationId: string,
-				input: { contactId: string; organizationRole: 'member' | 'manager'; expiresAt?: string | null },
+				input: { contactId?: string; email?: string; organizationRole: string; expiresAt?: string | null },
 			) => {
 				if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
 				const invite: OrganizationInvite = {
 					token: `invite_${organizationInvites.length + 1}`,
 					tenant: tenantSlug,
-					contactId: input.contactId,
+					contactId: input.contactId ?? `contact-for-${input.email}`,
 					organizationId,
 					organizationRole: input.organizationRole,
 					status: 'pending',
@@ -166,8 +165,20 @@ export function fakeOrganization(overrides: Partial<Organization> = {}): Organiz
 		organizationId: 'org-1',
 		tenant: 'acme',
 		name: 'Acme Corp',
-		managers: ['acct-1'],
-		successors: {},
+		grantedRoles: [],
+		seatLimit: null,
+		...overrides,
+	}
+}
+
+export function fakeMembership(overrides: Partial<OrganizationMembership> = {}): OrganizationMembership {
+	return {
+		membershipId: 'membership-1',
+		tenant: 'acme',
+		accountId: 'acct-1',
+		organizationId: 'org-1',
+		roles: ['manager', 'member'],
+		successorAccountId: null,
 		...overrides,
 	}
 }
