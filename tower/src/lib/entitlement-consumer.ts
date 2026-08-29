@@ -34,7 +34,7 @@ interface RoleRef {
 
 interface EntitlementEnvelope {
   tenant: string
-  scope: { account: string } | { tenant: string }
+  scope: { account: string } | { tenant: string } | { organization: string }
   sequence?: number
   role?: RoleRef
   roles?: RoleRef[]
@@ -49,6 +49,26 @@ function accountIdFrom(scope: EntitlementEnvelope['scope']): string | undefined 
 
 function tenantIdFrom(scope: EntitlementEnvelope['scope']): string | undefined {
   return 'tenant' in scope ? scope.tenant : undefined
+}
+
+// ADR 0100: {organization} publishes straight to the organization itself
+// (`organization.grantedRoles`/`.seatLimit`) -- never merged onto any
+// individual member's own `account.roles`, which is what keeps org-
+// purchased entitlement distinguishable from a member's personal usage.
+function organizationIdFrom(scope: EntitlementEnvelope['scope']): string | undefined {
+  return 'organization' in scope ? scope.organization : undefined
+}
+
+// keep's webhooks.ts publishes a role as `{ name: role.role, scope:
+// role.application }` -- `scope` here is the plain application-slug
+// string, not the `'tenant' | {application}` shape this file's own
+// `RoleRef` models for the *account*-scoped path (account.grant-role's
+// `RoleGrant` stores whatever it's given without runtime validation).
+// `organization.grant-role`'s `GrantedRole` wants `{application, role}`
+// fields specifically, so this translates rather than passing the
+// `{name, scope}` shape straight through.
+function grantedRoleFrom(role: RoleRef): { application: string, role: string } {
+  return { application: typeof role.scope === 'string' ? role.scope : role.scope.application, role: role.name }
 }
 
 // Idempotent, defensive, set-membership translation from keep's open
@@ -70,14 +90,26 @@ export async function handleEntitlementEvent(
 ): Promise<void> {
   switch (eventType) {
     case 'role-granted': {
+      if (!payload.role) return
+      const organizationId = organizationIdFrom(payload.scope)
+      if (organizationId) {
+        await consequent.handle(organizationId, 'organization.grant-role', { role: grantedRoleFrom(payload.role) })
+        return
+      }
       const accountId = accountIdFrom(payload.scope)
-      if (!accountId || !payload.role) return
+      if (!accountId) return
       await consequent.handle(accountId, 'account.grant-role', { role: payload.role })
       return
     }
     case 'role-revoked': {
+      if (!payload.role) return
+      const organizationId = organizationIdFrom(payload.scope)
+      if (organizationId) {
+        await consequent.handle(organizationId, 'organization.revoke-role', { role: grantedRoleFrom(payload.role) })
+        return
+      }
       const accountId = accountIdFrom(payload.scope)
-      if (!accountId || !payload.role) return
+      if (!accountId) return
       await consequent.handle(accountId, 'account.revoke-role', { role: payload.role })
       return
     }
@@ -99,6 +131,11 @@ export async function handleEntitlementEvent(
       return
     }
     case 'seat-limit-changed': {
+      const organizationId = organizationIdFrom(payload.scope)
+      if (organizationId) {
+        await consequent.handle(organizationId, 'organization.set-seat-limit', { seatLimit: payload.seatLimit ?? null })
+        return
+      }
       const tenant = tenantIdFrom(payload.scope) ?? payload.tenant
       if (!tenant) return
       await consequent.handle(tenant, 'tenant.set-seat-limit', { seatLimit: payload.seatLimit ?? null })

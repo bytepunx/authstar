@@ -49,6 +49,7 @@ describe('entitlement.* RabbitMQ consumer', () => {
     consequent = await buildInMemoryConsequent()
     await consequent.handle('acct-1', 'account.create', { accountId: 'acct-1', tenant: 'acme', contactId: 'c-1' })
     await consequent.handle('acme', 'tenant.create', { slug: 'acme', name: 'Acme', cookieDomain: 'acme.test', createdBy: 'test' })
+    await consequent.handle('org-1', 'organization.create', { organizationId: 'org-1', tenant: 'acme', name: 'Acme Corp' })
   })
 
   it('grants a role on entitlement.role-granted', async () => {
@@ -119,6 +120,49 @@ describe('entitlement.* RabbitMQ consumer', () => {
 
     const tenant = await consequent.fetch('tenant', 'acme')
     expect(tenant!.state.seatLimit).toBe(50)
+  })
+
+  it('grants a role on an organization (ADR 0100) -- never merged onto any account.roles', async () => {
+    const { channel, deliver, acked } = fakeChannel()
+    await startEntitlementConsumer(channel, 'q', { consequent })
+
+    deliver('entitlement.role-granted', {
+      tenant: 'acme', scope: { organization: 'org-1' }, sequence: 1,
+      role: { name: 'member', scope: 'demo-app' },
+    })
+    await flush()
+
+    expect(acked).toHaveLength(1)
+    const org = await consequent.fetch('organization', 'org-1')
+    expect(org!.state.grantedRoles).toEqual([{ application: 'demo-app', role: 'member' }])
+    const account = await consequent.fetch('account', 'acct-1')
+    expect(account!.state.grantedRoles).toEqual([])
+  })
+
+  it('revokes a role from an organization on entitlement.role-revoked', async () => {
+    const { channel, deliver } = fakeChannel()
+    await startEntitlementConsumer(channel, 'q', { consequent })
+
+    deliver('entitlement.role-granted', { tenant: 'acme', scope: { organization: 'org-1' }, sequence: 1, role: { name: 'member', scope: 'demo-app' } })
+    await flush()
+    deliver('entitlement.role-revoked', { tenant: 'acme', scope: { organization: 'org-1' }, sequence: 2, role: { name: 'member', scope: 'demo-app' } })
+    await flush()
+
+    const org = await consequent.fetch('organization', 'org-1')
+    expect(org!.state.grantedRoles).toEqual([])
+  })
+
+  it('updates organization seatLimit on entitlement.seat-limit-changed, not the tenant\'s', async () => {
+    const { channel, deliver } = fakeChannel()
+    await startEntitlementConsumer(channel, 'q', { consequent })
+
+    deliver('entitlement.seat-limit-changed', { tenant: 'acme', scope: { organization: 'org-1' }, sequence: 1, seatLimit: 10 })
+    await flush()
+
+    const org = await consequent.fetch('organization', 'org-1')
+    expect(org!.state.seatLimit).toBe(10)
+    const tenant = await consequent.fetch('tenant', 'acme')
+    expect(tenant!.state.seatLimit).toBeNull()
   })
 
   it('dead-letters a malformed message without requeueing', async () => {
