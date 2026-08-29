@@ -163,7 +163,7 @@ async fn handle_enrichment_outcome(
             let claims = allow_claims(
                 identity,
                 allow.account_id,
-                allow.organization_id,
+                allow.organization_memberships,
                 roles,
                 allow.permissions,
                 allow.usage,

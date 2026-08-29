@@ -26,10 +26,11 @@ pub struct InternalClaims {
     pub enrichment_status: EnrichmentStatus,
     #[serde(rename = "accountId", skip_serializing_if = "Option::is_none", default)]
     pub account_id: Option<String>,
-    /// The account's organization, if it belongs to one (ADR 0090). Same optionality/never-
-    /// fabricated treatment as `account_id` -- absent on a degraded token, never guessed.
-    #[serde(rename = "organizationId", skip_serializing_if = "Option::is_none", default)]
-    pub organization_id: Option<String>,
+    /// The account's organization memberships (ADR 0100) -- an account can belong to more than
+    /// one organization, each conferring its own independent role list. Same never-fabricated
+    /// treatment as `account_id`: empty on a degraded token, never guessed.
+    #[serde(rename = "organizationMemberships", skip_serializing_if = "Vec::is_empty", default)]
+    pub organization_memberships: Vec<OrganizationMembership>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub roles: Vec<String>,
     /// Tenant-wide, unfiltered permissions (ADR 0018/0030) — the closed, authstar-owned
@@ -53,6 +54,17 @@ pub enum EnrichmentStatus {
     Degraded,
 }
 
+/// One organization the account belongs to, and the role list it holds within it (ADR 0100).
+/// `roles` is the same open, catalog-validated vocabulary app-scoped roles already use --
+/// portcullis never interprets it, just forwards it.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub struct OrganizationMembership {
+    #[serde(rename = "organizationId")]
+    pub organization_id: String,
+    #[serde(default)]
+    pub roles: Vec<String>,
+}
+
 pub struct BaselineIdentity<'a> {
     pub email: &'a str,
     pub idp: &'a str,
@@ -64,7 +76,7 @@ pub struct BaselineIdentity<'a> {
 pub fn allow_claims(
     identity: BaselineIdentity,
     account_id: String,
-    organization_id: Option<String>,
+    organization_memberships: Vec<OrganizationMembership>,
     roles: Vec<String>,
     permissions: Vec<String>,
     usage: serde_json::Value,
@@ -77,7 +89,7 @@ pub fn allow_claims(
         identity_hash: identity.identity_hash.to_string(),
         enrichment_status: EnrichmentStatus::Ok,
         account_id: Some(account_id),
-        organization_id,
+        organization_memberships,
         roles,
         permissions,
         usage: if usage.is_null() { None } else { Some(usage) },
@@ -97,7 +109,7 @@ pub fn degraded_claims(identity: BaselineIdentity) -> InternalClaims {
         identity_hash: identity.identity_hash.to_string(),
         enrichment_status: EnrichmentStatus::Degraded,
         account_id: None,
-        organization_id: None,
+        organization_memberships: Vec::new(),
         roles: Vec::new(),
         permissions: Vec::new(),
         usage: None,
@@ -169,7 +181,7 @@ mod tests {
         let claims = allow_claims(
             identity(),
             "acct-1".to_string(),
-            None,
+            vec![],
             vec!["member".to_string()],
             vec!["tenant:manage".to_string()],
             serde_json::Value::Null,
@@ -179,23 +191,44 @@ mod tests {
     }
 
     #[test]
-    fn allow_claims_carries_organization_id_through_when_present() {
+    fn allow_claims_carries_organization_memberships_through_when_present() {
         let claims = allow_claims(
             identity(),
             "acct-1".to_string(),
-            Some("org-1".to_string()),
+            vec![
+                OrganizationMembership {
+                    organization_id: "org-1".to_string(),
+                    roles: vec!["manager".to_string(), "member".to_string()],
+                },
+                OrganizationMembership {
+                    organization_id: "org-2".to_string(),
+                    roles: vec!["member".to_string()],
+                },
+            ],
             vec![],
             vec![],
             serde_json::Value::Null,
             false,
         );
-        assert_eq!(claims.organization_id, Some("org-1".to_string()));
+        assert_eq!(
+            claims.organization_memberships,
+            vec![
+                OrganizationMembership {
+                    organization_id: "org-1".to_string(),
+                    roles: vec!["manager".to_string(), "member".to_string()],
+                },
+                OrganizationMembership {
+                    organization_id: "org-2".to_string(),
+                    roles: vec!["member".to_string()],
+                },
+            ]
+        );
     }
 
     #[test]
-    fn degraded_claims_never_fabricates_organization_id() {
+    fn degraded_claims_never_fabricates_organization_memberships() {
         let claims = degraded_claims(identity());
-        assert_eq!(claims.organization_id, None);
+        assert!(claims.organization_memberships.is_empty());
     }
 
     #[test]

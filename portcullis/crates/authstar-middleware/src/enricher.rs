@@ -18,6 +18,8 @@ use std::time::Duration;
 use async_trait::async_trait;
 use serde::{Deserialize, Serialize};
 
+use crate::jwt::internal::OrganizationMembership;
+
 const ENRICH_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Debug, Clone)]
@@ -43,11 +45,12 @@ struct EnrichRequestBody<'a> {
 #[serde(rename_all = "camelCase")]
 pub struct AllowOutcome {
     pub account_id: String,
-    /// The account's organization, if it belongs to one (ADR 0090). Passed through unchanged
+    /// The account's organization memberships (ADR 0100) -- an account can belong to more than
+    /// one organization, each conferring its own independent role list. Passed through unchanged
     /// onto the internal token, same treatment as `account_id` -- portcullis never interprets
     /// it, just forwards it for downstream services (tower/keep) to authorize against.
     #[serde(default)]
-    pub organization_id: Option<String>,
+    pub organization_memberships: Vec<OrganizationMembership>,
     #[serde(default)]
     pub granted_roles: Vec<String>,
     #[serde(default)]
