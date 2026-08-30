@@ -439,6 +439,25 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 						}
 					}
 
+					if (memberAccountId && segments[6] === 'successor') {
+						const membership = findMembership(tenant, organizationId, memberAccountId)
+						if (!membership) {
+							send(res, 404, { error: 'not found' })
+							return
+						}
+						if (segments.length === 7 && req.method === 'PUT') {
+							const body = await readJsonBody(req)
+							membership.successorAccountId = String(body.successorAccountId ?? '')
+							send(res, 200, membership)
+							return
+						}
+						if (segments.length === 7 && req.method === 'DELETE') {
+							membership.successorAccountId = null
+							send(res, 200, membership)
+							return
+						}
+					}
+
 					if (memberAccountId && segments.length === 6 && req.method === 'DELETE') {
 						const membership = findMembership(tenant, organizationId, memberAccountId)
 						if (!membership) {

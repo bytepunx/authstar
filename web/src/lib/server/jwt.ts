@@ -44,6 +44,7 @@ export async function verifyInternalJwt(token: string, getKey: JWTVerifyGetKey):
 		email: claims.sub,
 		roles: isOk ? claims.roles : [],
 		permissions: isOk ? claims.permissions : [],
+		organizationMemberships: isOk ? claims.organizationMemberships : [],
 		enrichmentStatus: claims.enrichmentStatus,
 	}
 }

@@ -8,6 +8,7 @@ export function fakeSession(overrides: Partial<Session> = {}): Session {
 		email: 'admin@acme.example.com',
 		roles: ['admin'],
 		permissions: ['applications:manage'],
+		organizationMemberships: [],
 		enrichmentStatus: 'ok',
 		...overrides,
 	}

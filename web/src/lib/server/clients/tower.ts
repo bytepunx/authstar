@@ -151,6 +151,8 @@ export interface TowerClient {
 	grantOrganizationRole(tenantSlug: string, organizationId: string, accountId: string, role: string): Promise<OrganizationMembership>
 	revokeOrganizationRole(tenantSlug: string, organizationId: string, accountId: string, role: string): Promise<OrganizationMembership>
 	removeOrganizationMember(tenantSlug: string, organizationId: string, accountId: string): Promise<void>
+	setOrganizationSuccessor(tenantSlug: string, organizationId: string, accountId: string, successorAccountId: string): Promise<OrganizationMembership>
+	clearOrganizationSuccessor(tenantSlug: string, organizationId: string, accountId: string): Promise<OrganizationMembership>
 	createOrganizationInvite(
 		tenantSlug: string,
 		organizationId: string,
@@ -240,6 +242,12 @@ export function createTowerClient(options: CreateTowerClientOptions): TowerClien
 		},
 		async removeOrganizationMember(tenantSlug, organizationId, accountId) {
 			await request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}`)
+		},
+		setOrganizationSuccessor(tenantSlug, organizationId, accountId, successorAccountId) {
+			return request('PUT', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}/successor`, { successorAccountId })
+		},
+		clearOrganizationSuccessor(tenantSlug, organizationId, accountId) {
+			return request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/members/${accountId}/successor`)
 		},
 		createOrganizationInvite(tenantSlug, organizationId, input) {
 			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/invites`, input)

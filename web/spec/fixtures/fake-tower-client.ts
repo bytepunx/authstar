@@ -134,6 +134,20 @@ export function createFakeTowerClient(options: FakeTowerClientOptions = {}) {
 			if (!membership) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
 			memberships.delete(membership.membershipId)
 		}),
+		setOrganizationSuccessor: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string, successorAccountId: string) => {
+			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
+			const membership = membershipFor(organizationId, accountId)
+			if (!membership) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
+			membership.successorAccountId = successorAccountId
+			return membership
+		}),
+		clearOrganizationSuccessor: vi.fn(async (_tenantSlug: string, organizationId: string, accountId: string) => {
+			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
+			const membership = membershipFor(organizationId, accountId)
+			if (!membership) throw new TowerNotFoundError(`account is not a member of this organization: ${accountId}`)
+			membership.successorAccountId = null
+			return membership
+		}),
 		createOrganizationInvite: vi.fn(
 			async (
 				tenantSlug: string,

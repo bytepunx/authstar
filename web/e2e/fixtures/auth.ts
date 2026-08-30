@@ -11,6 +11,7 @@ export interface FakeSessionClaims {
 	accountId?: string
 	roles?: string[]
 	permissions?: string[]
+	organizationMemberships?: Array<{ organizationId: string; roles: string[] }>
 	enrichmentStatus?: 'ok' | 'degraded'
 }
 
