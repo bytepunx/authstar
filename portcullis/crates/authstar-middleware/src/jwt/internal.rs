@@ -43,6 +43,13 @@ pub struct InternalClaims {
     pub usage: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "isNewAccount", default)]
     pub is_new_account: Option<bool>,
+    /// design/decisions/0101-api-keys.md. Present only on a token minted from a verified API-key
+    /// credential (`gate.rs`'s `handle_api_key_outcome`), never on a session-derived one -- purely
+    /// additive, same optional/never-fabricated treatment as `account_id`/`is_new_account`.
+    /// Downstream consumers use its presence to discriminate "this request came from an API key"
+    /// from ordinary session auth.
+    #[serde(rename = "apiKeyId", skip_serializing_if = "Option::is_none", default)]
+    pub api_key_id: Option<String>,
     pub iat: u64,
     pub exp: u64,
 }
@@ -94,6 +101,7 @@ pub fn allow_claims(
         permissions,
         usage: if usage.is_null() { None } else { Some(usage) },
         is_new_account: if is_new_account { Some(true) } else { None },
+        api_key_id: None,
         iat: now,
         exp: now + INTERNAL_TOKEN_TTL_SECS,
     }
@@ -114,6 +122,37 @@ pub fn degraded_claims(identity: BaselineIdentity) -> InternalClaims {
         permissions: Vec::new(),
         usage: None,
         is_new_account: None,
+        api_key_id: None,
+        iat: now,
+        exp: now + INTERNAL_TOKEN_TTL_SECS,
+    }
+}
+
+/// design/decisions/0101-api-keys.md. Builds the claims for a verified API-key `Allow` outcome --
+/// deliberately not a variant of `allow_claims` above (see `api_key_verifier.rs`'s own header
+/// comment on why the two identity models don't share one type): there is no `idp`/session to
+/// source `identity_hash` from, so `api_key_id` itself fills that role (it's already a unique,
+/// non-secret identifier -- exactly what `identity_hash` is for on the session path) and `idp` is
+/// a fixed sentinel naming the credential mechanism rather than a real login provider.
+pub fn api_key_claims(
+    sub: String,
+    api_key_id: String,
+    account_id: Option<String>,
+    roles: Vec<String>,
+) -> InternalClaims {
+    let now = now_unix();
+    InternalClaims {
+        sub,
+        idp: "api-key".to_string(),
+        identity_hash: api_key_id.clone(),
+        enrichment_status: EnrichmentStatus::Ok,
+        account_id,
+        organization_memberships: Vec::new(),
+        roles,
+        permissions: Vec::new(),
+        usage: None,
+        is_new_account: None,
+        api_key_id: Some(api_key_id),
         iat: now,
         exp: now + INTERNAL_TOKEN_TTL_SECS,
     }

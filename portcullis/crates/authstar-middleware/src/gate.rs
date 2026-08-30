@@ -23,12 +23,14 @@ use axum::http::{header, HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 
+use crate::api_key::{parse_api_key_header, ApiKeyCredential};
+use crate::api_key_verifier::{ApiKeyVerificationContext, ApiKeyVerificationOutcome};
 use crate::context::ForwardContext;
 use crate::cookies::{build_cookie, read_cookie_from_headers};
 use crate::detect::is_browser_request;
 use crate::enricher::{EnrichmentContext, EnrichmentOutcome};
 use crate::exempt::is_exempt;
-use crate::jwt::internal::{allow_claims, degraded_claims, sign_internal, BaselineIdentity};
+use crate::jwt::internal::{allow_claims, api_key_claims, degraded_claims, sign_internal, BaselineIdentity};
 use crate::jwt::session::verify_session;
 use crate::keys::EcKeyPair;
 use crate::return_url::is_safe_return_url;
@@ -109,6 +111,34 @@ pub async fn auth_gate(
         .await;
     }
 
+    // design/decisions/0101-api-keys.md: only reached once there's no valid session cookie --
+    // session (browser) auth takes priority over the exact same `Authorization` header transport
+    // an API key also uses. Any `Bearer` header at all is, by construction, an attempted API-key
+    // credential (a browser session travels exclusively by cookie in this system), so a malformed
+    // one always answers 401 -- never a redirect -- regardless of what `is_browser_request`'s own
+    // heuristics might otherwise suggest for this same request.
+    match parse_api_key_header(req.headers()) {
+        ApiKeyCredential::Present { api_key_id, secret } => {
+            let ctx = ApiKeyVerificationContext {
+                tenant: tenant.slug.clone(),
+                application: application.slug.clone(),
+                api_key_id,
+                secret,
+            };
+            let outcome = state.api_key_verifier.verify(&ctx).await;
+            return handle_api_key_outcome(&state, tenant, application, outcome, exempt, req, next)
+                .await;
+        }
+        ApiKeyCredential::Malformed => {
+            return if exempt {
+                forward_without_token(tenant, application, req, next).await
+            } else {
+                unauthorized_api_response()
+            };
+        }
+        ApiKeyCredential::Absent => {}
+    }
+
     if exempt {
         req.extensions_mut().insert(ForwardContext {
             tenant_slug: tenant.slug.clone(),
@@ -123,6 +153,70 @@ pub async fn auth_gate(
         redirect_to_login(tenant, application, &path_and_query)
     } else {
         unauthorized_api_response()
+    }
+}
+
+/// design/decisions/0101-api-keys.md. Structurally parallel to `handle_enrichment_outcome` above
+/// (Allow mints a token, Deny/Unreachable don't) but **deliberately does not fail open on
+/// `Unreachable`** -- see `api_key_verifier.rs`'s own header comment for why an unverifiable
+/// credential can't be given the same benefit of the doubt a locally-signature-verified session
+/// gets.
+async fn handle_api_key_outcome(
+    state: &Arc<PortcullisState>,
+    tenant: &TenantRuntime,
+    application: &ApplicationRuntime,
+    outcome: ApiKeyVerificationOutcome,
+    exempt: bool,
+    mut req: Request<Body>,
+    next: Next,
+) -> Response {
+    match outcome {
+        ApiKeyVerificationOutcome::Allow(allow) => {
+            if let Some(limit) = &allow.rate_limit {
+                if !state
+                    .api_key_rate_limiter
+                    .check_and_record(&allow.api_key_id, limit)
+                {
+                    return too_many_requests();
+                }
+            }
+
+            let Some(internal_key) = tenant.internal_keys.current() else {
+                return if exempt {
+                    forward_without_token(tenant, application, req, next).await
+                } else {
+                    internal_error()
+                };
+            };
+            let claims = api_key_claims(allow.sub, allow.api_key_id, allow.account_id, allow.granted_roles);
+            match sign_internal(internal_key, &claims, &tenant.slug) {
+                Ok(token) => {
+                    req.extensions_mut().insert(ForwardContext {
+                        tenant_slug: tenant.slug.clone(),
+                        application_slug: application.slug.clone(),
+                        internal_token: Some(token),
+                    });
+                    next.run(req).await
+                }
+                Err(_) => internal_error(),
+            }
+        }
+        ApiKeyVerificationOutcome::Deny { status, reason } => {
+            tracing::debug!(tenant = %tenant.slug, application = %application.slug, status, reason, "api key verification denied");
+            if exempt {
+                forward_without_token(tenant, application, req, next).await
+            } else {
+                unauthorized_api_response()
+            }
+        }
+        ApiKeyVerificationOutcome::Unreachable(err) => {
+            tracing::warn!(tenant = %tenant.slug, application = %application.slug, error = %err, "api key verification unreachable -- denying (api keys are not self-verifying, so this path does not fail open the way session enrichment does)");
+            if exempt {
+                forward_without_token(tenant, application, req, next).await
+            } else {
+                service_unavailable()
+            }
+        }
     }
 }
 
@@ -320,6 +414,15 @@ fn generic_body_for_status(status: StatusCode) -> &'static str {
         StatusCode::FORBIDDEN => r#"{"error":"Forbidden"}"#,
         _ => r#"{"error":"request denied"}"#,
     }
+}
+
+fn too_many_requests() -> Response {
+    (
+        StatusCode::TOO_MANY_REQUESTS,
+        [(header::CONTENT_TYPE, "application/json")],
+        r#"{"error":"rate limit exceeded"}"#,
+    )
+        .into_response()
 }
 
 fn service_unavailable() -> Response {

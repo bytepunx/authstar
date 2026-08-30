@@ -15,10 +15,12 @@ use authstar_config::secrets::{
 use authstar_config::RawSecrets;
 use indexmap::IndexMap;
 
+use crate::api_key_verifier::ApiKeyVerifier;
 use crate::enricher::ClaimsEnricher;
 use crate::identity_hash::IdentityHashKeys;
 use crate::keys::{EcKeyGenerations, EcKeyPair};
 use crate::provider::{discover_all, DiscoveryError, DiscoveryTarget, ResolvedProvider};
+use crate::rate_limit::ApiKeyRateLimiter;
 
 pub struct ResolvedExposedProvider {
     pub name: String,
@@ -116,6 +118,12 @@ pub struct PortcullisState {
     /// reproduced directly against production, not a client-side DNS artifact as first suspected.
     pub proxy_http_client: reqwest::Client,
     pub enricher: Arc<dyn ClaimsEnricher>,
+    /// design/decisions/0101-api-keys.md. Reached the same way `enricher` is -- SPIFFE mTLS via
+    /// `tower_http_client`, same `tower_base_url`.
+    pub api_key_verifier: Arc<dyn ApiKeyVerifier>,
+    /// One shared, in-process bucket map for every API-key-authenticated request this replica
+    /// handles -- see `rate_limit.rs`'s own header comment for the single-instance caveat.
+    pub api_key_rate_limiter: ApiKeyRateLimiter,
     /// Client for calls to tower directly (`/identities/resolve` at login; `/enrich` also uses
     /// this client, via `TowerClaimsEnricher`'s own `client` field, constructed from a clone of
     /// this same one) — SPIFFE mTLS in production (see `authstar_config::mtls`), presenting
@@ -278,6 +286,7 @@ pub async fn build_state(
     secrets: RawSecrets,
     clients: HttpClients,
     enricher: Arc<dyn ClaimsEnricher>,
+    api_key_verifier: Arc<dyn ApiKeyVerifier>,
     tower_base_url: String,
     keep_base_url: String,
 ) -> (PortcullisState, Vec<StartupWarning>) {
@@ -462,6 +471,8 @@ pub async fn build_state(
         http_client,
         proxy_http_client,
         enricher,
+        api_key_verifier,
+        api_key_rate_limiter: ApiKeyRateLimiter::new(),
         tower_http_client,
         tower_base_url,
         keep_base_url,

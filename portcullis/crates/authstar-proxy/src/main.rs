@@ -16,6 +16,7 @@ use std::time::Duration;
 
 use authstar_config::validate::validate_bundle;
 use authstar_config::{BootstrapEnv, SignetSource};
+use authstar_middleware::api_key_verifier::{ApiKeyVerifier, TowerApiKeyVerifier};
 use authstar_middleware::enricher::{ClaimsEnricher, TowerClaimsEnricher};
 use authstar_middleware::router::{apply_auth_gate, apply_cors, oauth_routes, webhook_routes};
 use authstar_middleware::state::{build_state, HttpClients, PortcullisState};
@@ -165,6 +166,13 @@ async fn main() {
         tower_base_url.clone(),
     ));
 
+    // design/decisions/0101-api-keys.md: same client/base-URL as `enricher` above -- both reach
+    // tower over the same SPIFFE mTLS connection.
+    let api_key_verifier: Arc<dyn ApiKeyVerifier> = Arc::new(TowerApiKeyVerifier::new(
+        tower_http_client.clone(),
+        tower_base_url.clone(),
+    ));
+
     let keep_base_url = fetched
         .config
         .keep_upstream
@@ -186,6 +194,7 @@ async fn main() {
             tower_http_client,
         },
         enricher,
+        api_key_verifier,
         tower_base_url,
         keep_base_url,
     )

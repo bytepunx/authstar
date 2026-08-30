@@ -11,6 +11,7 @@ use std::sync::Arc;
 
 use authstar_config::bundle::Bundle;
 use authstar_config::RawSecrets;
+use authstar_middleware::api_key_verifier::{ApiKeyVerifier, TowerApiKeyVerifier, UnreachableApiKeyVerifier};
 use authstar_middleware::enricher::{ClaimsEnricher, TowerClaimsEnricher, UnreachableEnricher};
 use authstar_middleware::gate::auth_gate;
 use authstar_middleware::router::{apply_auth_gate, apply_cors, oauth_routes};
@@ -218,7 +219,93 @@ async fn build_state_with_enricher_base(
             tower_http_client: http_client,
         },
         enricher,
+        Arc::new(UnreachableApiKeyVerifier),
         identities_tower_base.to_string(),
+        String::new(),
+    )
+    .await;
+    assert!(
+        warnings.is_empty(),
+        "expected no startup warnings, got: {:?}",
+        warnings.iter().map(|w| w.to_string()).collect::<Vec<_>>()
+    );
+    Arc::new(state)
+}
+
+/// Similar tenant/bundle shape to [`build_state_with_enricher_base`], but wires a real
+/// [`TowerApiKeyVerifier`] pointed at `tower_base` instead of the placeholder
+/// [`UnreachableApiKeyVerifier`] every other helper here uses -- for the
+/// design/decisions/0101-api-keys.md gate tests below, which send `Authorization: Bearer
+/// authstar_...` directly and never establish a session cookie at all, so no OIDC provider
+/// (and thus no `oidc_base` param) is needed, and the (deliberately unreachable) `enricher` is
+/// never touched.
+async fn build_state_with_api_key_verifier(tower_base: &str) -> Arc<PortcullisState> {
+    let session_key = generate_pem_key();
+    let internal_key = generate_pem_key();
+    let identity_hash_key = "identity-hash-key-material";
+
+    // No `providers` at all -- these tests exercise only the API-key Bearer path, never the
+    // OIDC login flow, so no discovery mock is needed (unlike every other helper in this file).
+    let bundle_json = json!({
+        "tenants": {
+            "acme": {
+                "status": "active",
+                "cookie": {
+                    "domain": "app.acme.test",
+                    "path": "/",
+                    "maxAge": 604800,
+                    "httpOnly": true,
+                    "secure": false,
+                },
+                "jwt": {
+                    "issuer": "authstar",
+                    "audience": "acme",
+                    "expiresIn": "168h",
+                },
+                "identityHashKeyGenerations": [
+                    { "version": 1 }
+                ],
+                "applications": {
+                    "app": {
+                        "hosts": ["app.acme.test"],
+                        "server": { "publicUrl": "http://app.acme.test" },
+                        "upstream": {
+                            "base": "http://upstream.invalid",
+                            "routes": {},
+                            "timeout": 30,
+                        },
+                        "cors": { "origin": "https://allowed.example.com" },
+                        "exempt": ["/health", "/api/public/*"],
+                    }
+                }
+            }
+        },
+        "secrets": {
+            "tenant-acme-session-key": b64(&session_key),
+            "tenant-acme-internal-key": b64(&internal_key),
+            "tenant-acme-identity-hash-key-1": b64(identity_hash_key),
+        }
+    });
+
+    let config: Bundle = serde_json::from_value(bundle_json.clone()).unwrap();
+    let secrets = RawSecrets::from_bundle_json(&bundle_json).unwrap();
+    let http_client = reqwest::Client::new();
+    let api_key_verifier: Arc<dyn ApiKeyVerifier> = Arc::new(TowerApiKeyVerifier::new(
+        http_client.clone(),
+        tower_base.to_string(),
+    ));
+
+    let (state, warnings) = build_state(
+        config,
+        secrets,
+        HttpClients {
+            http_client: http_client.clone(),
+            proxy_http_client: http_client.clone(),
+            tower_http_client: http_client,
+        },
+        Arc::new(UnreachableEnricher),
+        api_key_verifier,
+        tower_base.to_string(),
         String::new(),
     )
     .await;
@@ -318,6 +405,7 @@ async fn build_state_with_raw_exempt_app(oidc_base: &str, tower_base: &str) -> A
             tower_http_client: http_client,
         },
         enricher,
+        Arc::new(UnreachableApiKeyVerifier),
         tower_base.to_string(),
         String::new(),
     )
@@ -1102,6 +1190,202 @@ async fn unreachable_tower_fails_open_with_degraded_token() {
 }
 
 // ---------------------------------------------------------------------------------------------
+// API keys (design/decisions/0101-api-keys.md)
+// ---------------------------------------------------------------------------------------------
+
+fn decode_claims(token: &str) -> serde_json::Value {
+    let payload_b64 = token.split('.').nth(1).unwrap();
+    let payload_json = base64::engine::general_purpose::URL_SAFE_NO_PAD
+        .decode(payload_b64)
+        .unwrap();
+    serde_json::from_slice(&payload_json).unwrap()
+}
+
+#[tokio::test]
+async fn api_key_allow_outcome_gets_internal_token_carrying_api_key_id() {
+    let tower_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/verify-api-key"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "outcome": "allow",
+            "apiKeyId": "apikey-1",
+            "sub": "admin@example.com",
+            "accountId": "acct-1",
+            "grantedRoles": ["read"],
+            "permissions": [],
+            "usage": [],
+            "rateLimit": null,
+        })))
+        .mount(&tower_server)
+        .await;
+
+    let state = build_state_with_api_key_verifier(&tower_server.uri()).await;
+    let app = build_app(state);
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::AUTHORIZATION, "Bearer authstar_apikey-1_c2VjcmV0")
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::OK);
+    assert_eq!(
+        response.headers().get("x-internal-token-present").unwrap(),
+        "true"
+    );
+
+    let internal_token = response
+        .headers()
+        .get("x-internal-token")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let claims = decode_claims(&internal_token);
+    assert_eq!(claims["apiKeyId"], "apikey-1");
+    assert_eq!(claims["accountId"], "acct-1");
+    assert_eq!(claims["sub"], "admin@example.com");
+    assert_eq!(claims["roles"], json!(["read"]));
+    assert_eq!(claims["enrichmentStatus"], "ok");
+}
+
+#[tokio::test]
+async fn org_owned_api_key_allow_outcome_has_no_account_id() {
+    let tower_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/verify-api-key"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "outcome": "allow",
+            "apiKeyId": "apikey-2",
+            "sub": "apikey:apikey-2",
+            "grantedRoles": [],
+        })))
+        .mount(&tower_server)
+        .await;
+
+    let state = build_state_with_api_key_verifier(&tower_server.uri()).await;
+    let app = build_app(state);
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::AUTHORIZATION, "Bearer authstar_apikey-2_c2VjcmV0")
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    let internal_token = response
+        .headers()
+        .get("x-internal-token")
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+    let claims = decode_claims(&internal_token);
+    assert_eq!(claims["sub"], "apikey:apikey-2");
+    assert!(claims.get("accountId").is_none());
+}
+
+#[tokio::test]
+async fn api_key_deny_outcome_is_401_never_a_redirect() {
+    let tower_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/verify-api-key"))
+        .respond_with(ResponseTemplate::new(403).set_body_json(json!({"error": "Forbidden"})))
+        .mount(&tower_server)
+        .await;
+
+    let state = build_state_with_api_key_verifier(&tower_server.uri()).await;
+    let app = build_app(state);
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::ACCEPT, "text/html") // would trigger a browser redirect on the ordinary no-session path
+        .header(header::AUTHORIZATION, "Bearer authstar_apikey-1_wrongsecret")
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn malformed_bearer_credential_is_401_never_a_redirect() {
+    let tower_server = MockServer::start().await;
+    // No mock mounted for /verify-api-key -- a malformed credential must never even reach it.
+
+    let state = build_state_with_api_key_verifier(&tower_server.uri()).await;
+    let app = build_app(state);
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::ACCEPT, "text/html")
+        .header(header::AUTHORIZATION, "Bearer not-an-api-key-at-all")
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
+}
+
+#[tokio::test]
+async fn unreachable_tower_denies_api_key_requests_instead_of_failing_open() {
+    // Unlike the session path (`unreachable_tower_fails_open_with_degraded_token`), an API key is
+    // not self-verifying -- nothing about it is checked without tower, so an unreachable tower
+    // must deny, not mint a degraded token for an entirely unverified credential.
+    // A connection-refused base (nothing listens on port 1) rather than a mounted mock with no
+    // matching route -- the latter would be a `Deny(404)`, not `Unreachable`.
+    let state =
+        build_state_with_api_key_verifier("http://127.0.0.1:1").await;
+    let app = build_app(state);
+
+    let req = Request::builder()
+        .uri("/dashboard")
+        .header(header::HOST, "app.acme.test")
+        .header(header::AUTHORIZATION, "Bearer authstar_apikey-1_secret")
+        .body(Body::empty())
+        .unwrap();
+    let response = app.oneshot(req).await.unwrap();
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    assert!(response.headers().get("x-internal-token-present").is_none());
+}
+
+#[tokio::test]
+async fn api_key_exceeding_its_rate_limit_gets_429() {
+    let tower_server = MockServer::start().await;
+    Mock::given(method("POST"))
+        .and(path("/verify-api-key"))
+        .respond_with(ResponseTemplate::new(200).set_body_json(json!({
+            "outcome": "allow",
+            "apiKeyId": "apikey-1",
+            "sub": "admin@example.com",
+            "accountId": "acct-1",
+            "grantedRoles": ["read"],
+            "rateLimit": {"requestsPerMinute": 1},
+        })))
+        .mount(&tower_server)
+        .await;
+
+    let state = build_state_with_api_key_verifier(&tower_server.uri()).await;
+    let app = build_app(state);
+
+    let make_req = || {
+        Request::builder()
+            .uri("/dashboard")
+            .header(header::HOST, "app.acme.test")
+            .header(header::AUTHORIZATION, "Bearer authstar_apikey-1_c2VjcmV0")
+            .body(Body::empty())
+            .unwrap()
+    };
+
+    let first = app.clone().oneshot(make_req()).await.unwrap();
+    assert_eq!(first.status(), StatusCode::OK);
+
+    let second = app.oneshot(make_req()).await.unwrap();
+    assert_eq!(second.status(), StatusCode::TOO_MANY_REQUESTS);
+}
+
+// ---------------------------------------------------------------------------------------------
 // Logout (Story 016)
 // ---------------------------------------------------------------------------------------------
 
@@ -1282,6 +1566,7 @@ async fn build_rotated_keys_harness() -> (Router, String, String, String, String
             tower_http_client: http_client,
         },
         Arc::new(UnreachableEnricher),
+        Arc::new(UnreachableApiKeyVerifier),
         "http://tower.invalid".to_string(),
         String::new(),
     )

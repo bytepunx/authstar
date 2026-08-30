@@ -7,10 +7,12 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use authstar_config::bundle::{CookieConfig, TenantJwtConfig, TenantStatus, UpstreamConfig};
+use authstar_middleware::api_key_verifier::UnreachableApiKeyVerifier;
 use authstar_middleware::context::ForwardContext;
 use authstar_middleware::enricher::{ClaimsEnricher, EnrichmentContext, EnrichmentOutcome};
 use authstar_middleware::identity_hash::IdentityHashKeys;
 use authstar_middleware::keys::EcKeyGenerations;
+use authstar_middleware::rate_limit::ApiKeyRateLimiter;
 use authstar_middleware::state::{ApplicationRuntime, PortcullisState, TenantRuntime};
 use authstar_proxy::proxy::proxy_handler;
 use axum::async_trait;
@@ -96,6 +98,8 @@ fn build_state(application: ApplicationRuntime) -> Arc<PortcullisState> {
             .build()
             .unwrap(),
         enricher: Arc::new(NeverEnricher),
+        api_key_verifier: Arc::new(UnreachableApiKeyVerifier),
+        api_key_rate_limiter: ApiKeyRateLimiter::new(),
         tower_http_client: reqwest::Client::new(),
         tower_base_url: String::new(),
         keep_base_url: String::new(),
