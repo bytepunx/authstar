@@ -15,20 +15,22 @@ authoritative source:
 - **Session JWT** (`sub`, `idp`, `identityHash`, `iss`, `aud`, `iat`, `exp`) — the
   long-lived `jwt` cookie. Consumed mainly by portcullis itself.
 - **Internal JWT** (`sub`, `idp`, `identityHash`, `enrichmentStatus`, `accountId?`,
-  `roles`, `permissions`, `usage?`, `isNewAccount?`, `iat`, `exp` in the payload, plus a
-  `tenant` field on the **protected header** alongside `alg`/`kid`/`typ` — ADR 0089) — a
-  60-second,
+  `organizationMemberships`, `roles`, `permissions`, `usage?`, `isNewAccount?`, `iat`,
+  `exp` in the payload, plus a `tenant` field on the **protected header** alongside
+  `alg`/`kid`/`typ` — ADR 0089) — a 60-second,
   upstream-facing `Authorization: Bearer` token portcullis mints fresh on every proxied
   request. Its own doc comment says it plainly: *"downstream services verify it
   independently against the tenant's public key, per ADR 0030's 'defense in depth'"* —
   this repo is that verification, so adopting services never have to hand-roll it. This
   is almost certainly the one your HTTP framework middleware needs.
   `enrichmentStatus: "degraded"` is a real, load-bearing case (portcullis's fail-open
-  path when tower's `/enrich` is unreachable) — `roles`/`permissions`/`usage` are
-  deliberately empty in that case, never fabricated. Handle it the same way, don't
+  path when tower's `/enrich` is unreachable) — `roles`/`permissions`/`organizationMemberships`/`usage`
+  are deliberately empty in that case, never fabricated. Handle it the same way, don't
   discard it as an error. `roles` is an open, app-owned vocabulary; `permissions` is a
   closed, authstar-owned vocabulary tower's own authorization is built on (ADR 0069) —
-  the two are never merged.
+  the two are never merged. `organizationMemberships` (ADR 0100) is every organization
+  the account currently belongs to, each with its own independent `roles` list — an
+  account can belong to more than one at once, each conferring different standing.
 
 Both JWTs are independently verifiable via a live JWKS endpoint: `GET
 https://<tenant-host>/.well-known/jwks.json` (ADR 0086/0087), serving the tenant's
@@ -41,13 +43,18 @@ for:
 - **`jwksKeyProvider(url)`** — a single, fixed JWKS URL. The right choice for portcullis
   itself, or any service reached at a tenant-branded host (`Host`-based tenant
   resolution, ADR 0002).
-- **`perTenantJwksKeyProvider(baseDomain)`** — for a service with no Host-based tenant
-  signal at all (tower/keep/herald: one shared deployment serving every tenant, per ADR
-  0089). Reads the internal JWT's own `tenant` header field to resolve
-  `https://admin.<tenant-slug>.<baseDomain>/.well-known/jwks.json` per request, caching
-  one `createRemoteJWKSet` per tenant. This is almost certainly what a non-portcullis
-  backend service needs — see the ADR for why this is safe (the same principle `kid`
-  selection already relies on) and its own doc comment for the SSRF guard on the tenant
+- **`perTenantJwksKeyProvider(resolveDomain)`** — for a service with no Host-based
+  tenant signal at all (tower/keep/herald/web: one shared deployment serving every
+  tenant, per ADR 0089). Reads the internal JWT's own `tenant` header field, resolves
+  that tenant's own registered domain via `resolveDomain` (a `(tenantSlug) => string |
+  undefined | Promise<string | undefined>` callback — tenants bring their own, unrelated
+  domains, ADR 0091, so there's no fixed-formula `baseDomain` anymore, as of
+  `@bytepunx/authstar-core@0.3.0`), then fetches `https://authstar.<tenant's own
+  domain>/.well-known/jwks.json` (the tenant's reserved `authstar` application host),
+  caching one `createRemoteJWKSet` per tenant for the life of the process. This is
+  almost certainly what a non-portcullis backend service needs — see ADR 0091 for why
+  trusting the unverified header this way is safe (the same principle `kid` selection
+  already relies on) and the function's own doc comment for the SSRF guard on the tenant
   value before it's used to build a URL.
 - **`staticKeyProvider(jwks)`** — a fixed, locally-held key set. For tests, or any
   deployment that prefers pinning keys over a runtime fetch.
