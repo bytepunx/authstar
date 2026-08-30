@@ -70,6 +70,16 @@ export interface InternalClaims {
   usage?: unknown
   /** Present (true) only immediately after tower auto-provisioned a brand-new account. */
   isNewAccount?: boolean
+  /**
+   * design/decisions/0101-api-keys.md. Present only on a token minted from a verified
+   * API-key credential (`Authorization: Bearer authstar_{apiKeyId}_{secret}`), never on
+   * a session-derived one -- purely additive, same optional/never-fabricated treatment
+   * as `accountId`/`isNewAccount`. Its presence is how a downstream consumer
+   * discriminates "this request came from an API key" from ordinary session auth. See
+   * `getEmail()`'s own doc comment for a caveat this implies about `sub` for an
+   * org-owned key.
+   */
+  apiKeyId?: string
   iat: number
   exp: number
 }

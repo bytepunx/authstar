@@ -15,7 +15,8 @@ authoritative source:
 - **Session JWT** (`sub`, `idp`, `identityHash`, `iss`, `aud`, `iat`, `exp`) — the
   long-lived `jwt` cookie. Consumed mainly by portcullis itself.
 - **Internal JWT** (`sub`, `idp`, `identityHash`, `enrichmentStatus`, `accountId?`,
-  `organizationMemberships`, `roles`, `permissions`, `usage?`, `isNewAccount?`, `iat`,
+  `organizationMemberships`, `roles`, `permissions`, `usage?`, `isNewAccount?`,
+  `apiKeyId?`, `iat`,
   `exp` in the payload, plus a `tenant` field on the **protected header** alongside
   `alg`/`kid`/`typ` — ADR 0089) — a 60-second,
   upstream-facing `Authorization: Bearer` token portcullis mints fresh on every proxied
@@ -31,6 +32,9 @@ authoritative source:
   the two are never merged. `organizationMemberships` (ADR 0100) is every organization
   the account currently belongs to, each with its own independent `roles` list — an
   account can belong to more than one at once, each conferring different standing.
+  `apiKeyId?` (design/decisions/0101-api-keys.md) is present only when this token was
+  minted from a verified API-key credential rather than a session — see `getEmail()`'s
+  own doc comment for a caveat this implies about `sub` for an org-owned key.
 
 Both JWTs are independently verifiable via a live JWKS endpoint: `GET
 https://<tenant-host>/.well-known/jwks.json` (ADR 0086/0087), serving the tenant's
