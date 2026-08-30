@@ -53,5 +53,41 @@
 		<input name="meter" value={form?.values?.meter ?? ''} class="rounded border border-slate-300 px-2 py-1" />
 	</label>
 
+	<label class="flex flex-col gap-1 text-sm">
+		API key limit (blank = unlimited, 0 = disallow creating API keys)
+		<input
+			name="apiKeyLimit"
+			type="number"
+			min="0"
+			value={form?.values?.apiKeyLimit ?? ''}
+			class="rounded border border-slate-300 px-2 py-1"
+		/>
+	</label>
+
+	<div class="flex flex-col gap-1 text-sm">
+		API key rate limit (blank = none)
+		<div class="flex gap-2">
+			<input
+				name="apiKeyRateLimitRequestsPerMinute"
+				type="number"
+				min="1"
+				placeholder="requests / minute"
+				value={form?.values?.apiKeyRateLimitRequestsPerMinute ?? ''}
+				class="w-1/2 rounded border border-slate-300 px-2 py-1"
+			/>
+			<input
+				name="apiKeyRateLimitBurst"
+				type="number"
+				min="1"
+				placeholder="burst (optional)"
+				value={form?.values?.apiKeyRateLimitBurst ?? ''}
+				class="w-1/2 rounded border border-slate-300 px-2 py-1"
+			/>
+		</div>
+		{#if form?.fieldErrors?.apiKeyRateLimitBurst}<span class="text-red-600"
+				>{form.fieldErrors.apiKeyRateLimitBurst}</span
+			>{/if}
+	</div>
+
 	<button type="submit" class="w-fit rounded bg-slate-900 px-3 py-1.5 text-sm text-white">Create</button>
 </form>

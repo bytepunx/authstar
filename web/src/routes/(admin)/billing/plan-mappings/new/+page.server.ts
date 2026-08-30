@@ -17,6 +17,9 @@ export const actions: Actions = {
 		const stripePriceId = String(form.get('stripePriceId') ?? '').trim()
 		const name = String(form.get('name') ?? '').trim()
 		const seatLimitRaw = String(form.get('seatLimit') ?? '').trim()
+		const apiKeyLimitRaw = String(form.get('apiKeyLimit') ?? '').trim()
+		const apiKeyRateLimitRaw = String(form.get('apiKeyRateLimitRequestsPerMinute') ?? '').trim()
+		const apiKeyRateLimitBurstRaw = String(form.get('apiKeyRateLimitBurst') ?? '').trim()
 		const { roles: grantedRoles, invalid: invalidRoles } = parseGrantedRoles(form.get('grantedRoles'))
 
 		const fieldErrors: Record<string, string> = {}
@@ -24,6 +27,9 @@ export const actions: Actions = {
 		if (!name) fieldErrors.name = 'name is required'
 		if (invalidRoles.length > 0) {
 			fieldErrors.grantedRoles = `each entry must be "application:role" -- invalid: ${invalidRoles.join(', ')}`
+		}
+		if (apiKeyRateLimitBurstRaw && !apiKeyRateLimitRaw) {
+			fieldErrors.apiKeyRateLimitBurst = 'burst only applies alongside a requests-per-minute rate limit'
 		}
 		if (Object.keys(fieldErrors).length > 0) {
 			return fail(400, { fieldErrors, values: Object.fromEntries(form) })
@@ -36,6 +42,13 @@ export const actions: Actions = {
 				seatLimit: seatLimitRaw ? Number(seatLimitRaw) : null,
 				grantedRoles,
 				meter: String(form.get('meter') ?? '').trim() || null,
+				apiKeyLimit: apiKeyLimitRaw ? Number(apiKeyLimitRaw) : null,
+				apiKeyRateLimit: apiKeyRateLimitRaw
+					? {
+							requestsPerMinute: Number(apiKeyRateLimitRaw),
+							...(apiKeyRateLimitBurstRaw ? { burst: Number(apiKeyRateLimitBurstRaw) } : {}),
+						}
+					: null,
 			})
 			redirect(303, `/billing/plan-mappings#${created.id}`)
 		} catch (err) {

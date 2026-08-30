@@ -86,6 +86,10 @@ export interface Organization {
 	name: string
 	grantedRoles: Array<{ application: string; role: string }>
 	seatLimit: number | null
+	// design/decisions/0101-api-keys.md -- same keep entitlement pipeline as
+	// `seatLimit` above.
+	apiKeyLimit: number | null
+	apiKeyRateLimit: ApiKeyRateLimit | null
 }
 
 // One (account, organization) membership record -- the roster
@@ -123,6 +127,66 @@ export interface OrganizationInvite {
 	expiresAt: string | null
 }
 
+// design/decisions/0101-api-keys.md's own `RoleGrant` shape (tower's
+// account_actor.ts) -- `scope: 'tenant'` grants apply to every application,
+// `{application}` grants apply to just that one. Used here only for the
+// "which roles can I currently grant to a key" checklist -- callers filter
+// this list down to the one application a key-creation form is for
+// themselves (`filterRolesForApplication`'s own client-side equivalent),
+// same reasoning tower's own `/enrich` filters for.
+export interface AccountRoleGrant {
+	name: string
+	scope: 'tenant' | { application: string }
+}
+
+// The subset of tower's `account` actor's own fields this admin surface
+// needs to read -- `GET .../accounts/{accountId}` is self-accessible
+// (`requireSelfOrPermission`), so an ordinary logged-in account can fetch
+// its own record this way, not just a tenant admin fetching someone else's.
+export interface AccountDetail {
+	accountId: string
+	tenant: string
+	status: 'active' | 'suspended' | 'deleted'
+	grantedRoles: AccountRoleGrant[]
+	apiKeyLimit: number | null
+	apiKeyRateLimit: ApiKeyRateLimit | null
+}
+
+export interface ApiKeyRateLimit {
+	requestsPerMinute: number
+	burst?: number
+}
+
+// design/decisions/0101-api-keys.md. `grantedRoles` here is plain role-name
+// strings (not `AccountRoleGrant`'s `{name, scope}` shape) -- a key is
+// already pinned to one `application`, so no per-role scope wrapper is
+// needed, matching tower's own `apiKeyActor` state shape exactly.
+export interface ApiKeySummary {
+	apiKeyId: string
+	tenant: string
+	application: string
+	name: string
+	owner: { account: string } | { organization: string }
+	grantedRoles: string[]
+	createdBy: string
+	secretPreview: string
+	status: 'active' | 'revoked'
+	createdAt: string
+}
+
+// The one and only response shape that ever carries the full secret --
+// returned once, at creation, by `create{Personal,Organization}ApiKey`
+// alone. Every other call (list, and revoke's own response) uses
+// `ApiKeySummary`, which never includes it.
+export interface ApiKeyCreated extends ApiKeySummary {
+	secret: string
+}
+
+export interface ApiKeyCreateInput {
+	name: string
+	grantedRoles: string[]
+}
+
 export class TowerRequestError extends Error {
 	constructor(
 		message: string,
@@ -158,6 +222,13 @@ export interface TowerClient {
 		organizationId: string,
 		input: { contactId?: string; email?: string; organizationRole: string; expiresAt?: string | null },
 	): Promise<OrganizationInvite>
+	getAccount(tenantSlug: string, accountId: string): Promise<AccountDetail>
+	createPersonalApiKey(tenantSlug: string, appSlug: string, input: ApiKeyCreateInput): Promise<ApiKeyCreated>
+	listPersonalApiKeys(tenantSlug: string, appSlug: string): Promise<ApiKeySummary[]>
+	revokePersonalApiKey(tenantSlug: string, appSlug: string, apiKeyId: string): Promise<void>
+	createOrganizationApiKey(tenantSlug: string, organizationId: string, appSlug: string, input: ApiKeyCreateInput): Promise<ApiKeyCreated>
+	listOrganizationApiKeys(tenantSlug: string, organizationId: string, appSlug: string): Promise<ApiKeySummary[]>
+	revokeOrganizationApiKey(tenantSlug: string, organizationId: string, appSlug: string, apiKeyId: string): Promise<void>
 }
 
 export interface CreateTowerClientOptions {
@@ -251,6 +322,27 @@ export function createTowerClient(options: CreateTowerClientOptions): TowerClien
 		},
 		createOrganizationInvite(tenantSlug, organizationId, input) {
 			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/invites`, input)
+		},
+		getAccount(tenantSlug, accountId) {
+			return request('GET', `/tenants/${tenantSlug}/accounts/${accountId}`)
+		},
+		createPersonalApiKey(tenantSlug, appSlug, input) {
+			return request('POST', `/tenants/${tenantSlug}/applications/${appSlug}/api-keys`, input)
+		},
+		listPersonalApiKeys(tenantSlug, appSlug) {
+			return request('GET', `/tenants/${tenantSlug}/applications/${appSlug}/api-keys`)
+		},
+		async revokePersonalApiKey(tenantSlug, appSlug, apiKeyId) {
+			await request('DELETE', `/tenants/${tenantSlug}/applications/${appSlug}/api-keys/${apiKeyId}`)
+		},
+		createOrganizationApiKey(tenantSlug, organizationId, appSlug, input) {
+			return request('POST', `/tenants/${tenantSlug}/organizations/${organizationId}/applications/${appSlug}/api-keys`, input)
+		},
+		listOrganizationApiKeys(tenantSlug, organizationId, appSlug) {
+			return request('GET', `/tenants/${tenantSlug}/organizations/${organizationId}/applications/${appSlug}/api-keys`)
+		},
+		async revokeOrganizationApiKey(tenantSlug, organizationId, appSlug, apiKeyId) {
+			await request('DELETE', `/tenants/${tenantSlug}/organizations/${organizationId}/applications/${appSlug}/api-keys/${apiKeyId}`)
 		},
 	}
 }

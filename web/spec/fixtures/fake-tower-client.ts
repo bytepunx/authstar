@@ -2,6 +2,10 @@ import { vi } from 'vitest'
 import {
 	TowerNotFoundError,
 	TowerRequestError,
+	type AccountDetail,
+	type ApiKeyCreateInput,
+	type ApiKeyCreated,
+	type ApiKeySummary,
 	type ApplicationDetail,
 	type ApplicationInput,
 	type ApplicationUpdateInput,
@@ -26,6 +30,8 @@ export interface FakeTowerClientOptions {
 	organizations?: Organization[]
 	memberships?: OrganizationMembership[]
 	roleCatalog?: OrganizationRoleDefinition[]
+	accounts?: AccountDetail[]
+	apiKeys?: ApiKeySummary[]
 	/** Force every mutating call to fail as tower would reject it (409). */
 	rejectMutations?: boolean
 }
@@ -50,6 +56,11 @@ export function createFakeTowerClient(options: FakeTowerClientOptions = {}) {
 	for (const membership of options.memberships ?? []) memberships.set(membership.membershipId, membership)
 	const roleCatalog = options.roleCatalog ?? DEFAULT_ORGANIZATION_ROLE_CATALOG
 	const organizationInvites: OrganizationInvite[] = []
+	const accounts = new Map<string, AccountDetail>()
+	for (const account of options.accounts ?? []) accounts.set(account.accountId, account)
+	const apiKeys = new Map<string, ApiKeySummary>()
+	for (const key of options.apiKeys ?? []) apiKeys.set(key.apiKeyId, key)
+	let apiKeyCounter = 0
 
 	function membershipFor(organizationId: string, accountId: string): OrganizationMembership | undefined {
 		return [...memberships.values()].find((m) => m.organizationId === organizationId && m.accountId === accountId)
@@ -169,6 +180,67 @@ export function createFakeTowerClient(options: FakeTowerClientOptions = {}) {
 				return invite
 			},
 		),
+		getAccount: vi.fn(async (_tenantSlug: string, accountId: string) => {
+			const account = accounts.get(accountId)
+			if (!account) throw new TowerNotFoundError(`no such account: ${accountId}`)
+			return account
+		}),
+		createPersonalApiKey: vi.fn(async (tenantSlug: string, appSlug: string, input: ApiKeyCreateInput) => {
+			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
+			apiKeyCounter += 1
+			const apiKeyId = `apikey-${apiKeyCounter}`
+			const created: ApiKeyCreated = {
+				apiKeyId,
+				tenant: tenantSlug,
+				application: appSlug,
+				name: input.name,
+				owner: { account: 'acct-1' },
+				grantedRoles: input.grantedRoles,
+				createdBy: 'acct-1',
+				secretPreview: 'abcd',
+				status: 'active',
+				createdAt: '2026-01-01T00:00:00.000Z',
+				secret: `authstar_${apiKeyId}_fakeSecret`,
+			}
+			apiKeys.set(apiKeyId, created)
+			return created
+		}),
+		listPersonalApiKeys: vi.fn(async (_tenantSlug: string, appSlug: string) =>
+			[...apiKeys.values()].filter((k) => k.application === appSlug && 'account' in k.owner),
+		),
+		revokePersonalApiKey: vi.fn(async (_tenantSlug: string, _appSlug: string, apiKeyId: string) => {
+			const existing = apiKeys.get(apiKeyId)
+			if (!existing) throw new TowerNotFoundError(`no such api key: ${apiKeyId}`)
+			apiKeys.set(apiKeyId, { ...existing, status: 'revoked' })
+		}),
+		createOrganizationApiKey: vi.fn(async (tenantSlug: string, organizationId: string, appSlug: string, input: ApiKeyCreateInput) => {
+			if (options.rejectMutations) throw new TowerRequestError('rejected', 409)
+			apiKeyCounter += 1
+			const apiKeyId = `apikey-${apiKeyCounter}`
+			const created: ApiKeyCreated = {
+				apiKeyId,
+				tenant: tenantSlug,
+				application: appSlug,
+				name: input.name,
+				owner: { organization: organizationId },
+				grantedRoles: input.grantedRoles,
+				createdBy: 'acct-1',
+				secretPreview: 'abcd',
+				status: 'active',
+				createdAt: '2026-01-01T00:00:00.000Z',
+				secret: `authstar_${apiKeyId}_fakeSecret`,
+			}
+			apiKeys.set(apiKeyId, created)
+			return created
+		}),
+		listOrganizationApiKeys: vi.fn(async (_tenantSlug: string, organizationId: string, appSlug: string) =>
+			[...apiKeys.values()].filter((k) => k.application === appSlug && 'organization' in k.owner && k.owner.organization === organizationId),
+		),
+		revokeOrganizationApiKey: vi.fn(async (_tenantSlug: string, _organizationId: string, _appSlug: string, apiKeyId: string) => {
+			const existing = apiKeys.get(apiKeyId)
+			if (!existing) throw new TowerNotFoundError(`no such api key: ${apiKeyId}`)
+			apiKeys.set(apiKeyId, { ...existing, status: 'revoked' })
+		}),
 	}
 
 	return client
@@ -181,6 +253,36 @@ export function fakeOrganization(overrides: Partial<Organization> = {}): Organiz
 		name: 'Acme Corp',
 		grantedRoles: [],
 		seatLimit: null,
+		apiKeyLimit: null,
+		apiKeyRateLimit: null,
+		...overrides,
+	}
+}
+
+export function fakeAccount(overrides: Partial<AccountDetail> = {}): AccountDetail {
+	return {
+		accountId: 'acct-1',
+		tenant: 'acme',
+		status: 'active',
+		grantedRoles: [],
+		apiKeyLimit: null,
+		apiKeyRateLimit: null,
+		...overrides,
+	}
+}
+
+export function fakeApiKey(overrides: Partial<ApiKeySummary> = {}): ApiKeySummary {
+	return {
+		apiKeyId: 'apikey-1',
+		tenant: 'acme',
+		application: 'widgetco',
+		name: 'ci key',
+		owner: { account: 'acct-1' },
+		grantedRoles: [],
+		createdBy: 'acct-1',
+		secretPreview: 'abcd',
+		status: 'active',
+		createdAt: '2026-01-01T00:00:00.000Z',
 		...overrides,
 	}
 }

@@ -83,6 +83,8 @@ describe('billing/plan-mappings/[id] update action', () => {
 			seatLimit: 5,
 			grantedRoles: [{ application: 'loci', role: 'plan:business' }],
 			meter: 'seats',
+			apiKeyLimit: null,
+			apiKeyRateLimit: null,
 		})
 	})
 
@@ -149,6 +151,8 @@ describe('billing/plan-mappings/new create action', () => {
 				{ application: 'loci', role: 'plan-business' },
 			],
 			meter: null,
+			apiKeyLimit: null,
+			apiKeyRateLimit: null,
 		})
 	})
 
@@ -180,6 +184,8 @@ describe('billing/plan-mappings/new create action', () => {
 			seatLimit: null,
 			grantedRoles: [{ application: 'loci', role: 'plan:business' }],
 			meter: null,
+			apiKeyLimit: null,
+			apiKeyRateLimit: null,
 		})
 	})
 

@@ -48,6 +48,8 @@ export function createFakeKeepClient(options: FakeKeepClientOptions = {}) {
 				seatLimit: input.seatLimit ?? null,
 				grantedRoles: input.grantedRoles ?? [],
 				meter: input.meter ?? null,
+				apiKeyLimit: input.apiKeyLimit ?? null,
+				apiKeyRateLimit: input.apiKeyRateLimit ?? null,
 				unitAmount: 1000,
 				currency: 'usd',
 				interval: 'month',
@@ -67,6 +69,8 @@ export function createFakeKeepClient(options: FakeKeepClientOptions = {}) {
 				...(input.seatLimit !== undefined ? { seatLimit: input.seatLimit } : {}),
 				...(input.grantedRoles !== undefined ? { grantedRoles: input.grantedRoles } : {}),
 				...(input.meter !== undefined ? { meter: input.meter } : {}),
+				...(input.apiKeyLimit !== undefined ? { apiKeyLimit: input.apiKeyLimit } : {}),
+				...(input.apiKeyRateLimit !== undefined ? { apiKeyRateLimit: input.apiKeyRateLimit } : {}),
 			}
 			mappings.set(id, updated)
 			return updated
@@ -92,6 +96,8 @@ export function fakePlanMapping(overrides: Partial<PlanMapping> = {}): PlanMappi
 		seatLimit: null,
 		grantedRoles: [{ application: 'demo-app', role: 'member' }],
 		meter: null,
+		apiKeyLimit: null,
+		apiKeyRateLimit: null,
 		unitAmount: 1000,
 		currency: 'usd',
 		interval: 'month',

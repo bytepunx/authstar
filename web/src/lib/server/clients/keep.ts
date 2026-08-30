@@ -13,6 +13,12 @@ export interface GrantedRole {
 	role: string
 }
 
+// design/decisions/0101-api-keys.md.
+export interface ApiKeyRateLimit {
+	requestsPerMinute: number
+	burst?: number
+}
+
 export interface PlanMapping {
 	id: string
 	tenant: string
@@ -21,6 +27,8 @@ export interface PlanMapping {
 	seatLimit: number | null
 	grantedRoles: GrantedRole[]
 	meter: string | null
+	apiKeyLimit: number | null
+	apiKeyRateLimit: ApiKeyRateLimit | null
 	unitAmount: number | null
 	currency: string
 	interval: 'month' | 'year'
@@ -33,6 +41,8 @@ export interface PlanMappingInput {
 	seatLimit?: number | null
 	grantedRoles?: GrantedRole[]
 	meter?: string | null
+	apiKeyLimit?: number | null
+	apiKeyRateLimit?: ApiKeyRateLimit | null
 }
 
 // stripePriceId (and the unitAmount/currency/interval keep resolves from it
@@ -44,6 +54,8 @@ export interface PlanMappingUpdate {
 	seatLimit?: number | null
 	grantedRoles?: GrantedRole[]
 	meter?: string | null
+	apiKeyLimit?: number | null
+	apiKeyRateLimit?: ApiKeyRateLimit | null
 }
 
 export interface StripeConfigStatus {
