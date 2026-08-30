@@ -77,6 +77,30 @@ export interface UsageUpdatedEvent {
   sequence: number
 }
 
+// design/decisions/0101-api-keys.md. Kept as two separate event types
+// (not merged into one), mirroring `SeatLimitChangedEvent`'s own shape --
+// but, unlike that event, `scope` here is the full `EntitlementScope`
+// (`{account}` included), not the narrower `{tenant}|{organization}`
+// `SeatLimitChangedEvent` deliberately restricts itself to. An individual
+// account's own API-key allowance is meaningful (unlike seats, which only
+// make sense at organization/tenant scale) -- a real, explicit divergence
+// from the `seatLimit` template, not an oversight.
+export interface ApiKeyLimitChangedEvent {
+  type: 'entitlement.api-key-limit-changed'
+  tenant: string
+  scope: EntitlementScope
+  sequence: number
+  apiKeyLimit: number | null
+}
+
+export interface ApiKeyRateLimitChangedEvent {
+  type: 'entitlement.api-key-rate-limit-changed'
+  tenant: string
+  scope: EntitlementScope
+  sequence: number
+  apiKeyRateLimit: { requestsPerMinute: number, burst?: number } | null
+}
+
 export type EntitlementEvent =
   | RoleGrantedEvent
   | RoleRevokedEvent
@@ -85,6 +109,8 @@ export type EntitlementEvent =
   | TrialGrantedEvent
   | TrialExtendedEvent
   | UsageUpdatedEvent
+  | ApiKeyLimitChangedEvent
+  | ApiKeyRateLimitChangedEvent
 
 export interface EntitlementPublisher {
   publish(event: EntitlementEvent): Promise<void>

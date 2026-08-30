@@ -87,6 +87,34 @@ describe('plan mappings -- API contract', () => {
 
       expect(response.statusCode).toBe(409)
     })
+
+    // design/decisions/0101-api-keys.md.
+    it('accepts apiKeyLimit/apiKeyRateLimit, defaulting both to null when omitted', async () => {
+      const withoutFields = await t.app.inject({
+        method: 'POST',
+        url: '/tenants/acme/plan-mappings',
+        headers,
+        payload: { stripePriceId: 'price_basic', name: 'Basic' },
+      })
+      expect(withoutFields.json()).toMatchObject({ apiKeyLimit: null, apiKeyRateLimit: null })
+
+      const withFields = await t.app.inject({
+        method: 'POST',
+        url: '/tenants/acme/plan-mappings',
+        headers,
+        payload: {
+          stripePriceId: 'price_basic',
+          name: 'Basic With Keys',
+          apiKeyLimit: 5,
+          apiKeyRateLimit: { requestsPerMinute: 60, burst: 10 },
+        },
+      })
+      expect(withFields.statusCode).toBe(201)
+      expect(withFields.json()).toMatchObject({
+        apiKeyLimit: 5,
+        apiKeyRateLimit: { requestsPerMinute: 60, burst: 10 },
+      })
+    })
   })
 
   describe('GET /tenants/:tenantSlug/plan-mappings', () => {
@@ -178,6 +206,29 @@ describe('plan mappings -- API contract', () => {
       expect(body.name).toBe('Basic Plus')
       expect(body.seatLimit).toBe(10)
       expect(body.meter).toBe('api-calls')
+    })
+
+    it('updates apiKeyLimit/apiKeyRateLimit', async () => {
+      const created = await t.app.inject({
+        method: 'POST',
+        url: '/tenants/acme/plan-mappings',
+        headers,
+        payload: { stripePriceId: 'price_basic', name: 'Basic' },
+      })
+      const { id } = created.json()
+
+      const response = await t.app.inject({
+        method: 'PATCH',
+        url: `/tenants/acme/plan-mappings/${id}`,
+        headers,
+        payload: { apiKeyLimit: 3, apiKeyRateLimit: { requestsPerMinute: 30 } },
+      })
+
+      expect(response.statusCode).toBe(200)
+      expect(response.json()).toMatchObject({
+        apiKeyLimit: 3,
+        apiKeyRateLimit: { requestsPerMinute: 30 },
+      })
     })
 
     it('applies the same grantedRoles validation as create', async () => {

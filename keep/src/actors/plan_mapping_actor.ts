@@ -21,6 +21,14 @@ export interface GrantedRole {
   role: string
 }
 
+// design/decisions/0101-api-keys.md. `apiKeyRateLimit` mirrors keep's own
+// `EntitlementPublisher`-facing shape 1:1 (see entitlement-publisher.ts) --
+// no separate route-layer type, since nothing here transforms it.
+export interface ApiKeyRateLimit {
+  requestsPerMinute: number
+  burst?: number
+}
+
 export interface PlanMappingState {
   id: string
   tenant: string
@@ -29,6 +37,16 @@ export interface PlanMappingState {
   seatLimit: number | null
   grantedRoles: GrantedRole[]
   meter: string | null
+  // design/decisions/0101-api-keys.md, added after this actor's own
+  // original ADR 0083 design -- same mechanical addition `meter` above
+  // already went through (field + default -> Create/UpdateCommand ->
+  // create()/update() -> created()/updated()). `null` = unlimited, matching
+  // `seatLimit`'s own meaning; unlike `seatLimit`, `{account}` scope is
+  // meaningful for this field (an individual account's own key allowance),
+  // so this plan mapping can target it via `PlanMappingScope` same as any
+  // other field here.
+  apiKeyLimit: number | null
+  apiKeyRateLimit: ApiKeyRateLimit | null
   unitAmount: number | null
   currency: string
   interval: PlanMappingInterval
@@ -44,6 +62,8 @@ interface CreateCommand {
   seatLimit: number | null
   grantedRoles: GrantedRole[]
   meter: string | null
+  apiKeyLimit: number | null
+  apiKeyRateLimit: ApiKeyRateLimit | null
   unitAmount: number
   currency: string
   interval: PlanMappingInterval
@@ -54,6 +74,8 @@ interface UpdateCommand {
   seatLimit?: number | null
   grantedRoles?: GrantedRole[]
   meter?: string | null
+  apiKeyLimit?: number | null
+  apiKeyRateLimit?: ApiKeyRateLimit | null
 }
 
 interface SyncPricingCommand {
@@ -90,6 +112,8 @@ function create(_mapping: PlanMappingState, command: CreateCommand) {
     seatLimit: command.seatLimit,
     grantedRoles: command.grantedRoles,
     meter: command.meter,
+    apiKeyLimit: command.apiKeyLimit,
+    apiKeyRateLimit: command.apiKeyRateLimit,
     unitAmount: command.unitAmount,
     currency: command.currency,
     interval: command.interval,
@@ -103,6 +127,8 @@ function update(_mapping: PlanMappingState, command: UpdateCommand) {
     seatLimit: command.seatLimit,
     grantedRoles: command.grantedRoles,
     meter: command.meter,
+    apiKeyLimit: command.apiKeyLimit,
+    apiKeyRateLimit: command.apiKeyRateLimit,
   }
 }
 
@@ -142,6 +168,8 @@ function created(mapping: PlanMappingState, event: Omit<CreateCommand, 'id'>) {
   mapping.seatLimit = event.seatLimit
   mapping.grantedRoles = event.grantedRoles
   mapping.meter = event.meter
+  mapping.apiKeyLimit = event.apiKeyLimit
+  mapping.apiKeyRateLimit = event.apiKeyRateLimit
   mapping.unitAmount = event.unitAmount
   mapping.currency = event.currency
   mapping.interval = event.interval
@@ -154,6 +182,8 @@ function updated(mapping: PlanMappingState, event: UpdateCommand) {
   if (event.seatLimit !== undefined) mapping.seatLimit = event.seatLimit
   if (event.grantedRoles !== undefined) mapping.grantedRoles = event.grantedRoles
   if (event.meter !== undefined) mapping.meter = event.meter
+  if (event.apiKeyLimit !== undefined) mapping.apiKeyLimit = event.apiKeyLimit
+  if (event.apiKeyRateLimit !== undefined) mapping.apiKeyRateLimit = event.apiKeyRateLimit
 }
 
 function pricingSynced(mapping: PlanMappingState, event: SyncPricingCommand) {
@@ -189,6 +219,8 @@ export default function planMappingActor() {
       seatLimit: null,
       grantedRoles: [],
       meter: null,
+      apiKeyLimit: null,
+      apiKeyRateLimit: null,
       unitAmount: null,
       currency: '',
       interval: 'month',

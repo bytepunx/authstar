@@ -126,6 +126,57 @@ describe('stripe webhook handling -- API contract', () => {
       expect((seatEvent as { seatLimit: number }).seatLimit).toBe(5)
     })
 
+    // design/decisions/0101-api-keys.md.
+    it('publishes api-key-limit-changed/api-key-rate-limit-changed for an ACCOUNT-scoped subscription -- unlike seatLimit, {account} scope is meaningful here', async () => {
+      await t.app.inject({
+        method: 'POST',
+        url: '/tenants/acme/plan-mappings',
+        headers: manageHeaders,
+        payload: {
+          stripePriceId: 'price_pro',
+          name: 'Pro',
+          apiKeyLimit: 5,
+          apiKeyRateLimit: { requestsPerMinute: 60, burst: 10 },
+        },
+      })
+
+      await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_apikey_account',
+        customer: 'cus_apikey_account',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_pro' } }] },
+        metadata: { scope: JSON.stringify({ account: 'acct_apikey' }) },
+      }))
+
+      const limitEvent = t.publisher.published.find((e) => e.type === 'entitlement.api-key-limit-changed')
+      expect(limitEvent).toBeDefined()
+      expect(limitEvent).toMatchObject({ scope: { account: 'acct_apikey' }, apiKeyLimit: 5 })
+
+      const rateLimitEvent = t.publisher.published.find((e) => e.type === 'entitlement.api-key-rate-limit-changed')
+      expect(rateLimitEvent).toBeDefined()
+      expect(rateLimitEvent).toMatchObject({
+        scope: { account: 'acct_apikey' },
+        apiKeyRateLimit: { requestsPerMinute: 60, burst: 10 },
+      })
+    })
+
+    it('publishes neither api-key event when the plan mapping never set them (null-is-silent, same convention as seatLimit)', async () => {
+      // beforeEach's "Basic" mapping (price_basic) sets seatLimit but never apiKeyLimit/apiKeyRateLimit.
+      await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_no_api_key_fields',
+        customer: 'cus_no_api_key_fields',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+        metadata: { scope: JSON.stringify({ account: 'acct_plain' }) },
+      }))
+
+      const publishedTypes = t.publisher.published.map((e) => e.type)
+      expect(publishedTypes).not.toContain('entitlement.api-key-limit-changed')
+      expect(publishedTypes).not.toContain('entitlement.api-key-rate-limit-changed')
+    })
+
     it('is idempotent against a redelivered event for the same subscription id', async () => {
       const payload = stripeEventPayload('customer.subscription.created', {
         id: 'sub_2',

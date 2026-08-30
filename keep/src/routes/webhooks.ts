@@ -168,6 +168,38 @@ async function publishSeatLimitIfSet(app: FastifyInstance, tenant: string, scope
   })
 }
 
+// design/decisions/0101-api-keys.md: mirrors `publishSeatLimitIfSet`'s
+// null-is-silent convention (a mapping that never set a limit publishes
+// nothing, rather than an explicit "unlimited" event on every activation),
+// but -- unlike that function -- does **not** restrict `scope` to
+// `{tenant}|{organization}`. An individual account's own API-key allowance
+// is meaningful (unlike seats), so `{account}` scope publishes here too;
+// `isEntitlementScope` (already true for every `Scope` this file produces)
+// is the only gate needed.
+async function publishApiKeyLimitIfSet(app: FastifyInstance, tenant: string, scope: Scope, apiKeyLimit: number | null) {
+  if (apiKeyLimit === null || !isEntitlementScope(scope)) return
+  const sequence = await app.sequences.next(tenant, scope)
+  await app.entitlements.publish({
+    type: 'entitlement.api-key-limit-changed',
+    tenant,
+    scope,
+    sequence,
+    apiKeyLimit,
+  })
+}
+
+async function publishApiKeyRateLimitIfSet(app: FastifyInstance, tenant: string, scope: Scope, apiKeyRateLimit: { requestsPerMinute: number, burst?: number } | null) {
+  if (apiKeyRateLimit === null || !isEntitlementScope(scope)) return
+  const sequence = await app.sequences.next(tenant, scope)
+  await app.entitlements.publish({
+    type: 'entitlement.api-key-rate-limit-changed',
+    tenant,
+    scope,
+    sequence,
+    apiKeyRateLimit,
+  })
+}
+
 // Shared by `checkout.session.completed`/`customer.subscription.created`
 // and, indirectly, subscription renewal -- creates/updates the `customer`
 // and `subscription` records, converts an in-progress trial if one exists,
@@ -205,6 +237,8 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
   if (mapping) {
     await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-granted')
     await publishSeatLimitIfSet(app, tenant, scope, mapping.seatLimit)
+    await publishApiKeyLimitIfSet(app, tenant, scope, mapping.apiKeyLimit)
+    await publishApiKeyRateLimitIfSet(app, tenant, scope, mapping.apiKeyRateLimit)
   }
 }
 
@@ -228,7 +262,11 @@ async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: 
     const diff = diffRoles(previousMapping?.grantedRoles ?? [], newMapping?.grantedRoles ?? [])
     await publishRoleEvents(app, tenant, scope, diff.granted, 'entitlement.role-granted')
     await publishRoleEvents(app, tenant, scope, diff.revoked, 'entitlement.role-revoked')
-    if (newMapping) await publishSeatLimitIfSet(app, tenant, scope, newMapping.seatLimit)
+    if (newMapping) {
+      await publishSeatLimitIfSet(app, tenant, scope, newMapping.seatLimit)
+      await publishApiKeyLimitIfSet(app, tenant, scope, newMapping.apiKeyLimit)
+      await publishApiKeyRateLimitIfSet(app, tenant, scope, newMapping.apiKeyRateLimit)
+    }
   }
 }
 

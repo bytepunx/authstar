@@ -1,6 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { searchCriteria } from '../lib/consequent-types.js'
-import type { PlanMappingState, GrantedRole } from '../actors/plan_mapping_actor.js'
+import type { PlanMappingState, GrantedRole, ApiKeyRateLimit } from '../actors/plan_mapping_actor.js'
 import generateId from '../lib/ids.js'
 import { requirePermission } from '../lib/permissions.js'
 
@@ -28,6 +28,16 @@ const grantedRoleSchema = {
   },
 } as const
 
+const apiKeyRateLimitSchema = {
+  type: 'object',
+  additionalProperties: false,
+  required: ['requestsPerMinute'],
+  properties: {
+    requestsPerMinute: { type: 'integer', minimum: 1 },
+    burst: { type: 'integer', minimum: 1 },
+  },
+} as const
+
 const createBodySchema = {
   type: 'object',
   additionalProperties: false,
@@ -38,6 +48,8 @@ const createBodySchema = {
     seatLimit: { type: ['integer', 'null'], minimum: 1 },
     grantedRoles: { type: 'array', items: grantedRoleSchema },
     meter: { type: ['string', 'null'] },
+    apiKeyLimit: { type: ['integer', 'null'], minimum: 0 },
+    apiKeyRateLimit: { oneOf: [apiKeyRateLimitSchema, { type: 'null' }] },
   },
 } as const
 
@@ -49,6 +61,8 @@ const updateBodySchema = {
     seatLimit: { type: ['integer', 'null'], minimum: 1 },
     grantedRoles: { type: 'array', items: grantedRoleSchema },
     meter: { type: ['string', 'null'] },
+    apiKeyLimit: { type: ['integer', 'null'], minimum: 0 },
+    apiKeyRateLimit: { oneOf: [apiKeyRateLimitSchema, { type: 'null' }] },
   },
 } as const
 
@@ -89,6 +103,8 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
       seatLimit?: number | null
       grantedRoles?: GrantedRole[]
       meter?: string | null
+      apiKeyLimit?: number | null
+      apiKeyRateLimit?: ApiKeyRateLimit | null
     }
 
     const grantedRoles = body.grantedRoles ?? []
@@ -120,6 +136,8 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
       seatLimit: body.seatLimit ?? null,
       grantedRoles,
       meter: body.meter ?? null,
+      apiKeyLimit: body.apiKeyLimit ?? null,
+      apiKeyRateLimit: body.apiKeyRateLimit ?? null,
       unitAmount: price.unitAmount,
       currency: price.currency,
       interval: price.interval,
@@ -157,7 +175,14 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
 
   app.patch('/tenants/:tenantSlug/plan-mappings/:id', { schema: { params: idParamsSchema, body: updateBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
-    const body = request.body as { name?: string, seatLimit?: number | null, grantedRoles?: GrantedRole[], meter?: string | null }
+    const body = request.body as {
+      name?: string
+      seatLimit?: number | null
+      grantedRoles?: GrantedRole[]
+      meter?: string | null
+      apiKeyLimit?: number | null
+      apiKeyRateLimit?: ApiKeyRateLimit | null
+    }
 
     const current = await fetchMapping(app, id)
     if (!exists(current) || current.tenant !== tenantSlug) {
@@ -177,6 +202,8 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
       seatLimit: body.seatLimit,
       grantedRoles: body.grantedRoles,
       meter: body.meter,
+      apiKeyLimit: body.apiKeyLimit,
+      apiKeyRateLimit: body.apiKeyRateLimit,
     })
     const rejection = results.find((r) => r?.rejected)
     if (rejection) {
