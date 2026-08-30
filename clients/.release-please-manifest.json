@@ -1,4 +1,4 @@
 {
-  "typescript/core": "2.0.0",
+  "typescript/core": "2.1.0",
   "typescript/fastify": "2.0.1"
 }

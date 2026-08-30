@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/bytepunx/authstar-clients/compare/core-v2.0.0...core-v2.1.0) (2026-08-30)
+
+
+### Features
+
+* **core:** add InternalClaims.apiKeyId (ADR 0101) ([4465928](https://github.com/bytepunx/authstar-clients/commit/4465928e64f24987dfa8d713632f39ed55b669a6))
+
 ## [2.0.0](https://github.com/bytepunx/authstar-clients/compare/core-v1.0.0...core-v2.0.0) (2026-08-29)
 
 
