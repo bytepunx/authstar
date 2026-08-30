@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.0.1](https://github.com/bytepunx/authstar-clients/compare/fastify-v2.0.0...fastify-v2.0.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **fastify:** actually inline core's bundled types, not dangling imports ([03a0c49](https://github.com/bytepunx/authstar-clients/commit/03a0c4982732fe2c915011271c957413d0f564cb))
+
 ## [2.0.0](https://github.com/bytepunx/authstar-clients/compare/fastify-v1.0.0...fastify-v2.0.0) (2026-08-29)
 
 
