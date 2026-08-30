@@ -30,6 +30,8 @@ import registerInviteRoutes from '../routes/invites.js'
 import registerInviteCodeRoutes from '../routes/invite-codes.js'
 import registerActivityRoutes from '../routes/activity.js'
 import registerOperatorRoutes from '../routes/operator.js'
+import registerApiKeyRoutes from '../routes/api-keys.js'
+import registerVerifyApiKeyRoutes from '../routes/verify-api-key.js'
 
 const defaultProvisioningConfig: ProvisioningConfig = {
   selfServiceEnabled: true,
@@ -147,5 +149,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   await app.register(registerInviteCodeRoutes)
   await app.register(registerActivityRoutes)
   await app.register(registerOperatorRoutes)
+  await app.register(registerApiKeyRoutes)
+  await app.register(registerVerifyApiKeyRoutes)
   return app
 }

@@ -1,4 +1,6 @@
 import type { preHandlerHookHandler, FastifyRequest } from 'fastify'
+import type { AccountState } from '../actors/account_actor.js'
+import { filterRolesForApplication } from './roles.js'
 
 // ADR 0051's consolidated permissions catalog table -- "treated as the
 // canonical list going forward." Deduplicated (the table lists
@@ -174,6 +176,44 @@ export function requireSelfOrOrganizationManager(orgParamName = 'organizationId'
  * already covers the legitimate support/recovery case for this route, same
  * as everywhere else in this codebase.
  */
+/**
+ * design/decisions/0101-api-keys.md: gates `routes/api-keys.ts`'s personal
+ * (non-organization) key routes on the caller holding a specific
+ * application-scope role -- `api-keys:manage` is this route's only real
+ * caller today, but this is written generically (any app-scope role name).
+ *
+ * **Deliberately does not use `request.authstar.roles`**, unlike every
+ * other gate in this file that reads straight off the verified token.
+ * `claims.roles` is portcullis's own `grantedRoles + active trialRoles`,
+ * already filtered by `/enrich`'s `application` field to whatever
+ * application the *current inbound request* was proxied for (confirmed
+ * directly against portcullis's `enricher.rs`) -- for a request landing on
+ * tower's own API, that's tower's own admin-surface application slug, not
+ * the arbitrary tenant `{appSlug}` route param this route needs to check
+ * roles against. So this fetches the account's live `grantedRoles` directly
+ * (same live-lookup pattern `routes/invite-codes.ts`'s own
+ * `callerMaxOutstanding` already uses) and filters with the same
+ * `filterRolesForApplication` helper `/enrich` itself uses, just against
+ * `{appSlug}` instead of the request's own proxied application.
+ */
+export function requireAppRole(roleName: string, appParamName = 'appSlug'): preHandlerHookHandler {
+  return async (request, reply) => {
+    const claims = request.authstar
+    const params = request.params as Record<string, string>
+    if (claims?.enrichmentStatus !== 'ok' || !claims.accountId) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+    if (claims.permissions.includes('accounts:manage')) return
+
+    const instance = await request.server.consequent.fetch('account', claims.accountId)
+    const state = instance?.state as unknown as AccountState | undefined
+    const roles = state ? filterRolesForApplication(state.grantedRoles, params[appParamName]) : []
+    if (!roles.includes(roleName)) {
+      return reply.code(403).send({ error: 'forbidden' })
+    }
+  }
+}
+
 export function requireSelf(paramName = 'accountId'): preHandlerHookHandler {
   return async (request, reply) => {
     const claims = request.authstar

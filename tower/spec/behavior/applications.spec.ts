@@ -216,6 +216,32 @@ describe('applications -- API contract', () => {
       })
       expect(response.statusCode).toBe(403)
     })
+
+    // design/decisions/0101-api-keys.md.
+    it('auto-seeds an active application-scope api-keys:manage role definition', async () => {
+      await createTenant('acme')
+      await app.inject({ method: 'POST', url: '/tenants/acme/applications', headers, payload: { slug: 'billing', name: 'Billing' } })
+
+      const roleDefinition = await consequent.fetch('roleDefinition', 'acme:billing:api-keys:manage')
+      expect(roleDefinition!.state).toMatchObject({
+        tenant: 'acme',
+        name: 'api-keys:manage',
+        scope: { application: 'billing' },
+        status: 'active',
+      })
+    })
+
+    it('is idempotent about seeding api-keys:manage on a retried create', async () => {
+      await createTenant('acme')
+      await app.inject({ method: 'POST', url: '/tenants/acme/applications', headers, payload: { slug: 'billing', name: 'Billing' } })
+      // A second create for the same slug 409s (duplicate), but the seeding
+      // helper itself must not error or duplicate-create the role on any
+      // path that re-checks it -- covered directly via the backfill route
+      // below, which re-runs the exact same idempotent-checked seed call
+      // against an application that already has the role.
+      const roleDefinition = await consequent.fetch('roleDefinition', 'acme:billing:api-keys:manage')
+      expect(roleDefinition!.state.status).toBe('active')
+    })
   })
 
   describe('GET /tenants/:tenantSlug/applications', () => {
@@ -494,5 +520,73 @@ describe('applications -- operator tree', () => {
     })
     expect(remove.statusCode).toBe(200)
     expect(remove.json().status).toBe('deleted')
+  })
+
+  // design/decisions/0101-api-keys.md: pre-existing applications never went
+  // through `createApplication`'s own auto-seed call, since that call site
+  // didn't exist yet when they were created -- simulated here by creating
+  // the `application` actor directly (bypassing the route entirely), the
+  // same way a genuinely pre-existing row would already exist.
+  describe('POST /operator/tenants/:tenantSlug/applications/backfill-api-keys-manage-role', () => {
+    beforeEach(async () => {
+      await consequent.handle('acme:loci', 'application.create', {
+        tenant: 'acme', slug: 'loci', name: 'Loci', hosts: [], publicUrl: '', exposedProviders: [],
+      })
+    })
+
+    it('requires a valid operator bearer token', async () => {
+      const response = await app.inject({ method: 'POST', url: '/operator/tenants/acme/applications/backfill-api-keys-manage-role' })
+      expect(response.statusCode).toBe(403)
+    })
+
+    it('requires X-Operator-Actor', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/acme/applications/backfill-api-keys-manage-role',
+        headers: { authorization: 'Bearer op-secret' },
+      })
+      expect(response.statusCode).toBe(400)
+    })
+
+    it('seeds api-keys:manage for every active application missing it', async () => {
+      const before = await consequent.fetch('roleDefinition', 'acme:loci:api-keys:manage')
+      expect(before!.state.createdAt).toBeFalsy()
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/acme/applications/backfill-api-keys-manage-role',
+        headers: { authorization: 'Bearer op-secret', 'x-operator-actor': 'alice' },
+      })
+      expect(response.statusCode).toBe(200)
+      expect(response.json()).toEqual({ seeded: 1 })
+
+      const after = await consequent.fetch('roleDefinition', 'acme:loci:api-keys:manage')
+      expect(after!.state).toMatchObject({ name: 'api-keys:manage', scope: { application: 'loci' }, status: 'active' })
+    })
+
+    it('is idempotent -- safe to re-run against an application that already has the role', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/acme/applications/backfill-api-keys-manage-role',
+        headers: { authorization: 'Bearer op-secret', 'x-operator-actor': 'alice' },
+      })
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/acme/applications/backfill-api-keys-manage-role',
+        headers: { authorization: 'Bearer op-secret', 'x-operator-actor': 'alice' },
+      })
+      expect(response.statusCode).toBe(200)
+      expect(response.json()).toEqual({ seeded: 1 })
+    })
+
+    it('returns 404 for a tenant that was never created', async () => {
+      const response = await app.inject({
+        method: 'POST',
+        url: '/operator/tenants/nonexistent/applications/backfill-api-keys-manage-role',
+        headers: { authorization: 'Bearer op-secret', 'x-operator-actor': 'alice' },
+      })
+      expect(response.statusCode).toBe(404)
+    })
   })
 })

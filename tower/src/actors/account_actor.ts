@@ -42,6 +42,11 @@ export interface UsageRecord {
   periodLimit: number | null
 }
 
+export interface ApiKeyRateLimit {
+  requestsPerMinute: number
+  burst?: number
+}
+
 export interface AccountState {
   accountId: string
   tenant: string
@@ -53,6 +58,17 @@ export interface AccountState {
   trialExpiresAt: string | null
   permissions: PermissionGrant[]
   usage: UsageRecord[]
+  // design/decisions/0101-api-keys.md: sourced from keep's plan-mapping
+  // entitlement pipeline (`lib/entitlement-consumer.ts`'s new
+  // `api-key-limit-changed`/`api-key-rate-limit-changed` cases), same as
+  // `organization.apiKeyLimit` below. `apiKeyLimit` defaults to `0`
+  // (fail-closed), not `null` -- an account that never received a plan
+  // grant can't reach `routes/api-keys.ts`'s create path anyway (it also
+  // needs `api-keys:manage` in `grantedRoles`), but this keeps the limit
+  // check itself fail-safe on its own, matching ADR 0100's own
+  // `organization.seatLimit` null-means-one-seat divergence reasoning.
+  apiKeyLimit: number | null
+  apiKeyRateLimit: ApiKeyRateLimit | null
   createdAt: string
 }
 
@@ -97,6 +113,14 @@ interface UpdateUsageCommand {
 interface ChangeEmailCommand {
   contactId: string
   actingAs?: string
+}
+
+interface SetApiKeyLimitCommand {
+  apiKeyLimit: number | null
+}
+
+interface SetApiKeyRateLimitCommand {
+  apiKeyRateLimit: ApiKeyRateLimit | null
 }
 
 interface StatusChangeCommand {
@@ -168,6 +192,14 @@ function changeEmail(_account: AccountState, command: ChangeEmailCommand) {
   return { type: 'account.contact-changed', contactId: command.contactId, ...actingAsFields(command) }
 }
 
+function setApiKeyLimit(_account: AccountState, command: SetApiKeyLimitCommand) {
+  return { type: 'account.api-key-limit-set', apiKeyLimit: command.apiKeyLimit }
+}
+
+function setApiKeyRateLimit(_account: AccountState, command: SetApiKeyRateLimitCommand) {
+  return { type: 'account.api-key-rate-limit-set', apiKeyRateLimit: command.apiKeyRateLimit }
+}
+
 function updateUsage(_account: AccountState, command: UpdateUsageCommand) {
   return {
     type: 'account.usage-updated',
@@ -233,6 +265,8 @@ function created(account: AccountState, event: CreateCommand) {
   account.trialExpiresAt = null
   account.permissions = []
   account.usage = []
+  account.apiKeyLimit = 0
+  account.apiKeyRateLimit = null
   account.createdAt = new Date(0).toISOString() // replaced by consequent's own event timestamp on read
 }
 
@@ -315,6 +349,14 @@ function contactChanged(account: AccountState, event: { contactId: string }) {
   account.contactId = event.contactId
 }
 
+function apiKeyLimitSet(account: AccountState, event: { apiKeyLimit: number | null }) {
+  account.apiKeyLimit = event.apiKeyLimit
+}
+
+function apiKeyRateLimitSet(account: AccountState, event: { apiKeyRateLimit: ApiKeyRateLimit | null }) {
+  account.apiKeyRateLimit = event.apiKeyRateLimit
+}
+
 export default function accountActor() {
   return {
     actor: {
@@ -334,6 +376,8 @@ export default function accountActor() {
       trialExpiresAt: null,
       permissions: [],
       usage: [],
+      apiKeyLimit: 0,
+      apiKeyRateLimit: null,
       createdAt: '',
     },
     commands: {
@@ -345,6 +389,8 @@ export default function accountActor() {
       'revoke-permission': revokePermission,
       'update-usage': updateUsage,
       'change-email': changeEmail,
+      'set-api-key-limit': setApiKeyLimit,
+      'set-api-key-rate-limit': setApiKeyRateLimit,
       suspend: [
         { when: isActive, then: suspend },
         rejectSuspend,
@@ -367,6 +413,8 @@ export default function accountActor() {
       'permission-revoked': permissionRevoked,
       'usage-updated': usageUpdated,
       'contact-changed': contactChanged,
+      'api-key-limit-set': apiKeyLimitSet,
+      'api-key-rate-limit-set': apiKeyRateLimitSet,
       suspended,
       activated,
       deleted,

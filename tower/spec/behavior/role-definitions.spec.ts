@@ -376,6 +376,34 @@ describe('role-definitions -- API contract', () => {
       expect(response.json().status).toBe('retired')
     })
   })
+
+  // design/decisions/0101-api-keys.md: the first application-scope (not
+  // organization-scope) built-in role, same protected-retirement treatment.
+  describe('the built-in application-scope api-keys:manage role cannot be retired', () => {
+    it('rejects retiring "api-keys:manage" for an application', async () => {
+      await createTenant('acme')
+      await consequent.handle('acme:app1:api-keys:manage', 'roleDefinition.create', {
+        tenant: 'acme', name: 'api-keys:manage', scope: { application: 'app1' }, description: 'built in',
+      })
+
+      const response = await app.inject({ method: 'DELETE', url: `/tenants/acme/role-definitions/${encodeURIComponent('acme:app1:api-keys:manage')}`, headers })
+      expect(response.statusCode).toBe(409)
+
+      const instance = await consequent.fetch('roleDefinition', 'acme:app1:api-keys:manage')
+      expect(instance!.state.status).toBe('active')
+    })
+
+    it('a tenant-defined custom application role (not api-keys:manage) can still be retired normally', async () => {
+      await createTenant('acme')
+      await consequent.handle('acme:app1:editor', 'roleDefinition.create', {
+        tenant: 'acme', name: 'editor', scope: { application: 'app1' }, description: 'custom',
+      })
+
+      const response = await app.inject({ method: 'DELETE', url: `/tenants/acme/role-definitions/${encodeURIComponent('acme:app1:editor')}`, headers })
+      expect(response.statusCode).toBe(200)
+      expect(response.json().status).toBe('retired')
+    })
+  })
 })
 
 // Story 013's operator tree -- same handlers, bearer-token auth instead of

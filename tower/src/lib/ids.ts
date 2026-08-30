@@ -14,6 +14,7 @@ export interface IdGenerator {
   nextIdentityId(): string
   nextOrganizationId(): string
   nextOrganizationMembershipId(): string
+  nextApiKeyId(): string
 }
 
 export function createIdGenerator(nodeIdentifier = 'tower'): IdGenerator {
@@ -23,5 +24,6 @@ export function createIdGenerator(nodeIdentifier = 'tower'): IdGenerator {
     nextIdentityId: () => provider(),
     nextOrganizationId: () => provider(),
     nextOrganizationMembershipId: () => provider(),
+    nextApiKeyId: () => provider(),
   }
 }

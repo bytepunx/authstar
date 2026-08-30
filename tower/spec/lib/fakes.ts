@@ -106,15 +106,17 @@ export function createSpyPublisher(): SpyPublisher {
   }
 }
 
-export function createDeterministicIds(prefix = 'acct'): { nextAccountId: () => string, nextIdentityId: () => string, nextOrganizationId: () => string, nextOrganizationMembershipId: () => string } {
+export function createDeterministicIds(prefix = 'acct'): { nextAccountId: () => string, nextIdentityId: () => string, nextOrganizationId: () => string, nextOrganizationMembershipId: () => string, nextApiKeyId: () => string } {
   let accountCounter = 0
   let identityCounter = 0
   let organizationCounter = 0
   let membershipCounter = 0
+  let apiKeyCounter = 0
   return {
     nextAccountId: () => `${prefix}-${++accountCounter}`,
     nextIdentityId: () => `identity-${++identityCounter}`,
     nextOrganizationId: () => `org-${++organizationCounter}`,
     nextOrganizationMembershipId: () => `membership-${++membershipCounter}`,
+    nextApiKeyId: () => `apikey-${++apiKeyCounter}`,
   }
 }

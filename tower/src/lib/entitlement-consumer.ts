@@ -41,6 +41,8 @@ interface EntitlementEnvelope {
   grantedRoles?: RoleRef[]
   trialExpiresAt?: string
   seatLimit?: number | null
+  apiKeyLimit?: number | null
+  apiKeyRateLimit?: { requestsPerMinute: number, burst?: number } | null
 }
 
 function accountIdFrom(scope: EntitlementEnvelope['scope']): string | undefined {
@@ -139,6 +141,41 @@ export async function handleEntitlementEvent(
       const tenant = tenantIdFrom(payload.scope) ?? payload.tenant
       if (!tenant) return
       await consequent.handle(tenant, 'tenant.set-seat-limit', { seatLimit: payload.seatLimit ?? null })
+      return
+    }
+    // design/decisions/0101-api-keys.md: unlike `seat-limit-changed` above,
+    // `EntitlementScope` here can be `{account}` as well as `{organization}`
+    // -- an individual account's own key limit is meaningful, keep's
+    // `entitlement-publisher.ts` deliberately doesn't restrict these two
+    // event types to `{tenant}|{organization}` the way `SeatLimitChangedEvent`
+    // is restricted. No `{tenant}` fallback -- this feature is entirely
+    // plan-mapping-scoped, never provisioning-time tenant-wide.
+    case 'api-key-limit-changed': {
+      // `payload.apiKeyLimit` is `number | null | undefined` -- `null`
+      // (keep's own "unlimited") must survive as `null`, not collapse to
+      // the fail-closed `0` default; only a genuinely *missing* field
+      // (malformed/older-producer message) falls back to `0`. A plain `??`
+      // would wrongly treat an explicit `null` the same as `undefined`.
+      const apiKeyLimit = payload.apiKeyLimit === undefined ? 0 : payload.apiKeyLimit
+      const organizationId = organizationIdFrom(payload.scope)
+      if (organizationId) {
+        await consequent.handle(organizationId, 'organization.set-api-key-limit', { apiKeyLimit })
+        return
+      }
+      const accountId = accountIdFrom(payload.scope)
+      if (!accountId) return
+      await consequent.handle(accountId, 'account.set-api-key-limit', { apiKeyLimit })
+      return
+    }
+    case 'api-key-rate-limit-changed': {
+      const organizationId = organizationIdFrom(payload.scope)
+      if (organizationId) {
+        await consequent.handle(organizationId, 'organization.set-api-key-rate-limit', { apiKeyRateLimit: payload.apiKeyRateLimit ?? null })
+        return
+      }
+      const accountId = accountIdFrom(payload.scope)
+      if (!accountId) return
+      await consequent.handle(accountId, 'account.set-api-key-rate-limit', { apiKeyRateLimit: payload.apiKeyRateLimit ?? null })
       return
     }
     default:

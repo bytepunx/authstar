@@ -6,6 +6,7 @@ import { requirePermission } from '../lib/permissions.js'
 import { requireOperatorAuth, requireOperatorActor } from '../lib/operator-auth.js'
 import { createKeyedMutex } from '../lib/mutex.js'
 import { searchCriteria } from '../lib/consequent-types.js'
+import { roleDefinitionKey } from '../lib/role-definition-lookup.js'
 
 // Per design/stories/tower/004-applications-and-providers.md (Applications
 // half only -- Providers CRUD is a separate, ADR-0047-unrelated surface,
@@ -89,6 +90,26 @@ const SLUG_PATTERN = /^[a-z0-9-]+$/
 
 function appKeyFor(tenantSlug: string, appSlug: string): string {
   return `${tenantSlug}:${appSlug}`
+}
+
+// design/decisions/0101-api-keys.md: `api-keys:manage` is the first
+// application-scope baked-in role, seeded per application at creation time
+// (unlike the four organization-scope roles, seeded once per tenant at
+// provisioning time -- routes/provisioning.ts). Idempotent, same
+// fetch-before-create check that seeding step already uses -- safe to call
+// on a slug that already has the role (a retried create request, or the
+// one-time backfill for applications that predate this feature).
+async function seedApiKeysManageRole(app: FastifyInstance, tenantSlug: string, appSlug: string): Promise<void> {
+  const key = roleDefinitionKey(tenantSlug, 'api-keys:manage', { application: appSlug })
+  const existing = await app.consequent.fetch('roleDefinition', key)
+  const existingState = existing?.state as unknown as { createdAt: string } | undefined
+  if (existingState?.createdAt) return
+  await app.consequent.handle(key, 'roleDefinition.create', {
+    tenant: tenantSlug,
+    name: 'api-keys:manage',
+    scope: { application: appSlug },
+    description: 'Create and manage API keys for this application.',
+  })
 }
 
 async function fetchTenant(app: FastifyInstance, tenantSlug: string): Promise<TenantState> {
@@ -255,6 +276,8 @@ async function createApplication(app: FastifyInstance, request: FastifyRequest, 
     return reply.code(outcome.status).send({ error: outcome.error })
   }
 
+  await seedApiKeysManageRole(app, tenantSlug, body.slug)
+
   await app.publisher.publish('application.created', {
     tenant: tenantSlug, application: body.slug, name: body.name, status: 'active',
   })
@@ -347,6 +370,32 @@ async function deleteApplication(app: FastifyInstance, request: FastifyRequest, 
   return toResponse(updated!)
 }
 
+// design/decisions/0101-api-keys.md: a one-time backfill for every
+// already-active application that predates `api-keys:manage` auto-seeding
+// -- deliberately idempotent (safe to re-run; `seedApiKeysManageRole`
+// itself no-ops once seeded), operator-only, no standalone script.
+// Reusing this route's already-connected `consequent` instance is simpler
+// and more testable than reimplementing this file's own production
+// bootstrap (signet dial, SPIFFE, Postgres pool -- server.ts) for a
+// one-off maintenance task.
+async function backfillApiKeysManageRole(app: FastifyInstance, request: FastifyRequest, reply: FastifyReply) {
+  const { tenantSlug } = request.params as { tenantSlug: string }
+  const tenant = await fetchTenant(app, tenantSlug)
+  if (!tenantExists(tenant)) return reply.code(404).send()
+
+  const instances = await app.consequent.find('application', searchCriteria({ tenant: tenantSlug, status: 'active' }))
+  const slugs = instances
+    .map((i) => i.state as unknown as ApplicationState)
+    .filter((s) => s.slug !== '_admin')
+    .map((s) => s.slug)
+
+  for (const slug of slugs) {
+    await seedApiKeysManageRole(app, tenantSlug, slug)
+  }
+
+  return reply.code(200).send({ seeded: slugs.length })
+}
+
 const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   // Per ADR 0051's screen design: `_admin` is excluded from this list
   // entirely, not just filtered -- it's system-managed, exposing it here
@@ -420,6 +469,16 @@ const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     '/operator/tenants/:tenantSlug/applications/:appSlug',
     { schema: { params: appParamsSchema }, preHandler: requireOperatorActor(app) },
     (request, reply) => deleteApplication(app, request, reply),
+  )
+
+  // design/decisions/0101-api-keys.md: one-time, operator-only, idempotent
+  // backfill for applications created before `api-keys:manage` auto-seeding
+  // existed. Mutating (creates roleDefinition actors), so `requireOperatorActor`
+  // (needs `X-Operator-Actor`), same as every other mutating operator route.
+  app.post(
+    '/operator/tenants/:tenantSlug/applications/backfill-api-keys-manage-role',
+    { schema: { params: tenantParamsSchema }, preHandler: requireOperatorActor(app) },
+    (request, reply) => backfillApiKeysManageRole(app, request, reply),
   )
 }
 

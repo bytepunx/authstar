@@ -97,6 +97,15 @@ function isActive(state: RoleDefinitionState) {
 // access levels.
 const PROTECTED_ORGANIZATION_ROLES = new Set(['manager', 'member', 'billingAdmin', 'billingViewer'])
 
+// design/decisions/0101-api-keys.md: the first *application*-scope (not
+// organization/tenant-scope) baked-in role -- authstar interprets this one
+// role name as its own access-control primitive (routes/api-keys.ts checks
+// for it directly) the same narrow way it already does for the four
+// organization roles above, so it gets the same retirement protection.
+// Seeded per application at creation time (routes/applications.ts), not
+// per tenant at provisioning time.
+const PROTECTED_APPLICATION_ROLE_NAMES = new Set(['api-keys:manage'])
+
 // Command `then` handlers for an already-existing actor receive the full
 // instance wrapper (`{state, actor, ...}`), not the state alone -- the same
 // asymmetry organization_actor.ts's own header comment documents (confirmed
@@ -109,6 +118,9 @@ interface ActorInstance {
 function retire(instance: ActorInstance) {
   if (instance.state.scope === 'organization' && PROTECTED_ORGANIZATION_ROLES.has(instance.state.name)) {
     return Promise.reject(new Error('this organization role is built into authstar and cannot be retired'))
+  }
+  if (typeof instance.state.scope === 'object' && PROTECTED_APPLICATION_ROLE_NAMES.has(instance.state.name)) {
+    return Promise.reject(new Error('this application role is built into authstar and cannot be retired'))
   }
   return { type: 'roleDefinition.retired' }
 }
