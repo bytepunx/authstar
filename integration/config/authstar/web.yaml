@@ -1,23 +1,50 @@
 # Plain (non-secret) config for web.
 #
-# NOTE: web has NO signet-client dependency at all (confirmed: no
+# NOTE: web has NO signet-client dependency at all yet (confirmed: no
 # @bytepunx/signet-client in package.json; every "signet" reference in the
 # tree is a comment flagging deferred work, e.g. src/lib/server/jwt.ts:6-9,
-# hooks.server.ts:7-15). It currently reads TOWER_BASE_URL/
-# INTERNAL_JWT_JWKS_URL/PUBLIC_TOWER_BASE_URL as plain env vars, and with
-# INTERNAL_JWT_JWKS_URL unset every request is treated as unauthenticated
-# (explicit comment in hooks.server.ts). This file is provisioned ahead of
-# that wiring landing.
+# hooks.server.ts:7-15). It currently reads TOWER_BASE_URL/KEEP_BASE_URL/
+# INTERNAL_JWT_JWKS_URL/PUBLIC_TOWER_BASE_URL as plain env vars. This file
+# is provisioned ahead of web's own companion PR (story 012) landing that
+# wiring; manifests/16-web.yaml now sets the equivalent plain env vars too,
+# so today's Env-Only Mode already gets a real (not unset) value for
+# INTERNAL_JWT_JWKS_URL -- see that field's own comment below for the two
+# remaining gaps before it actually authenticates anything.
 #
 # No secret scope is provisioned for web: it holds no signing key of its own
 # (it only verifies portcullis-signed JWTs via a JWKS URL), and that JWKS
 # endpoint is public key material, not a secret.
 #
-# internalJwtJwksUrl is intentionally left unset: portcullis's own code has
-# no JWKS-serving route yet (grepped crates/authstar-middleware for "jwks" —
-# no hits outside test/doc strings), so pointing this at any URL would just
-# 404. With it unset, web's own hooks.server.ts falls back to treating every
-# request as unauthenticated (its own documented behavior) — real gap, not
-# this file's bug to paper over.
+# internalJwtJwksUrl: per ADR 0102 this was the priority gap ("real
+# auth-relevant gap, not just a docs issue") -- now set for real, not a
+# placeholder. ADR 0086 decides portcullis serves JWKS per-tenant, resolved
+# by Host, at GET https://<tenant-host>/.well-known/jwks.json; ADR 0091 /
+# tower's own tenant provisioning register a dedicated
+# `admin.<slug>.<baseDomain>` host per tenant specifically for this
+# convention (`perTenantJwksKeyProvider`) -- config/authstar/portcullis.yaml
+# already lists `admin.acme.authstar.app` under the `acme` tenant's `web`
+# application hosts for exactly this reason (see that file's own comment).
+# Using that host, not the tenant's regular public host, matches the
+# convention every JWT-consuming service is meant to resolve against.
+#
+# TWO GAPS STILL BLOCK THIS FROM ACTUALLY WORKING, NEITHER FIXED BY SETTING
+# THIS VALUE -- flagged for operator verification before deploy:
+#   1. Portcullis has NO `/.well-known/jwks.json` route implemented yet
+#      (ADR 0086's decision, filed as bytepunx/authstar-portcullis#2 --
+#      NOT one of the seven companion PRs this signet-precedence pass
+#      wires up). This URL 404s until that lands.
+#   2. Even once it does, this repo's own README ("Not yet done") already
+#      confirmed live that web running *inside* the cluster has no DNS
+#      path to `admin.acme.authstar.app` at all -- no in-cluster DNS entry
+#      for the public tenant domain exists. A real fix needs in-cluster
+#      DNS wiring (CoreDNS rewrite rules or similar), separate from this
+#      value being set correctly.
+internalJwtJwksUrl: https://admin.acme.authstar.app/.well-known/jwks.json
+
+# keepBaseUrl: used in code (per web's own story 012) but was missing here
+# entirely. Same in-cluster Service DNS + port convention as tower's own
+# towerBaseUrl below.
+keepBaseUrl: http://keep.authstar.svc.cluster.local:8080
+
 towerBaseUrl: http://tower.authstar.svc.cluster.local:8080
 publicTowerBaseUrl: http://localhost:8080

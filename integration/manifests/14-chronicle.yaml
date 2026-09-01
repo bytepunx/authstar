@@ -1,19 +1,26 @@
-# No signet wiring yet (see config/authstar/chronicle/config.yaml's own
-# note) — no SPIFFE volume, no SIGNET_* env vars, just the CHRONICLE_* env
-# vars its own config.ts reads. Requires 01-db-init-job.yaml to have run
-# first (creates the "chronicle" ClickHouse database).
+# SIGNET_* bootstrap now set here (ADR 0102 / chronicle story 003): this
+# repo's own config/authstar/chronicle.yaml and secrets/authstar/chronicle/
+# were already fully provisioned (matching ADR 0036's original list), but
+# chronicle's own src/lib/config.ts/server.ts had never actually gained a
+# signet dial to read them -- confirmed real, all thirteen settings were
+# plain CHRONICLE_* process.env reads with CHRONICLE_INTERNAL_JWT_SECRET
+# defaulting to the literal 'dev-only-insecure-secret' verbatim below.
+# Chronicle's own companion PR (story 003) adds the dialWorkload/
+# getServiceBundle wiring keep/herald/tower already use; this manifest
+# change is only safe/backward-compatible once that PR has merged (see
+# this repo's own PR description for the exact merge-order dependency) --
+# until then, chronicle will crash on startup: presence of SIGNET_ADDR
+# alone doesn't help it if its own code doesn't yet dial signet with it.
+# SIGNET_ADMIN_ADDR is set per story 003's explicit bootstrap-surface list,
+# matching tower/keep/herald's own admin-port convention (8444, gated by
+# the chart's admin.clusterAccess flag) even though chronicle's own code
+# doesn't yet make any admin/GitOps calls -- harmless if unused, and saves
+# a second manifest edit if it later needs one (e.g. its own
+# signetAdminToken push), same reasoning as its inclusion in every other
+# service's bootstrap set here.
 #
-# CHRONICLE_RABBITMQ_URL's credential is this specific cluster's live,
-# randomly-generated broker credential, not guest/guest -- see
-# scripts/lib-secrets.sh's header comment for how to read the current one
-# and why guest/guest 403s (ACCESS_REFUSED) against a real broker. Reuses
-# tower's own dedicated user rather than a separate chronicle identity:
-# chronicle isn't in rabbitmqTargetServices (kluster-lib/profile/
-# authstar.go, "today: tower, keep" per ADR 0008/0012), and tower's own
-# Permission resource is a fully-permissive dev-only wildcard (configure/
-# read/write: ".*", confirmed via `kubectl get permission.rabbitmq.com -n
-# rabbitmq`), so sharing it works and needs no new topology-operator
-# identity.
+# Requires 01-db-init-job.yaml to have run first (creates the "chronicle"
+# ClickHouse database).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -62,18 +69,25 @@ spec:
             periodSeconds: 5
             failureThreshold: 3
           env:
-            - name: CHRONICLE_CLICKHOUSE_URL
-              value: http://clickhouse.clickhouse.svc.cluster.local:8123
-            - name: CHRONICLE_CLICKHOUSE_USERNAME
-              value: default
-            - name: CHRONICLE_CLICKHOUSE_PASSWORD
-              value: clickhouse
-            - name: CHRONICLE_CLICKHOUSE_DATABASE
-              value: chronicle
-            - name: CHRONICLE_RABBITMQ_URL
-              value: amqp://tower:6dd9a30b4b819743ed58e3db6080d3999756aa97a242cf95@rabbitmq.rabbitmq.svc.cluster.local:5672/authstar
-            - name: CHRONICLE_INTERNAL_JWT_SECRET
-              value: dev-only-insecure-secret
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_ADMIN_ADDR
+              value: signet.signet.svc.cluster.local:8444
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
 ---
 apiVersion: v1
 kind: Service
