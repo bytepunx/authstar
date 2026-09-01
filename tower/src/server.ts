@@ -14,6 +14,7 @@ import { startEntitlementConsumer } from './lib/entitlement-consumer.js'
 import { startErasureAckConsumer } from './lib/erasure-ack-consumer.js'
 import { createEphemeralHeraldKey, heraldKeyFromPem, type HeraldPayloadKey } from './lib/herald-payload-crypto.js'
 import { fetchServerCredentials, watchSVIDRotation } from './lib/spiffe-mtls.js'
+import { resolveProvisioningConfig, resolveSignetAdminToken } from './lib/signet-bundle-config.js'
 import type { ProvisioningConfig } from './routes/provisioning.js'
 
 // Production entrypoint. Follows the fetch-once/watch/restart-lock pattern
@@ -115,20 +116,13 @@ async function main(): Promise<void> {
 
   const dbConnectionString = (bundle.dbConnectionString as string | undefined) ?? secrets.dbConnectionString
   const rabbitmqUrl = (bundle.rabbitmqUrl as string | undefined) ?? secrets.rabbitmqUrl
-  const signetAdminToken = secrets.signetAdminToken ?? requireEnv('SIGNET_ADMIN_TOKEN')
+  const signetAdminToken = resolveSignetAdminToken(secrets)
   const contactHashPepper = secrets.contactHashPepper
   if (!dbConnectionString) throw new Error('signet bundle missing dbConnectionString')
   if (!rabbitmqUrl) throw new Error('signet bundle missing rabbitmqUrl')
   if (!contactHashPepper) throw new Error('signet bundle missing contactHashPepper secret')
 
-  const provisioningConfig: ProvisioningConfig = {
-    selfServiceEnabled: Boolean((bundle.provisioning as Record<string, unknown> | undefined)?.selfServiceEnabled ?? false),
-    operatorToken: secrets.operatorToken ?? '',
-    defaultProvider: ((bundle.provisioning as Record<string, unknown> | undefined)?.defaultProvider as ProvisioningConfig['defaultProvider'] | undefined) ?? {
-      name: '', clientId: '', discoveryUrl: '', scope: [],
-    },
-    defaultProviderClientSecret: secrets['default-provider-client-secret'] ?? '',
-  }
+  const provisioningConfig: ProvisioningConfig = resolveProvisioningConfig(bundle, secrets)
 
   const pgPool = new Pool({ connectionString: dbConnectionString })
   await ensureContactsSchema(pgPool)
