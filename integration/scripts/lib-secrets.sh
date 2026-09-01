@@ -55,6 +55,7 @@ SECRET_ENTRIES=(
   "keep/signetAdminToken"
   "keep/stripe-secret-key-acme"
   "keep/stripe-webhook-secret-acme"
+  "keep/credentialSalt"
   "herald/dbConnectionString"
   "herald/rabbitmqUrl"
   "herald/signetAdminToken"
@@ -100,6 +101,14 @@ SECRET_VALUE__keep__rabbitmqUrl='amqp://keep:d12bd135729e664f68d704b16400db0e8aa
 SECRET_VALUE__keep__signetAdminToken='dev-placeholder-wpFlp6pZEAmPfmDyQt-JJriEpTT-nHySI6QquFUer10'
 SECRET_VALUE__keep__stripe_secret_key_acme='sk_test_51PlaceholderAcmeDevKeyDoNotUseInProd00000000'
 SECRET_VALUE__keep__stripe_webhook_secret_acme='whsec_PlaceholderAcmeDevWebhookSigningSecret0000'
+# ADR 0102: KEEP_CREDENTIAL_SALT moves from a hardcoded 'keep-dev-salt'
+# literal in hash.ts (justified there by an ADR 0079 citation this ADR
+# retires -- 0079 is about the credential secret itself leaving the trust
+# boundary, not the salt used to hash it) into signet's bundle/secrets,
+# fail-loud in Signet-Configured Mode. Never leaves the trust boundary, so
+# it's provisioned as a secret alongside keep's other credential material,
+# same as tower's contactHashPepper.
+SECRET_VALUE__keep__credentialSalt='dev-placeholder-UcentsxTkWCSa54m0dlbeQBKRhb8trlXh0g1L2y5w'
 SECRET_VALUE__herald__dbConnectionString='postgres://postgres:postgres@postgresql.postgres.svc.cluster.local:5432/herald?sslmode=disable'
 # herald isn't in rabbitmqTargetServices ("today: tower, keep" per ADR
 # 0008/0012 -- kluster-lib/profile/authstar.go), so it gets no dedicated

@@ -12,3 +12,12 @@
 # found and fixed in tower/keep/herald's own config.yaml (stale guest/guest
 # silently overriding a correctly-provisioned secret once config sync
 # started working). Not worth reintroducing here pre-emptively.
+#
+# Explicit `{}` below (not left comment-only): an all-comment file parses
+# to `nil`, not a mapping, which made signetd log a parse error on every
+# sync cycle even before lookout had any live signet wiring (see this
+# repo's README "Not yet done" section). manifests/13-lookout.yaml now
+# sets lookout's bootstrap SIGNET_* vars, so this file will actually be
+# synced against for real once lookout's own companion PR merges --
+# closing the parse error now, before it matters, rather than after.
+{}

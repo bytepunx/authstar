@@ -130,7 +130,7 @@ scripts/down.sh         # kluster down — ALWAYS run this when finished
    update-config` — this rewrites `.sops.yaml`'s placeholder recipient with the live
    cluster's real public key. **Must** happen before the next step, since `signet
    secret set` encrypts against whatever `.sops.yaml` currently names.
-4. Author all 24 placeholder secrets via `signet secret set`, one call per entry in
+4. Author all 25 placeholder secrets via `signet secret set`, one call per entry in
    `lib-secrets.sh`'s `SECRET_ENTRIES` list.
 5. Ensure a read-only GitHub deploy key exists, commit, push.
 6. Register the repo with signet (`repo add`, or reuse an existing registration), then
@@ -179,13 +179,13 @@ the other 6 is extrapolated from ADR 0004's generic pattern plus tower/keep/hera
 | Service | Secrets | Config | Live signet wiring in app code? |
 |---|---|---|---|
 | tower | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `contactHashPepper`, `operatorToken`, `default-provider-client-secret`, `tenant-acme-contact-hash-pepper` | `dbConnectionString`, `rabbitmqUrl`, `provisioning.*` | Yes |
-| keep | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `stripe-secret-key-acme`, `stripe-webhook-secret-acme` | `dbConnectionString`, `rabbitmqUrl` | Yes |
-| herald | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `operatorToken` | `dbConnectionString`, `rabbitmqUrl` | Yes |
-| lookout | `rabbitmqUrl` | `rabbitmqUrl` | **No** — reads `LOOKOUT_RABBITMQ_URL` env var directly; scope provisioned ahead of the wiring landing |
-| chronicle | `clickhousePassword`, `rabbitmqUrl`, `internalJwtSecret` | `clickhouseUrl`, `clickhouseUsername`, `clickhouseDatabase`, `retentionMonths`, `maxDateRangeDays`, `queryTimeoutMs`, `rateLimitMax`, `rateLimitWindowMs` | **No** — reads `CHRONICLE_*` env vars directly |
+| keep | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `stripe-secret-key-acme`, `stripe-webhook-secret-acme`, `credentialSalt` | `dbConnectionString`, `rabbitmqUrl`, `towerBaseUrl` | Yes |
+| herald | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `operatorToken` | `dbConnectionString`, `rabbitmqUrl`, `towerBaseUrl` | Yes |
+| lookout | `rabbitmqUrl` | `rabbitmqUrl` | **No** — reads `LOOKOUT_RABBITMQ_URL` env var directly; scope provisioned ahead of the wiring landing (bootstrap `SIGNET_*` env vars now set in `manifests/13-lookout.yaml`, but only take effect once lookout's own companion PR merges) |
+| chronicle | `clickhousePassword`, `rabbitmqUrl`, `internalJwtSecret` | `clickhouseUrl`, `clickhouseUsername`, `clickhouseDatabase`, `retentionMonths`, `maxDateRangeDays`, `queryTimeoutMs`, `rateLimitMax`, `rateLimitWindowMs` | **No** — reads `CHRONICLE_*` env vars directly; bootstrap `SIGNET_*` env vars now set in `manifests/14-chronicle.yaml`, but only take effect once chronicle's own companion PR merges |
 | portcullis | `tenant-acme-session-key`, `tenant-acme-internal-key`, `tenant-acme-identity-hash-key-1`, `tenant-acme-provider-dex-client-secret` | `webUpstream`, `towerUpstream`, `tenants.acme.*` (full `Bundle` struct shape) | Yes (Rust, `authstar-config` crate) |
 | steward | *(none)* | `towerUrl`, `heraldUrl` | **No** `@bytepunx/signet-client` dependency at all; reads plain env vars |
-| web | *(none)* | `towerBaseUrl`, `publicTowerBaseUrl`, `internalJwtJwksUrl` | **No** `@bytepunx/signet-client` dependency at all; reads plain env vars |
+| web | *(none)* | `towerBaseUrl`, `keepBaseUrl`, `publicTowerBaseUrl`, `internalJwtJwksUrl` | **No** `@bytepunx/signet-client` dependency at all; reads plain env vars |
 
 All secrets use tenant slug `acme` for consistency with portcullis's own
 `examples/signet_smoke.rs` live smoke test, which already asserts against
@@ -559,18 +559,32 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
   keeping in mind for whatever rotation mechanism eventually replaces the manual mint —
   it needs the `signet-admin` identity specifically, not a least-privilege per-service one
   (none is currently granted `administer`).
-- **`config/authstar/herald.yaml`/`lookout.yaml`'s comment-only-YAML parse error** —
-  confirmed real and currently silent (logged every sync cycle, blocking nothing yet
-  since neither service reads anything through this path). Worth fixing before either
-  service gains real config needs, so the failure mode isn't "silently ignored" the first
-  time it matters.
+- **`config/authstar/herald.yaml`/`lookout.yaml`'s comment-only-YAML parse error** — was
+  confirmed real and silent (logged every sync cycle). Now fixed for both: `herald.yaml`
+  gained a real field (`towerBaseUrl`, per ADR 0102/ADR 0089 — herald's `server.ts`
+  already reads `bundle.towerBaseUrl`/`secrets.towerBaseUrl` and throws `signet bundle
+  missing towerBaseUrl` if absent, the same fail-loud gap this repo already fixed for
+  keep; this file being comment-only was a real, previously-unnoticed gap for herald too,
+  not just a parse-error curiosity). `lookout.yaml` has no plain config of its own (its
+  one setting, `rabbitmqUrl`, is a secret) but now parses to an explicit empty mapping
+  (`{}`) instead of `nil`, closing the parse error now that `manifests/13-lookout.yaml`
+  actually sets bootstrap `SIGNET_*` vars (once lookout's own companion PR merges, sync
+  cycles against this file will stop erroring).
 - Chronicle's HS256-vs-tower's-ES256 internal-JWT algorithm mismatch (flagged by an
   earlier pass of this repo, still real, still unaddressed) — chronicle's `analytics:read`
   routes accept a self-minted HS256 token using a known dev secret specifically because a
   genuine portcullis-forwarded internal JWT can never pass its check.
-- Web's own JWKS wiring (`INTERNAL_JWT_JWKS_URL`/`AUTHSTAR_BASE_DOMAIN`, currently unset
-  in `manifests/16-web.yaml`) — even with portcullis's own JWKS host fix in this pass,
-  web running *inside* the cluster has no DNS path to fetch
+- Web's own JWKS wiring — `INTERNAL_JWT_JWKS_URL` is now set, in both
+  `config/authstar/web.yaml` (`internalJwtJwksUrl`, signet-sourced once web's own
+  companion PR lands) and `manifests/16-web.yaml` (`INTERNAL_JWT_JWKS_URL` env var, for
+  today's Env-Only Mode), to `https://admin.acme.authstar.app/.well-known/jwks.json` —
+  the per-tenant JWKS host convention (`perTenantJwksKeyProvider`, ADR 0086/0091) this
+  repo's own portcullis config already registers for `acme`. **Two gaps still block this
+  from actually closing the "requests treated as unauthenticated" gap, neither fixed by
+  this value being set**: (1) portcullis has no `/.well-known/jwks.json` route
+  implemented yet (ADR 0086's decision, filed as `bytepunx/authstar-portcullis#2`,
+  *not* one of the seven companion PRs this pass wires up) — the URL 404s until that
+  lands; (2) even once it does, web running *inside* the cluster has no DNS path to fetch
   `https://admin.acme.authstar.app/.well-known/jwks.json` (confirmed live: that hostname
   doesn't resolve from inside any pod at all — no in-cluster DNS entry for the public
   tenant domain exists). A real fix needs in-cluster DNS wiring for the public tenant

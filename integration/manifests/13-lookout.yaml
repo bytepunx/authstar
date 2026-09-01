@@ -1,17 +1,18 @@
-# No signet wiring yet (see config/authstar/lookout/config.yaml's own note)
-# — no SPIFFE volume, no SIGNET_* env vars. Just the one env var its code
-# actually reads.
+# SIGNET_* bootstrap now set here (ADR 0102 / lookout story 002). Lookout
+# has exactly one signet-scoped setting -- LOOKOUT_RABBITMQ_URL -- and the
+# secret scope for it (secrets/authstar/lookout/rabbitmqUrl.yaml) was
+# already provisioned but never consumed: the hardcoded plaintext value
+# below (including this specific cluster's real broker credential) is
+# exactly the gap story 002 closes. Per that story's own minimal bootstrap
+# list, no SIGNET_ADMIN_ADDR is set here -- lookout makes no admin/GitOps
+# calls (ADR 0035's "stays simple by construction").
 #
-# LOOKOUT_RABBITMQ_URL's credential is this specific cluster's live,
-# randomly-generated broker credential, not guest/guest -- see
-# scripts/lib-secrets.sh's header comment for how to read the current one
-# and why guest/guest 403s (ACCESS_REFUSED) against a real broker. Reuses
-# tower's own dedicated user rather than a separate lookout identity:
-# lookout isn't in rabbitmqTargetServices (kluster-lib/profile/authstar.go,
-# "today: tower, keep" per ADR 0008/0012), and tower's own Permission
-# resource is a fully-permissive dev-only wildcard (configure/read/write:
-# ".*", confirmed via `kubectl get permission.rabbitmq.com -n rabbitmq`),
-# so sharing it works and needs no new topology-operator identity.
+# This manifest change is only safe/backward-compatible once lookout's own
+# companion PR (story 002, adding the dialWorkload/getServiceBundle wiring)
+# has merged -- see this repo's own PR description for the exact
+# merge-order dependency. Until then, lookout will crash on startup:
+# presence of SIGNET_ADDR alone doesn't help it if its own code doesn't yet
+# dial signet with it.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -60,8 +61,23 @@ spec:
             periodSeconds: 5
             failureThreshold: 3
           env:
-            - name: LOOKOUT_RABBITMQ_URL
-              value: amqp://tower:6dd9a30b4b819743ed58e3db6080d3999756aa97a242cf95@rabbitmq.rabbitmq.svc.cluster.local:5672/authstar
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
 ---
 apiVersion: v1
 kind: Service
