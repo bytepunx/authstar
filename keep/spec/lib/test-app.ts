@@ -7,6 +7,7 @@ import { createInMemoryStripeConfigStore, type StripeConfigStore } from '../../s
 import { createRoleReferenceCache, type RoleReferenceSnapshot } from '../../src/lib/role-reference-cache.js'
 import { createInMemoryEntitlementPublisher, createInMemorySequenceProvider, type EntitlementEvent } from '../../src/lib/entitlement-publisher.js'
 import { createInternalJwtFixture, bearer, type InternalTokenOverrides } from './internal-jwt.js'
+import { createSecretHasher } from '../../src/lib/hash.js'
 
 // One place every behavior/e2e spec builds its app from -- same in-memory
 // `consequent` instance, same fake Stripe/role-cache/entitlement-publisher
@@ -53,6 +54,7 @@ export default async function buildTestApp(roleSnapshot: RoleReferenceSnapshot =
     entitlements: publisher,
     sequences: createInMemorySequenceProvider(),
     authstarGetKey: jwt.getKey,
+    secretHasher: createSecretHasher('test-credential-salt'),
   })
 
   return {

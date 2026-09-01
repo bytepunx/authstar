@@ -8,6 +8,7 @@ import { createInMemoryStripeConfigStore } from '../../src/lib/stripe-config.js'
 import { createRoleReferenceCache } from '../../src/lib/role-reference-cache.js'
 import { createInMemoryEntitlementPublisher, createInMemorySequenceProvider } from '../../src/lib/entitlement-publisher.js'
 import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
+import { createSecretHasher } from '../../src/lib/hash.js'
 
 // Proves `plan-mappings.ts` (and, by the same one-line pattern, trials.ts/
 // coupons.ts) actually calls `app.roleBackfill.ensureFresh(tenantSlug)`
@@ -53,6 +54,7 @@ describe('plan-mappings route -- role reference backfill wiring (ADR 0047)', () 
       entitlements: createInMemoryEntitlementPublisher(),
       sequences: createInMemorySequenceProvider(),
       authstarGetKey: jwt.getKey,
+      secretHasher: createSecretHasher('test-credential-salt'),
     })
 
     stripeState.prices.set('price_basic', { unitAmount: 1000, currency: 'usd', interval: 'month' })

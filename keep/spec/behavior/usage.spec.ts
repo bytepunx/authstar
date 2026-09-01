@@ -142,5 +142,21 @@ describe('usage records and credentials -- API contract', () => {
       const response = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials', headers: manageHeaders })
       expect(response.statusCode).toBe(403)
     })
+
+    it('hashes the issued secret through app.secretHasher (ADR 0102/Story 008 -- credentialSalt sourced from signet, not a hardcoded/env default), not some separate hashing path', async () => {
+      const headers = await t.headers({ permissions: ['applications:manage'] })
+      const issued = await t.app.inject({ method: 'POST', url: '/tenants/acme/applications/demo-app/usage-credentials', headers })
+      const { credentialId, secret } = issued.json()
+
+      const instance = await t.consequent.fetch('usageReportingCredential', credentialId)
+      const state = instance!.state as unknown as { hashedSecret: string }
+
+      // Recomputing via the exact same app.secretHasher this test app was
+      // built with (spec/lib/test-app.ts's createSecretHasher('test-credential-salt'))
+      // proves the route actually threads app.secretHasher through, not an
+      // independent/default hasher that happens to agree.
+      expect(state.hashedSecret).toBe(t.app.secretHasher.hashSecret(secret))
+      expect(t.app.secretHasher.verifySecret(secret, state.hashedSecret)).toBe(true)
+    })
   })
 })
