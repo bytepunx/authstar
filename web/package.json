@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@bytepunx/authstar-core": "^2.0.0",
+    "@bytepunx/signet-client": "^0.7.0",
     "@sveltejs/adapter-node": "^5.5.7",
     "jose": "^6.2.8"
   },
