@@ -207,11 +207,16 @@ none exists yet in this design repo at the header-name level):**
   this; it was never wired to anything real. `hooks.server.ts`/`jwt.ts` now use
   `@bytepunx/authstar-core`'s `verifyInternalJwt`/`perTenantJwksKeyProvider`: the internal JWT
   carries its own tenant hint on its protected header (set by portcullis at mint time), read
-  *before* verification to resolve `https://admin.<tenant-slug>.<baseDomain>/.well-known/
+  *before* verification to resolve `https://authstar.<tenant's own domain>/.well-known/
   jwks.json` (portcullis's real JWKS route, ADR 0086/0087) and *again*, from the verified claims,
-  to build `Session.tenantSlug` — never from a request header. Configured via
-  `AUTHSTAR_BASE_DOMAIN`. `INTERNAL_JWT_JWKS_URL`, if set, still overrides with one fixed JWKS
+  to build `Session.tenantSlug` — never from a request header. There is no `AUTHSTAR_BASE_DOMAIN`
+  (or similar static-formula) env var — ADR 0091 replaced the slug-to-domain formula with dynamic
+  per-tenant resolution, backed by tower's own `GET /tenants/:slug`, since every tenant now brings
+  its own, unrelated domain. `INTERNAL_JWT_JWKS_URL`, if set, still overrides with one fixed JWKS
   URL (`jwksKeyProvider`) — what e2e/dev point at a fixture server, see `playwright.config.ts`.
+  As of ADR 0102/Story 012, both `INTERNAL_JWT_JWKS_URL` and the tower base URL used for that
+  per-tenant lookup are resolved by `src/lib/server/config.ts`, which sources them from signet
+  instead of env when `SIGNET_ADDR` is set — see that file's header comment.
 - **CORS on the public signup page**: tower's own CORS configuration for `signup.{baseDomain}`
   (Story 010) is entirely tower's own concern; this repo's `PUBLIC_TOWER_BASE_URL` env var and
   the fake backend's permissive `access-control-allow-origin: *` (fixture-only) are what let the
