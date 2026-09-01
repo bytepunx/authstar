@@ -11,6 +11,7 @@ import { createAmqpPublisher } from './lib/publisher.js'
 import { PayloadKeyring, type PersistedPayloadKeyGeneration } from './lib/payload-crypto.js'
 import { UnsubscribeKeyring, type PersistedUnsubscribeKeyGeneration } from './lib/unsubscribe-token.js'
 import { createSignetAdmin } from './lib/signet-admin.js'
+import { requireBundleSecret } from './lib/bundle-secrets.js'
 import { seedBuiltInTemplates } from './lib/seed-templates.js'
 
 // Production entrypoint. Follows the exact fetch-once/watch/restart-lock
@@ -67,7 +68,7 @@ function decodeBundleSecrets(bundle: Record<string, unknown> | undefined): Recor
 function loadPayloadKeyring(secrets: Record<string, string>, log: (msg: string) => void): PayloadKeyring {
   const raw = secrets.payloadKeyGenerations
   if (!raw) {
-    log('herald: no payloadKeyGenerations in signet bundle -- generating an ephemeral in-process keypair (see server.ts header comment)')
+    log('herald: no payloadKeyGenerations in signet bundle -- generating an ephemeral in-process keypair; run POST /operator/rotate-keys with keys: ["payload-encryption"] to provision a persisted key in signet (see server.ts header comment)')
     return new PayloadKeyring()
   }
   try {
@@ -75,7 +76,7 @@ function loadPayloadKeyring(secrets: Record<string, string>, log: (msg: string) 
     if (!Array.isArray(seed) || seed.length === 0) throw new Error('empty')
     return new PayloadKeyring(seed)
   } catch (err) {
-    log(`herald: payloadKeyGenerations in signet bundle was unusable (${(err as Error).message}) -- falling back to an ephemeral in-process keypair`)
+    log(`herald: payloadKeyGenerations in signet bundle was unusable (${(err as Error).message}) -- falling back to an ephemeral in-process keypair; run POST /operator/rotate-keys with keys: ["payload-encryption"] to provision a persisted key in signet`)
     return new PayloadKeyring()
   }
 }
@@ -83,7 +84,7 @@ function loadPayloadKeyring(secrets: Record<string, string>, log: (msg: string) 
 function loadUnsubscribeKeyring(secrets: Record<string, string>, log: (msg: string) => void): UnsubscribeKeyring {
   const raw = secrets.unsubscribeKeyGenerations
   if (!raw) {
-    log('herald: no unsubscribeKeyGenerations in signet bundle -- generating an ephemeral in-process HMAC key (see server.ts header comment)')
+    log('herald: no unsubscribeKeyGenerations in signet bundle -- generating an ephemeral in-process HMAC key; run POST /operator/rotate-keys with keys: ["unsubscribe-signing"] to provision a persisted key in signet (see server.ts header comment)')
     return new UnsubscribeKeyring()
   }
   try {
@@ -91,7 +92,7 @@ function loadUnsubscribeKeyring(secrets: Record<string, string>, log: (msg: stri
     if (!Array.isArray(seed) || seed.length === 0) throw new Error('empty')
     return new UnsubscribeKeyring(seed)
   } catch (err) {
-    log(`herald: unsubscribeKeyGenerations in signet bundle was unusable (${(err as Error).message}) -- falling back to an ephemeral in-process HMAC key`)
+    log(`herald: unsubscribeKeyGenerations in signet bundle was unusable (${(err as Error).message}) -- falling back to an ephemeral in-process HMAC key; run POST /operator/rotate-keys with keys: ["unsubscribe-signing"] to provision a persisted key in signet`)
     return new UnsubscribeKeyring()
   }
 }
@@ -140,9 +141,18 @@ async function main(): Promise<void> {
   // ADR 0081: herald's own narrow, self-bundle-scoped GitOpsService admin
   // token, and the shared operator-token value (ADR 0021/0045) -- same
   // delivery pattern tower's own tokens use, herald just receives both
-  // for the first time here.
-  const signetAdminToken = secrets.signetAdminToken ?? requireEnv('SIGNET_ADMIN_TOKEN')
-  const operatorToken = secrets.operatorToken ?? ''
+  // for the first time here. Per ADR 0102, herald is always
+  // Signet-Configured Mode (its bootstrap vars above are `requireEnv`,
+  // unconditional, with no Env-Only Mode) -- so a bundle missing either
+  // secret is a provisioning gap, not something to paper over with an env
+  // fallback (`signetAdminToken`'s old `?? requireEnv('SIGNET_ADMIN_TOKEN')`)
+  // or a hardcoded default (`operatorToken`'s old `?? ''`, which downstream
+  // `isOperatorRequest` would otherwise treat as "no valid operator token
+  // configured" instead of surfacing the real problem at boot). Both now
+  // fail startup loudly via `requireBundleSecret`, naming the missing
+  // secret.
+  const signetAdminToken = requireBundleSecret(secrets, 'signetAdminToken')
+  const operatorToken = requireBundleSecret(secrets, 'operatorToken')
 
   // eslint-disable-next-line no-console
   const bootLog = (msg: string) => console.warn(msg)
