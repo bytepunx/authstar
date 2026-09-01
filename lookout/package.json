@@ -11,7 +11,8 @@
     "build": "tsc",
     "dev": "tsx watch src/server.ts",
     "pretest": "npm run build",
-    "test": "npm run test:behavior && npm run test:e2e",
+    "test": "npm run test:unit && npm run test:behavior && npm run test:e2e",
+    "test:unit": "vitest run spec/unit",
     "test:behavior": "vitest run spec/behavior",
     "test:e2e": "vitest run spec/e2e",
     "pretest:integration": "npm run build",
@@ -21,6 +22,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@bytepunx/signet-client": "^0.7.0",
     "amqplib": "^0.10.8",
     "fastify": "^5.0.0",
     "node-flakes": "^2.1.0",
