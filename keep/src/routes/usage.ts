@@ -4,7 +4,6 @@ import type { UsageRecordState } from '../actors/usage_record_actor.js'
 import type { UsageReportingCredentialState } from '../actors/usage_reporting_credential_actor.js'
 import type { PlanMappingState } from '../actors/plan_mapping_actor.js'
 import generateId from '../lib/ids.js'
-import { generateSecret, hashSecret } from '../lib/hash.js'
 import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/keep/005-usage-records-and-credentials.md.
@@ -159,13 +158,13 @@ const usageRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
 
   app.post('/tenants/:tenantSlug/applications/:appSlug/usage-credentials', { schema: { params: appParamsSchema }, preHandler: requirePermission('applications:manage') }, async (request, reply) => {
     const { tenantSlug, appSlug } = request.params as { tenantSlug: string, appSlug: string }
-    const secret = generateSecret()
+    const secret = app.secretHasher.generateSecret()
     const credentialId = generateId()
     await app.consequent.handle(credentialId, 'usageReportingCredential.create', {
       credentialId,
       tenant: tenantSlug,
       application: appSlug,
-      hashedSecret: hashSecret(secret),
+      hashedSecret: app.secretHasher.hashSecret(secret),
     })
     // Returned once -- never retrievable again (Story 001/005).
     return reply.code(201).send({ credentialId, secret })

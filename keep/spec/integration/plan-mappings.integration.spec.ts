@@ -12,6 +12,7 @@ import { createInMemoryStripeConfigStore } from '../../src/lib/stripe-config.js'
 import { createRoleReferenceCache } from '../../src/lib/role-reference-cache.js'
 import { createInMemoryEntitlementPublisher } from '../../src/lib/entitlement-publisher.js'
 import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
+import { createSecretHasher } from '../../src/lib/hash.js'
 
 // Integration tier: `consequent`'s real `consequent-postgres` adapters
 // against a real, disposable Postgres (testcontainers) -- proves keep's
@@ -70,6 +71,7 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
       roleCache: createRoleReferenceCache({ acme: { 'demo-app': ['member', 'admin'] } }),
       entitlements: createInMemoryEntitlementPublisher(),
       authstarGetKey: jwt.getKey,
+      secretHasher: createSecretHasher('test-credential-salt'),
     })
   }, 60_000) // container pull + start can genuinely take a while on a cold cache
 

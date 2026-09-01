@@ -7,6 +7,7 @@ import { createInMemoryStripeConfigStore, type StripeConfigStore } from '../../s
 import { createRoleReferenceCache, type RoleReferenceSnapshot } from '../../src/lib/role-reference-cache.js'
 import { createInMemoryEntitlementPublisher, createInMemorySequenceProvider, type EntitlementEvent } from '../../src/lib/entitlement-publisher.js'
 import { createInternalJwtFixture, bearer, type InternalTokenOverrides } from './internal-jwt.js'
+import { createSecretHasher } from '../../src/lib/hash.js'
 
 // spec/live's own counterpart to spec/lib/test-app.ts's buildTestApp --
 // same in-memory consequent/role-cache/entitlement-publisher wiring, but
@@ -65,6 +66,7 @@ export default async function buildLiveTestApp(roleSnapshot: RoleReferenceSnapsh
     entitlements: publisher,
     sequences: createInMemorySequenceProvider(),
     authstarGetKey: jwt.getKey,
+    secretHasher: createSecretHasher('test-credential-salt'),
   })
 
   return {

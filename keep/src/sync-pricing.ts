@@ -6,6 +6,7 @@ import initializeConsequent from 'consequent'
 import { createStripeClientFactory } from './lib/stripe-client.js'
 import { createSignetStripeConfigStore } from './lib/signet-stripe-config-store.js'
 import { syncAllPlanMappingPricing } from './lib/pricing-sync.js'
+import { requireBundleSecret } from './lib/bundle-secrets.js'
 
 // Standalone entrypoint for the periodic pricing re-sync CronJob (design/
 // stories/keep/003's "Periodic pricing re-sync" section: "the same
@@ -70,8 +71,12 @@ async function main(): Promise<void> {
   const secrets = decodeBundleSecrets(bundle)
 
   const dbConnectionString = (bundle.dbConnectionString as string | undefined) ?? secrets.dbConnectionString
-  const signetAdminToken = secrets.signetAdminToken ?? requireEnv('SIGNET_ADMIN_TOKEN')
   if (!dbConnectionString) throw new Error('signet bundle missing dbConnectionString')
+  // ADR 0102: keep is always in Signet-Configured Mode (bootstrap vars above
+  // are required unconditionally, no Env-Only Mode exists here) -- a bundle
+  // missing this secret is a provisioning gap, not a reason to fall back to
+  // `SIGNET_ADMIN_TOKEN`. Same fix as `src/server.ts`.
+  const signetAdminToken = requireBundleSecret(bundle, secrets, 'signetAdminToken')
 
   const pgAdapters = initializePostgresAdapters({ connectionString: dbConnectionString })
   // Same structural-vs-nominal adapter type friction `server.ts` casts at

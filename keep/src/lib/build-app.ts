@@ -8,6 +8,7 @@ import type { RoleReferenceBackfill } from './role-reference-backfill.js'
 import { createNoopRoleReferenceBackfill } from './role-reference-backfill.js'
 import type { EntitlementPublisher, SequenceProvider } from './entitlement-publisher.js'
 import { createInMemorySequenceProvider } from './entitlement-publisher.js'
+import type { SecretHasher } from './hash.js'
 import registerPlanMappingRoutes from '../routes/plan-mappings.js'
 import registerCheckoutSessionRoutes from '../routes/checkout-sessions.js'
 import registerPortalSessionRoutes from '../routes/portal-sessions.js'
@@ -30,6 +31,12 @@ export interface BuildAppOptions {
   roleBackfill?: RoleReferenceBackfill
   entitlements: EntitlementPublisher
   sequences?: SequenceProvider
+  // Story 001/005's usage-reporting-credential hashing (ADR 0102): sourced
+  // from signet by `src/server.ts` (`credentialSalt`), not defaulted here --
+  // unlike `roleBackfill`/`sequences`, there's no safe non-secret default to
+  // fall back to, so every caller (including every test builder) must supply
+  // one explicitly.
+  secretHasher: SecretHasher
   logger?: boolean
   // Story 007's internal-JWT verification key -- keep has no Host to
   // resolve a tenant from itself (one shared deployment for every tenant,
@@ -87,6 +94,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('roleBackfill', options.roleBackfill ?? createNoopRoleReferenceBackfill())
   app.decorate('entitlements', options.entitlements)
   app.decorate('sequences', options.sequences ?? createInMemorySequenceProvider())
+  app.decorate('secretHasher', options.secretHasher)
 
   const authstarGetKey = options.authstarGetKey
     ?? perTenantJwksKeyProvider(options.resolveTenantDomain ?? (() => undefined))

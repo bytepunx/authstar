@@ -10,6 +10,7 @@ import { createRoleReferenceCache } from '../../src/lib/role-reference-cache.js'
 import { createInMemorySequenceProvider } from '../../src/lib/entitlement-publisher.js'
 import { createAmqpEntitlementPublisher, ENTITLEMENT_EXCHANGE } from '../../src/lib/amqp-entitlement-publisher.js'
 import { createInternalJwtFixture, bearer } from '../lib/internal-jwt.js'
+import { createSecretHasher } from '../../src/lib/hash.js'
 
 // Integration tier: a real RabbitMQ (testcontainers), proving keep's
 // `AmqpEntitlementPublisher` actually lands a message tower's own
@@ -68,6 +69,7 @@ describe('entitlement publishing -- real RabbitMQ', () => {
       entitlements,
       sequences: createInMemorySequenceProvider(),
       authstarGetKey: jwt.getKey,
+      secretHasher: createSecretHasher('test-credential-salt'),
     })
 
     // A separate connection standing in for tower's real consumer -- proves
