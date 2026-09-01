@@ -22,6 +22,9 @@
     "test": "npm run test:behavior && npm run test:integration && npm run test:e2e",
     "test:watch": "vitest"
   },
+  "dependencies": {
+    "@bytepunx/signet-client": "^0.7.0"
+  },
   "devDependencies": {
     "@playwright/test": "^1.47.0",
     "@sveltejs/adapter-node": "^5.2.0",
