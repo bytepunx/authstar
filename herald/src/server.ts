@@ -138,20 +138,22 @@ async function main(): Promise<void> {
   // domain).
   const towerBaseUrl = (bundle.towerBaseUrl as string | undefined) ?? secrets.towerBaseUrl
   if (!towerBaseUrl) throw new Error('signet bundle missing towerBaseUrl')
-  // ADR 0081: herald's own narrow, self-bundle-scoped GitOpsService admin
-  // token, and the shared operator-token value (ADR 0021/0045) -- same
-  // delivery pattern tower's own tokens use, herald just receives both
-  // for the first time here. Per ADR 0102, herald is always
+  // ADR 0021/0045's shared operator-token value -- same delivery pattern
+  // tower's own tokens use. Per ADR 0102, herald is always
   // Signet-Configured Mode (its bootstrap vars above are `requireEnv`,
-  // unconditional, with no Env-Only Mode) -- so a bundle missing either
-  // secret is a provisioning gap, not something to paper over with an env
-  // fallback (`signetAdminToken`'s old `?? requireEnv('SIGNET_ADMIN_TOKEN')`)
-  // or a hardcoded default (`operatorToken`'s old `?? ''`, which downstream
+  // unconditional, with no Env-Only Mode) -- so a bundle missing this
+  // secret is a provisioning gap, not something to paper over with a
+  // hardcoded default (`operatorToken`'s old `?? ''`, which downstream
   // `isOperatorRequest` would otherwise treat as "no valid operator token
-  // configured" instead of surfacing the real problem at boot). Both now
-  // fail startup loudly via `requireBundleSecret`, naming the missing
-  // secret.
-  const signetAdminToken = requireBundleSecret(secrets, 'signetAdminToken')
+  // configured" instead of surfacing the real problem at boot). Fails
+  // startup loudly via `requireBundleSecret`, naming the missing secret.
+  //
+  // ADR 0103 retired herald's `signetAdminToken` entirely -- herald's
+  // GitOps writes (own bundle plus the tower/keep/portcullis cross-service
+  // pushes ADR 0081 needs) now authenticate with herald's own workload
+  // SPIFFE identity (`trustDomain`, already fetched above for
+  // `dialWorkload`) instead of a bearer token. See createSignetAdmin's own
+  // call below.
   const operatorToken = requireBundleSecret(secrets, 'operatorToken')
 
   // eslint-disable-next-line no-console
@@ -206,7 +208,7 @@ async function main(): Promise<void> {
     return state.domain
   }
 
-  const signetAdmin = createSignetAdmin({ address: adminAddress, token: signetAdminToken, namespace })
+  const signetAdmin = await createSignetAdmin({ address: adminAddress, trustDomain, namespace })
 
   const app = await buildApp({
     consequent,

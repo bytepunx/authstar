@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib'
-import { gitOpsClient, encryptForSecret, type GitOpsServiceClient } from '@bytepunx/signet-client'
+import { dialWorkloadGitOps, encryptForSecret } from '@bytepunx/signet-client'
 
 // ADR 0081's key-rotation route needs herald to push secrets into two
 // places: its *own* bundle (the full generation set, so a restart doesn't
@@ -16,7 +16,7 @@ export interface SignetAdmin {
 
 export interface SignetAdminOptions {
   address: string
-  token: string
+  trustDomain: string
   namespace: string
 }
 
@@ -84,11 +84,17 @@ export function syncBundleFailure(response: { errors: string[] }): string | null
   return null
 }
 
-export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
-  // plaintext: true is required -- see tower's own signet-admin.ts header
-  // comment for the confirmed-against-a-live-cluster reasoning, unchanged
-  // here.
-  const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token, plaintext: true })
+// Per ADR 0103, herald authenticates its own GitOps writes (own-bundle
+// SyncBundle plus the tower/keep/portcullis cross-service pushes ADR 0081
+// needs) with its own workload SPIFFE identity instead of the retired
+// admin bearer token -- the same `DialWorkloadOptions` shape (`address` +
+// `trustDomain`) `dialWorkload` already uses for herald's ordinary bundle
+// fetch in server.ts. `dialWorkloadGitOps` always dials real workload
+// mTLS, so there's no `plaintext`/loopback heuristic to carry over from
+// the old bearer-token dial path -- that was specific to gitOpsClient's
+// token-based dial, not applicable here.
+export async function createSignetAdmin(opts: SignetAdminOptions): Promise<SignetAdmin> {
+  const { client } = await dialWorkloadGitOps({ address: opts.address, trustDomain: opts.trustDomain })
 
   return {
     async pushSecret(targetService, key, value) {
