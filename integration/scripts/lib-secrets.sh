@@ -45,20 +45,17 @@
 SECRET_ENTRIES=(
   "tower/dbConnectionString"
   "tower/rabbitmqUrl"
-  "tower/signetAdminToken"
   "tower/contactHashPepper"
   "tower/operatorToken"
   "tower/default-provider-client-secret"
   "tower/tenant-acme-contact-hash-pepper"
   "keep/dbConnectionString"
   "keep/rabbitmqUrl"
-  "keep/signetAdminToken"
   "keep/stripe-secret-key-acme"
   "keep/stripe-webhook-secret-acme"
   "keep/credentialSalt"
   "herald/dbConnectionString"
   "herald/rabbitmqUrl"
-  "herald/signetAdminToken"
   "herald/operatorToken"
   "lookout/rabbitmqUrl"
   "chronicle/clickhousePassword"
@@ -89,7 +86,12 @@ SECRET_VALUE__tower__dbConnectionString='postgres://postgres:postgres@postgresql
 # authstar-integration cluster instance"). Vhost is "/authstar", not the
 # default "/" -- kluster-lib/addon/rabbitmq.go's RabbitMQVhost constant.
 SECRET_VALUE__tower__rabbitmqUrl='amqp://tower:6dd9a30b4b819743ed58e3db6080d3999756aa97a242cf95@rabbitmq.rabbitmq.svc.cluster.local:5672/authstar'
-SECRET_VALUE__tower__signetAdminToken='dev-placeholder-4KApxqBOTcqSxG3u2jysc4UwSxvp03apRnHHf6OAFu8'
+# tower__signetAdminToken retired here per ADR 0103 (SPIFFE-scoped self-service
+# signet writes replace the admin bearer token entirely) — tower/017. Tower now
+# authenticates its own-bundle write and its portcullis-authoring writes with
+# its own workload SVID; the one-time CreatePolicy grant this needs (tower's
+# SPIFFE ID -> put on portcullis's namespace/service) is provisioned by
+# scripts/provision.sh, not a secret.
 SECRET_VALUE__tower__contactHashPepper='dev-placeholder-1f6ReyqGSS-jXOr8w_yt-Uftij6Sf6WzJy67c8Zsw4I'
 SECRET_VALUE__tower__operatorToken='dev-placeholder-nWvzdBisvYWVX4ZqZ4iE3k7jC-dmh5nbrU_9DcI536A'
 SECRET_VALUE__tower__default_provider_client_secret='authstar-dev-secret'
@@ -98,7 +100,10 @@ SECRET_VALUE__keep__dbConnectionString='postgres://postgres:postgres@postgresql.
 # See tower__rabbitmqUrl's own comment above -- same fresh-per-cluster
 # credential, same manual-copy caveat, same "/authstar" vhost.
 SECRET_VALUE__keep__rabbitmqUrl='amqp://keep:d12bd135729e664f68d704b16400db0e8aab19720c3afdcf@rabbitmq.rabbitmq.svc.cluster.local:5672/authstar'
-SECRET_VALUE__keep__signetAdminToken='dev-placeholder-wpFlp6pZEAmPfmDyQt-JJriEpTT-nHySI6QquFUer10'
+# keep__signetAdminToken retired here per ADR 0103 (SPIFFE-scoped self-service
+# signet writes replace the admin bearer token entirely) — keep/009. Keep only
+# ever writes to its own bundle, so it authenticates with its own workload SVID
+# and needs no CreatePolicy grant at all.
 SECRET_VALUE__keep__stripe_secret_key_acme='sk_test_51PlaceholderAcmeDevKeyDoNotUseInProd00000000'
 SECRET_VALUE__keep__stripe_webhook_secret_acme='whsec_PlaceholderAcmeDevWebhookSigningSecret0000'
 # ADR 0102: KEEP_CREDENTIAL_SALT moves from a hardcoded 'keep-dev-salt'
@@ -164,15 +169,14 @@ SECRET_VALUE__herald__rabbitmqUrl='amqp://tower:6dd9a30b4b819743ed58e3db6080d399
 # minutes -- confirmed live via the RabbitMQ management API) until this was
 # fixed and POST /operator/rotate-keys was actually called once.
 SECRET_VALUE__herald__operatorToken='dev-placeholder-LKL0D3M7tKg2ZpRXgB3c29lviezj-cRFBUTSYEWJV7w'
-# herald/src/server.ts gained its own createSignetAdmin wiring (ADR 0025,
-# for pushing herald's payload-encryption public key to signet) after this
-# repo's manifests/secrets were first authored -- never previously
-# provisioned, a real gap this run found (herald crashed on startup:
-# "missing required environment variable SIGNET_ADMIN_TOKEN"). Same
-# dev-placeholder shape as tower/keep's own signetAdminToken -- never
-# cryptographically validated at plain startup, only exercised lazily by
-# herald's own POST /operator/rotate-keys route.
-SECRET_VALUE__herald__signetAdminToken='dev-placeholder-NI5l4rFr-pD3atJJnVuTQBLLArPmMWjv1rb9Rn17hLg'
+# herald__signetAdminToken retired here per ADR 0103 (SPIFFE-scoped
+# self-service signet writes replace the admin bearer token entirely) --
+# herald/008. Herald's own-bundle write and its three cross-service pushes
+# (new payload public key -> tower, keep, portcullis, ADR 0081) now
+# authenticate with herald's own workload SVID; the three one-time
+# CreatePolicy grants those cross-service pushes need (herald's SPIFFE ID ->
+# put on each target's namespace/service) are provisioned by
+# scripts/provision.sh, not a secret.
 SECRET_VALUE__lookout__rabbitmqUrl='amqp://rmq-e723a8343b2dd491:c68cd68864a92438478140b78988be85c7ba571a@rabbitmq.rabbitmq.svc.cluster.local:5672/'
 SECRET_VALUE__chronicle__clickhousePassword='clickhouse'
 SECRET_VALUE__chronicle__rabbitmqUrl='amqp://rmq-e723a8343b2dd491:c68cd68864a92438478140b78988be85c7ba571a@rabbitmq.rabbitmq.svc.cluster.local:5672/'

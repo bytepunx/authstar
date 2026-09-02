@@ -130,16 +130,24 @@ scripts/down.sh         # kluster down — ALWAYS run this when finished
    update-config` — this rewrites `.sops.yaml`'s placeholder recipient with the live
    cluster's real public key. **Must** happen before the next step, since `signet
    secret set` encrypts against whatever `.sops.yaml` currently names.
-4. Author all 25 placeholder secrets via `signet secret set`, one call per entry in
+4. Author all 22 placeholder secrets via `signet secret set`, one call per entry in
    `lib-secrets.sh`'s `SECRET_ENTRIES` list.
-5. Ensure a read-only GitHub deploy key exists, commit, push.
-6. Register the repo with signet (`repo add`, or reuse an existing registration), then
+5. Provision the four [ADR 0103](../design/decisions/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
+   cross-service policy grants via `signet policy create` — herald's SPIFFE ID → `put` on
+   tower's, keep's, and portcullis's namespace/service, and tower's SPIFFE ID → `put` on
+   portcullis's namespace/service. keep needs none (it only ever writes its own bundle).
+   Skips any grant `signet policy list` already shows, since `policy create` itself has no
+   server-side dedup.
+6. Ensure a read-only GitHub deploy key exists, commit, push.
+7. Register the repo with signet (`repo add`, or reuse an existing registration), then
    trigger an explicit `repo sync`.
 
 Idempotent throughout — safe to re-run against an already-provisioned cluster, matching
 signet-smoke-test's own idempotency checks (existing SOPS key / repo registration are
 detected and reused rather than duplicated; `secret set` is naturally idempotent since
-it's just "overwrite plaintext, re-encrypt").
+it's just "overwrite plaintext, re-encrypt"). The policy grants aren't naturally
+idempotent the same way (`policy create` has no server-side dedup) — `provision.sh`
+checks `policy list` first and skips any grant already present.
 
 ### Why secret values live in `lib-secrets.sh`, not just in `secrets/*.yaml`
 
@@ -178,9 +186,9 @@ the other 6 is extrapolated from ADR 0004's generic pattern plus tower/keep/hera
 
 | Service | Secrets | Config | Live signet wiring in app code? |
 |---|---|---|---|
-| tower | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `contactHashPepper`, `operatorToken`, `default-provider-client-secret`, `tenant-acme-contact-hash-pepper` | `dbConnectionString`, `rabbitmqUrl`, `provisioning.*` | Yes |
-| keep | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `stripe-secret-key-acme`, `stripe-webhook-secret-acme`, `credentialSalt` | `dbConnectionString`, `rabbitmqUrl`, `towerBaseUrl` | Yes |
-| herald | `dbConnectionString`, `rabbitmqUrl`, `signetAdminToken`, `operatorToken` | `dbConnectionString`, `rabbitmqUrl`, `towerBaseUrl` | Yes |
+| tower | `dbConnectionString`, `rabbitmqUrl`, `contactHashPepper`, `operatorToken`, `default-provider-client-secret`, `tenant-acme-contact-hash-pepper` | `dbConnectionString`, `rabbitmqUrl`, `provisioning.*` | Yes |
+| keep | `dbConnectionString`, `rabbitmqUrl`, `stripe-secret-key-acme`, `stripe-webhook-secret-acme`, `credentialSalt` | `dbConnectionString`, `rabbitmqUrl`, `towerBaseUrl` | Yes |
+| herald | `dbConnectionString`, `rabbitmqUrl`, `operatorToken` | `dbConnectionString`, `rabbitmqUrl`, `towerBaseUrl` | Yes |
 | lookout | `rabbitmqUrl` | `rabbitmqUrl` | **No** — reads `LOOKOUT_RABBITMQ_URL` env var directly; scope provisioned ahead of the wiring landing (bootstrap `SIGNET_*` env vars now set in `manifests/13-lookout.yaml`, but only take effect once lookout's own companion PR merges) |
 | chronicle | `clickhousePassword`, `rabbitmqUrl`, `internalJwtSecret` | `clickhouseUrl`, `clickhouseUsername`, `clickhouseDatabase`, `retentionMonths`, `maxDateRangeDays`, `queryTimeoutMs`, `rateLimitMax`, `rateLimitWindowMs` | **No** — reads `CHRONICLE_*` env vars directly; bootstrap `SIGNET_*` env vars now set in `manifests/14-chronicle.yaml`, but only take effect once chronicle's own companion PR merges |
 | portcullis | `tenant-acme-session-key`, `tenant-acme-internal-key`, `tenant-acme-identity-hash-key-1`, `tenant-acme-provider-dex-client-secret` | `webUpstream`, `towerUpstream`, `tenants.acme.*` (full `Bundle` struct shape) | Yes (Rust, `authstar-config` crate) |
@@ -190,6 +198,14 @@ the other 6 is extrapolated from ADR 0004's generic pattern plus tower/keep/hera
 All secrets use tenant slug `acme` for consistency with portcullis's own
 `examples/signet_smoke.rs` live smoke test, which already asserts against
 `tenant-acme-session-key`.
+
+Per [ADR 0103](../design/decisions/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
+(herald/008, keep/009, tower/017), none of tower/keep/herald hold a `signetAdminToken`
+anymore — each now authenticates its own signet writes (own-bundle, and any cross-service
+write) with its own SPIFFE workload identity instead of an admin bearer token. The
+cross-service writes (herald → tower/keep/portcullis, tower → portcullis) instead rely on
+the four one-time `CreatePolicy` grants `scripts/provision.sh` provisions (see above); keep
+needs no grant at all, since it only ever writes its own bundle.
 
 ### Confirmed-from-code vs. inferred-from-ADR — the interesting bits
 
@@ -547,18 +563,20 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
 - **`kubectl port-forward` reliability** — this pass worked around silent forward death
   by re-establishing forwards fresh each run rather than fixing the underlying flakiness;
   a longer-running test harness (e.g. a CI job) would want retry/reconnect logic instead.
-- **A rotation mechanism for tower's and herald's own `signetAdminToken`** — both are
-  currently a manually-minted, short-lived (1h) Kubernetes token, a same-session stopgap
-  documented in `scripts/lib-secrets.sh`'s own comments, not a durable fix. Needs a
-  CronJob matching kickr's own `rabbitmq-provisioner-rotate` pattern. **Found live while
-  refreshing an expired token this pass**: the token must be minted from the
+- ~~A rotation mechanism for tower's and herald's own `signetAdminToken`~~ — **resolved by
+  [ADR 0103](../design/decisions/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)**
+  (herald/008, keep/009, tower/017): rather than building a rotation mechanism for it, the
+  admin token is retired outright — tower/keep/herald now authenticate signet writes with
+  their own SPIFFE workload identity, which SPIRE already rotates on its own. The original
+  finding below is kept for historical context (it's what motivated the ADR), but the
+  token it describes no longer exists in this repo's secrets. Both were previously a
+  manually-minted, short-lived (1h) Kubernetes token, a same-session stopgap documented in
+  `scripts/lib-secrets.sh`'s own comments, not a durable fix. **Found live while
+  refreshing an expired token in that earlier pass**: the token had to be minted from the
   `signet-admin` service account (`kubectl create token signet-admin -n signet --audience
-  signet`) — minting from each app's own service account (`tower`/`herald`) instead gets
+  signet`) — minting from each app's own service account (`tower`/`herald`) instead got
   `PERMISSION_DENIED: unauthorized ... not authorized to administer signet (grant via
-  SIGNET_ADMIN_SUBJECTS or RBAC on signet.io/admin operations verb administer)`. Worth
-  keeping in mind for whatever rotation mechanism eventually replaces the manual mint —
-  it needs the `signet-admin` identity specifically, not a least-privilege per-service one
-  (none is currently granted `administer`).
+  SIGNET_ADMIN_SUBJECTS or RBAC on signet.io/admin operations verb administer)`.
 - **`config/authstar/herald.yaml`/`lookout.yaml`'s comment-only-YAML parse error** — was
   confirmed real and silent (logged every sync cycle). Now fixed for both: `herald.yaml`
   gained a real field (`towerBaseUrl`, per ADR 0102/ADR 0089 — herald's `server.ts`
