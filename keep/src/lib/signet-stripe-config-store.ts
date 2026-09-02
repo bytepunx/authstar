@@ -1,14 +1,22 @@
 import { gzipSync } from 'node:zlib'
-import { gitOpsClient, encryptForSecret, type GitOpsServiceClient } from '@bytepunx/signet-client'
+import { dialWorkloadGitOps, encryptForSecret } from '@bytepunx/signet-client'
 import type { StripeConfigStore, TenantStripeConfig } from './stripe-config.js'
 
 // ADR 0052's real wiring for keep's own `stripe-config` route --
 // stripe-config.ts's own top-of-file comment calls this "out of scope for
 // this pilot slice"; this is that follow-up.
 //
+// ADR 0103: re-pointed at SPIFFE-mTLS self-service instead of ADR 0052's
+// admin bearer token -- signet already authorizes `SyncBundle`/
+// `GetSOPSPublicKey` for a caller presenting its own workload SPIFFE
+// identity, scoped to that identity's own namespace/service, so keep (which
+// only ever writes its own bundle) needs no admin-level credential and no
+// `CreatePolicy` grant at all. See Story 009 and ADR 0103 for the full
+// writeup.
+//
 // Unlike tower's `signet-admin.ts` (ADR 0011: a cross-service admin token
-// that can push into *other* services' bundles), ADR 0052 gives keep a
-// narrower token scoped to its **own** bundle only -- so there is no
+// that can push into *other* services' bundles), keep's identity is
+// narrowly scoped to its **own** bundle only -- so there is no
 // `targetService` parameter here, and the archive path is always
 // `secrets/<key>.yaml`, never `secrets/<service>/<key>.yaml`.
 //
@@ -84,22 +92,24 @@ function buildSecretArchive(key: string, content: Uint8Array): Buffer {
 
 export interface SignetStripeConfigStoreOptions {
   address: string
-  token: string
+  // SPIFFE trust domain the dialed signet server's presented identity must
+  // belong to -- same value keep's own `dialWorkload` bundle-fetch bootstrap
+  // in src/server.ts already requires and verifies against.
+  trustDomain: string
   // Decoded secrets off keep's own `GetServiceBundle` response, fetched
   // once at startup by src/server.ts -- see the file comment above for why
   // this is a one-time snapshot, not a live lookup.
   initialSecrets: Record<string, string>
 }
 
-export function createSignetStripeConfigStore(opts: SignetStripeConfigStoreOptions): StripeConfigStore {
-  // plaintext: true is required, not optional: signet's admin/GitOps listener never
-  // terminates TLS itself, even reached by its in-cluster DNS name (a non-loopback
-  // address) -- per signet-clients' own DialAdminOptions.plaintext doc comment,
-  // omitting this makes the client's loopback heuristic pick TLS and the handshake
-  // fails immediately ("wrong version number") against a server that never speaks
-  // TLS on that port. Confirmed for real against a live cluster (same bug found and
-  // fixed in tower's signet-admin.ts).
-  const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token, plaintext: true })
+export async function createSignetStripeConfigStore(opts: SignetStripeConfigStoreOptions): Promise<StripeConfigStore> {
+  // dialWorkloadGitOps binds keep's own workload SVID (fetched from the
+  // local SPIFFE Workload API) to a GitOpsServiceClient via real mTLS --
+  // there is no plaintext concept on this path (unlike the retired
+  // token-based `gitOpsClient` dial, mTLS is always in effect here), so the
+  // loopback/TLS heuristic that used to govern `plaintext: true` no longer
+  // applies.
+  const { client } = await dialWorkloadGitOps({ address: opts.address, trustDomain: opts.trustDomain })
   const secrets = new Map<string, string>(Object.entries(opts.initialSecrets))
 
   async function pushSecret(key: string, value: string): Promise<void> {
