@@ -1,8 +1,19 @@
-# No signet wiring yet, no SPIFFE volume. INTERNAL_JWT_JWKS_URL is
-# deliberately unset -- portcullis has no JWKS-serving route yet (see
-# config/authstar/web/config.yaml's own note) -- so web falls back to its
-# own documented "treat every request as unauthenticated" mode. Real gap,
-# not something to paper over here.
+# SIGNET_* bootstrap now set here (ADR 0102 / web story 012), enabling
+# Signet-Configured Mode for web's plain config (towerBaseUrl/keepBaseUrl,
+# sourced from config/authstar/web.yaml, overriding TOWER_BASE_URL/
+# KEEP_BASE_URL below if both present) once web's own companion PR adds
+# the dialWorkload/getServiceBundle wiring. Until then, web stays in
+# today's Env-Only Mode unchanged (per ADR 0102, that mode remains
+# legitimate for web). No SIGNET_ADMIN_ADDR: web makes no admin/GitOps
+# calls.
+#
+# INTERNAL_JWT_JWKS_URL is now set for real (see
+# config/authstar/web.yaml's own much longer comment on this exact field
+# for the two remaining gaps -- portcullis has no JWKS route yet, and the
+# admin.acme.authstar.app host has no in-cluster DNS path -- both flagged
+# for operator verification before deploy, neither fixed by this value
+# being set). KEEP_BASE_URL is added here too: used in code but was
+# missing from this manifest entirely.
 #
 # PUBLIC_TOWER_BASE_URL is browser-visible ($env/dynamic/public) and only
 # matters for a human driving the signup page directly; it assumes
@@ -56,10 +67,31 @@ spec:
             periodSeconds: 5
             failureThreshold: 3
           env:
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
             - name: TOWER_BASE_URL
               value: http://tower.authstar.svc.cluster.local:8080
+            - name: KEEP_BASE_URL
+              value: http://keep.authstar.svc.cluster.local:8080
+            - name: INTERNAL_JWT_JWKS_URL
+              value: https://admin.acme.authstar.app/.well-known/jwks.json
             - name: PUBLIC_TOWER_BASE_URL
               value: http://localhost:8080
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
 ---
 apiVersion: v1
 kind: Service

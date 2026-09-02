@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Provisions signet itself for authstar's integration harness: admin RBAC,
-# SOPS age key, the 24 placeholder secrets across the 6 services that
+# SOPS age key, the 25 placeholder secrets across the 6 services that
 # currently have real signet wiring (see lib-secrets.sh's SECRET_ENTRIES),
 # the GitHub deploy key + repo registration, and an initial sync. Idempotent
 # — safe to re-run against an already-provisioned cluster. Adapted from
