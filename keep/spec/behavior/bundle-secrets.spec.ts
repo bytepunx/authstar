@@ -2,14 +2,18 @@ import { describe, expect, it } from 'vitest'
 import { requireBundleSecret } from '../../src/lib/bundle-secrets.js'
 
 // Behavior tier for `requireBundleSecret` (ADR 0102 / Story 008): the
-// fail-loud helper `src/server.ts` and `src/sync-pricing.ts` both now use
-// for `signetAdminToken` (previously `secrets.signetAdminToken ??
-// requireEnv('SIGNET_ADMIN_TOKEN')`, a silent non-signet fallback) and
-// `credentialSalt` (previously not signet-sourced at all). Kept in its own
-// side-effect-free module, separate from `server.ts`/`sync-pricing.ts`
-// themselves, so it can be unit-tested without importing either
-// entrypoint's own module-level `main().catch(...)` (which would try to
-// dial signet immediately on import).
+// fail-loud helper `src/server.ts` uses for `credentialSalt` (previously not
+// signet-sourced at all). Kept in its own side-effect-free module, separate
+// from `server.ts`/`sync-pricing.ts` themselves, so it can be unit-tested
+// without importing either entrypoint's own module-level `main().catch(...)`
+// (which would try to dial signet immediately on import).
+//
+// `signetAdminToken` is used below purely as an example field name to
+// exercise this helper's generic precedence/fail-loud behavior -- it is no
+// longer an actual call site as of ADR 0103/Story 009, which retired
+// `signetAdminToken` entirely (keep authenticates its signet GitOps writes
+// with its own workload SPIFFE identity now, not a bundle-delivered admin
+// token) without replacing its one `requireBundleSecret` call with anything.
 
 describe('requireBundleSecret', () => {
   it('returns the value when present as a decoded secret', () => {

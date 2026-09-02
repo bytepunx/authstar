@@ -96,14 +96,6 @@ async function main(): Promise<void> {
   const rabbitmqUrl = (bundle.rabbitmqUrl as string | undefined) ?? secrets.rabbitmqUrl
   if (!dbConnectionString) throw new Error('signet bundle missing dbConnectionString')
   if (!rabbitmqUrl) throw new Error('signet bundle missing rabbitmqUrl')
-  // ADR 0052: keep's own narrow, self-bundle-scoped GitOpsService admin
-  // token -- delivered as a secret in keep's own bundle, same delivery
-  // pattern as tower's own token (ADR 0011), just narrower in what it can
-  // reach. ADR 0102: keep is always in Signet-Configured Mode (its bootstrap
-  // vars above are required unconditionally, no Env-Only Mode exists here),
-  // so a bundle missing this secret is a provisioning gap, not a reason to
-  // fall back to `SIGNET_ADMIN_TOKEN` -- that env fallback is removed.
-  const signetAdminToken = requireBundleSecret(bundle, secrets, 'signetAdminToken')
   // ADR 0102: the salt used to hash usage-reporting-credential secrets
   // (`lib/hash.ts`) -- signet-sourced like keep's other secrets, since it
   // never leaves keep's own trust boundary (see that file's own comment for
@@ -143,7 +135,11 @@ async function main(): Promise<void> {
   const sequences = createConsequentSequenceProvider(consequent)
 
   const stripeClients = createStripeClientFactory()
-  const stripeConfig = createSignetStripeConfigStore({ address: adminAddress, token: signetAdminToken, initialSecrets: secrets })
+  // ADR 0103: keep's own workload SVID authenticates this GitOps dial
+  // directly -- no admin bearer token, no `CreatePolicy` grant, since keep
+  // only ever writes its own bundle. Same `trustDomain` already verified
+  // above for the ordinary `dialWorkload` bundle fetch.
+  const stripeConfig = await createSignetStripeConfigStore({ address: adminAddress, trustDomain, initialSecrets: secrets })
 
   // ADR 0047's role reference cache -- now real, not the always-empty
   // stub this used to boot with. Kept current two ways: a live RabbitMQ

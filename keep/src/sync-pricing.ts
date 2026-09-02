@@ -6,7 +6,6 @@ import initializeConsequent from 'consequent'
 import { createStripeClientFactory } from './lib/stripe-client.js'
 import { createSignetStripeConfigStore } from './lib/signet-stripe-config-store.js'
 import { syncAllPlanMappingPricing } from './lib/pricing-sync.js'
-import { requireBundleSecret } from './lib/bundle-secrets.js'
 
 // Standalone entrypoint for the periodic pricing re-sync CronJob (design/
 // stories/keep/003's "Periodic pricing re-sync" section: "the same
@@ -72,11 +71,6 @@ async function main(): Promise<void> {
 
   const dbConnectionString = (bundle.dbConnectionString as string | undefined) ?? secrets.dbConnectionString
   if (!dbConnectionString) throw new Error('signet bundle missing dbConnectionString')
-  // ADR 0102: keep is always in Signet-Configured Mode (bootstrap vars above
-  // are required unconditionally, no Env-Only Mode exists here) -- a bundle
-  // missing this secret is a provisioning gap, not a reason to fall back to
-  // `SIGNET_ADMIN_TOKEN`. Same fix as `src/server.ts`.
-  const signetAdminToken = requireBundleSecret(bundle, secrets, 'signetAdminToken')
 
   const pgAdapters = initializePostgresAdapters({ connectionString: dbConnectionString })
   // Same structural-vs-nominal adapter type friction `server.ts` casts at
@@ -90,7 +84,11 @@ async function main(): Promise<void> {
   })
 
   const stripeClients = createStripeClientFactory()
-  const stripeConfig = createSignetStripeConfigStore({ address: adminAddress, token: signetAdminToken, initialSecrets: secrets })
+  // ADR 0103: keep's own workload SVID authenticates this GitOps dial
+  // directly -- no admin bearer token, no `CreatePolicy` grant. Same
+  // `trustDomain` already verified above for the ordinary `dialWorkload`
+  // bundle fetch.
+  const stripeConfig = await createSignetStripeConfigStore({ address: adminAddress, trustDomain, initialSecrets: secrets })
 
   // eslint-disable-next-line no-console
   const log = (message: string) => console.log(message)
