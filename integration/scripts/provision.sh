@@ -1,20 +1,26 @@
 #!/usr/bin/env bash
 # Provisions signet itself for authstar's integration harness: admin RBAC,
-# SOPS age key, the 25 placeholder secrets across the 6 services that
+# SOPS age key, the 22 placeholder secrets across the 6 services that
 # currently have real signet wiring (see lib-secrets.sh's SECRET_ENTRIES),
-# the GitHub deploy key + repo registration, and an initial sync. Idempotent
-# — safe to re-run against an already-provisioned cluster. Adapted from
-# signet-smoke-test/scripts/provision.sh's exact pattern, generalized from
-# one toy "echo" service to 8 real authstar services.
+# four ADR 0103 cross-service policy grants, the GitHub deploy key + repo
+# registration, and an initial sync. Idempotent — safe to re-run against an
+# already-provisioned cluster. Adapted from signet-smoke-test/scripts/
+# provision.sh's exact pattern, generalized from one toy "echo" service to 8
+# real authstar services.
 #
-# Unlike signet-smoke-test, this script does NOT create any signet policy:
-# smoke-test needed one because it has a genuinely cross-namespace shared
-# secret (smoke-shared/common, read by every language's echo workload).
-# Authstar's services each read only their own namespace/service bundle
-# (single shared "authstar" namespace, one scope per service, per ADR 0014)
-# — signet's convention-first automatic-access rule already covers that with
-# no policy needed, same reasoning signet-smoke-test's own README documents
-# for its per-language scopes.
+# Unlike signet-smoke-test, this script does not create a policy for a
+# shared *secret* (smoke-test needs one for smoke-shared/common, a genuinely
+# cross-namespace secret read by every language's echo workload). Authstar's
+# services each read only their own namespace/service bundle (single shared
+# "authstar" namespace, one scope per service, per ADR 0014) — signet's
+# convention-first automatic-access rule already covers that with no policy
+# needed, same reasoning signet-smoke-test's own README documents for its
+# per-language scopes. What DOES need policies here: ADR 0103's cross-
+# service *writes* — herald pushing its payload public key into tower's,
+# keep's, and portcullis's bundles, and tower authoring portcullis's bundle
+# on its behalf (ADR 0011). Those four grants are provisioned below, once
+# signet's own convention-first rule (which only covers a caller's own
+# namespace/service) plainly does not apply.
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 source "$(dirname "${BASH_SOURCE[0]}")/lib-secrets.sh"
 
@@ -91,6 +97,46 @@ done
 
 log "config/ (plain, non-secret) files are already committed as static YAML in this repo — nothing to generate"
 log "no secrets exist yet for steward or web: both are pending signet-client wiring on the app side (see README.md); their config/ files are already committed"
+
+log "provisioning ADR 0103 cross-service policy grants (herald, tower)"
+# Per ADR 0103 (design/decisions/0103-spiffe-scoped-signet-writes-retire-
+# admin-tokens.md) and herald/008, tower/017: herald and tower now write
+# into another service's bundle using their own SPIFFE workload identity
+# instead of a signetAdminToken admin bearer token, which needs a one-time
+# CreatePolicy grant per cross-service write (signet's convention-first
+# auto-access only covers a caller's own namespace/service). keep needs none
+# — it only ever writes its own bundle (keep/009).
+#
+# 'signet policy create' has no server-side dedup (plain SQL INSERT, see
+# signet/internal/store/policies.go's PutPolicy — no ON CONFLICT), so unlike
+# 'signet secret set' this is NOT naturally idempotent: re-running it
+# unconditionally would pile up duplicate policy rows on every provision.sh
+# rerun. Match this script's own idempotent style anyway by checking
+# 'signet policy list' first and skipping any (spiffe_id, pattern) pair
+# that's already there.
+POLICY_GRANTS=(
+  "spiffe://${TRUST_DOMAIN}/ns/${AUTHSTAR_NAMESPACE}/sa/herald tower"
+  "spiffe://${TRUST_DOMAIN}/ns/${AUTHSTAR_NAMESPACE}/sa/herald keep"
+  "spiffe://${TRUST_DOMAIN}/ns/${AUTHSTAR_NAMESPACE}/sa/herald portcullis"
+  "spiffe://${TRUST_DOMAIN}/ns/${AUTHSTAR_NAMESPACE}/sa/tower portcullis"
+)
+for grant in "${POLICY_GRANTS[@]}"; do
+  spiffe_id="${grant% *}"
+  target_service="${grant#* }"
+  pattern="${AUTHSTAR_NAMESPACE}/${target_service}/*"
+  if signet policy list --token "$TOKEN" \
+    | awk -v id="$spiffe_id" -v pat="$pattern" '$2==id && $4==pat {found=1} END{exit !found}'; then
+    log "policy grant already exists: $spiffe_id -> put on $pattern"
+    continue
+  fi
+  log "creating policy grant: $spiffe_id -> put on $pattern"
+  signet policy create \
+    --spiffe-id "$spiffe_id" \
+    --namespace "$AUTHSTAR_NAMESPACE" \
+    --service "$target_service" \
+    --permission put \
+    --token "$TOKEN"
+done
 
 log "ensuring a read-only deploy key exists on $REPO_SLUG"
 mkdir -p "$DEPLOY_KEY_DIR"
