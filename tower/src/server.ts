@@ -14,7 +14,7 @@ import { startEntitlementConsumer } from './lib/entitlement-consumer.js'
 import { startErasureAckConsumer } from './lib/erasure-ack-consumer.js'
 import { createEphemeralHeraldKey, heraldKeyFromPem, type HeraldPayloadKey } from './lib/herald-payload-crypto.js'
 import { fetchServerCredentials, watchSVIDRotation } from './lib/spiffe-mtls.js'
-import { resolveProvisioningConfig, resolveSignetAdminToken } from './lib/signet-bundle-config.js'
+import { resolveProvisioningConfig } from './lib/signet-bundle-config.js'
 import type { ProvisioningConfig } from './routes/provisioning.js'
 
 // Production entrypoint. Follows the fetch-once/watch/restart-lock pattern
@@ -116,7 +116,6 @@ async function main(): Promise<void> {
 
   const dbConnectionString = (bundle.dbConnectionString as string | undefined) ?? secrets.dbConnectionString
   const rabbitmqUrl = (bundle.rabbitmqUrl as string | undefined) ?? secrets.rabbitmqUrl
-  const signetAdminToken = resolveSignetAdminToken(secrets)
   const contactHashPepper = secrets.contactHashPepper
   if (!dbConnectionString) throw new Error('signet bundle missing dbConnectionString')
   if (!rabbitmqUrl) throw new Error('signet bundle missing rabbitmqUrl')
@@ -157,7 +156,7 @@ async function main(): Promise<void> {
   await startErasureAckConsumer(amqpChannel, ackQueue.queue, { consequent })
 
   const publisher = createAmqpPublisher(amqpChannel, 'authstar')
-  const signetAdmin = createSignetAdmin({ address: adminAddress, token: signetAdminToken, namespace })
+  const signetAdmin = await createSignetAdmin({ address: adminAddress, trustDomain, namespace })
   const contactStore = createPgContactStore(pgPool, contactHashPepper)
   const ids = createIdGenerator(service)
   // eslint-disable-next-line no-console
