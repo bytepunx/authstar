@@ -1,13 +1,18 @@
 import { describe, it, expect } from 'vitest'
-import { resolveProvisioningConfig, resolveSignetAdminToken } from '../../src/lib/signet-bundle-config.js'
+import { resolveProvisioningConfig } from '../../src/lib/signet-bundle-config.js'
 
 // ADR 0102 / Story 016: tower is always in Signet-Configured Mode (its
 // bootstrap coordinates -- SIGNET_ADDR/SIGNET_NAMESPACE/SIGNET_TRUST_DOMAIN
 // -- are `requireEnv`'d unconditionally in server.ts, no Env-Only Mode
-// exists for tower). A field these two resolvers expect that's missing
-// from the fetched bundle must fail startup naming the exact missing
-// field/secret -- never a silent `?? false` / `?? ''` / `?? {...}`
+// exists for tower). A field resolveProvisioningConfig expects that's
+// missing from the fetched bundle must fail startup naming the exact
+// missing field/secret -- never a silent `?? false` / `?? ''` / `?? {...}`
 // hardcoded literal, and never an env-var fallback.
+//
+// ADR 0103 / Story 017 removed this file's other resident,
+// resolveSignetAdminToken (and its tests below) -- tower no longer resolves
+// a signetAdminToken secret at all. See signet-admin.spec.ts for coverage
+// of the SPIFFE-mTLS dial path that replaced it.
 
 const validProvisioning = {
   selfServiceEnabled: true,
@@ -20,24 +25,9 @@ const validProvisioning = {
 }
 
 const validSecrets: Record<string, string> = {
-  signetAdminToken: 'admin-tok',
   operatorToken: 'op-tok',
   'default-provider-client-secret': 'provider-secret',
 }
-
-describe('resolveSignetAdminToken', () => {
-  it('returns the bundle-sourced token when present', () => {
-    expect(resolveSignetAdminToken({ signetAdminToken: 'tok-123' })).toBe('tok-123')
-  })
-
-  it('throws naming the missing field when signetAdminToken secret is absent, with no env fallback', () => {
-    expect(() => resolveSignetAdminToken({})).toThrow(/signetAdminToken/)
-  })
-
-  it('throws when signetAdminToken is present but empty', () => {
-    expect(() => resolveSignetAdminToken({ signetAdminToken: '' })).toThrow(/signetAdminToken/)
-  })
-})
 
 describe('resolveProvisioningConfig', () => {
   it('returns the expected config object for full valid input', () => {

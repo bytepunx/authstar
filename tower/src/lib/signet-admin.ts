@@ -1,5 +1,5 @@
 import { gzipSync } from 'node:zlib'
-import { gitOpsClient, encryptForSecret, type GitOpsServiceClient, type adminv1 } from '@bytepunx/signet-client'
+import { dialWorkloadGitOps, encryptForSecret, type adminv1 } from '@bytepunx/signet-client'
 
 // ADR 0067's tenant-provisioning flow needs tower to push four secrets
 // (session signing key, internal signing key, `identity-hash-key`
@@ -35,7 +35,7 @@ export interface SignetAdmin {
 
 export interface SignetAdminOptions {
   address: string
-  token: string
+  trustDomain: string
   namespace: string
 }
 
@@ -115,16 +115,19 @@ export function syncBundleFailure(response: { errors: string[] }): string | null
   return null
 }
 
-export function createSignetAdmin(opts: SignetAdminOptions): SignetAdmin {
-  // plaintext: true is required, not optional: signet's admin/GitOps listener never
-  // terminates TLS itself, even reached by its in-cluster DNS name (a non-loopback
-  // address) -- per signet-clients' own DialAdminOptions.plaintext doc comment,
-  // omitting this makes the client's loopback heuristic pick TLS and the handshake
-  // fails immediately ("wrong version number") against a server that never speaks
-  // TLS on that port. Confirmed for real against a live cluster: SIGNET_ADMIN_ADDR
-  // is signet.signet.svc.cluster.local:8444, and self-service tenant provisioning
-  // 500'd with exactly that OpenSSL error before this was added.
-  const client: GitOpsServiceClient = gitOpsClient({ address: opts.address, token: opts.token, plaintext: true })
+export async function createSignetAdmin(opts: SignetAdminOptions): Promise<SignetAdmin> {
+  // ADR 0103: signet's server already authorizes SyncBundle/
+  // PatchServiceConfig/GetServiceConfig/GetSOPSPublicKey via the caller's
+  // verified SPIFFE identity, scoped to that identity's own namespace/
+  // service (with tower's cross-service portcullis-authoring role covered
+  // by a one-time CreatePolicy grant provisioned separately in
+  // authstar-integration) -- no admin bearer token needed. dialWorkloadGitOps
+  // builds the same workload-mTLS ChannelCredentials dialWorkload already
+  // uses for tower's ordinary bundle fetch (server.ts) and binds them to a
+  // GitOpsServiceClient instead, so this always does real mTLS -- unlike the
+  // retired admin-token dial path, there's no plaintext/TLS heuristic to get
+  // wrong here.
+  const { client } = await dialWorkloadGitOps({ address: opts.address, trustDomain: opts.trustDomain })
 
   return {
     async pushSecret(targetService, key, value) {

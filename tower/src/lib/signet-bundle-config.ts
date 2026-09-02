@@ -6,23 +6,20 @@ import type { ProvisioningConfig } from '../routes/provisioning.js'
 // field the service expects that's missing from the fetched bundle is a
 // startup failure naming the exact missing field/secret -- never a silent
 // `?? false` / `?? ''` / `?? {...}` hardcoded literal, and never a fallback
-// to a same-named env var. This module is the one place those two
-// previously-silent-fallback fields (`SIGNET_ADMIN_TOKEN` and the whole
-// `provisioning.*` block) get resolved, so `server.ts`'s untested `main()`
-// stays a thin wiring shell (see TESTING.md's scope note on entrypoints)
-// and the actual precedence/fail-loud logic is covered here instead.
+// to a same-named env var. This module is the one place the previously-
+// silent-fallback `provisioning.*` block gets resolved, so `server.ts`'s
+// untested `main()` stays a thin wiring shell (see TESTING.md's scope note
+// on entrypoints) and the actual precedence/fail-loud logic is covered here
+// instead.
+//
+// ADR 0103 removed this module's other resident, `resolveSignetAdminToken`:
+// tower no longer holds or resolves a `signetAdminToken` secret at all --
+// `createSignetAdmin` (signet-admin.ts) authenticates GitOps writes with
+// tower's own workload SPIFFE identity instead, the same credential
+// `dialWorkload` already uses for its ordinary bundle fetch.
 
 function missingFieldError(field: string): Error {
   return new Error(`signet bundle missing ${field} -- provision it in signet`)
-}
-
-// `secrets.signetAdminToken ?? requireEnv('SIGNET_ADMIN_TOKEN')` (the old
-// herald/keep/tower pattern ADR 0102 names directly) becomes fail-loud only
-// -- no env fallback -- since tower has no Env-Only Mode to fall back into.
-export function resolveSignetAdminToken(secrets: Record<string, string>): string {
-  const token = secrets.signetAdminToken
-  if (!token) throw missingFieldError('signetAdminToken secret')
-  return token
 }
 
 export function resolveProvisioningConfig(
