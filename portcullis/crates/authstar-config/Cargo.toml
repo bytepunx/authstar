@@ -6,7 +6,7 @@ license.workspace = true
 publish.workspace = true
 
 [dependencies]
-signet-client = { version = "0.3", features = ["spiffe-workload"] }
+signet-client = { version = "0.6", features = ["spiffe-workload"] }
 prost-types = "0.14"
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
 tokio-util = "0.7"
