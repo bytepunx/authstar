@@ -212,7 +212,16 @@ async fn build_response(resp: reqwest::Response) -> Response {
             axum::http::HeaderName::from_bytes(name.as_str().as_bytes()),
             axum::http::HeaderValue::from_bytes(value.as_bytes()),
         ) {
-            headers.insert(n, v);
+            // `insert` replaces any existing value for this header name --
+            // fine for single-valued headers, but silently drops all but
+            // the last occurrence of a header the upstream legitimately
+            // repeats (RFC 7230 explicitly allows this; Set-Cookie is the
+            // most consequential real-world case, since a login response
+            // routinely sets more than one cookie in one response). This
+            // loop already visits each repeated value individually (
+            // reqwest's HeaderMap::iter() yields one entry per value), so
+            // `append` is what actually preserves all of them downstream.
+            headers.append(n, v);
         }
     }
 

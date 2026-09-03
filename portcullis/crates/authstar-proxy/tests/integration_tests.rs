@@ -401,3 +401,43 @@ async fn passes_a_3xx_from_upstream_straight_through_instead_of_following_it() {
         Some("https://checkout.stripe.com/c/pay/cs_live_abc123")
     );
 }
+
+#[tokio::test]
+async fn preserves_every_repeated_response_header_from_upstream() {
+    // Regression: `build_response` used to copy upstream headers with `HeaderMap::insert`, which
+    // replaces rather than accumulates -- fine for single-valued headers, but it silently dropped
+    // all but the last value of a header the upstream legitimately repeats. Set-Cookie is the
+    // consequential real-world case: a login response routinely sets more than one cookie.
+    let upstream = MockServer::start().await;
+    Mock::given(method("GET"))
+        .and(path("/login"))
+        .respond_with(ResponseTemplate::new(200).append_headers([
+            ("set-cookie", "session=abc123; Path=/"),
+            ("set-cookie", "csrf=xyz789; Path=/"),
+        ]))
+        .mount(&upstream)
+        .await;
+
+    let application = test_application(upstream.uri(), IndexMap::new());
+    let state = build_state(application);
+    let app = app_with_forward_context(state, None);
+
+    let req = Request::builder()
+        .method("GET")
+        .uri("/login")
+        .header(header::HOST, "app.acme.test")
+        .body(Body::empty())
+        .unwrap();
+
+    let response = app.oneshot(req).await.unwrap();
+    let cookies: Vec<&str> = response
+        .headers()
+        .get_all("set-cookie")
+        .iter()
+        .map(|v| v.to_str().unwrap())
+        .collect();
+    assert_eq!(
+        cookies,
+        vec!["session=abc123; Path=/", "csrf=xyz789; Path=/"]
+    );
+}
