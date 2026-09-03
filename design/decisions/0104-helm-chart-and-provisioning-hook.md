@@ -83,8 +83,9 @@ continue to use their existing SPIFFE-scoped runtime access (ADR 0103) unchanged
 - The operator-supplied bearer token is a new, explicit piece of required chart input,
   documented in `authstar-chart`'s README — a real standing credential requirement, scoped to
   install/upgrade time only.
-- A story is written in `authstar-chart` (`stories/`, following this repo's normal convention)
-  before implementation, covering: chart layout, the hook's exact `PutServiceConfig`/
+- A story is written in `authstar-design`'s `stories/chart/` (this repo's normal convention: every
+  service's stories live here regardless of which repo implements them) before implementation,
+  covering: chart layout, the hook's exact `PutServiceConfig`/
   `SyncBundle` call sequence per service, hook failure behavior (a failed provisioning run must
   fail the Helm release, not partially apply), and the values.yaml schema for both the bearer
   token reference and each service's config/secret payloads.
