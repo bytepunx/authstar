@@ -1,0 +1,52 @@
+# tower is the only service whose signet-admin.ts wiring calls signet's
+# GitOpsService (self-service tenant provisioning pushes new secrets/config) --
+# that RPC lives on signet's admin port (8444, gated by admin.clusterAccess),
+# NOT the workload port (8443) server.ts's dialWorkload/getServiceBundle
+# calls use. dbConnectionString/rabbitmqUrl/signetAdminToken/etc. are NOT env
+# vars here -- they're delivered via tower's own signet bundle, pushed by
+# this chart's provisioning hook, fetched at startup over SPIFFE mTLS.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tower
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: tower
+spec:
+  replicas: {{ .Values.tower.replicas }}
+  selector:
+    matchLabels:
+      app: tower
+  template:
+    metadata:
+      labels:
+        app: tower
+    spec:
+      serviceAccountName: tower
+      {{- include "authstar.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: tower
+          image: "{{ .Values.tower.image.repository }}:{{ .Values.tower.image.tag }}"
+          imagePullPolicy: {{ .Values.tower.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.tower.port }}
+          # TCP-only: no dedicated health route exists on any of these 8
+          # services yet.
+          {{- include "authstar.probes" .Values.tower.port | nindent 10 }}
+          {{- include "authstar.resources" .Values.tower.resources | nindent 10 }}
+          env:
+            - name: SIGNET_NAMESPACE
+              value: {{ .Values.tower.signet.namespace | quote }}
+            - name: SIGNET_ADDR
+              value: {{ .Values.tower.signet.addr | quote }}
+            - name: SIGNET_ADMIN_ADDR
+              value: {{ .Values.tower.signet.adminAddr | quote }}
+            - name: SIGNET_TRUST_DOMAIN
+              value: {{ .Values.tower.signet.trustDomain | quote }}
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: {{ .Values.tower.spiffe.socketValue | quote }}
+            {{- include "authstar.extraEnv" .Values.tower.extraEnv | nindent 12 }}
+          volumeMounts:
+            {{- include "authstar.spiffeVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "authstar.spiffeVolume" . | nindent 8 }}

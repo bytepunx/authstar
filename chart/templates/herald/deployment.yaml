@@ -1,0 +1,46 @@
+# SIGNET_ADMIN_ADDR: herald's own createSignetAdmin wiring (ADR 0025, pushing
+# herald's payload-encryption public key to signet) also calls the admin
+# port (8444), not the workload port (8443) -- same reasoning as tower/keep.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: herald
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: herald
+spec:
+  replicas: {{ .Values.herald.replicas }}
+  selector:
+    matchLabels:
+      app: herald
+  template:
+    metadata:
+      labels:
+        app: herald
+    spec:
+      serviceAccountName: herald
+      {{- include "authstar.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: herald
+          image: "{{ .Values.herald.image.repository }}:{{ .Values.herald.image.tag }}"
+          imagePullPolicy: {{ .Values.herald.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.herald.port }}
+          {{- include "authstar.probes" .Values.herald.port | nindent 10 }}
+          {{- include "authstar.resources" .Values.herald.resources | nindent 10 }}
+          env:
+            - name: SIGNET_NAMESPACE
+              value: {{ .Values.herald.signet.namespace | quote }}
+            - name: SIGNET_ADDR
+              value: {{ .Values.herald.signet.addr | quote }}
+            - name: SIGNET_ADMIN_ADDR
+              value: {{ .Values.herald.signet.adminAddr | quote }}
+            - name: SIGNET_TRUST_DOMAIN
+              value: {{ .Values.herald.signet.trustDomain | quote }}
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: {{ .Values.herald.spiffe.socketValue | quote }}
+            {{- include "authstar.extraEnv" .Values.herald.extraEnv | nindent 12 }}
+          volumeMounts:
+            {{- include "authstar.spiffeVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "authstar.spiffeVolume" . | nindent 8 }}

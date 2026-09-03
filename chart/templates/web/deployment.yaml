@@ -1,0 +1,46 @@
+# web's own code has supported Signet-Configured Mode since ADR 0102/
+# Story 012 (merged) -- bootstrap coordinates below activate it, sourcing
+# tower/keep URLs and the JWKS URL from the signet bundle the hook
+# provisions (values.web.config) instead of the extraEnv entries below (left
+# in place as the Env-Only Mode fallback).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: web
+spec:
+  replicas: {{ .Values.web.replicas }}
+  selector:
+    matchLabels:
+      app: web
+  template:
+    metadata:
+      labels:
+        app: web
+    spec:
+      serviceAccountName: web
+      {{- include "authstar.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: web
+          image: "{{ .Values.web.image.repository }}:{{ .Values.web.image.tag }}"
+          imagePullPolicy: {{ .Values.web.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.web.port }}
+          {{- include "authstar.probes" .Values.web.port | nindent 10 }}
+          {{- include "authstar.resources" .Values.web.resources | nindent 10 }}
+          env:
+            - name: SIGNET_NAMESPACE
+              value: {{ .Values.web.signet.namespace | quote }}
+            - name: SIGNET_ADDR
+              value: {{ .Values.web.signet.addr | quote }}
+            - name: SIGNET_TRUST_DOMAIN
+              value: {{ .Values.web.signet.trustDomain | quote }}
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: {{ .Values.web.spiffe.socketValue | quote }}
+            {{- include "authstar.extraEnv" .Values.web.extraEnv | nindent 12 }}
+          volumeMounts:
+            {{- include "authstar.spiffeVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "authstar.spiffeVolume" . | nindent 8 }}

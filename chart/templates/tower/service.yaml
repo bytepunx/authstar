@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: tower
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: tower
+  ports:
+    - port: {{ .Values.tower.port }}
+      targetPort: {{ .Values.tower.port }}

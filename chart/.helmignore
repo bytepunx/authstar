@@ -1,0 +1,21 @@
+# Patterns to ignore when building packages.
+.git/
+.gitignore
+.helmignore
+*.swp
+*.bak
+*.tmp
+*.orig
+*~
+.project
+.idea/
+*.tmproj
+.vscode/
+
+# The hook/ subtree is a separate Node/TypeScript project (built into a
+# standalone container image referenced by values.hook.image.*), not chart
+# template material -- exclude its build artifacts and dependencies from
+# the packaged chart.
+hook/node_modules/
+hook/dist/
+hook/*.tsbuildinfo

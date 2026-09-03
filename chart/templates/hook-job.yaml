@@ -1,0 +1,69 @@
+# Provisioning hook: pushes each of the 8 services' plain config
+# (PutServiceConfig) and secrets (SyncBundle) into signet before any service
+# Deployment is applied/updated. Runs as a pre-install,pre-upgrade hook, so
+# Helm applies it (and waits for it to complete) before templating any other
+# resource in this chart -- no explicit hook-weight ordering against the
+# services' own Deployments is needed for that guarantee, but hook-weight
+# "0" is still set for clarity/idempotent-reordering if more hooks are added
+# later.
+#
+# helm.sh/hook-failure-policy is deliberately left unset (Helm's default):
+# a failed hook fails the whole release with no custom recovery path here
+# (Story 001).
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "authstar-chart.fullname" . }}-authstar-provision
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authstar-chart.labels" . | nindent 4 }}
+  annotations:
+    helm.sh/hook: pre-install,pre-upgrade
+    helm.sh/hook-weight: "0"
+spec:
+  # No automatic retries: PutServiceConfig/SyncBundle are independently
+  # idempotent per service (Story 001), so a failed run is safely re-run in
+  # full via `helm upgrade` (or `helm install --replace`) rather than by a
+  # Job-level retry that would otherwise silently re-attempt with the same
+  # inputs and bury which attempt's logs actually matter.
+  backoffLimit: 0
+  template:
+    metadata:
+      labels:
+        {{- include "authstar-chart.labels" . | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      {{- include "authstar.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: authstar-provision
+          image: "{{ .Values.hook.image.repository }}:{{ .Values.hook.image.tag }}"
+          imagePullPolicy: {{ .Values.hook.image.pullPolicy }}
+          {{- include "authstar.resources" .Values.hook.resources | nindent 10 }}
+          env:
+            - name: SIGNET_ADMIN_ADDR
+              value: {{ .Values.hook.signetAdminAddr | quote }}
+            - name: SIGNET_ADMIN_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.hook.adminTokenSecretRef.name | quote }}
+                  key: {{ .Values.hook.adminTokenSecretRef.key | quote }}
+            - name: HOOK_CONFIG_PATH
+              value: /etc/authstar-hook/config.json
+            - name: HOOK_SECRETS_PATH
+              value: /etc/authstar-hook/secrets.json
+          volumeMounts:
+            - name: hook-config
+              mountPath: /etc/authstar-hook/config.json
+              subPath: config.json
+              readOnly: true
+            - name: hook-secrets
+              mountPath: /etc/authstar-hook/secrets.json
+              subPath: secrets.json
+              readOnly: true
+      volumes:
+        - name: hook-config
+          configMap:
+            name: {{ include "authstar-chart.fullname" . }}-authstar-hook-config
+        - name: hook-secrets
+          secret:
+            secretName: {{ include "authstar-chart.fullname" . }}-authstar-hook-secrets

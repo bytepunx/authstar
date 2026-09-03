@@ -1,0 +1,46 @@
+# Lookout's own code has supported Signet-Configured Mode since ADR 0102/
+# Story 002 (merged) -- bootstrap coordinates below activate it, sourcing
+# LOOKOUT_RABBITMQ_URL from the signet bundle the hook provisions
+# (values.lookout.secrets) instead of the extraEnv secretKeyRef below (left
+# in place as the Env-Only Mode fallback).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lookout
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: lookout
+spec:
+  replicas: {{ .Values.lookout.replicas }}
+  selector:
+    matchLabels:
+      app: lookout
+  template:
+    metadata:
+      labels:
+        app: lookout
+    spec:
+      serviceAccountName: lookout
+      {{- include "authstar.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: lookout
+          image: "{{ .Values.lookout.image.repository }}:{{ .Values.lookout.image.tag }}"
+          imagePullPolicy: {{ .Values.lookout.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.lookout.port }}
+          {{- include "authstar.probes" .Values.lookout.port | nindent 10 }}
+          {{- include "authstar.resources" .Values.lookout.resources | nindent 10 }}
+          env:
+            - name: SIGNET_NAMESPACE
+              value: {{ .Values.lookout.signet.namespace | quote }}
+            - name: SIGNET_ADDR
+              value: {{ .Values.lookout.signet.addr | quote }}
+            - name: SIGNET_TRUST_DOMAIN
+              value: {{ .Values.lookout.signet.trustDomain | quote }}
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: {{ .Values.lookout.spiffe.socketValue | quote }}
+            {{- include "authstar.extraEnv" .Values.lookout.extraEnv | nindent 12 }}
+          volumeMounts:
+            {{- include "authstar.spiffeVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "authstar.spiffeVolume" . | nindent 8 }}

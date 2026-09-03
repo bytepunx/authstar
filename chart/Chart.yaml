@@ -1,0 +1,15 @@
+apiVersion: v2
+name: authstar-chart
+description: >-
+  Deploys all eight authstar services (chronicle, herald, keep, lookout,
+  portcullis, steward, tower, web) and provisions their signet config/secrets
+  via a pre-install/pre-upgrade hook. See ADR 0104 in bytepunx/authstar-design
+  for the design rationale.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/bytepunx/authstar-chart
+sources:
+  - https://github.com/bytepunx/authstar-chart
+maintainers:
+  - name: bytepunx
