@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@bytepunx/authstar-fastify": "^1.0.0",
-    "@bytepunx/signet-client": "^0.8.0",
+    "@bytepunx/signet-client": "^0.9.0",
     "@fastify/swagger": "^9.0.0",
     "amqp-connection-manager": "^5.0.0",
     "amqplib": "^0.10.4",
