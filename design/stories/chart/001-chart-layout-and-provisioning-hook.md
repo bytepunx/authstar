@@ -21,16 +21,38 @@ services' own pods start.
 ### Chart layout
 
 - [ ] `Chart.yaml` declares the chart; `values.yaml` provides defaults for every value below.
-- [ ] `templates/<service>/deployment.yaml`, `templates/<service>/service.yaml` exist for each of
-      the eight services, one subtree per service under `values.<service>.*`.
+- [ ] `templates/<service>/deployment.yaml`, `templates/<service>/service.yaml`,
+      `templates/<service>/serviceaccount.yaml` exist for each of the eight services, one subtree
+      per service under `values.<service>.*`. Each service gets its own `ServiceAccount` named
+      exactly the service name (chronicle, herald, keep, lookout, portcullis, steward, tower,
+      web) — SPIRE's `ClusterSpiffeID` registration derives
+      `spiffe://<trust-domain>/ns/<namespace>/sa/<service-account>` from this literal pairing
+      (matching `bytepunx/deploy`'s current `authstar-platform/serviceaccounts.yaml`); the
+      namespace default `ServiceAccount` must never be used.
 - [ ] Each service's `Deployment` sets `SIGNET_ADDR`, `SIGNET_TRUST_DOMAIN`, `SIGNET_NAMESPACE`
-      (and any other bootstrap coordinate that service's stories already require, e.g.
-      `SPIFFE_WORKLOAD_SOCKET`) from `values.<service>.signet.*`, plus `image.repository`/
-      `image.tag`/`replicas`/resource requests from `values.<service>.*`. No other env var is
-      templated by the chart — every non-bootstrap setting comes from the signet bundle the hook
-      provisions, per ADR 0102's Signet-Configured Mode.
+      (and any other bootstrap coordinate that service's stories already require, e.g. tower's/
+      herald's/keep's `SIGNET_ADMIN_ADDR` for their own admin-port GitOps calls, or portcullis's
+      bare-path `SPIFFE_SOCKET` vs. the Node services' `unix://`-prefixed
+      `SPIFFE_ENDPOINT_SOCKET` — mirror `bytepunx/deploy/apps/authstar-platform/*/deployment.yaml`
+      exactly per service rather than assuming one shared env var set) from `values.<service>.signet.*`,
+      plus `image.repository`/`image.tag`/`replicas`/resource requests/liveness+readiness TCP
+      probes from `values.<service>.*`. A service that isn't yet signet-wired for a given field
+      (chronicle/lookout/steward/web remain permitted Env-Only Mode per ADR 0102 until their own
+      follow-up cutover) still needs its plain-http inter-service URLs (`TOWER_URL`/
+      `TOWER_BASE_URL`/`HERALD_URL`/`KEEP_BASE_URL`) and the `NODE_TLS_REJECT_UNAUTHORIZED=0`
+      workaround those calls currently require against tower's SPIFFE-mTLS-only server (no CA
+      trust wiring on the caller side yet) — expose these as `values.<service>.extraEnv` (a
+      passthrough list merged into the container's `env`, not specially templated) so the chart
+      doesn't hardcode a workaround that's really an application-level gap tracked elsewhere.
+      Every service also needs `imagePullSecrets: [{name: dockerhub-credentials}]`
+      (`values.imagePullSecretName`, chart-wide default) and, for the six services that dial
+      signet, the `csi.spiffe.io` SPIFFE volume mount at `/run/spire/sockets`.
 - [ ] The chart does not template anything for signet itself (no signet `Deployment`/`Service`) —
       `values.yaml` only ever references an already-running signet via its bootstrap coordinates.
+- [ ] The chart does not template a `Namespace` — matching `bytepunx/deploy`'s
+      `authstar-platform/namespace.yaml` being separate from its per-service kustomizations, the
+      target namespace is assumed to already exist (or is created by the operator/kluster addon
+      wiring, out of scope for this chart).
 
 ### Provisioning hook
 
