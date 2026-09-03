@@ -36,17 +36,21 @@ services' own pods start.
       `SPIFFE_ENDPOINT_SOCKET` — mirror `bytepunx/deploy/apps/authstar-platform/*/deployment.yaml`
       exactly per service rather than assuming one shared env var set) from `values.<service>.signet.*`,
       plus `image.repository`/`image.tag`/`replicas`/resource requests/liveness+readiness TCP
-      probes from `values.<service>.*`. A service that isn't yet signet-wired for a given field
-      (chronicle/lookout/steward/web remain permitted Env-Only Mode per ADR 0102 until their own
-      follow-up cutover) still needs its plain-http inter-service URLs (`TOWER_URL`/
+      probes from `values.<service>.*`. **All eight services get bootstrap coordinates rendered
+      into their own Deployment env**, activating Signet-Configured Mode chart-wide (ADR 0104) —
+      including chronicle, lookout, steward, and web, whose own repos already shipped
+      Signet-Configured Mode support (ADR 0102/Stories 002, 003, 006, 012) even though
+      `bytepunx/deploy`'s live manifests never turned it on; this chart is the vehicle that
+      finally does. Every service still keeps its plain-http inter-service URLs (`TOWER_URL`/
       `TOWER_BASE_URL`/`HERALD_URL`/`KEEP_BASE_URL`) and the `NODE_TLS_REJECT_UNAUTHORIZED=0`
       workaround those calls currently require against tower's SPIFFE-mTLS-only server (no CA
-      trust wiring on the caller side yet) — expose these as `values.<service>.extraEnv` (a
-      passthrough list merged into the container's `env`, not specially templated) so the chart
+      trust wiring on the caller side yet) as `values.<service>.extraEnv` (a passthrough list
+      merged into the container's `env`, not specially templated) — inert once signet overrides
+      them (ADR 0102), but left as the Env-Only Mode fallback rather than deleted, so the chart
       doesn't hardcode a workaround that's really an application-level gap tracked elsewhere.
       Every service also needs `imagePullSecrets: [{name: dockerhub-credentials}]`
-      (`values.imagePullSecretName`, chart-wide default) and, for the six services that dial
-      signet, the `csi.spiffe.io` SPIFFE volume mount at `/run/spire/sockets`.
+      (`values.imagePullSecretName`, chart-wide default) and, since every service dials signet
+      once activated, the `csi.spiffe.io` SPIFFE volume mount at `/run/spire/sockets`.
 - [ ] The chart does not template anything for signet itself (no signet `Deployment`/`Service`) —
       `values.yaml` only ever references an already-running signet via its bootstrap coordinates.
 - [ ] The chart does not template a `Namespace` — matching `bytepunx/deploy`'s
