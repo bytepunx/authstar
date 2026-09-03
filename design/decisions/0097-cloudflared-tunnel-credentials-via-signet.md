@@ -35,18 +35,21 @@ Deployment, not baked into the image) tell kickr to exec `cloudflared tunnel --n
 --config /etc/cloudflared/config/config.yaml run` — the exact same invocation the plain image
 used, unchanged.
 
-### The secret: `tunnel-cred-contents`
+### The secret: `tunnel-token`
 
-Pushed to signet at `cloudflare/cloudflared/tunnel-cred-contents` (`bytepunx/cluster-secrets`).
-kickr's own env-var-normalisation (`internal/bundle/bundle.go`: uppercase, non-alphanumeric →
-underscore) turns this into `TUNNEL_CRED_CONTENTS` — which `cloudflared` reads natively (confirmed
-directly against `cloudflared tunnel run --help`: `--credentials-contents value ... Contents of
-the tunnel credentials JSON file to use ... [$TUNNEL_CRED_CONTENTS]`, taking precedence over
-`--credentials-file` when both are present). This is the key property that makes the whole
+Pushed to signet at `cloudflare/cloudflared/tunnel-token` (`bytepunx/cluster-secrets`) — a fresh
+token issued from the Cloudflare dashboard for the same existing tunnel (Zero Trust → Networks →
+Tunnels → Configure), rather than the original `cloudflared tunnel create`-issued
+`credentials.json`, which was never recovered. kickr's own env-var-normalisation
+(`internal/bundle/bundle.go`: uppercase, non-alphanumeric → underscore) turns this into
+`TUNNEL_TOKEN` — which `cloudflared` reads natively via its own `$TUNNEL_TOKEN` support (confirmed
+directly against `cloudflared tunnel run --help`). This is the key property that makes the whole
 approach work with zero file-writing: kickr's own design is deliberately environment-variable-only
 (no file-writing path exists), which would otherwise be a hard blocker — cloudflared's *own*
-support for passing credentials as a content string rather than a file path is what closes the
-gap, not any change to kickr.
+support for token-based (or, equivalently, `--credentials-contents`/`$TUNNEL_CRED_CONTENTS`
+content-string-based) authentication is what closes the gap, not any change to kickr. Token-based
+auth composes cleanly with the existing locally-managed `config.yaml` ingress rules (unchanged) —
+it replaces only the tunnel's *authentication*, not where routing rules live.
 
 Keeps the existing locally-managed tunnel model (`config.yaml` with `ingress:` rules, committed to
 `bytepunx/deploy`, unchanged) rather than migrating to Cloudflare's remotely-managed
@@ -70,10 +73,10 @@ until some unrelated future restart.
   cloudflared`), and the SPIFFE CSI volume; `apps/spire-registrations/cluster-spiffe-id.yaml`
   gains a matching `ClusterSpiffeID`. The KSOPS-encrypted credentials file, its `ksops.yaml`
   generator, and the Secret volume mount are removed.
-- **`bytepunx/cluster-secrets`**: needs `cloudflare/cloudflared/tunnel-cred-contents` pushed with
-  the real tunnel credentials JSON before the new deployment spec is safe to roll out — until
-  then, the old (corrupted) Secret path is left in place as the live configuration, deliberately
-  not pushed, so the two currently-working pods are never disturbed by an incomplete migration.
+- **`bytepunx/cluster-secrets`**: needs `cloudflare/cloudflared/tunnel-token` pushed with a real
+  tunnel token before the new deployment spec is safe to roll out — until then, the old
+  (corrupted) Secret path is left in place as the live configuration, deliberately not pushed, so
+  the two currently-working pods are never disturbed by an incomplete migration.
 - Establishes `bytepunx/cloudflared-kickr` as the second real-world instance (after
   `bytepunx/rabbitmq-kickr`) of ADR 0010's general pattern — wrapping a signet-unaware
   third-party binary in kickr — worth reusing again for any future third-party binary that reads
