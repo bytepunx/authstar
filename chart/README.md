@@ -219,3 +219,33 @@ npm run build       # tsc
 npm run typecheck   # tsc --noEmit
 npm test            # vitest run -- 19 unit tests, hand-written fakes, no real network
 ```
+
+## `manifest.json` -- what each service needs, before you fill in `values.yaml`
+
+Per [ADR 0105](https://github.com/bytepunx/authstar-design/blob/main/decisions/0105-signet-manifest-and-aggregated-onboarding-spec.md),
+services opt in to shipping a `signet-manifest.json` in their own repo, embedded at
+`/signet-manifest.json` in their published image -- a schema (field names, `config` vs `secret`,
+required, derivable) of what that service needs in signet, never actual values.
+`tools/aggregate-manifest.mjs` extracts every onboarded service's manifest straight from the
+exact image `values.yaml` references (no local Docker daemon, no source checkout needed) and
+merges them into the committed `manifest.json` at this chart's root. A service that hasn't
+adopted the manifest yet is skipped with a warning, not a hard failure -- rollout across the 8
+services is incremental (lookout is the pilot; see Story 003 in `authstar-design`).
+
+**Prerequisites:** [`crane`](https://github.com/google/go-containerregistry/tree/main/cmd/crane)
+and [`yq`](https://github.com/mikefarah/yq) on your `PATH`, plus registry credentials for any
+private image (`docker login`/`crane auth login` -- `crane` reads the same `~/.docker/config.json`
+credential store `docker` does).
+
+```
+node tools/aggregate-manifest.mjs           # regenerate manifest.json
+node tools/aggregate-manifest.mjs --check   # exit 1 if manifest.json is stale (CI)
+```
+
+CI re-runs the `--check` form on every push and fails if `manifest.json` doesn't match what the
+images `values.yaml` currently references actually declare -- bumping any service's `image.tag`
+that changed its manifest requires regenerating and committing `manifest.json` in the same PR.
+There's no wizard yet that reads this file to walk an operator through populating
+`values.<service>.config`/`.secrets` -- that's tracked as separate follow-on work in the `signet`
+project itself (ADR 0105), not this chart. For now, `manifest.json` is a single, trustworthy,
+CI-verified place to look up what a service needs, in place of reading its source.
