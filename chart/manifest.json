@@ -1,3 +1,17 @@
 {
-  "services": {}
+  "services": {
+    "lookout": {
+      "signetNamespace": "authstar-platform",
+      "signetService": "lookout",
+      "fields": [
+        {
+          "name": "rabbitmqUrl",
+          "kind": "secret",
+          "required": true,
+          "derivable": false,
+          "description": "AMQP connection URL (with credentials) for the RabbitMQ broker lookout publishes ingestion events to. Cannot be derived -- must reference a real broker."
+        }
+      ]
+    }
+  }
 }
