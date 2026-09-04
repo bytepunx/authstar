@@ -21,26 +21,31 @@ first being solved, and authstar-chart is the first consumer.
 
 ## Decision
 
-### Each service ships a `signet-manifest.yaml`, compiled to JSON, embedded in its image
+### Each service ships a `signet-manifest.json`, embedded in its image
 
-A service declares its own requirements in `signet-manifest.yaml` at its repo root:
+A service declares its own requirements in `signet-manifest.json` at its repo root:
 
-```yaml
-service: lookout
-fields:
-  - name: rabbitmqUrl
-    kind: secret          # "secret" | "config"
-    required: true
-    derivable: false       # or a generator id, e.g. "ec-p256-keypair", "random-hex:32", "uuid-v4"
-    description: >
-      AMQP connection URL (with credentials) for the RabbitMQ broker lookout publishes
-      ingestion events to. Cannot be derived -- must reference a real broker.
+```json
+{
+  "service": "lookout",
+  "fields": [
+    {
+      "name": "rabbitmqUrl",
+      "kind": "secret",
+      "required": true,
+      "derivable": false,
+      "description": "AMQP connection URL (with credentials) for the RabbitMQ broker lookout publishes ingestion events to. Cannot be derived -- must reference a real broker."
+    }
+  ]
+}
 ```
 
 This is a schema (field names, kind, required/derivable, human-readable description), never
-actual values. It's authored in YAML for readability and compiled to `signet-manifest.json` as
-a build step, then `COPY`'d into the final image stage (e.g. `/signet-manifest.json`) — so a
-tool can read a service's requirements straight from its published image without needing the
+actual values. Authored directly as JSON, no YAML/compile step — the field list is flat and
+small enough that a parser dependency and build step per repo isn't worth it; revisit if the
+schema grows enough to need comments or cross-references a compile step could help with. It's
+`COPY`'d as-is into the final image stage (e.g. `/signet-manifest.json`) — so a tool can read a
+service's requirements straight from its published image without needing the
 source repo, and the declaration is guaranteed to match the exact code shipped in that image
 (not whatever's on `main` at tool-run time).
 
@@ -98,8 +103,8 @@ scope, deferred as a future enhancement rather than blocking this ADR.
 
 ## Consequences
 
-- **All 8 service repos**: gain `signet-manifest.yaml`, a compile-to-JSON step, and a Dockerfile
-  change embedding the compiled file into the final image stage. Rolled out incrementally,
+- **All 8 service repos**: gain `signet-manifest.json` and a Dockerfile change embedding it into
+  the final image stage. Rolled out incrementally,
   starting with a pilot (lookout — simplest service, one field, no config-only fields) to prove
   the full pipeline (manifest → image embed → chart-side extraction → CI check) before repeating
   across the remaining 7. A story is written per service as it's onboarded, not one giant story.

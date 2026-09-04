@@ -20,23 +20,24 @@ rolling the same pattern to the remaining seven services.
 
 ### lookout
 
-- [ ] `signet-manifest.yaml` at repo root:
-  ```yaml
-  service: lookout
-  fields:
-    - name: rabbitmqUrl
-      kind: secret
-      required: true
-      derivable: false
-      description: >
-        AMQP connection URL (with credentials) for the RabbitMQ broker lookout publishes
-        ingestion events to. Cannot be derived -- must reference a real broker.
+- [ ] `signet-manifest.json` at repo root:
+  ```json
+  {
+    "service": "lookout",
+    "fields": [
+      {
+        "name": "rabbitmqUrl",
+        "kind": "secret",
+        "required": true,
+        "derivable": false,
+        "description": "AMQP connection URL (with credentials) for the RabbitMQ broker lookout publishes ingestion events to. Cannot be derived -- must reference a real broker."
+      }
+    ]
+  }
   ```
-- [ ] A compile step (`npm run build:manifest` or folded into the existing `build` script) turns
-      this into `signet-manifest.json` (a straight YAML→JSON conversion, no schema validation
-      library needed for one field — add one if/when the schema grows enough to warrant it).
-- [ ] `Dockerfile`'s final stage `COPY`s the compiled `signet-manifest.json` to
-      `/signet-manifest.json` in the image.
+  Authored directly as JSON, no YAML/compile step (ADR 0105).
+- [ ] `Dockerfile`'s final stage `COPY`s `signet-manifest.json` to `/signet-manifest.json` in the
+      image.
 - [ ] Fix the Dockerfile's and `server.ts`'s stale "no signet-client wiring exists yet for
       lookout" comments while touching this file — lookout has had signet wiring since Story 002;
       the comments predate it and were never updated.
