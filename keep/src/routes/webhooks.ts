@@ -32,9 +32,22 @@ interface StripeSubscriptionObject {
   id: string
   customer: string
   status: string
-  current_period_end: number
-  items: { data: Array<{ price: { id: string } }> }
+  // Kept only as a fallback below -- current API versions no longer set this
+  // top-level field on the real webhook payload (see `periodEnd`).
+  current_period_end?: number
+  items: { data: Array<{ price: { id: string }, current_period_end?: number }> }
   metadata?: { scope?: string }
+}
+
+// `current_period_end` moved from the Subscription object to each
+// SubscriptionItem in the API version this account is pinned to (the same
+// gotcha `stripe-client.ts`'s `getSubscription` already normalizes for the
+// `checkout.session.completed` path) -- a raw `customer.subscription.*`
+// webhook payload only carries it on `items.data[0]`, not on the
+// Subscription object itself. Falls back to the top-level field so
+// fixtures/API versions that still set it there keep working.
+function periodEnd(sub: StripeSubscriptionObject): number {
+  return sub.items.data[0]?.current_period_end ?? sub.current_period_end ?? 0
 }
 
 interface StripeCheckoutSessionObject {
@@ -220,7 +233,7 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
       scope: customer.scope,
       stripePriceId,
       status: sub.status,
-      currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
+      currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
     })
   }
 
@@ -251,7 +264,7 @@ async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: 
   await app.consequent.handle(sub.id, 'subscription.update', {
     status: sub.status,
     stripePriceId: newPriceId,
-    currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
+    currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
   })
 
   if (previousPriceId && previousPriceId !== newPriceId) {
@@ -299,7 +312,7 @@ async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: S
 
   await app.consequent.handle(sub.id, 'subscription.update', {
     status: sub.status,
-    currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
+    currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
   })
 
   const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
@@ -315,7 +328,7 @@ async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: 
 
   await app.consequent.handle(sub.id, 'subscription.update', {
     status: sub.status,
-    currentPeriodEnd: new Date(sub.current_period_end * 1000).toISOString(),
+    currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
   })
 
   const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''

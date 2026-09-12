@@ -111,6 +111,31 @@ describe('stripe webhook handling -- API contract', () => {
       expect(sequences).toEqual([...sequences].sort((a, b) => a - b))
     })
 
+    // Real Stripe webhook payloads (the API version this deployment is
+    // pinned to) never set a top-level `current_period_end` on the
+    // Subscription object -- it only lives on `items.data[0]`. This is the
+    // shape `getSubscription` (stripe-client.ts) already normalizes for
+    // `checkout.session.completed`; this proves the direct
+    // `customer.subscription.created` path handles it too, rather than
+    // throwing on `new Date(undefined * 1000)`.
+    it('handles a real-shape payload with no top-level current_period_end', async () => {
+      const response = await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_real_shape',
+        customer: 'cus_real_shape',
+        status: 'active',
+        items: { data: [{ price: { id: 'price_basic' }, current_period_end: 1_700_000_000 }] },
+        metadata: { scope: JSON.stringify({ account: 'acct_real_shape' }) },
+      }))
+      expect(response.statusCode).toBe(200)
+
+      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_real_shape', headers: readHeaders })
+      expect(sub.statusCode).toBe(200)
+      expect(sub.json().currentPeriodEnd).toBe(new Date(1_700_000_000 * 1000).toISOString())
+
+      const publishedTypes = t.publisher.published.map((e) => e.type)
+      expect(publishedTypes).toContain('entitlement.role-granted')
+    })
+
     it('publishes seat-limit-changed for a tenant-scoped subscription (never for account scope -- an individual has no seats)', async () => {
       await post(stripeEventPayload('customer.subscription.created', {
         id: 'sub_seat',
