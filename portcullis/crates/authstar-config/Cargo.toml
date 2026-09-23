@@ -1,0 +1,37 @@
+[package]
+name = "authstar-config"
+version = "0.1.0"
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+signet-client = { version = "0.6", features = ["spiffe-workload"] }
+prost-types = "0.14"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time", "sync"] }
+tokio-util = "0.7"
+tonic = { version = "0.14", features = ["tls-ring"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+indexmap = { version = "2", features = ["serde"] }
+base64 = "0.22"
+thiserror = "1"
+tracing = "0.1"
+# --- east-west SPIFFE mTLS (crates/authstar-config/src/mtls.rs) ---
+# Same crates (and, thanks to matching versions, the same unified rustls/spiffe types)
+# `signet-client`'s own `spiffe-workload` feature already pulls in for `dial_workload` — used
+# here directly to build a second, independent SPIFFE mTLS connection (to tower, not signet).
+spiffe = { version = "0.16", features = ["x509-source", "workload-api-x509", "transport-grpc"] }
+spiffe-rustls = "0.7"
+rustls = "0.23"
+reqwest = { version = "0.12", features = ["json", "rustls-tls-manual-roots"] }
+
+[dev-dependencies]
+tokio = { version = "1", features = ["full", "test-util"] }
+p256 = { version = "0.13", features = ["pkcs8", "ecdsa"] }
+# Used only by mtls_integration_tests.rs, to hand-build a SPIFFE-shaped (URI SAN) mTLS cert
+# pair for a local test listener — a stand-in for a real SPIRE-issued SVID, which needs a live
+# Workload API this test suite doesn't have (see that file's module doc for exactly what this
+# does and doesn't prove).
+rcgen = "0.14"
+tokio-rustls = "0.26"
