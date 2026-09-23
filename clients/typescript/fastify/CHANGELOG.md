@@ -1,0 +1,52 @@
+# Changelog
+
+## [2.0.1](https://github.com/bytepunx/authstar-clients/compare/fastify-v2.0.0...fastify-v2.0.1) (2026-08-29)
+
+
+### Bug Fixes
+
+* **fastify:** actually inline core's bundled types, not dangling imports ([03a0c49](https://github.com/bytepunx/authstar-clients/commit/03a0c4982732fe2c915011271c957413d0f564cb))
+
+## [2.0.0](https://github.com/bytepunx/authstar-clients/compare/fastify-v1.0.0...fastify-v2.0.0) (2026-08-29)
+
+
+### ⚠ BREAKING CHANGES
+
+* **fastify:** fastify fully bundles core's source at build time (tsup --noExternal), so request.authstar's decorated shape changes to match core 2.0.0 -- organizationMemberships replaces organizationId, same breaking change, just carried through the bundle rather than fastify's own source changing.
+
+### Features
+
+* **fastify:** rebuild and republish against core 2.0.0 ([3e4f742](https://github.com/bytepunx/authstar-clients/commit/3e4f74247924a8ddb570b1de1e85834cba04e189))
+
+## [1.0.0](https://github.com/bytepunx/authstar-clients/compare/fastify-v0.2.2...fastify-v1.0.0) (2026-08-20)
+
+
+### ⚠ BREAKING CHANGES
+
+* **fastify:** perTenantJwksKeyProvider (re-exported from authstar-core) now takes a domain resolver function, not a baseDomain string -- same breaking change as core 0.3.0, just actually propagated this time.
+
+### Bug Fixes
+
+* **fastify:** pin authstar-core dependency, re-bundle against 0.3.0 ([98b009d](https://github.com/bytepunx/authstar-clients/commit/98b009d91f72da4b1b0ad2d2393b7e09da874468))
+* regenerate lock file after core's 1.0.0 release, bump fastify's pin ([51f7cbb](https://github.com/bytepunx/authstar-clients/commit/51f7cbb5e6d2bf2d2f10929459241435913ad7f9))
+
+## [0.2.2](https://github.com/bytepunx/authstar-clients/compare/fastify-v0.2.1...fastify-v0.2.2) (2026-08-18)
+
+
+### Bug Fixes
+
+* **fastify:** actually bundle core's types, not just its JS ([6523ab5](https://github.com/bytepunx/authstar-clients/commit/6523ab5535671d8eec0c0932c1b24950033b90ed))
+
+## [0.2.1](https://github.com/bytepunx/authstar-clients/compare/fastify-v0.2.0...fastify-v0.2.1) (2026-08-14)
+
+
+### Bug Fixes
+
+* **fastify:** re-export perTenantJwksKeyProvider from core ([9a4221a](https://github.com/bytepunx/authstar-clients/commit/9a4221a0d8d39d1c34fe6b5ff3ec9988a40c9532))
+
+## [0.2.0](https://github.com/bytepunx/authstar-clients/compare/fastify-v0.1.0...fastify-v0.2.0) (2026-08-14)
+
+
+### Features
+
+* **core:** add perTenantJwksKeyProvider, InternalClaims gains tenant ([c61f3fe](https://github.com/bytepunx/authstar-clients/commit/c61f3fe7ceb15acc7f64126ecb702a44d3a074a5))
