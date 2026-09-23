@@ -1,0 +1,48 @@
+# Steward's own code has supported Signet-Configured Mode since ADR 0102/
+# Story 006 (merged) -- bootstrap coordinates below activate it, sourcing
+# towerUrl/heraldUrl from the signet bundle the hook provisions
+# (values.steward.config) instead of the extraEnv TOWER_URL/HERALD_URL below
+# (left in place as the Env-Only Mode fallback). Steward never holds an
+# operator bearer token itself (ADR 0045/0048), unaffected by this; no
+# public Ingress -- steward is reached only via `kubectl port-forward`.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steward
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: steward
+spec:
+  replicas: {{ .Values.steward.replicas }}
+  selector:
+    matchLabels:
+      app: steward
+  template:
+    metadata:
+      labels:
+        app: steward
+    spec:
+      serviceAccountName: steward
+      {{- include "authstar.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: steward
+          image: "{{ .Values.steward.image.repository }}:{{ .Values.steward.image.tag }}"
+          imagePullPolicy: {{ .Values.steward.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.steward.port }}
+          {{- include "authstar.probes" .Values.steward.port | nindent 10 }}
+          {{- include "authstar.resources" .Values.steward.resources | nindent 10 }}
+          env:
+            - name: SIGNET_NAMESPACE
+              value: {{ .Values.steward.signet.namespace | quote }}
+            - name: SIGNET_ADDR
+              value: {{ .Values.steward.signet.addr | quote }}
+            - name: SIGNET_TRUST_DOMAIN
+              value: {{ .Values.steward.signet.trustDomain | quote }}
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: {{ .Values.steward.spiffe.socketValue | quote }}
+            {{- include "authstar.extraEnv" .Values.steward.extraEnv | nindent 12 }}
+          volumeMounts:
+            {{- include "authstar.spiffeVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "authstar.spiffeVolume" . | nindent 8 }}

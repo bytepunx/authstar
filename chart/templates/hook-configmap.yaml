@@ -1,0 +1,22 @@
+# Plain config for all 8 services, templated from values.<service>.config,
+# in the fixed order the hook itself also enforces (chronicle, herald, keep,
+# lookout, portcullis, steward, tower, web). Secrets are deliberately NOT
+# included here -- they're templated into templates/hook-secret.yaml
+# instead, so they never land in a ConfigMap (see Story 001's Notes on the
+# values-as-secret-store tradeoff this chart already accepts either way).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "authstar-chart.fullname" . }}-authstar-hook-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "authstar-chart.labels" . | nindent 4 }}
+data:
+  config.json: |
+    {{- $result := dict }}
+    {{- range $name := list "chronicle" "herald" "keep" "lookout" "portcullis" "steward" "tower" "web" }}
+    {{- $svc := index $.Values $name }}
+    {{- $entry := dict "signetNamespace" $svc.signet.namespace "signetService" $name "config" $svc.config }}
+    {{- $noop := set $result $name $entry }}
+    {{- end }}
+    {{ dict "services" $result | toJson | nindent 4 }}

@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: herald
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: herald
+  ports:
+    - port: {{ .Values.herald.port }}
+      targetPort: {{ .Values.herald.port }}

@@ -1,0 +1,27 @@
+{
+  "name": "@bytepunx/authstar-chart-hook",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pre-install/pre-upgrade Helm hook for authstar-chart: pushes each of the 8 authstar services' plain config and secrets into signet before their Deployments are applied.",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@bytepunx/signet-client": "^0.9.0",
+    "@grpc/grpc-js": "^1.10.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}

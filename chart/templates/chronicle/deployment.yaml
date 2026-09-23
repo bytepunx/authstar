@@ -1,0 +1,49 @@
+# Chronicle's own code has supported Signet-Configured Mode since ADR 0102/
+# Story 003 (merged) -- bootstrap coordinates below activate it, at which
+# point clickhousePassword/rabbitmqUrl/internalJwtSecret (and the rest of
+# chronicle's ADR 0036 scope) come from the signet bundle the hook
+# provisions (values.chronicle.config/secrets), not the extraEnv secretKeyRefs
+# below. Those extraEnv entries are left in place as the Env-Only Mode
+# fallback (harmless once Signet-Configured Mode is active: ADR 0102 has
+# signet unconditionally override env, never merge).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: chronicle
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: chronicle
+spec:
+  replicas: {{ .Values.chronicle.replicas }}
+  selector:
+    matchLabels:
+      app: chronicle
+  template:
+    metadata:
+      labels:
+        app: chronicle
+    spec:
+      serviceAccountName: chronicle
+      {{- include "authstar.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: chronicle
+          image: "{{ .Values.chronicle.image.repository }}:{{ .Values.chronicle.image.tag }}"
+          imagePullPolicy: {{ .Values.chronicle.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.chronicle.port }}
+          {{- include "authstar.probes" .Values.chronicle.port | nindent 10 }}
+          {{- include "authstar.resources" .Values.chronicle.resources | nindent 10 }}
+          env:
+            - name: SIGNET_NAMESPACE
+              value: {{ .Values.chronicle.signet.namespace | quote }}
+            - name: SIGNET_ADDR
+              value: {{ .Values.chronicle.signet.addr | quote }}
+            - name: SIGNET_TRUST_DOMAIN
+              value: {{ .Values.chronicle.signet.trustDomain | quote }}
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: {{ .Values.chronicle.spiffe.socketValue | quote }}
+            {{- include "authstar.extraEnv" .Values.chronicle.extraEnv | nindent 12 }}
+          volumeMounts:
+            {{- include "authstar.spiffeVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "authstar.spiffeVolume" . | nindent 8 }}

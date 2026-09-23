@@ -1,0 +1,333 @@
+# Default values for authstar-chart.
+#
+# Layout mirrors bytepunx/deploy's currently-live authstar-platform manifests
+# (see ADR 0104 in bytepunx/authstar-design and the chart README for the full
+# rationale). Every service gets its own `values.<service>.*` subtree; the
+# `hook.*` subtree configures the pre-install/pre-upgrade signet-provisioning
+# Job.
+#
+# This chart does NOT template a Namespace, and does NOT install/manage
+# signet itself -- both are assumed to already exist. It also does NOT
+# template the two Secrets referenced below (`imagePullSecretName` and
+# `hook.adminTokenSecretRef`) -- the operator creates those once, out of
+# band, before installing this chart. See README.md.
+
+# -- Secret (already existing in the target namespace) holding docker.io
+# pull credentials, referenced by every service's Deployment.
+imagePullSecretName: dockerhub-credentials
+
+# -- Signet-provisioning hook: a `helm.sh/hook: pre-install,pre-upgrade` Job
+# that pushes each service's plain config (PutServiceConfig) and secrets
+# (SyncBundle) into signet before any service Deployment is applied/updated.
+hook:
+  image:
+    repository: bytepunx/authstar-chart-hook
+    tag: latest
+    pullPolicy: IfNotPresent
+
+  # signet's admin gRPC address (GitOpsService/AdminService), e.g.
+  # "signet-admin.signet.svc.cluster.local:8444". Required.
+  signetAdminAddr: ""
+
+  # Kubernetes Secret (already existing, not templated by this chart) that
+  # holds the signet operator bearer token used by the hook. Required.
+  adminTokenSecretRef:
+    name: ""
+    key: ""
+
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+# ---------------------------------------------------------------------------
+# Per-service configuration. Every service has the same top-level shape:
+#
+#   signet:      bootstrap coordinates the hook uses to target this
+#                service's namespace/service in signet, and (for the
+#                services that already dial signet themselves) the
+#                bootstrap env vars that activate their Signet-Configured
+#                Mode (ADR 0102).
+#   image:       repository/tag/pullPolicy for this service's container.
+#   replicas, port, resources: ordinary Deployment knobs.
+#   extraEnv:    a passthrough list (raw {name, value} / {name, valueFrom}
+#                entries) merged verbatim into the container's env. This is
+#                where each service's current plain-http inter-service URLs
+#                and NODE_TLS_REJECT_UNAUTHORIZED workarounds live, so the
+#                chart never hardcodes an application-level gap that's
+#                tracked elsewhere. Defaults below reproduce each service's
+#                currently-live env exactly.
+#   config:      arbitrary map -- this service's plain config, pushed via
+#                the hook's PutServiceConfig call. Mirrors what this
+#                service's own signet bundle should contain per its own
+#                stories.
+#   secrets:     arbitrary map -- same, for secret fields pushed via the
+#                hook's SyncBundle call. NOTE: these transit `helm
+#                install`/`upgrade` as plain values -- see README's
+#                "Secrets in values.yaml" section before using this in
+#                production.
+# ---------------------------------------------------------------------------
+
+chronicle:
+  # Bootstrap coordinates activate chronicle's Signet-Configured Mode
+  # (ADR 0102/Story 003, merged) -- rendered into chronicle's own env below,
+  # not just used by the hook.
+  signet:
+    addr: "signet.signet.svc.cluster.local:8443"
+    trustDomain: "bytepunx.com"
+    namespace: "authstar-platform"
+  image:
+    repository: bytepunx/authstar-chronicle
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+  spiffe:
+    socketValue: "unix:///run/spire/sockets/spire-agent.sock"
+  extraEnv:
+    - name: CHRONICLE_CLICKHOUSE_URL
+      value: "http://clickhouse.clickhouse.svc.cluster.local:8123"
+    - name: CHRONICLE_CLICKHOUSE_USERNAME
+      value: "default"
+    - name: CHRONICLE_CLICKHOUSE_DATABASE
+      value: "chronicle"
+    - name: CHRONICLE_CLICKHOUSE_PASSWORD
+      valueFrom:
+        secretKeyRef:
+          name: chronicle-secrets
+          key: CLICKHOUSE_PASSWORD
+    - name: CHRONICLE_RABBITMQ_URL
+      valueFrom:
+        secretKeyRef:
+          name: chronicle-secrets
+          key: RABBITMQ_URL
+    - name: CHRONICLE_INTERNAL_JWT_SECRET
+      valueFrom:
+        secretKeyRef:
+          name: chronicle-secrets
+          key: INTERNAL_JWT_SECRET
+  config: {}
+  secrets: {}
+
+herald:
+  signet:
+    addr: "signet.signet.svc.cluster.local:8443"
+    adminAddr: "signet.signet.svc.cluster.local:8444"
+    trustDomain: "bytepunx.com"
+    namespace: "authstar-platform"
+  image:
+    repository: bytepunx/authstar-herald
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 8080
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+  spiffe:
+    socketValue: "unix:///run/spire/sockets/spire-agent.sock"
+  extraEnv:
+    # Plain fetch() against tower's towerBaseUrl (ADR 0089's tenant-JWKS
+    # domain resolution) -- tower runs real SPIFFE mTLS unconditionally, and
+    # herald has no SPIFFE-bundle CA trust wiring of its own for this one
+    # call yet.
+    - name: NODE_TLS_REJECT_UNAUTHORIZED
+      value: "0"
+  config: {}
+  secrets: {}
+
+keep:
+  signet:
+    addr: "signet.signet.svc.cluster.local:8443"
+    adminAddr: "signet.signet.svc.cluster.local:8444"
+    trustDomain: "bytepunx.com"
+    namespace: "authstar-platform"
+  image:
+    repository: bytepunx/authstar-keep
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 8080
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+  spiffe:
+    socketValue: "unix:///run/spire/sockets/spire-agent.sock"
+  extraEnv:
+    # keep's role-reference-backfill.ts calls tower's own bundle-configured
+    # towerBaseUrl via plain fetch() -- no SPIFFE-bundle CA trust wiring of
+    # its own for that specific call yet.
+    - name: NODE_TLS_REJECT_UNAUTHORIZED
+      value: "0"
+  config: {}
+  secrets: {}
+
+lookout:
+  # Bootstrap coordinates activate lookout's Signet-Configured Mode
+  # (ADR 0102/Story 002, merged) -- rendered into lookout's own env below.
+  signet:
+    addr: "signet.signet.svc.cluster.local:8443"
+    trustDomain: "bytepunx.com"
+    namespace: "authstar-platform"
+  image:
+    repository: bytepunx/authstar-lookout
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  spiffe:
+    socketValue: "unix:///run/spire/sockets/spire-agent.sock"
+  extraEnv:
+    # Reuses tower's own dedicated RabbitMQ user -- lookout isn't in the
+    # small set of services with its own least-privilege credential today.
+    - name: LOOKOUT_RABBITMQ_URL
+      valueFrom:
+        secretKeyRef:
+          name: lookout-secrets
+          key: RABBITMQ_URL
+  config: {}
+  secrets: {}
+
+portcullis:
+  signet:
+    addr: "signet.signet.svc.cluster.local:8443"
+    trustDomain: "bytepunx.com"
+    namespace: "authstar-platform"
+  image:
+    repository: bytepunx/authstar-portcullis
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 3710
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  spiffe:
+    # Bare path (not a unix:// URI like the Node services'
+    # SPIFFE_ENDPOINT_SOCKET) -- authstar-config/src/env.rs normalizes it
+    # itself.
+    socketValue: "/run/spire/sockets/spire-agent.sock"
+  extraEnv: []
+  config: {}
+  secrets: {}
+
+steward:
+  # Bootstrap coordinates activate steward's Signet-Configured Mode
+  # (ADR 0102/Story 006, merged) -- rendered into steward's own env below.
+  signet:
+    addr: "signet.signet.svc.cluster.local:8443"
+    trustDomain: "bytepunx.com"
+    namespace: "authstar-platform"
+  image:
+    repository: bytepunx/authstar-steward
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  spiffe:
+    socketValue: "unix:///run/spire/sockets/spire-agent.sock"
+  extraEnv:
+    # tower runs real SPIFFE mTLS unconditionally; steward's fetch client
+    # has no SPIFFE/signet wiring of its own to trust SPIRE's CA bundle.
+    - name: TOWER_URL
+      value: "https://tower.authstar-platform.svc.cluster.local:8080"
+    - name: HERALD_URL
+      value: "http://herald.authstar-platform.svc.cluster.local:8080"
+    - name: NODE_TLS_REJECT_UNAUTHORIZED
+      value: "0"
+  config: {}
+  secrets: {}
+
+tower:
+  signet:
+    addr: "signet.signet.svc.cluster.local:8443"
+    adminAddr: "signet.signet.svc.cluster.local:8444"
+    trustDomain: "bytepunx.com"
+    namespace: "authstar-platform"
+  image:
+    repository: bytepunx/authstar-tower
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 8080
+  resources:
+    requests:
+      cpu: 20m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+  spiffe:
+    socketValue: "unix:///run/spire/sockets/spire-agent.sock"
+  extraEnv: []
+  config: {}
+  secrets: {}
+
+web:
+  # Bootstrap coordinates activate web's Signet-Configured Mode
+  # (ADR 0102/Story 012, merged) -- rendered into web's own env below.
+  signet:
+    addr: "signet.signet.svc.cluster.local:8443"
+    trustDomain: "bytepunx.com"
+    namespace: "authstar-platform"
+  image:
+    repository: bytepunx/authstar-web
+    tag: latest
+    pullPolicy: Always
+  replicas: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 20m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+  spiffe:
+    socketValue: "unix:///run/spire/sockets/spire-agent.sock"
+  extraEnv:
+    - name: TOWER_BASE_URL
+      value: "https://tower.authstar-platform.svc.cluster.local:8080"
+    - name: PUBLIC_TOWER_BASE_URL
+      value: "http://localhost:8080"
+    - name: NODE_TLS_REJECT_UNAUTHORIZED
+      value: "0"
+    # Plain http, unlike TOWER_BASE_URL -- keep never terminates TLS.
+    - name: KEEP_BASE_URL
+      value: "http://keep.authstar-platform.svc.cluster.local:8080"
+    # adapter-node's own origin/CSRF-check needs to know the request was
+    # really HTTPS at the client (portcullis terminates TLS upstream of us
+    # and forwards over plain HTTP internally).
+    - name: PROTOCOL_HEADER
+      value: "x-forwarded-proto"
+    - name: HOST_HEADER
+      value: "x-forwarded-host"
+  config: {}
+  secrets: {}

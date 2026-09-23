@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: lookout
+  namespace: {{ .Release.Namespace }}
+spec:
+  selector:
+    app: lookout
+  ports:
+    - port: {{ .Values.lookout.port }}
+      targetPort: {{ .Values.lookout.port }}

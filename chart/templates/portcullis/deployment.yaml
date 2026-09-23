@@ -1,0 +1,49 @@
+# Fixed listen port (crates/authstar-proxy/src/main.rs's LISTEN_PORT
+# constant -- no PORT env var support, unlike the Node services). SPIFFE_SOCKET
+# is a bare path here (not a unix:// URI like the Node services'
+# SPIFFE_ENDPOINT_SOCKET) -- authstar-config/src/env.rs normalizes it itself.
+# All routing/upstream/branding/key config comes from portcullis's own
+# signet bundle, pushed by this chart's provisioning hook.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portcullis
+  namespace: {{ .Release.Namespace }}
+  labels:
+    app: portcullis
+spec:
+  replicas: {{ .Values.portcullis.replicas }}
+  selector:
+    matchLabels:
+      app: portcullis
+  template:
+    metadata:
+      labels:
+        app: portcullis
+    spec:
+      serviceAccountName: portcullis
+      {{- include "authstar.imagePullSecrets" . | nindent 6 }}
+      containers:
+        - name: portcullis
+          image: "{{ .Values.portcullis.image.repository }}:{{ .Values.portcullis.image.tag }}"
+          imagePullPolicy: {{ .Values.portcullis.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.portcullis.port }}
+          {{- include "authstar.probes" .Values.portcullis.port | nindent 10 }}
+          {{- include "authstar.resources" .Values.portcullis.resources | nindent 10 }}
+          env:
+            - name: SIGNET_NAMESPACE
+              value: {{ .Values.portcullis.signet.namespace | quote }}
+            - name: SIGNET_SERVICE
+              value: portcullis
+            - name: SIGNET_ADDR
+              value: {{ .Values.portcullis.signet.addr | quote }}
+            - name: SIGNET_TRUST_DOMAIN
+              value: {{ .Values.portcullis.signet.trustDomain | quote }}
+            - name: SPIFFE_SOCKET
+              value: {{ .Values.portcullis.spiffe.socketValue | quote }}
+            {{- include "authstar.extraEnv" .Values.portcullis.extraEnv | nindent 12 }}
+          volumeMounts:
+            {{- include "authstar.spiffeVolumeMount" . | nindent 12 }}
+      volumes:
+        {{- include "authstar.spiffeVolume" . | nindent 8 }}
