@@ -1,0 +1,16 @@
+.git
+.github
+node_modules
+build
+.svelte-kit
+dist
+dist-widgets
+coverage
+playwright-report
+test-results
+spec
+e2e
+*.log
+*.md
+.env
+.env.*

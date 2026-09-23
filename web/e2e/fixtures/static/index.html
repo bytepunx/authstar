@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<title>Adopting Application -- Widget Embed Fixture</title>
+		<style>
+			:root {
+				--authstar-color-primary: #7c3aed;
+				--authstar-border-radius: 999px;
+			}
+		</style>
+	</head>
+	<body>
+		<h1>Adopting application</h1>
+		<p>This plain HTML page has no framework and no build step -- it's what Story 011's own end-to-end proof looks like: the widget bundle loaded via a single script tag, rendering outside the SvelteKit app shell entirely.</p>
+
+		<div id="upgrade">
+			<authstar-upgrade-button label="Upgrade now"></authstar-upgrade-button>
+		</div>
+
+		<div id="subscription">
+			<authstar-subscription-status></authstar-subscription-status>
+		</div>
+
+		<script type="module" src="/widgets/authstar-widgets.esm.js"></script>
+	</body>
+</html>
