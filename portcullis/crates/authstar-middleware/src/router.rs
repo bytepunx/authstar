@@ -14,6 +14,7 @@ use axum::Router;
 use crate::cors::cors_layer;
 use crate::endpoints::{jwks_handler, providers_handler, select_handler};
 use crate::gate::auth_gate;
+use crate::me::me_subscription_handler;
 use crate::oauth::{callback_handler, login_handler, logout_handler};
 use crate::state::PortcullisState;
 use crate::webhooks::stripe_webhook_handler;
@@ -44,6 +45,14 @@ pub fn oauth_routes() -> Router<Arc<PortcullisState>> {
 /// handling) with its own story.
 pub fn webhook_routes() -> Router<Arc<PortcullisState>> {
     Router::new().route("/_authstar/webhooks/stripe", post(stripe_webhook_handler))
+}
+
+/// The gated, never-proxied `/_authstar/me/*` self-service routes (ADR 0071). Unlike
+/// [`oauth_routes`] and [`webhook_routes`], the caller **must** wrap this with
+/// [`apply_auth_gate`]: each handler reads the [`crate::context::ForwardContext`] the gate
+/// inserts and forwards the internal token to the backend that owns the data.
+pub fn me_routes() -> Router<Arc<PortcullisState>> {
+    Router::new().route("/_authstar/me/subscription", get(me_subscription_handler))
 }
 
 /// Wraps `router` with the authentication gate (Story 013). Apply this only to the

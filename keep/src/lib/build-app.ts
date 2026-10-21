@@ -18,6 +18,7 @@ import registerTrialRoutes from '../routes/trials.js'
 import registerCouponRoutes from '../routes/coupons.js'
 import registerUsageRoutes from '../routes/usage.js'
 import registerStripeConfigRoutes from '../routes/stripe-config.js'
+import registerMeRoutes from '../routes/me.js'
 
 export interface BuildAppOptions {
   consequent: ConsequentApi
@@ -116,6 +117,7 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   await app.register(registerCouponRoutes)
   await app.register(registerUsageRoutes)
   await app.register(registerStripeConfigRoutes)
+  await app.register(registerMeRoutes)
 
   return app
 }

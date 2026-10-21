@@ -302,6 +302,29 @@ else
 fi
 
 ##############################################################################
+log "step 4b: self-service widget route -- portcullis /_authstar/me/subscription -> keep (S-0006, ADR 0071)"
+##############################################################################
+# Through portcullis with the real session cookie from step 2, so the gate mints the
+# internal JWT keep verifies. The account from step 3 has no subscription (step 4's
+# webhook is scoped to cus_scenario, not this login), so the contract is the
+# all-null shape, not a 404 (design/stories/keep/006).
+if [[ -z "${session_jwt:-}" ]]; then
+  fail "me/subscription -- no session cookie from the login step to call it with"
+else
+  me_response="$(curl -s "${PORTCULLIS_URL}/_authstar/me/subscription" \
+    -H "Host: ${TENANT_SLUG}.authstar.app" \
+    -H "Cookie: jwt=${session_jwt}" \
+    -w '\n%{http_code}')"
+  me_status="$(echo "$me_response" | tail -1)"
+  me_body="$(echo "$me_response" | head -1)"
+  if [[ "$me_status" == "200" ]] && echo "$me_body" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if set(d)=={"status","planName","currentPeriodEnd"} else 1)' 2>/dev/null; then
+    pass "me/subscription through portcullis (gate -> internal JWT -> keep): $me_body"
+  else
+    fail "me/subscription through portcullis (HTTP $me_status): $me_body"
+  fi
+fi
+
+##############################################################################
 log "step 5/6: herald -- full send-and-verify (real rotation, real invite, real decrypt)"
 ##############################################################################
 HERALD_OPERATOR_TOKEN="${HERALD_OPERATOR_TOKEN:-dev-placeholder-LKL0D3M7tKg2ZpRXgB3c29lviezj-cRFBUTSYEWJV7w}"

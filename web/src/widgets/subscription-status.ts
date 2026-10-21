@@ -16,7 +16,8 @@ import { THEME_BASE_CSS } from './theme'
 //     (detail: the Error) -- the observable signal an adopting page or a
 //     test can hook without inspecting shadow-DOM markup.
 export interface SubscriptionInfo {
-	status: 'active' | 'trialing' | 'past_due' | 'canceled' | null
+	// Stripe's full status set, mirrored by keep (ADR 0107); null when the account has no subscription.
+	status: 'incomplete' | 'incomplete_expired' | 'trialing' | 'active' | 'past_due' | 'canceled' | 'unpaid' | 'paused' | null
 	planName: string | null
 	currentPeriodEnd: string | null
 }

@@ -374,3 +374,13 @@ underlying listener was still alive. Fixed by pointing the "simulate an unreacha
 test case at a port nothing listens on (`127.0.0.1:1`) instead of relying on server-drop timing —
 see `unreachable_tower_fails_open_with_degraded_token` in
 `crates/authstar-middleware/tests/integration_tests.rs`.
+
+## `/_authstar/me/subscription` (S-0006, ADR 0071)
+
+`crates/authstar-middleware/src/me.rs`, mounted by `router::me_routes()` inside the auth gate in
+`authstar-proxy`'s `build_app`. Forwards `GET` to keep's `/me/subscription` with the gate's
+internal token as a bearer and relays keep's status and body; 401 when the gate minted no token,
+503 without `keepUpstream`, 502 when keep is unreachable. `tests/me_tests.rs` drives the handler
+with the `ForwardContext` the gate would insert, against a wiremock keep; the gate's own
+behaviour is covered by its existing tests. Reaches keep over the plain `http_client`, as the
+webhook forward does (ADR 0095), not SPIFFE mTLS.
