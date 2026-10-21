@@ -1,0 +1,4 @@
+name: authstar-integration
+profile: authstar
+provider: k3d
+trust-domain: authstar.cluster.local
