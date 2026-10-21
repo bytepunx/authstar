@@ -1,10 +1,15 @@
+---
+title: "Story 020: Analytics Event Ingestion"
+updated: 2026-08-01
+status: draft
+---
 # Story 020 — Analytics Event Ingestion
 
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0035](../../decisions/0035-lookout-and-chronicle-analytics.md),
-[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md).
+**New — not present in `ref-design`.** Per [ADR 0035](../../adrs/0035-lookout-and-chronicle-analytics.md),
+[ADR 0058](../../adrs/0058-analytics-event-shape-corrections.md).
 
 ---
 

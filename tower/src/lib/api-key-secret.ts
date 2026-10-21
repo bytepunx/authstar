@@ -1,6 +1,6 @@
 import { randomBytes, createHash } from 'node:crypto'
 
-// Per design/decisions/0101-api-keys.md. A deliberate improvement over
+// Per design/adrs/0101-api-keys.md. A deliberate improvement over
 // keep's usage-reporting credential (ADR 0079, `keep/src/lib/hash.ts`),
 // which hashes with one static, deployment-wide salt
 // (`KEEP_CREDENTIAL_SALT`) -- a known, explicitly-flagged shortcut there.

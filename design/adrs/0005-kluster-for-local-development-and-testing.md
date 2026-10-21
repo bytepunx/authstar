@@ -1,3 +1,12 @@
+---
+id: ADR-0005
+title: kluster for Local Development and Testing
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0005: kluster for Local Development and Testing
 
 - **Status:** Accepted

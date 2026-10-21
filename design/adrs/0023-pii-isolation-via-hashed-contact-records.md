@@ -1,3 +1,12 @@
+---
+id: ADR-0023
+title: PII Isolation via HMAC-Hashed Contact Records
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0023: PII Isolation via HMAC-Hashed Contact Records
 
 - **Status:** Accepted (extended by [ADR 0055](0055-web-privacy-compliance-screens.md))
@@ -23,6 +32,8 @@ Several actors designed so far do exactly that: `identity.email`, `account.profi
 `invite.email`, and `optOut`'s plaintext-email business key.
 
 ## Decision
+
+`contact` — a plain, mutable, deletable Postgres row in tower, not a consequent actor.
 
 ### `contact` — a plain, mutable, deletable Postgres row in tower, not a consequent actor
 

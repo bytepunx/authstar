@@ -1,3 +1,12 @@
+---
+id: ADR-0066
+title: Portcullis Proxies Branded Pages to `web` — Same Host, No Redirect, No `_portal`
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0066: Portcullis Proxies Branded Pages to `web` — Same Host, No Redirect, No `_portal`
 
 - **Status:** Accepted
@@ -18,6 +27,8 @@ unambiguous intent signal — avoids that cost, and re-deriving the mechanism wi
 in mind produces something simpler than what ADR 0050/0064 built, not just different.
 
 ## Decision
+
+Reserved paths proxy to a fixed, installation-wide `web` upstream — same host, no redirect.
 
 ### Reserved paths proxy to a fixed, installation-wide `web` upstream — same host, no redirect
 

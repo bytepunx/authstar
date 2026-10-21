@@ -1,10 +1,15 @@
+---
+title: "Story 001: Keep Actor Definitions"
+updated: 2026-08-05
+status: draft
+---
 # Story 001 — Keep Actor Definitions
 
 **Epic:** Domain Model
 **Repo:** keep
 **Status:** Draft
-**New — consolidates the actor model scattered across decisions/0018–0083 into one
-implementation-ready reference.** Per [tech-stack.md](../../docs/tech-stack.md)'s choice of
+**New — consolidates the actor model scattered across adrs/0018–0083 into one
+implementation-ready reference.** Per [tech-stack.md](../../tech/tech-stack.md)'s choice of
 `consequent`/`consequent-postgres`/`fount`/`node-flakes` (shared with tower/herald) and
 [tower Story 001](../tower/001-actor-definitions.md)'s established conventions, reused here
 rather than re-derived.
@@ -14,7 +19,7 @@ rather than re-derived.
 ## Summary
 
 Same domain-model shape as tower — `consequent` actors, one module per type, `_actor.ts` files
-under `./actors/`. Every shape below is the **final**, corrected form; [ADR 0083](../../decisions/0083-keep-actor-boundary-corrections.md)
+under `./actors/`. Every shape below is the **final**, corrected form; [ADR 0083](../../adrs/0083-keep-actor-boundary-corrections.md)
 fixed several real gaps found while assembling this reference (two composite-key corrections
 identical in kind to tower's `inviteCode` fix, two missing Stripe-object-id fields, and explicit
 `identifiedBy`/`searchableBy` for every actor — none had been declared anywhere before now).

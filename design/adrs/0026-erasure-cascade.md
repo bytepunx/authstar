@@ -1,3 +1,12 @@
+---
+id: ADR-0026
+title: Erasure Cascade Across Services
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0026: Erasure Cascade Across Services
 
 - **Status:** Accepted (extended by [ADR 0055](0055-web-privacy-compliance-screens.md))
@@ -24,6 +33,8 @@ be recoverable through herald's own decrypt capability, which defeats the point 
 at all.
 
 ## Decision
+
+Generalize the purge signal.
 
 ### Generalize the purge signal
 

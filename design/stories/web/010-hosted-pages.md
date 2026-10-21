@@ -1,16 +1,21 @@
+---
+title: "Story 010: Hosted Pages"
+updated: 2026-08-06
+status: draft
+---
 # Story 010 — Hosted Pages
 
 **Epic:** Hosted Surfaces
 **Repo:** web
 **Status:** Draft
-**New — web's side of the pages [ADR 0066](../../decisions/0066-portcullis-proxies-branded-pages-to-web.md)/
-[ADR 0068](../../decisions/0068-tenant-creation-ui-surfaces.md)/
-[ADR 0070](../../decisions/0070-self-service-identity-linking.md) already specify.**
-Per [ADR 0044](../../decisions/0044-web-surfaces-and-distribution-model.md),
-[ADR 0065](../../decisions/0065-portal-upgrade-flow.md),
-[ADR 0066](../../decisions/0066-portcullis-proxies-branded-pages-to-web.md),
-[ADR 0068](../../decisions/0068-tenant-creation-ui-surfaces.md),
-[ADR 0070](../../decisions/0070-self-service-identity-linking.md).
+**New — web's side of the pages [ADR 0066](../../adrs/0066-portcullis-proxies-branded-pages-to-web.md)/
+[ADR 0068](../../adrs/0068-tenant-creation-ui-surfaces.md)/
+[ADR 0070](../../adrs/0070-self-service-identity-linking.md) already specify.**
+Per [ADR 0044](../../adrs/0044-web-surfaces-and-distribution-model.md),
+[ADR 0065](../../adrs/0065-portal-upgrade-flow.md),
+[ADR 0066](../../adrs/0066-portcullis-proxies-branded-pages-to-web.md),
+[ADR 0068](../../adrs/0068-tenant-creation-ui-surfaces.md),
+[ADR 0070](../../adrs/0070-self-service-identity-linking.md).
 **Depends on:** [tower Story 012](../tower/012-tenant-creation-and-provisioning.md)'s
 `POST /tenants`, [tower Story 009](../tower/009-self-service-identities-and-me-routes.md)'s
 `POST /identity-links`.

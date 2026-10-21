@@ -151,7 +151,7 @@ describe('stripe webhook handling -- API contract', () => {
       expect((seatEvent as { seatLimit: number }).seatLimit).toBe(5)
     })
 
-    // design/decisions/0101-api-keys.md.
+    // design/adrs/0101-api-keys.md.
     it('publishes api-key-limit-changed/api-key-rate-limit-changed for an ACCOUNT-scoped subscription -- unlike seatLimit, {account} scope is meaningful here', async () => {
       await t.app.inject({
         method: 'POST',

@@ -1,9 +1,14 @@
+---
+title: "Story 016: Signet Precedence and Provisioning Defaults"
+updated: 2026-09-03
+status: draft
+---
 # Story 016 — Signet Precedence and Provisioning Defaults
 
 **Epic:** Config/Secrets Compliance
 **Repo:** tower
 **Status:** Draft
-**Per:** [ADR 0102](../../decisions/0102-signet-precedence-and-fallback-scope.md)
+**Per:** [ADR 0102](../../adrs/0102-signet-precedence-and-fallback-scope.md)
 
 ---
 

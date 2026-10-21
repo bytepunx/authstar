@@ -1,3 +1,12 @@
+---
+id: ADR-0086
+title: JWKS Endpoint for Internal JWT Verification
+status: accepted
+date: 2026-08-12
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0086: JWKS Endpoint for Internal JWT Verification
 
 - **Status:** Accepted
@@ -15,7 +24,7 @@
 
 Every downstream service that receives the internal JWT is expected to independently
 re-verify its signature (ADR 0030's "defense in depth" — a Node service checking against the
-tenant's public key, not trusting portcullis's forwarding alone). `design/docs/tech-stack.md`
+tenant's public key, not trusting portcullis's forwarding alone). `design/tech/tech-stack.md`
 picked `jose` specifically for this reason: *"strong native `kid`/JWKS-set support... a better
 fit than `jsonwebtoken` for a design that verifies against a resolved key selected by `kid`
 everywhere."* [ADR 0002](0002-multi-tenant-architecture-and-key-management.md) goes further,
@@ -43,6 +52,8 @@ change later: today it holds exactly one entry, and it holds two the moment over
 actually lands.
 
 ## Decision
+
+Per-tenant, unauthenticated `GET /.well-known/jwks.json`, resolved by `Host` the same as everything else.
 
 ### Per-tenant, unauthenticated `GET /.well-known/jwks.json`, resolved by `Host` the same as everything else
 

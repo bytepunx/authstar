@@ -217,7 +217,7 @@ describe('applications -- API contract', () => {
       expect(response.statusCode).toBe(403)
     })
 
-    // design/decisions/0101-api-keys.md.
+    // design/adrs/0101-api-keys.md.
     it('auto-seeds an active application-scope api-keys:manage role definition', async () => {
       await createTenant('acme')
       await app.inject({ method: 'POST', url: '/tenants/acme/applications', headers, payload: { slug: 'billing', name: 'Billing' } })
@@ -522,7 +522,7 @@ describe('applications -- operator tree', () => {
     expect(remove.json().status).toBe('deleted')
   })
 
-  // design/decisions/0101-api-keys.md: pre-existing applications never went
+  // design/adrs/0101-api-keys.md: pre-existing applications never went
   // through `createApplication`'s own auto-seed call, since that call site
   // didn't exist yet when they were created -- simulated here by creating
   // the `application` actor directly (bypassing the route entirely), the

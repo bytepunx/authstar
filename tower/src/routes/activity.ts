@@ -4,7 +4,7 @@ import { requirePermission } from '../lib/permissions.js'
 import { isOperatorRequest } from '../lib/operator-auth.js'
 import { buildActivityFeed } from '../lib/activity-feed.js'
 
-// Per design/stories/tower/010-activity-feed.md and design/decisions/
+// Per design/stories/tower/010-activity-feed.md and design/adrs/
 // 0060-activity-feed-and-revenue-summary.md. Tenant-scoped and
 // operator-scoped routes share the exact same handler (`handleActivity`)
 // -- the only difference is which auth check runs first, per ADR 0030's

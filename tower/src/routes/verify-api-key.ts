@@ -6,7 +6,7 @@ import { filterRolesForApplication } from '../lib/roles.js'
 import { verifyApiKeySecret } from '../lib/api-key-secret.js'
 import { requireSpiffePeer } from '../lib/spiffe-mtls.js'
 
-// Per design/decisions/0101-api-keys.md. Called by portcullis
+// Per design/adrs/0101-api-keys.md. Called by portcullis
 // (`authstar-middleware/src/api_key_verifier.rs`) on every request bearing
 // an `Authorization: Bearer authstar_{apiKeyId}_{secret}` credential --
 // the API-key analogue of `enrich.ts`'s `/enrich`, reusing the exact same
@@ -69,7 +69,7 @@ interface OwnerVerification {
 // and `rateLimitForOwner` used to be separate functions, each re-fetching
 // the same account/organization instance).
 //
-// `sub` -- per design/decisions/0101-api-keys.md's baseline-identity
+// `sub` -- per design/adrs/0101-api-keys.md's baseline-identity
 // decision: a personal key resolves the owning account's real email (via
 // `contactStore`, same source `/enrich` itself never needed to touch since
 // a session's own `sub` already *is* the verified email); an org-owned key

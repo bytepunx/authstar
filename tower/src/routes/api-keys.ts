@@ -9,7 +9,7 @@ import { searchCriteria } from '../lib/consequent-types.js'
 import { filterRolesForApplication } from '../lib/roles.js'
 import { generateApiKeySecret, generateApiKeySalt, hashApiKeySecret } from '../lib/api-key-secret.js'
 
-// Per design/decisions/0101-api-keys.md. Two route trees over one shared
+// Per design/adrs/0101-api-keys.md. Two route trees over one shared
 // handler core -- personal (an account's own keys for one application) and
 // organization (an org's keys for one application, manager-gated). Both
 // resolve to the same `ApiKeyState` shape and the same `OwnerContext`
@@ -219,7 +219,7 @@ async function revokeOwnerKey(app: FastifyInstance, reply: FastifyReply, tenantS
   return toResponse(updated!)
 }
 
-// design/decisions/0101-api-keys.md: an org-owned key additionally requires
+// design/adrs/0101-api-keys.md: an org-owned key additionally requires
 // the org itself to currently hold `api-keys:manage` for this application
 // -- `requireOrganizationManager` alone only proves the caller is a manager
 // *of the org*, not that the org's own plan entitles it to mint keys at

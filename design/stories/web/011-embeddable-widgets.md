@@ -1,13 +1,18 @@
+---
+title: "Story 011: Embeddable Widget Library"
+updated: 2026-08-06
+status: draft
+---
 # Story 011 — Embeddable Widget Library
 
 **Epic:** Widget Library
 **Repo:** web
 **Status:** Draft
-**New — web's side of the widgets [ADR 0072](../../decisions/0072-embeddable-web-component-inventory.md)
-already specifies.** Per [ADR 0044](../../decisions/0044-web-surfaces-and-distribution-model.md),
-[ADR 0071](../../decisions/0071-self-service-widget-data-access.md),
-[ADR 0072](../../decisions/0072-embeddable-web-component-inventory.md).
-Per [tech-stack.md](../../docs/tech-stack.md) — a separate Vite library-mode build target from
+**New — web's side of the widgets [ADR 0072](../../adrs/0072-embeddable-web-component-inventory.md)
+already specifies.** Per [ADR 0044](../../adrs/0044-web-surfaces-and-distribution-model.md),
+[ADR 0071](../../adrs/0071-self-service-widget-data-access.md),
+[ADR 0072](../../adrs/0072-embeddable-web-component-inventory.md).
+Per [tech-stack.md](../../tech/tech-stack.md) — a separate Vite library-mode build target from
 the SvelteKit admin app, not the same bundle.
 
 ---
@@ -17,7 +22,7 @@ the SvelteKit admin app, not the same bundle.
 Six Custom Elements (Shadow DOM), framework-agnostic, no dependency on SvelteKit or any
 framework at runtime — a genuinely different build target living in the same repo, not a
 SvelteKit feature. Every widget calls a portcullis `/_authstar/me/*` route
-([ADR 0071](../../decisions/0071-self-service-widget-data-access.md)) same-origin, relative
+([ADR 0071](../../adrs/0071-self-service-widget-data-access.md)) same-origin, relative
 URL, no CORS needed, since the adopting application's own host is what portcullis fronts.
 
 ---

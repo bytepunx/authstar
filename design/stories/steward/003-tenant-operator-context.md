@@ -1,9 +1,14 @@
+---
+title: "Story 003: Tenant Operator Context: Admin Access and OIDC Providers"
+updated: 2026-08-06
+status: draft
+---
 # Story 003 — Tenant Operator Context: Admin Access and OIDC Providers
 
 **Epic:** Operator Console
 **Repo:** steward
 **Status:** Draft
-**New — steward's side of the screens [ADR 0048](../../decisions/0048-steward-ux.md) already
+**New — steward's side of the screens [ADR 0048](../../adrs/0048-steward-ux.md) already
 specifies.**
 **Depends on:** [tower Story 005](../tower/005-accounts-roles-and-permissions.md)'s account/
 permission routes, [tower Story 007](../tower/007-invites-and-invite-codes.md)'s invite

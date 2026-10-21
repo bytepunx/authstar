@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify'
 import { searchCriteria, type ConsequentEvent } from './consequent-types.js'
 
-// Per design/stories/tower/010-activity-feed.md and design/decisions/
+// Per design/stories/tower/010-activity-feed.md and design/adrs/
 // 0060-activity-feed-and-revenue-summary.md. Shared by both the
 // tenant-scoped (`routes/activity.ts`'s `GET /tenants/{tenantSlug}/
 // activity`) and operator-scoped (`GET /operator/tenants/{tenantSlug}/

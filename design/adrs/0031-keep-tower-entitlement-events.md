@@ -1,3 +1,12 @@
+---
+id: ADR-0031
+title: Keep → Tower Entitlement Message Contract
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0031: Keep → Tower Entitlement Message Contract
 
 - **Status:** Accepted
@@ -18,6 +27,8 @@ ordering problem that belongs on the consumer side and has cheaper, well-known s
 Coupling a producer's publishing shape to a consumer's ordering concerns is exactly backwards.
 
 ## Decision
+
+Keep publishes discrete, meaningful events — the same pattern used everywhere else in this system.
 
 ### Keep publishes discrete, meaningful events — the same pattern used everywhere else in this system
 

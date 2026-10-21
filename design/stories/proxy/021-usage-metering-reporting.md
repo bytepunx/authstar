@@ -1,9 +1,14 @@
+---
+title: "Story 021: Usage Metering Reporting"
+updated: 2026-07-30
+status: draft
+---
 # Story 021 — Usage Metering Reporting
 
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0043](../../decisions/0043-application-reported-usage-metering.md).
+**New — not present in `ref-design`.** Per [ADR 0043](../../adrs/0043-application-reported-usage-metering.md).
 
 ---
 

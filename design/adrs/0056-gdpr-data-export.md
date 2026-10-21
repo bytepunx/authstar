@@ -1,3 +1,12 @@
+---
+id: ADR-0056
+title: Data Export — Right of Access and Portability (GDPR Article 15/20)
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0056: Data Export — Right of Access and Portability (GDPR Article 15/20)
 
 - **Status:** Accepted
@@ -16,6 +25,8 @@ fan-out/acknowledgment machinery here would be solving a consistency problem exp
 actually have.
 
 ## Decision
+
+`web` orchestrates; no service gains a new dependency on another.
 
 ### `web` orchestrates; no service gains a new dependency on another
 

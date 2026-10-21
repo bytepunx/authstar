@@ -1,3 +1,12 @@
+---
+id: ADR-0017
+title: Account, Identity, and Role Model
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0017: Account, Identity, and Role Model
 
 - **Status:** Accepted (role opacity partially revised by [ADR 0047](0047-application-and-role-slug-validation.md))
@@ -32,6 +41,8 @@ single account can hold different roles on different applications within one ten
 Stack-Overflow-style case)?
 
 ## Decision
+
+`identity` actor.
 
 ### `identity` actor
 

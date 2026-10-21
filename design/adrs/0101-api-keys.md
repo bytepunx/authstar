@@ -1,3 +1,12 @@
+---
+id: ADR-0101
+title: API Keys — User-Scoped and Org-Scoped, Tenant-Plan-Gated
+status: accepted
+date: 2026-08-30
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0101: API Keys — User-Scoped and Org-Scoped, Tenant-Plan-Gated
 
 - **Status:** Accepted

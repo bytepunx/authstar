@@ -1,9 +1,14 @@
+---
+title: "Story 007: Signet Precedence and Operator Token"
+updated: 2026-09-03
+status: draft
+---
 # Story 007 — Signet Precedence and Operator Token
 
 **Epic:** Config/Secrets Compliance
 **Repo:** herald
 **Status:** Draft
-**Per:** [ADR 0102](../../decisions/0102-signet-precedence-and-fallback-scope.md)
+**Per:** [ADR 0102](../../adrs/0102-signet-precedence-and-fallback-scope.md)
 
 ---
 

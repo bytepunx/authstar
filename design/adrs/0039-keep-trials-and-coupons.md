@@ -1,3 +1,12 @@
+---
+id: ADR-0039
+title: Trials and Coupons in Keep
+status: accepted
+date: 2026-07-29
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0039: Trials and Coupons in Keep
 
 - **Status:** Accepted
@@ -19,6 +28,8 @@ flagged an open question: should a single marketing code be able to grant both a
 `inviteCode`) and a discount/entitlement (keep's domain) in one redemption?
 
 ## Decision
+
+`trial` — formalizes what ADR 0018 described.
 
 ### `trial` — formalizes what ADR 0018 described
 

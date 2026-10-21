@@ -1,3 +1,12 @@
+---
+id: ADR-0085
+title: Chronicle's ClickHouse Schema
+status: accepted
+date: 2026-08-06
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0085: Chronicle's ClickHouse Schema
 
 - **Status:** Accepted
@@ -16,6 +25,8 @@ not a correction of an existing decision — the first "fill the missing foundat
 pass, rather than a "fix what's there" one.
 
 ## Decision
+
+One wide table, not one per event type.
 
 ### One wide table, not one per event type
 

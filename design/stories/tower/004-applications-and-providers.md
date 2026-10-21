@@ -1,17 +1,22 @@
+---
+title: "Story 004: Applications and Providers Management"
+updated: 2026-08-05
+status: draft
+---
 # Story 004 — Applications and Providers Management
 
 **Epic:** Identity & Access
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0030](../../decisions/0030-tower-api-surface.md)/
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md) already
-specify.** Per [ADR 0016](../../decisions/0016-application-layer-and-sso-scope.md),
-[ADR 0020](../../decisions/0020-tenant-application-actors-and-secret-handling.md),
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0053](../../decisions/0053-lifecycle-status-consolidation.md),
-[ADR 0067](../../decisions/0067-tenant-creation-and-provisioning.md),
-[ADR 0073](../../decisions/0073-provider-discovery-status-feedback.md),
-[ADR 0082](../../decisions/0082-tower-actor-boundary-corrections.md).
+**New — tower's side of the routes [ADR 0030](../../adrs/0030-tower-api-surface.md)/
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md) already
+specify.** Per [ADR 0016](../../adrs/0016-application-layer-and-sso-scope.md),
+[ADR 0020](../../adrs/0020-tenant-application-actors-and-secret-handling.md),
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md),
+[ADR 0053](../../adrs/0053-lifecycle-status-consolidation.md),
+[ADR 0067](../../adrs/0067-tenant-creation-and-provisioning.md),
+[ADR 0073](../../adrs/0073-provider-discovery-status-feedback.md),
+[ADR 0082](../../adrs/0082-tower-actor-boundary-corrections.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `tenant`/`application`/`provider`
 shapes and the `tenant.add-application`/`tenant.add-provider` command pattern.
 

@@ -5,7 +5,7 @@ import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import { createInMemoryContactStore, type ContactStore } from '../../src/lib/contact-store.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 
-// Behavior tier: design/decisions/0101-api-keys.md's `POST /verify-api-key`
+// Behavior tier: design/adrs/0101-api-keys.md's `POST /verify-api-key`
 // -- the API-key analogue of `enrich.spec.ts`. Keys are created here
 // directly against the `apiKey` actor (not through `routes/api-keys.ts`,
 // which has its own dedicated spec) so each test controls the exact

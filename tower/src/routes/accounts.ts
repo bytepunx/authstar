@@ -7,7 +7,7 @@ import { fetchMemberships, organizationManagers } from './organizations.js'
 import type { OrganizationMembershipState } from '../actors/organization_membership_actor.js'
 
 // Account-level role/permission grants are never organization-scoped
-// (design/decisions/0100-...: org-granted roles live on `organization`/
+// (design/adrs/0100-...: org-granted roles live on `organization`/
 // `organizationMembership`, never merged onto `account.roles`) -- narrower
 // than `role-definition-lookup.ts`'s own `Scope`, which also covers
 // organization-scope role *definitions* elsewhere in the catalog.

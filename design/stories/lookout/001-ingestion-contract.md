@@ -1,13 +1,18 @@
+---
+title: "Story 001: Ingestion Contract"
+updated: 2026-08-06
+status: draft
+---
 # Story 001 — Ingestion Contract
 
 **Epic:** Analytics Ingestion
 **Repo:** lookout
 **Status:** Draft
-**New — lookout's side of the mechanism [ADR 0035](../../decisions/0035-lookout-and-chronicle-analytics.md)
+**New — lookout's side of the mechanism [ADR 0035](../../adrs/0035-lookout-and-chronicle-analytics.md)
 already specifies, naming the one thing it left unnamed: lookout's own ingestion route.**
-Per [ADR 0035](../../decisions/0035-lookout-and-chronicle-analytics.md),
-[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md).
-**Depends on:** [tech-stack.md](../../docs/tech-stack.md)'s choice of fastify for lookout
+Per [ADR 0035](../../adrs/0035-lookout-and-chronicle-analytics.md),
+[ADR 0058](../../adrs/0058-analytics-event-shape-corrections.md).
+**Depends on:** [tech-stack.md](../../tech/tech-stack.md)'s choice of fastify for lookout
 (lightweight — no `consequent`, no database, per `claude.md`).
 
 ---

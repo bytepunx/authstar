@@ -1,3 +1,12 @@
+---
+id: ADR-0055
+title: "`web`'s Privacy & Compliance Screens"
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0055: `web`'s Privacy & Compliance Screens
 
 - **Status:** Accepted
@@ -13,6 +22,8 @@ improvements to the erasure flow, and one significant, previously-unaddressed ga
 coverage overall.
 
 ## Decision
+
+Contacts — finding one, safely.
 
 ### Contacts — finding one, safely
 

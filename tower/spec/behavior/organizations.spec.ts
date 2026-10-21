@@ -10,7 +10,7 @@ import { createSpyPublisher } from '../lib/fakes.js'
 import { roleDefinitionKey } from '../../src/lib/role-definition-lookup.js'
 import type { OrganizationMembershipState } from '../../src/actors/organization_membership_actor.js'
 
-// Behavior tier: design/decisions/0100-organization-membership-and-open-
+// Behavior tier: design/adrs/0100-organization-membership-and-open-
 // role-catalog.md (supersedes ADR 0090/0098). No `POST /accounts` route
 // exists in this repo (Story 005), so tests create accounts directly via
 // `consequent.handle()`, same convention accounts.spec.ts already uses.

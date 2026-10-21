@@ -1,9 +1,14 @@
+---
+title: "Story 006: Signet Precedence for Service URLs"
+updated: 2026-09-03
+status: draft
+---
 # Story 006 — Signet Precedence for Service URLs
 
 **Epic:** Config/Secrets Compliance
 **Repo:** steward
 **Status:** Draft
-**Per:** [ADR 0102](../../decisions/0102-signet-precedence-and-fallback-scope.md)
+**Per:** [ADR 0102](../../adrs/0102-signet-precedence-and-fallback-scope.md)
 
 ---
 

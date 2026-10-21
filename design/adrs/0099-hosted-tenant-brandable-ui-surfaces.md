@@ -1,3 +1,12 @@
+---
+id: ADR-0099
+title: Hosted, Tenant-Brandable UI Surfaces for Platform-Owned Concepts
+status: proposed
+date: 2026-08-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0099: Hosted, Tenant-Brandable UI Surfaces for Platform-Owned Concepts
 
 - **Status:** Proposed
@@ -15,6 +24,10 @@ handling, the same "what does a 409 mean here" logic, with no shared visual lang
 
 This ADR is a **proposal**, not a decision — it sketches a direction and names the open questions
 rather than resolving them, so it can be picked up as a real implementation plan once prioritized.
+
+## Decision
+
+No decision is recorded yet: this ADR is a proposal, and the sketch and open questions below are what a later ADR would decide.
 
 ## Sketch
 

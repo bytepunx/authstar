@@ -5,7 +5,7 @@ import type { Session } from '$lib/server/session'
 import { TowerNotFoundError, TowerRequestError } from '$lib/server/clients/tower'
 import { organizationRolesForApplication } from '$lib/server/api-key-roles'
 
-// design/decisions/0101-api-keys.md. Reuses the *existing* org embed
+// design/adrs/0101-api-keys.md. Reuses the *existing* org embed
 // layout (`(embed)/organizations/[organizationId]/+layout.server.ts`) via
 // ordinary SvelteKit route nesting -- no new layout file, no new membership
 // gate -- rather than a parallel tree, exactly like every other page under

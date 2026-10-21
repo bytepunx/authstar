@@ -1,3 +1,12 @@
+---
+id: ADR-0084
+title: Herald Actor Boundary Corrections — Keys Finally Declared
+status: accepted
+date: 2026-08-05
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0084: Herald Actor Boundary Corrections — Keys Finally Declared
 
 - **Status:** Accepted
@@ -32,6 +41,8 @@ The rest are missing declarations rather than live risks, closed here for comple
 the pattern of leaving them undeclared has caused confusion twice already.
 
 ## Decision
+
+`communicationType.identifiedBy` becomes `{tenant}:{type}`.
 
 ### `communicationType.identifiedBy` becomes `{tenant}:{type}`
 

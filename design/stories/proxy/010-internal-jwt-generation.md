@@ -1,16 +1,21 @@
+---
+title: "Story 010: Internal JWT Generation for Upstream Services"
+updated: 2026-08-03
+status: draft
+---
 # Story 010 — Internal JWT Generation for Upstream Services
 
 **Epic:** Session Management
 **Repo:** portcullis
 **Status:** Draft
-**Adapted from:** `ref-design` Story 010 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
-[ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
-[ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
-[ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
-[ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md),
-[ADR 0043](../../decisions/0043-application-reported-usage-metering.md),
-[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md).
+**Adapted from:** `ref-design` Story 010 per [ADR 0001](../../adrs/0001-claims-enrichment-via-tower.md),
+[ADR 0002](../../adrs/0002-multi-tenant-architecture-and-key-management.md),
+[ADR 0003](../../adrs/0003-enrichment-outcome-response-contract.md),
+[ADR 0017](../../adrs/0017-account-identity-and-role-model.md),
+[ADR 0018](../../adrs/0018-trial-roles-and-keep-boundary.md),
+[ADR 0027](../../adrs/0027-portcullis-computed-identity-hash.md),
+[ADR 0043](../../adrs/0043-application-reported-usage-metering.md),
+[ADR 0058](../../adrs/0058-analytics-event-shape-corrections.md).
 
 ---
 

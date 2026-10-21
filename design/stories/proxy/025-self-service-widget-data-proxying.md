@@ -1,9 +1,14 @@
+---
+title: "Story 025: Self-Service Widget Data Proxying (`/_authstar/me/*`)"
+updated: 2026-08-01
+status: draft
+---
 # Story 025 — Self-Service Widget Data Proxying (`/_authstar/me/*`)
 
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0071](../../decisions/0071-self-service-widget-data-access.md).
+**New — not present in `ref-design`.** Per [ADR 0071](../../adrs/0071-self-service-widget-data-access.md).
 
 ---
 

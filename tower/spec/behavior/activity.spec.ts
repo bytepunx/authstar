@@ -7,7 +7,7 @@ import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 import type { ProvisioningConfig } from '../../src/routes/provisioning.js'
 
 // Behavior tier: design/stories/tower/010-activity-feed.md and design/
-// decisions/0060-activity-feed-and-revenue-summary.md. Exercises both
+// adrs/0060-activity-feed-and-revenue-summary.md. Exercises both
 // `GET /tenants/:tenantSlug/activity` and its operator-scoped twin against
 // the real in-memory `consequent` (buildInMemoryConsequent -- the fixed
 // searchAdapter + the real, now-working getEventStream from consequent

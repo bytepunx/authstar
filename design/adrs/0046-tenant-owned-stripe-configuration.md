@@ -1,3 +1,12 @@
+---
+id: ADR-0046
+title: Tenant-Owned Stripe Configuration — Corrects the Single-Account Model
+status: accepted
+date: 2026-07-30
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0046: Tenant-Owned Stripe Configuration — Corrects the Single-Account Model
 
 - **Status:** Accepted
@@ -36,6 +45,8 @@ authstar itself is an entirely orthogonal business concern, handled with the ope
 tooling outside this system — `keep` has no first-class concept of it.
 
 ## Decision
+
+Each tenant supplies its own Stripe credentials — plain secrets, no Connect, no onboarding flow.
 
 ### Each tenant supplies its own Stripe credentials — plain secrets, no Connect, no onboarding flow
 

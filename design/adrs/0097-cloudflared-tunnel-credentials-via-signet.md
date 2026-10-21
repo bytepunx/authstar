@@ -1,3 +1,12 @@
+---
+id: ADR-0097
+title: cloudflared Tunnel Credentials via Signet + kickr
+status: accepted
+date: 2026-08-23
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0097: cloudflared Tunnel Credentials via Signet + kickr
 
 - **Status:** Accepted

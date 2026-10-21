@@ -1,3 +1,12 @@
+---
+id: ADR-0089
+title: The Internal JWT Carries Its Own Tenant Hint
+status: accepted
+date: 2026-08-14
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0089: The Internal JWT Carries Its Own Tenant Hint
 
 - **Status:** Accepted (JWKS URL construction superseded by [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md))
@@ -56,6 +65,8 @@ internal and external upstreams, and matches this design's own stated posture (A
 upstreams verify independently, they don't trust what portcullis forwards).
 
 ## Decision
+
+A new `tenant` field on the internal JWT's **protected header** — not the payload.
 
 ### A new `tenant` field on the internal JWT's **protected header** — not the payload
 

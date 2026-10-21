@@ -1,9 +1,14 @@
+---
+title: "Story 026: SES Bounce/Complaint Webhook Passthrough"
+updated: 2026-08-01
+status: draft
+---
 # Story 026 — SES Bounce/Complaint Webhook Passthrough
 
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md).
+**New — not present in `ref-design`.** Per [ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md).
 
 ---
 

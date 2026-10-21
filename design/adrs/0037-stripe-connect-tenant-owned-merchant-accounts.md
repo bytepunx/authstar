@@ -1,3 +1,12 @@
+---
+id: ADR-0037
+title: Stripe Connect Standard Accounts — Tenants Own the Merchant Relationship
+status: superseded
+date: 2026-07-29
+updated: 2026-09-23
+supersedes: []
+superseded_by: [ADR-0042]
+---
 # ADR 0037: Stripe Connect Standard Accounts — Tenants Own the Merchant Relationship
 
 - **Status:** Superseded by [ADR 0042](0042-single-account-billing-model.md)
@@ -23,6 +32,8 @@ of the authstar.io-sending-email problem herald was designed to avoid — except
 regulatory/liability exposure attached, not just a deliverability concern.
 
 ## Decision
+
+Stripe Connect, Standard account type.
 
 ### Stripe Connect, Standard account type
 

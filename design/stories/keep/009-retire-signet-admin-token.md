@@ -1,10 +1,15 @@
+---
+title: "Story 009: Retire Signet Admin Token"
+updated: 2026-09-03
+status: draft
+---
 # Story 009 — Retire Signet Admin Token
 
 **Epic:** Config/Secrets Compliance
 **Repo:** keep
 **Status:** Draft — unblocked, signet-client v0.8.0 and signet server's scoped `GetSOPSPublicKey`
 have shipped.
-**Per:** [ADR 0103](../../decisions/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
+**Per:** [ADR 0103](../../adrs/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
 
 ---
 

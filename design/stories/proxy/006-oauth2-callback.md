@@ -1,13 +1,18 @@
+---
+title: "Story 006: OAuth2 Callback: Code Exchange and Userinfo Fetch"
+updated: 2026-08-03
+status: draft
+---
 # Story 006 — OAuth2 Callback: Code Exchange and Userinfo Fetch
 
 **Epic:** OAuth2 Authentication
 **Repo:** portcullis
 **Status:** Draft
-**Adapted from:** `ref-design` Story 006 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
-[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md),
-[ADR 0028](../../decisions/0028-identity-hash-key-generations.md),
-[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md).
-**Branches for linking:** if the `oauth2-link-mode` cookie ([ADR 0070](../../decisions/0070-self-service-identity-linking.md))
+**Adapted from:** `ref-design` Story 006 per [ADR 0001](../../adrs/0001-claims-enrichment-via-tower.md),
+[ADR 0027](../../adrs/0027-portcullis-computed-identity-hash.md),
+[ADR 0028](../../adrs/0028-identity-hash-key-generations.md),
+[ADR 0058](../../adrs/0058-analytics-event-shape-corrections.md).
+**Branches for linking:** if the `oauth2-link-mode` cookie ([ADR 0070](../../adrs/0070-self-service-identity-linking.md))
 is present, this handler diverts after computing `identityHash` — see
 [Story 024](024-self-service-identity-linking.md), which owns that branch's behavior rather than
 duplicating it here. Everything below (state/PKCE validation, code exchange, userinfo fetch,

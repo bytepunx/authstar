@@ -143,7 +143,7 @@ export async function handleEntitlementEvent(
       await consequent.handle(tenant, 'tenant.set-seat-limit', { seatLimit: payload.seatLimit ?? null })
       return
     }
-    // design/decisions/0101-api-keys.md: unlike `seat-limit-changed` above,
+    // design/adrs/0101-api-keys.md: unlike `seat-limit-changed` above,
     // `EntitlementScope` here can be `{account}` as well as `{organization}`
     // -- an individual account's own key limit is meaningful, keep's
     // `entitlement-publisher.ts` deliberately doesn't restrict these two

@@ -1,3 +1,12 @@
+---
+id: ADR-0098
+title: Organization Permission Lifecycle and Entitlement Fan-Out
+status: superseded
+date: 2026-08-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: [ADR-0100]
+---
 # ADR 0098: Organization Permission Lifecycle and Entitlement Fan-Out
 
 - **Status:** Superseded by [ADR 0100](0100-organization-membership-and-open-role-catalog.md)
@@ -36,6 +45,8 @@ never actually worked end-to-end for a real account:
    forward.
 
 ## Decision
+
+Manager membership and `organization:manage` change atomically.
 
 ### Manager membership and `organization:manage` change atomically
 

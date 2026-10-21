@@ -1,16 +1,21 @@
+---
+title: "Story 013: Authentication Gate (Pre-Handler)"
+updated: 2026-08-01
+status: draft
+---
 # Story 013 — Authentication Gate (Pre-Handler)
 
 **Epic:** Reverse Proxy
 **Repo:** portcullis
 **Status:** Draft
 **Adapted from:** `ref-design` Story 013 — substantially expanded per
-[ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
-[ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
-[ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
-[ADR 0014](../../decisions/0014-single-bundle-prefixed-tenant-keys.md),
-[ADR 0015](../../decisions/0015-exempt-routes-never-blocked.md),
-[ADR 0016](../../decisions/0016-application-layer-and-sso-scope.md),
-[ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md).
+[ADR 0001](../../adrs/0001-claims-enrichment-via-tower.md),
+[ADR 0002](../../adrs/0002-multi-tenant-architecture-and-key-management.md),
+[ADR 0003](../../adrs/0003-enrichment-outcome-response-contract.md),
+[ADR 0014](../../adrs/0014-single-bundle-prefixed-tenant-keys.md),
+[ADR 0015](../../adrs/0015-exempt-routes-never-blocked.md),
+[ADR 0016](../../adrs/0016-application-layer-and-sso-scope.md),
+[ADR 0062](../../adrs/0062-tenant-status-enforcement-and-reactivation.md).
 
 ---
 

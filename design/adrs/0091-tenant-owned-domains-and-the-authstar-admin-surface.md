@@ -1,3 +1,12 @@
+---
+id: ADR-0091
+title: Tenant-Owned Domains and the Reserved `authstar` Admin Surface
+status: accepted
+date: 2026-08-19
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0091: Tenant-Owned Domains and the Reserved `authstar` Admin Surface
 
 - **Status:** Accepted (domain-at-creation requirement superseded by [ADR 0093](0093-domain-pending-tenant-provisioning.md))
@@ -43,6 +52,8 @@ installation, the admin surface's host becomes trivially unique too, using the e
 mechanism portcullis already has.
 
 ## Decision
+
+Every tenant has exactly one domain, globally unique across the installation.
 
 ### Every tenant has exactly one domain, globally unique across the installation
 

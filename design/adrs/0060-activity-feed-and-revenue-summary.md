@@ -1,3 +1,12 @@
+---
+id: ADR-0060
+title: Cross-Service Activity Feed and Keep's Revenue Summary
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0060: Cross-Service Activity Feed and Keep's Revenue Summary
 
 - **Status:** Accepted
@@ -14,6 +23,8 @@ Neither had a real data source. Activity existed only as an operator-scoped, tow
 Stripe owns pricing entirely, and nothing in `planMapping` (ADR 0038/0046) caches it.
 
 ## Decision
+
+Tenant-scoped activity, mirroring ADR 0048's operator-scoped precedent — now in three services.
 
 ### Tenant-scoped activity, mirroring ADR 0048's operator-scoped precedent — now in three services
 

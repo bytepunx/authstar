@@ -1,15 +1,20 @@
+---
+title: "Story 009: Self-Service Identities and `/me/*` Routes"
+updated: 2026-08-05
+status: draft
+---
 # Story 009 — Self-Service Identities and `/me/*` Routes
 
 **Epic:** Self-Service
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0070](../../decisions/0070-self-service-identity-linking.md)/
-[ADR 0071](../../decisions/0071-self-service-widget-data-access.md) already specify.**
-Per [ADR 0019](../../decisions/0019-invite-codes.md),
-[ADR 0030](../../decisions/0030-tower-api-surface.md),
-[ADR 0043](../../decisions/0043-application-reported-usage-metering.md),
-[ADR 0070](../../decisions/0070-self-service-identity-linking.md),
-[ADR 0071](../../decisions/0071-self-service-widget-data-access.md).
+**New — tower's side of the routes [ADR 0070](../../adrs/0070-self-service-identity-linking.md)/
+[ADR 0071](../../adrs/0071-self-service-widget-data-access.md) already specify.**
+Per [ADR 0019](../../adrs/0019-invite-codes.md),
+[ADR 0030](../../adrs/0030-tower-api-surface.md),
+[ADR 0043](../../adrs/0043-application-reported-usage-metering.md),
+[ADR 0070](../../adrs/0070-self-service-identity-linking.md),
+[ADR 0071](../../adrs/0071-self-service-widget-data-access.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `identity`/`account` shapes,
 [Story 007](007-invites-and-invite-codes.md)'s `inviteCode` creation validation (reused
 unchanged by `/me/invite-codes`).

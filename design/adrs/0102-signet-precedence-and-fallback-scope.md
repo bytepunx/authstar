@@ -1,3 +1,12 @@
+---
+id: ADR-0102
+title: Signet Precedence, Fallback Scope, and Missing-Field Behavior
+status: accepted
+date: 2026-08-31
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0102: Signet Precedence, Fallback Scope, and Missing-Field Behavior
 
 - **Status:** Accepted
@@ -47,6 +56,8 @@ of compliance with ADR 0004's config/secrets model, in three distinct ways:
    guarantees signet wins.
 
 ## Decision
+
+Two operating modes, gated on the presence of signet's bootstrap coordinates.
 
 ### Two operating modes, gated on the presence of signet's bootstrap coordinates
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0053
+title: Lifecycle State Transitions via `PATCH`, Not a Separate `DELETE` — Consolidated Fix
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0053: Lifecycle State Transitions via `PATCH`, Not a Separate `DELETE` — Consolidated Fix
 
 - **Status:** Accepted
@@ -17,6 +26,8 @@ subscribers/applications still reference breaks their behavior going forward, no
 audit history.
 
 ## Decision
+
+Lifecycle State Transitions via `PATCH`, Not a Separate `DELETE` — Consolidated Fix.
 
 | Resource | Service | Current state | Fix |
 |---|---|---|---|

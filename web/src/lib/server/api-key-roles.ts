@@ -1,6 +1,6 @@
 import type { AccountRoleGrant } from './clients/tower'
 
-// design/decisions/0101-api-keys.md. The (embed) API-key creation forms'
+// design/adrs/0101-api-keys.md. The (embed) API-key creation forms'
 // own client-side mirror of tower's `filterRolesForApplication` (`lib/
 // roles.ts`) -- used only to decide which roles to show as checkable in the
 // creation form and whether to show the form at all (holding

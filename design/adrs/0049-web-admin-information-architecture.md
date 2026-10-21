@@ -1,3 +1,12 @@
+---
+id: ADR-0049
+title: "`web`'s Admin Surface — Information Architecture"
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0049: `web`'s Admin Surface — Information Architecture
 
 - **Status:** Accepted
@@ -14,6 +23,8 @@ given its tiny backend surface (admins + OIDC providers only), `web`'s admin sur
 information architecture, not a flat list of screens.
 
 ## Decision
+
+Navigation is permission-aware, not a single fixed "admin" experience.
 
 ### Navigation is permission-aware, not a single fixed "admin" experience
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0100
+title: Multi-Organization Membership and an Open Org-Role Catalog
+status: accepted
+date: 2026-08-28
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0100: Multi-Organization Membership and an Open Org-Role Catalog
 
 - **Status:** Accepted
@@ -33,6 +42,8 @@ gaps in ADR 0090/0098's design, not implementation bugs:
    downstream.
 
 ## Decision
+
+`organizationMembership` — its own tracked actor, not a list or a flat field.
 
 ### `organizationMembership` — its own tracked actor, not a list or a flat field
 

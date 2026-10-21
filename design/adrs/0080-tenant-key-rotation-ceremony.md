@@ -1,3 +1,12 @@
+---
+id: ADR-0080
+title: Tenant Key Rotation Ceremony
+status: accepted
+date: 2026-08-02
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0080: Tenant Key Rotation Ceremony
 
 - **Status:** Accepted
@@ -39,6 +48,8 @@ cache-population code to write and operate in tower"). Neither needs new design 
 pointer this ADR adds.
 
 ## Decision
+
+`POST /operator/tenants/{tenantSlug}/rotate-keys` — operator-only, one route for all three key types.
 
 ### `POST /operator/tenants/{tenantSlug}/rotate-keys` — operator-only, one route for all three key types
 

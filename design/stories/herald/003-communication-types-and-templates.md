@@ -1,14 +1,19 @@
+---
+title: "Story 003: Communication Types and Templates"
+updated: 2026-08-05
+status: draft
+---
 # Story 003 — Communication Types and Templates
 
 **Epic:** Sending
 **Repo:** herald
 **Status:** Draft
-**New — herald's side of the routes [ADR 0034](../../decisions/0034-herald-api-surface.md)
-already specifies.** Per [ADR 0025](../../decisions/0025-versioned-templates-and-encrypted-payloads.md),
-[ADR 0029](../../decisions/0029-herald-payload-retention.md),
-[ADR 0032](../../decisions/0032-per-tenant-sending-and-can-spam.md),
-[ADR 0053](../../decisions/0053-lifecycle-status-consolidation.md),
-[ADR 0078](../../decisions/0078-herald-template-branding.md).
+**New — herald's side of the routes [ADR 0034](../../adrs/0034-herald-api-surface.md)
+already specifies.** Per [ADR 0025](../../adrs/0025-versioned-templates-and-encrypted-payloads.md),
+[ADR 0029](../../adrs/0029-herald-payload-retention.md),
+[ADR 0032](../../adrs/0032-per-tenant-sending-and-can-spam.md),
+[ADR 0053](../../adrs/0053-lifecycle-status-consolidation.md),
+[ADR 0078](../../adrs/0078-herald-template-branding.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `communicationType`/`template` shapes.
 
 ---

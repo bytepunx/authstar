@@ -92,7 +92,7 @@ function appKeyFor(tenantSlug: string, appSlug: string): string {
   return `${tenantSlug}:${appSlug}`
 }
 
-// design/decisions/0101-api-keys.md: `api-keys:manage` is the first
+// design/adrs/0101-api-keys.md: `api-keys:manage` is the first
 // application-scope baked-in role, seeded per application at creation time
 // (unlike the four organization-scope roles, seeded once per tenant at
 // provisioning time -- routes/provisioning.ts). Idempotent, same
@@ -220,7 +220,7 @@ async function createApplication(app: FastifyInstance, request: FastifyRequest, 
   if (body.slug === 'authstar') {
     return reply.code(400).send({ error: '"authstar" is a reserved slug' })
   }
-  // design/decisions/0100-...: the `roleDefinition` key scheme reuses the
+  // design/adrs/0100-...: the `roleDefinition` key scheme reuses the
   // application-scope's two-segment shape (`${tenant}:${slug}:${name}`) for
   // organization-scope role definitions too, with the literal `organization`
   // where a slug would go -- an app actually named `organization` would
@@ -370,7 +370,7 @@ async function deleteApplication(app: FastifyInstance, request: FastifyRequest, 
   return toResponse(updated!)
 }
 
-// design/decisions/0101-api-keys.md: a one-time backfill for every
+// design/adrs/0101-api-keys.md: a one-time backfill for every
 // already-active application that predates `api-keys:manage` auto-seeding
 // -- deliberately idempotent (safe to re-run; `seedApiKeysManageRole`
 // itself no-ops once seeded), operator-only, no standalone script.
@@ -471,7 +471,7 @@ const applicationsRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     (request, reply) => deleteApplication(app, request, reply),
   )
 
-  // design/decisions/0101-api-keys.md: one-time, operator-only, idempotent
+  // design/adrs/0101-api-keys.md: one-time, operator-only, idempotent
   // backfill for applications created before `api-keys:manage` auto-seeding
   // existed. Mutating (creates roleDefinition actors), so `requireOperatorActor`
   // (needs `X-Operator-Actor`), same as every other mutating operator route.

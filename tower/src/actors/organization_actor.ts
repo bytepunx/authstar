@@ -1,4 +1,4 @@
-// Per design/decisions/0100-organization-membership-and-scoped-entitlements.md
+// Per design/adrs/0100-organization-membership-and-scoped-entitlements.md
 // (supersedes ADR 0090's original shape). The organization itself, stripped
 // down to what's genuinely its own: identity, and what its subscription
 // grants. Membership (`managers`/`successors` used to live here) moved to
@@ -23,7 +23,7 @@ export interface OrganizationState {
   name: string
   grantedRoles: GrantedRole[]
   seatLimit: number | null
-  // design/decisions/0101-api-keys.md: same keep entitlement pipeline as
+  // design/adrs/0101-api-keys.md: same keep entitlement pipeline as
   // `seatLimit` above, plus two new `EntitlementEvent` cases
   // (`lib/entitlement-consumer.ts`). `apiKeyLimit` defaults to `0`, not
   // `null` -- fails closed, same reasoning as `account.apiKeyLimit`

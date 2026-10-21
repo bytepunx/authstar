@@ -1,13 +1,18 @@
+---
+title: "Story 001: Connect and Session"
+updated: 2026-08-06
+status: draft
+---
 # Story 001 — Connect and Session
 
 **Epic:** Operator Console
 **Repo:** steward
 **Status:** Draft
-**New — steward's side of the flow [ADR 0045](../../decisions/0045-steward-operator-console.md)/
-[ADR 0048](../../decisions/0048-steward-ux.md) already specify.**
-Per [ADR 0021](../../decisions/0021-cli-operator-bootstrap.md),
-[ADR 0045](../../decisions/0045-steward-operator-console.md),
-[ADR 0048](../../decisions/0048-steward-ux.md).
+**New — steward's side of the flow [ADR 0045](../../adrs/0045-steward-operator-console.md)/
+[ADR 0048](../../adrs/0048-steward-ux.md) already specify.**
+Per [ADR 0021](../../adrs/0021-cli-operator-bootstrap.md),
+[ADR 0045](../../adrs/0045-steward-operator-console.md),
+[ADR 0048](../../adrs/0048-steward-ux.md).
 **Depends on:** [tower Story 013](../tower/013-operator-api.md)'s bearer-token auth model and
 `X-Operator-Actor` attribution requirement, reused unchanged.
 

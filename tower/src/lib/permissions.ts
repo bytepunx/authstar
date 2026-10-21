@@ -177,7 +177,7 @@ export function requireSelfOrOrganizationManager(orgParamName = 'organizationId'
  * as everywhere else in this codebase.
  */
 /**
- * design/decisions/0101-api-keys.md: gates `routes/api-keys.ts`'s personal
+ * design/adrs/0101-api-keys.md: gates `routes/api-keys.ts`'s personal
  * (non-organization) key routes on the caller holding a specific
  * application-scope role -- `api-keys:manage` is this route's only real
  * caller today, but this is written generically (any app-scope role name).

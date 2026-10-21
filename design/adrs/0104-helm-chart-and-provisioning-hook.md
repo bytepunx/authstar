@@ -1,3 +1,12 @@
+---
+id: ADR-0104
+title: Helm Chart for authstar, with a Signet-Provisioning Hook
+status: accepted
+date: 2026-09-03
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0104: Helm Chart for authstar, with a Signet-Provisioning Hook
 
 - **Status:** Accepted
@@ -28,6 +37,8 @@ call via `SyncBundle`). Both can now be driven by one provisioning step with no 
 involved on the installer's side.
 
 ## Decision
+
+A new repo, `authstar-chart`, holds the chart and its provisioning hook.
 
 ### A new repo, `authstar-chart`, holds the chart and its provisioning hook
 

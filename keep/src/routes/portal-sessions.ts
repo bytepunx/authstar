@@ -19,7 +19,7 @@ const accountPortalBodySchema = {
   },
 } as const
 
-// Per design/decisions/0090-organizations-shared-billing-administration-
+// Per design/adrs/0090-organizations-shared-billing-administration-
 // and-succession.md. Unlike checkout-sessions.ts, there's no implicit-
 // customer-creation fallback -- the Billing Portal requires an existing
 // Stripe Customer, and an organization only ever gets one via a real

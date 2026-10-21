@@ -1,3 +1,12 @@
+---
+id: ADR-0070
+title: Self-Service Identity Linking
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0070: Self-Service Identity Linking
 
 - **Status:** Accepted
@@ -20,6 +29,8 @@ purely the missing **write path**: nothing today lets a second identity be creat
 an *already-existing* accountId rather than resolving-or-creating a new one.
 
 ## Decision
+
+Initiation — a new protected route, reusing the existing per-provider redirect mechanism.
 
 ### Initiation — a new protected route, reusing the existing per-provider redirect mechanism
 

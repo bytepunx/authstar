@@ -1,3 +1,12 @@
+---
+id: ADR-0071
+title: Self-Service Widget Data Access — the `/_authstar/me/*` Proxy Family
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0071: Self-Service Widget Data Access — the `/_authstar/me/*` Proxy Family
 
 - **Status:** Accepted
@@ -26,6 +35,8 @@ design already uses twice (`/_authstar/upgrade` and `/oauth2/select` proxying to
 0066; `/_authstar/usage` and `/_authstar/webhooks/stripe` proxying to `keep`, Stories 021/022).
 
 ## Decision
+
+`/_authstar/me/*` — a new reserved, protected path family, routed by prefix to the owning backend.
 
 ### `/_authstar/me/*` — a new reserved, protected path family, routed by prefix to the owning backend
 

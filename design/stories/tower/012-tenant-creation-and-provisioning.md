@@ -1,17 +1,22 @@
+---
+title: "Story 012: Tenant Creation and Provisioning"
+updated: 2026-08-05
+status: draft
+---
 # Story 012 — Tenant Creation and Provisioning
 
 **Epic:** Tenant Lifecycle
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the mechanism [ADR 0067](../../decisions/0067-tenant-creation-and-provisioning.md)
-already specifies.** Per [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
-[ADR 0009](../../decisions/0009-tenant-data-via-syncbundle-no-github.md),
-[ADR 0011](../../decisions/0011-minimizing-towers-signet-footprint.md),
-[ADR 0021](../../decisions/0021-cli-operator-bootstrap.md),
-[ADR 0022](../../decisions/0022-herald-communications-service.md),
-[ADR 0023](../../decisions/0023-pii-isolation-via-hashed-contact-records.md),
-[ADR 0044](../../decisions/0044-web-surfaces-and-distribution-model.md),
-[ADR 0067](../../decisions/0067-tenant-creation-and-provisioning.md).
+**New — tower's side of the mechanism [ADR 0067](../../adrs/0067-tenant-creation-and-provisioning.md)
+already specifies.** Per [ADR 0002](../../adrs/0002-multi-tenant-architecture-and-key-management.md),
+[ADR 0009](../../adrs/0009-tenant-data-via-syncbundle-no-github.md),
+[ADR 0011](../../adrs/0011-minimizing-towers-signet-footprint.md),
+[ADR 0021](../../adrs/0021-cli-operator-bootstrap.md),
+[ADR 0022](../../adrs/0022-herald-communications-service.md),
+[ADR 0023](../../adrs/0023-pii-isolation-via-hashed-contact-records.md),
+[ADR 0044](../../adrs/0044-web-surfaces-and-distribution-model.md),
+[ADR 0067](../../adrs/0067-tenant-creation-and-provisioning.md).
 **Depends on:** [Story 004](004-applications-and-providers.md)'s `tenant.add-application`/
 `tenant.add-provider` command pattern, [Story 007](007-invites-and-invite-codes.md)'s invite
 creation, [Story 011](011-tenant-management-and-key-rotation.md)'s key-material handling.
@@ -107,6 +112,6 @@ returned to the caller — same discipline as every other invite issuance).
 
 - Rate limiting/abuse prevention on the self-service path — named as a requirement (ADR 0067),
   not designed here or anywhere yet.
-- The public signup page and `steward`'s create-tenant screen — [ADR 0068](../../decisions/0068-tenant-creation-ui-surfaces.md)'s
+- The public signup page and `steward`'s create-tenant screen — [ADR 0068](../../adrs/0068-tenant-creation-ui-surfaces.md)'s
   concern, `web`'s and `steward`'s own future stories.
 - Tenant deletion — remains explicitly out of scope (ADR 0021).

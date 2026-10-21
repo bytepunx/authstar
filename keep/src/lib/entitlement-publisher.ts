@@ -1,5 +1,5 @@
 // Publishing side of ADR 0031's entitlement events. Per
-// design/docs/tech-stack.md: "publishing to RabbitMQ is application code,
+// design/tech/tech-stack.md: "publishing to RabbitMQ is application code,
 // not consequent's job" -- a service calls `consequent.handle(...)`, gets
 // back the events that actually occurred, and only *then*, outside
 // consequent, decides what to publish (best-effort, no outbox pattern,
@@ -9,7 +9,7 @@
 // tests can assert exactly what would have gone out over RabbitMQ without
 // needing a real broker. Production wiring (`createAmqpEntitlementPublisher`,
 // not implemented in this pilot slice -- see TESTING.md) would wrap
-// `amqplib`/`amqp-connection-manager` per design/docs/tech-stack.md.
+// `amqplib`/`amqp-connection-manager` per design/tech/tech-stack.md.
 
 // ADR 0100: {organization} publishes straight to the organization itself
 // (tower's organization.grant-role/revoke-role/set-seat-limit, consumed in
@@ -77,7 +77,7 @@ export interface UsageUpdatedEvent {
   sequence: number
 }
 
-// design/decisions/0101-api-keys.md. Kept as two separate event types
+// design/adrs/0101-api-keys.md. Kept as two separate event types
 // (not merged into one), mirroring `SeatLimitChangedEvent`'s own shape --
 // but, unlike that event, `scope` here is the full `EntitlementScope`
 // (`{account}` included), not the narrower `{tenant}|{organization}`

@@ -1,3 +1,12 @@
+---
+id: ADR-0081
+title: Herald Key Rotation
+status: accepted
+date: 2026-08-02
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0081: Herald Key Rotation
 
 - **Status:** Accepted
@@ -27,6 +36,8 @@ Two things make this a genuinely different problem from ADR 0080, not a copy-pas
    together.
 
 ## Decision
+
+Herald joins the shared operator-token distribution, gains one narrow operator route.
 
 ### Herald joins the shared operator-token distribution, gains one narrow operator route
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0014
+title: Single Bundle with Prefixed Tenant Keys
+status: accepted
+date: 2026-07-22
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0014: Single Bundle with Prefixed Tenant Keys
 
 - **Status:** Accepted

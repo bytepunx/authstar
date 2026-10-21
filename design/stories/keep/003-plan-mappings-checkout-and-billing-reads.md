@@ -1,15 +1,20 @@
+---
+title: "Story 003: Plan Mappings, Checkout Sessions, and Billing Reads"
+updated: 2026-08-05
+status: draft
+---
 # Story 003 — Plan Mappings, Checkout Sessions, and Billing Reads
 
 **Epic:** Billing
 **Repo:** keep
 **Status:** Draft
-**New — keep's side of the routes [ADR 0041](../../decisions/0041-keep-api-surface.md) already
-specifies.** Per [ADR 0038](../../decisions/0038-plan-mapping-and-subscription-tracking.md),
-[ADR 0041](../../decisions/0041-keep-api-surface.md),
-[ADR 0046](../../decisions/0046-tenant-owned-stripe-configuration.md),
-[ADR 0047](../../decisions/0047-application-and-role-slug-validation.md),
-[ADR 0053](../../decisions/0053-lifecycle-status-consolidation.md),
-[ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md).
+**New — keep's side of the routes [ADR 0041](../../adrs/0041-keep-api-surface.md) already
+specifies.** Per [ADR 0038](../../adrs/0038-plan-mapping-and-subscription-tracking.md),
+[ADR 0041](../../adrs/0041-keep-api-surface.md),
+[ADR 0046](../../adrs/0046-tenant-owned-stripe-configuration.md),
+[ADR 0047](../../adrs/0047-application-and-role-slug-validation.md),
+[ADR 0053](../../adrs/0053-lifecycle-status-consolidation.md),
+[ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `planMapping`/`customer`/`subscription`
 shapes, [Story 002](002-stripe-webhook-handling.md)'s webhook-driven writes (this story is the
 admin-facing read/write surface those writes feed).

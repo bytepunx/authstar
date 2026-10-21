@@ -8,7 +8,7 @@ import { createKeyedMutex } from '../lib/mutex.js'
 import { searchCriteria } from '../lib/consequent-types.js'
 import { roleDefinitionKey, type Scope } from '../lib/role-definition-lookup.js'
 
-// Per design/decisions/0047-application-and-role-slug-validation.md and
+// Per design/adrs/0047-application-and-role-slug-validation.md and
 // design/stories/tower/001-actor-definitions.md's `roleDefinition` section.
 //
 // Scope note: this file builds the role *catalog* itself -- creation,

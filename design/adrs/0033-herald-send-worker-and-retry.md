@@ -1,3 +1,12 @@
+---
+id: ADR-0033
+title: Herald Send Worker, Retry, and Dead-Letter Handling
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0033: Herald Send Worker, Retry, and Dead-Letter Handling
 
 - **Status:** Accepted
@@ -12,6 +21,8 @@ worth resolving before the API surface, since manual retry directly shapes the `
 resource.
 
 ## Decision
+
+RabbitMQ delivers the request once; herald owns retry itself.
 
 ### RabbitMQ delivers the request once; herald owns retry itself
 

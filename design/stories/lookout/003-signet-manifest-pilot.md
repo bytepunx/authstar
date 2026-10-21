@@ -1,9 +1,14 @@
+---
+title: "Story 003: Signet Manifest Pilot"
+updated: 2026-09-03
+status: draft
+---
 # Story 003 — Signet Manifest Pilot
 
 **Epic:** Deployment
 **Repo:** lookout (manifest + Dockerfile), authstar-chart (aggregation + CI)
 **Status:** Draft
-**Per:** [ADR 0105](../../decisions/0105-signet-manifest-and-aggregated-onboarding-spec.md)
+**Per:** [ADR 0105](../../adrs/0105-signet-manifest-and-aggregated-onboarding-spec.md)
 
 ---
 

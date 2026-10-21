@@ -1,12 +1,17 @@
+---
+title: "Story 001: Event Consumption"
+updated: 2026-08-06
+status: draft
+---
 # Story 001 — Event Consumption
 
 **Epic:** Analytics Storage
 **Repo:** chronicle
 **Status:** Draft
-**New — chronicle's side of the mechanism [ADR 0035](../../decisions/0035-lookout-and-chronicle-analytics.md)
-already specifies.** Per [ADR 0035](../../decisions/0035-lookout-and-chronicle-analytics.md),
-[ADR 0085](../../decisions/0085-chronicle-clickhouse-schema.md).
-**Depends on:** [ADR 0085](../../decisions/0085-chronicle-clickhouse-schema.md)'s
+**New — chronicle's side of the mechanism [ADR 0035](../../adrs/0035-lookout-and-chronicle-analytics.md)
+already specifies.** Per [ADR 0035](../../adrs/0035-lookout-and-chronicle-analytics.md),
+[ADR 0085](../../adrs/0085-chronicle-clickhouse-schema.md).
+**Depends on:** [ADR 0085](../../adrs/0085-chronicle-clickhouse-schema.md)'s
 `analytics_events` table, [lookout Story 001](../lookout/001-ingestion-contract.md)'s publishing
 side.
 

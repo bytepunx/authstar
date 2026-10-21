@@ -1,11 +1,16 @@
+---
+title: "Story 002: Tenant Search and Creation"
+updated: 2026-08-06
+status: draft
+---
 # Story 002 — Tenant Search and Creation
 
 **Epic:** Operator Console
 **Repo:** steward
 **Status:** Draft
-**New — steward's side of the screens [ADR 0048](../../decisions/0048-steward-ux.md)/
-[ADR 0067](../../decisions/0067-tenant-creation-and-provisioning.md)/
-[ADR 0068](../../decisions/0068-tenant-creation-ui-surfaces.md) already specify.**
+**New — steward's side of the screens [ADR 0048](../../adrs/0048-steward-ux.md)/
+[ADR 0067](../../adrs/0067-tenant-creation-and-provisioning.md)/
+[ADR 0068](../../adrs/0068-tenant-creation-ui-surfaces.md) already specify.**
 **Depends on:** [tower Story 013](../tower/013-operator-api.md)'s `GET /operator/tenants`,
 [tower Story 012](../tower/012-tenant-creation-and-provisioning.md)'s `POST /tenants`,
 [tower Story 011](../tower/011-tenant-management-and-key-rotation.md)'s

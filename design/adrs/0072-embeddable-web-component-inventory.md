@@ -1,3 +1,12 @@
+---
+id: ADR-0072
+title: Embeddable Web Component Inventory
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0072: Embeddable Web Component Inventory
 
 - **Status:** Accepted
@@ -14,6 +23,8 @@ closed the harder prerequisite — how a widget gets data at all without a backe
 This ADR designs the six widgets themselves.
 
 ## Decision
+
+`<authstar-account-summary>`.
 
 ### `<authstar-account-summary>`
 

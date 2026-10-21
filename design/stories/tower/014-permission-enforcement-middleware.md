@@ -1,17 +1,22 @@
+---
+title: "Story 014: Permission Enforcement Middleware"
+updated: 2026-08-14
+status: draft
+---
 # Story 014 — Permission Enforcement Middleware
 
 **Epic:** Authorization
 **Repo:** tower
 **Status:** Draft
 **New — every prior tower story assumes this exists and none of them specify it.** Per
-[ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
-[ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0030](../../decisions/0030-tower-api-surface.md),
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0070](../../decisions/0070-self-service-identity-linking.md),
-[ADR 0086](../../decisions/0086-jwks-endpoint-for-internal-jwt-verification.md),
-[ADR 0087](../../decisions/0087-jwks-response-includes-pem-alongside-jwk-point.md),
-[ADR 0089](../../decisions/0089-internal-jwt-carries-its-own-tenant-hint.md).
+[ADR 0017](../../adrs/0017-account-identity-and-role-model.md),
+[ADR 0018](../../adrs/0018-trial-roles-and-keep-boundary.md),
+[ADR 0030](../../adrs/0030-tower-api-surface.md),
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md),
+[ADR 0070](../../adrs/0070-self-service-identity-linking.md),
+[ADR 0086](../../adrs/0086-jwks-endpoint-for-internal-jwt-verification.md),
+[ADR 0087](../../adrs/0087-jwks-response-includes-pem-alongside-jwk-point.md),
+[ADR 0089](../../adrs/0089-internal-jwt-carries-its-own-tenant-hint.md).
 **Depends on:** [Story 002](002-claims-enrichment-endpoint.md)'s `permissions` field on the
 internal JWT (only real as of `bytepunx/authstar-portcullis` commit `a16ffad` — every route
 story written before that landed assumed the claim would eventually exist, not that it already
@@ -61,7 +66,7 @@ tenant-scoped tree, where `permissions` is the actual authorization boundary (AD
       account route where the URL's `{accountId}` equals the caller's own resolved `accountId`)
       — implemented as an explicit allowlist of (route, method) pairs the exemption applies to,
       not a blanket "any self-action skips the check," per
-      [ADR 0030](../../decisions/0030-tower-api-surface.md)'s own correction that
+      [ADR 0030](../../adrs/0030-tower-api-surface.md)'s own correction that
       `roles`/`permissions` grant-or-revoke actions on one's own account are **never**
       self-action-exempt even though most other self-reads are.
 - [ ] Failure is a `403` with a generic body (no detail on which grant was required) — matching
@@ -73,7 +78,7 @@ tenant-scoped tree, where `permissions` is the actual authorization boundary (AD
 
 **How does a request reaching tower even know which tenant's JWKS to verify against?** Was an
 open question, flagged here rather than silently assumed, until
-[ADR 0089](../../decisions/0089-internal-jwt-carries-its-own-tenant-hint.md) settled it: the
+[ADR 0089](../../adrs/0089-internal-jwt-carries-its-own-tenant-hint.md) settled it: the
 internal JWT's own header carries a `tenant` field, set by portcullis at sign time (it already
 knows the tenant, having resolved it from `Host`). `@bytepunx/authstar-core`'s
 `perTenantJwksKeyProvider` reads it and constructs
@@ -85,7 +90,7 @@ to resolve here.
 
 ## Route → permission mapping
 
-Pulled directly from the canonical catalog [ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md)
+Pulled directly from the canonical catalog [ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md)
 consolidated, and from each route's own story — not reinvented here:
 
 | Route family | Grant | Story |

@@ -1,9 +1,14 @@
+---
+title: "Story 008: Signet Precedence and Credential Salt"
+updated: 2026-09-03
+status: draft
+---
 # Story 008 — Signet Precedence and Credential Salt
 
 **Epic:** Config/Secrets Compliance
 **Repo:** keep
 **Status:** Draft
-**Per:** [ADR 0102](../../decisions/0102-signet-precedence-and-fallback-scope.md)
+**Per:** [ADR 0102](../../adrs/0102-signet-precedence-and-fallback-scope.md)
 
 ---
 

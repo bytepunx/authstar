@@ -1,3 +1,12 @@
+---
+id: ADR-0069
+title: Role Interpretation Is Permanently Application-Owned
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0069: Role Interpretation Is Permanently Application-Owned
 
 - **Status:** Accepted

@@ -1,17 +1,22 @@
+---
+title: "Story 005: Accounts, Roles, and Permissions"
+updated: 2026-08-05
+status: draft
+---
 # Story 005 — Accounts, Roles, and Permissions
 
 **Epic:** Identity & Access
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0030](../../decisions/0030-tower-api-surface.md)/
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md) already
-specify.** Per [ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
-[ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0023](../../decisions/0023-pii-isolation-via-hashed-contact-records.md),
-[ADR 0047](../../decisions/0047-application-and-role-slug-validation.md),
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0069](../../decisions/0069-role-interpretation-is-application-owned.md),
-[ADR 0070](../../decisions/0070-self-service-identity-linking.md).
+**New — tower's side of the routes [ADR 0030](../../adrs/0030-tower-api-surface.md)/
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md) already
+specify.** Per [ADR 0017](../../adrs/0017-account-identity-and-role-model.md),
+[ADR 0018](../../adrs/0018-trial-roles-and-keep-boundary.md),
+[ADR 0023](../../adrs/0023-pii-isolation-via-hashed-contact-records.md),
+[ADR 0047](../../adrs/0047-application-and-role-slug-validation.md),
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md),
+[ADR 0069](../../adrs/0069-role-interpretation-is-application-owned.md),
+[ADR 0070](../../adrs/0070-self-service-identity-linking.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `account` shape.
 
 ---

@@ -1,3 +1,12 @@
+---
+id: ADR-0004
+title: Configuration and Secrets via Signet (Hard Dependency)
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0004: Configuration and Secrets via Signet (Hard Dependency)
 
 - **Status:** Accepted
@@ -22,6 +31,8 @@ signet in a customer's cluster, under a similar license, rather than assuming a 
 bytepunx-hosted deployment is the only shape.
 
 ## Decision
+
+Every service fetches its bundle from signet at startup and holds it in memory.
 
 ### Every service fetches its bundle from signet at startup and holds it in memory
 

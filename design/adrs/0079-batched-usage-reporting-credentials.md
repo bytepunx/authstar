@@ -1,3 +1,12 @@
+---
+id: ADR-0079
+title: Durable Credentials for Batched Usage Reporting
+status: accepted
+date: 2026-08-02
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0079: Durable Credentials for Batched Usage Reporting
 
 - **Status:** Accepted
@@ -17,6 +26,8 @@ anywhere in this design; every other application-adjacent secret (provider `clie
 signing keypairs) is tenant-scoped and never leaves signet/tower's control.
 
 ## Decision
+
+A new, narrow credential class: keep-issued, scoped to usage reporting only.
 
 ### A new, narrow credential class: keep-issued, scoped to usage reporting only
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0068
+title: Tenant Creation UI — `web`'s Public Signup Page and `steward`'s Create-Tenant Screen
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0068: Tenant Creation UI — `web`'s Public Signup Page and `steward`'s Create-Tenant Screen
 
 - **Status:** Accepted
@@ -15,6 +24,8 @@ nothing to resolve. `steward` already has the right access pattern (direct, bear
 portcullis) — it just needs a new screen.
 
 ## Decision
+
+`web` gains a fourth surface: an installation-level, pre-tenant public signup page.
 
 ### `web` gains a fourth surface: an installation-level, pre-tenant public signup page
 

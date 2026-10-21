@@ -13,7 +13,7 @@ export interface GrantedRole {
 	role: string
 }
 
-// design/decisions/0101-api-keys.md.
+// design/adrs/0101-api-keys.md.
 export interface ApiKeyRateLimit {
 	requestsPerMinute: number
 	burst?: number

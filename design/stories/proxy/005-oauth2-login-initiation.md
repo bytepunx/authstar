@@ -1,3 +1,8 @@
+---
+title: "Story 005: OAuth2 Login Initiation"
+updated: 2026-08-01
+status: draft
+---
 # Story 005 — OAuth2 Login Initiation
 
 **Epic:** OAuth2 Authentication

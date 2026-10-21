@@ -377,7 +377,7 @@ describe('role-definitions -- API contract', () => {
     })
   })
 
-  // design/decisions/0101-api-keys.md: the first application-scope (not
+  // design/adrs/0101-api-keys.md: the first application-scope (not
   // organization-scope) built-in role, same protected-retirement treatment.
   describe('the built-in application-scope api-keys:manage role cannot be retired', () => {
     it('rejects retiring "api-keys:manage" for an application', async () => {

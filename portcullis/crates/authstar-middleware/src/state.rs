@@ -118,7 +118,7 @@ pub struct PortcullisState {
     /// reproduced directly against production, not a client-side DNS artifact as first suspected.
     pub proxy_http_client: reqwest::Client,
     pub enricher: Arc<dyn ClaimsEnricher>,
-    /// design/decisions/0101-api-keys.md. Reached the same way `enricher` is -- SPIFFE mTLS via
+    /// design/adrs/0101-api-keys.md. Reached the same way `enricher` is -- SPIFFE mTLS via
     /// `tower_http_client`, same `tower_base_url`.
     pub api_key_verifier: Arc<dyn ApiKeyVerifier>,
     /// One shared, in-process bucket map for every API-key-authenticated request this replica

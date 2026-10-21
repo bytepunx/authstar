@@ -1,3 +1,12 @@
+---
+id: ADR-0077
+title: Keep Refund and Dispute Handling
+status: accepted
+date: 2026-08-02
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0077: Keep Refund and Dispute Handling
 
 - **Status:** Accepted
@@ -20,6 +29,8 @@ partially built, not flagged as deferred — a genuine, complete omission with n
 concept for either.
 
 ## Decision
+
+Two new read-only, webhook-populated actors — visibility first, no automatic entitlement logic for refunds.
 
 ### Two new read-only, webhook-populated actors — visibility first, no automatic entitlement logic for refunds
 

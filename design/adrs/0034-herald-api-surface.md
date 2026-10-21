@@ -1,3 +1,12 @@
+---
+id: ADR-0034
+title: Herald's HTTP API Surface
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0034: Herald's HTTP API Surface
 
 - **Status:** Accepted (extended by [ADR 0049](0049-web-admin-information-architecture.md))
@@ -14,6 +23,8 @@ Herald's domain model (ADR 0022–0033) is settled; this lays out the actual rou
 consume, following the same conventions established for tower (ADR 0030).
 
 ## Decision
+
+Auth model — same shape as tower, no separate operator tier.
 
 ### Auth model — same shape as tower, no separate operator tier
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0029
+title: Encrypted Payload Retention in Herald
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0029: Encrypted Payload Retention in Herald
 
 - **Status:** Accepted
@@ -20,6 +29,8 @@ longer than its purpose requires), and it shrinks what the erasure cascade (ADR 
 reach on-demand — time-based purging handles the common case automatically.
 
 ## Decision
+
+Retention is configurable per `communicationType`, not a single global constant.
 
 ### Retention is configurable per `communicationType`, not a single global constant
 

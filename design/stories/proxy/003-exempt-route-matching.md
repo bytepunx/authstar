@@ -1,3 +1,8 @@
+---
+title: "Story 003: Exempt Route Pattern Matching"
+updated: 2026-07-22
+status: draft
+---
 # Story 003 — Exempt Route Pattern Matching
 
 **Epic:** Configuration

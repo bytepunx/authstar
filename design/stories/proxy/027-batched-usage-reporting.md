@@ -1,9 +1,14 @@
+---
+title: "Story 027: Batched Usage Reporting (Credential-Authenticated)"
+updated: 2026-08-02
+status: draft
+---
 # Story 027 — Batched Usage Reporting (Credential-Authenticated)
 
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0079](../../decisions/0079-batched-usage-reporting-credentials.md).
+**New — not present in `ref-design`.** Per [ADR 0079](../../adrs/0079-batched-usage-reporting-credentials.md).
 
 ---
 

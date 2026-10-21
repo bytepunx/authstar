@@ -1,3 +1,12 @@
+---
+id: ADR-0030
+title: Tower's HTTP API Surface
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0030: Tower's HTTP API Surface
 
 - **Status:** Accepted
@@ -12,6 +21,8 @@ that gap: general conventions, the two authentication models tower's endpoints s
 the full resource/route inventory.
 
 ## Decision
+
+Conventions.
 
 ### Conventions
 

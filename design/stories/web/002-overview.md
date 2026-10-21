@@ -1,11 +1,16 @@
+---
+title: "Story 002: Overview"
+updated: 2026-08-06
+status: draft
+---
 # Story 002 — Overview
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — web's side of the screen [ADR 0061](../../decisions/0061-web-overview-screen.md)
-already specifies.** Per [ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md),
-[ADR 0061](../../decisions/0061-web-overview-screen.md).
+**New — web's side of the screen [ADR 0061](../../adrs/0061-web-overview-screen.md)
+already specifies.** Per [ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md),
+[ADR 0061](../../adrs/0061-web-overview-screen.md).
 **Depends on:** [Story 001](001-app-shell-auth-and-section-gating.md)'s per-tile gating pattern,
 [tower Story 010](../tower/010-activity-feed.md)'s activity route, chronicle
 [Story 002](../chronicle/002-reporting-api.md)'s active-users report, keep's revenue-summary

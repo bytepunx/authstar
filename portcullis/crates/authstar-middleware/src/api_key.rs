@@ -1,4 +1,4 @@
-//! Per design/decisions/0101-api-keys.md. Parses the `Authorization` header for portcullis's
+//! Per design/adrs/0101-api-keys.md. Parses the `Authorization` header for portcullis's
 //! second credential transport -- `Bearer authstar_{apiKeyId}_{secret}` -- distinct from the
 //! session cookie every browser flow uses.
 //!

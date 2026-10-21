@@ -1,3 +1,8 @@
+---
+title: "Story 011: HTTP Reverse Proxy Forwarding"
+updated: 2026-07-22
+status: draft
+---
 # Story 011 — HTTP Reverse Proxy Forwarding
 
 **Epic:** Reverse Proxy

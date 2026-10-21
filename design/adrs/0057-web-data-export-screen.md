@@ -1,3 +1,12 @@
+---
+id: ADR-0057
+title: "`web`'s Data Export Screen"
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0057: `web`'s Data Export Screen
 
 - **Status:** Accepted
@@ -7,6 +16,8 @@
 - **Extends:** [ADR 0055](0055-web-privacy-compliance-screens.md)
 
 ## Decision
+
+One more action on the same Contact detail view erasure already lives on.
 
 ### One more action on the same Contact detail view erasure already lives on
 

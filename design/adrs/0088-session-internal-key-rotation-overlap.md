@@ -1,3 +1,12 @@
+---
+id: ADR-0088
+title: Session/Internal Key Rotation-with-Overlap
+status: accepted
+date: 2026-08-12
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0088: Session/Internal Key Rotation-with-Overlap
 
 - **Status:** Accepted
@@ -37,6 +46,8 @@ partially-built-but-undocumented. This ADR designs the actual mechanism, reusing
 already-proven shape rather than inventing a new one.
 
 ## Decision
+
+Session/internal keys become generation arrays, mirroring ADR 0028 exactly.
 
 ### Session/internal keys become generation arrays, mirroring ADR 0028 exactly
 

@@ -1,3 +1,8 @@
+---
+title: "Story 004: OIDC Provider Discovery"
+updated: 2026-08-01
+status: draft
+---
 # Story 004 — OIDC Provider Discovery
 
 **Epic:** OAuth2 Authentication
@@ -51,7 +56,7 @@ document to learn its authorization, token, and userinfo endpoints.
 - [ ] Whenever a provider's discovery result **differs** from the last one portcullis observed
       for it (including the first-ever check), it reports the transition to tower via
       `POST /provider-discovery-status`, fire-and-forget — see
-      [ADR 0073](../../decisions/0073-provider-discovery-status-feedback.md). A failure to report
+      [ADR 0073](../../adrs/0073-provider-discovery-status-feedback.md). A failure to report
       never affects discovery or login itself.
 
 ---
@@ -63,6 +68,6 @@ document to learn its authorization, token, and userinfo endpoints.
   instance for dev/test (fixed client `authstar` / `authstar-dev-secret` — ADR 0005).
 - If **every** provider for a given tenant fails discovery, that tenant has no way to
   authenticate — this is a real operational state (fully misconfigured tenant). **Resolved by
-  [ADR 0073](../../decisions/0073-provider-discovery-status-feedback.md):** each provider's
+  [ADR 0073](../../adrs/0073-provider-discovery-status-feedback.md):** each provider's
   status becomes admin-visible in `web` and the tenant activity feed; proactive alerting beyond
   that remains a flagged future enhancement, not designed there either.

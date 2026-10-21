@@ -1,3 +1,12 @@
+---
+id: ADR-0025
+title: Versioned Templates and Encrypted Payloads in Herald
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0025: Versioned Templates and Encrypted Payloads in Herald
 
 - **Status:** Accepted
@@ -26,6 +35,8 @@ versioned templates and a way to recover the original rendered content without k
 plaintext PII in herald's normal, broadly-queryable record.
 
 ## Decision
+
+Publishers encrypt the sensitive segment before it ever reaches RabbitMQ.
 
 ### Publishers encrypt the sensitive segment before it ever reaches RabbitMQ
 

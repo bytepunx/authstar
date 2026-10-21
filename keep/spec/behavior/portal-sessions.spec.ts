@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import buildTestApp, { type TestApp } from '../lib/test-app.js'
 
-// Behavior tier: design/decisions/0100-organization-membership-and-open-
+// Behavior tier: design/adrs/0100-organization-membership-and-open-
 // role-catalog.md (supersedes ADR 0090). No customer-creation route exists
 // in keep (Story 001/002 -- a `customer` record is only ever created by
 // webhook handling on a completed checkout), so tests create one directly

@@ -1,3 +1,12 @@
+---
+id: ADR-0013
+title: Tenant Discovery via Signet
+status: superseded
+date: 2026-07-22
+updated: 2026-09-23
+supersedes: []
+superseded_by: [ADR-0014]
+---
 # ADR 0013: Tenant Discovery via Signet
 
 - **Status:** Superseded by [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md)
@@ -20,6 +29,8 @@ header(s) map to which tenant to perform the tenant resolution ADR 0002 requires
 JWT verification. `signet-proto` has no "list namespaces" RPC.
 
 ## Decision
+
+Tenant Discovery via Signet.
 
 Tower maintains a plain (non-secret) config document under portcullis's **own** service scope —
 not a tenant namespace — listing every active tenant and its hostname mapping:

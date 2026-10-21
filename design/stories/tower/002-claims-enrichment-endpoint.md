@@ -1,14 +1,19 @@
+---
+title: "Story 002: Claims Enrichment Endpoint"
+updated: 2026-08-03
+status: draft
+---
 # Story 002 — Claims Enrichment Endpoint
 
 **Epic:** Claims Enrichment
 **Repo:** tower
 **Status:** Draft
 **New — tower's side of the contract [portcullis Story 010](../proxy/010-internal-jwt-generation.md)
-already assumes exists.** Per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
-[ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md),
-[ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
-[ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0043](../../decisions/0043-application-reported-usage-metering.md).
+already assumes exists.** Per [ADR 0001](../../adrs/0001-claims-enrichment-via-tower.md),
+[ADR 0003](../../adrs/0003-enrichment-outcome-response-contract.md),
+[ADR 0017](../../adrs/0017-account-identity-and-role-model.md),
+[ADR 0018](../../adrs/0018-trial-roles-and-keep-boundary.md),
+[ADR 0043](../../adrs/0043-application-reported-usage-metering.md).
 **Sibling:** [Story 003](003-identity-resolution-at-login.md) covers the separate, explicit
 login-time resolve-or-create call — kept as its own route rather than folded into this one, so
 account creation is never an implicit side effect of the endpoint the auth gate hits on every

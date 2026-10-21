@@ -1,3 +1,12 @@
+---
+id: ADR-0020
+title: Tenant and Application Actors; Secrets Never Persisted in Tower's Event Log
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0020: Tenant and Application Actors; Secrets Never Persisted in Tower's Event Log
 
 - **Status:** Accepted (extended by [ADR 0062](0062-tenant-status-enforcement-and-reactivation.md), [ADR 0064](0064-portal-signin-flow.md))
@@ -28,6 +37,8 @@ signing keypairs), or does it strictly defer to signet as the sole secrets autho
 and never persist secret values itself?
 
 ## Decision
+
+`tenant` actor.
 
 ### `tenant` actor
 

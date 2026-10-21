@@ -1,3 +1,12 @@
+---
+id: ADR-0059
+title: "`web`'s Analytics Screens"
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0059: `web`'s Analytics Screens
 
 - **Status:** Accepted
@@ -7,6 +16,8 @@
 - **Depends on:** [ADR 0058](0058-analytics-event-shape-corrections.md)
 
 ## Decision
+
+Three screens.
 
 ### Three screens
 

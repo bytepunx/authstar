@@ -88,7 +88,7 @@ describe('plan mappings -- API contract', () => {
       expect(response.statusCode).toBe(409)
     })
 
-    // design/decisions/0101-api-keys.md.
+    // design/adrs/0101-api-keys.md.
     it('accepts apiKeyLimit/apiKeyRateLimit, defaulting both to null when omitted', async () => {
       const withoutFields = await t.app.inject({
         method: 'POST',

@@ -43,7 +43,7 @@ pub struct InternalClaims {
     pub usage: Option<serde_json::Value>,
     #[serde(skip_serializing_if = "Option::is_none", rename = "isNewAccount", default)]
     pub is_new_account: Option<bool>,
-    /// design/decisions/0101-api-keys.md. Present only on a token minted from a verified API-key
+    /// design/adrs/0101-api-keys.md. Present only on a token minted from a verified API-key
     /// credential (`gate.rs`'s `handle_api_key_outcome`), never on a session-derived one -- purely
     /// additive, same optional/never-fabricated treatment as `account_id`/`is_new_account`.
     /// Downstream consumers use its presence to discriminate "this request came from an API key"
@@ -128,7 +128,7 @@ pub fn degraded_claims(identity: BaselineIdentity) -> InternalClaims {
     }
 }
 
-/// design/decisions/0101-api-keys.md. Builds the claims for a verified API-key `Allow` outcome --
+/// design/adrs/0101-api-keys.md. Builds the claims for a verified API-key `Allow` outcome --
 /// deliberately not a variant of `allow_claims` above (see `api_key_verifier.rs`'s own header
 /// comment on why the two identity models don't share one type): there is no `idp`/session to
 /// source `identity_hash` from, so `api_key_id` itself fills that role (it's already a unique,

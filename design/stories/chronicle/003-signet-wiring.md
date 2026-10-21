@@ -1,10 +1,15 @@
+---
+title: "Story 003: Signet Wiring"
+updated: 2026-09-03
+status: draft
+---
 # Story 003 — Signet Wiring
 
 **Epic:** Config/Secrets Compliance
 **Repo:** chronicle
 **Status:** Draft
-**Per:** [ADR 0102](../../decisions/0102-signet-precedence-and-fallback-scope.md), reaffirming
-[ADR 0036](../../decisions/0036-chronicle-reporting-api-and-retention-config.md)'s original
+**Per:** [ADR 0102](../../adrs/0102-signet-precedence-and-fallback-scope.md), reaffirming
+[ADR 0036](../../adrs/0036-chronicle-reporting-api-and-retention-config.md)'s original
 (unimplemented) scoping.
 
 ---

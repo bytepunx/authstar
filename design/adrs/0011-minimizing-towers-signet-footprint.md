@@ -1,3 +1,12 @@
+---
+id: ADR-0011
+title: Minimizing Tower's Signet Configuration Footprint
+status: accepted
+date: 2026-07-22
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0011: Minimizing Tower's Signet Configuration Footprint
 
 - **Status:** Accepted
@@ -38,6 +47,8 @@ Two things reduce this further:
    file.
 
 ## Decision
+
+Minimizing Tower's Signet Configuration Footprint.
 
 - Tower builds `SyncBundle` payloads as plain file trees, not real git repositories.
   `head_sha` is sent empty.

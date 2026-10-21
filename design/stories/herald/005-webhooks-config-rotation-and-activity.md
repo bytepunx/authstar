@@ -1,14 +1,19 @@
+---
+title: "Story 005: Bounce/Complaint Webhook, Sending Config, Key Rotation, and Activity"
+updated: 2026-08-05
+status: draft
+---
 # Story 005 — Bounce/Complaint Webhook, Sending Config, Key Rotation, and Activity
 
 **Epic:** Sending
 **Repo:** herald
 **Status:** Draft
-**New — herald's side of the routes [ADR 0034](../../decisions/0034-herald-api-surface.md)/
-[ADR 0045](../../decisions/0045-steward-operator-console.md)/
-[ADR 0052](../../decisions/0052-keep-herald-own-signet-access.md)/
-[ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md)/
-[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md)/
-[ADR 0081](../../decisions/0081-herald-key-rotation.md) already specify.**
+**New — herald's side of the routes [ADR 0034](../../adrs/0034-herald-api-surface.md)/
+[ADR 0045](../../adrs/0045-steward-operator-console.md)/
+[ADR 0052](../../adrs/0052-keep-herald-own-signet-access.md)/
+[ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md)/
+[ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md)/
+[ADR 0081](../../adrs/0081-herald-key-rotation.md) already specify.**
 **Depends on:** [Story 001](001-actor-definitions.md)'s `sendingConfig`/`communication`/
 `suppression` shapes, [tower Story 010](../tower/010-activity-feed.md)'s event-stream-construction
 approach (reused here).

@@ -1,3 +1,12 @@
+---
+id: ADR-0018
+title: Trial Roles via Granted/Trial Split; Keep Stays Behind Web, Not Tower
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0018: Trial Roles via Granted/Trial Split; Keep Stays Behind Web, Not Tower
 
 - **Status:** Accepted
@@ -13,6 +22,8 @@ pattern ADR 0001/0006 established, and how expiry-aware role logic can stay out 
 materialized view without pushing complexity into the hot enrichment path.
 
 ## Decision
+
+Keep is reached through `web`, never through `tower`.
 
 ### Keep is reached through `web`, never through `tower`
 

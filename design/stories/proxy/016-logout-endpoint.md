@@ -1,3 +1,8 @@
+---
+title: "Story 016: Logout Endpoint"
+updated: 2026-07-22
+status: draft
+---
 # Story 016 — Logout Endpoint
 
 **Epic:** Utility Endpoints

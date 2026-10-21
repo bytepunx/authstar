@@ -1,3 +1,12 @@
+---
+id: ADR-0040
+title: Keep's Response to Contact Erasure
+status: accepted
+date: 2026-07-29
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0040: Keep's Response to Contact Erasure
 
 - **Status:** Accepted — original conclusion restored by [ADR 0046](0046-tenant-owned-stripe-configuration.md)
@@ -24,6 +33,8 @@ no way to correlate an incoming `contactId` to the `accountId` its own records r
 without a fix, keep would receive an erasure notice it's structurally unable to act on.
 
 ## Decision
+
+`contact.purged` gains `accountId`.
 
 ### `contact.purged` gains `accountId`
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0067
+title: Tenant Creation and Provisioning API
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0067: Tenant Creation and Provisioning API
 
 - **Status:** Accepted (`_admin` host convention superseded by [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md))
@@ -22,6 +31,8 @@ configured, so a bootstrap invite (ADR 0021's existing mechanism) is unredeemabl
 something to authenticate against.
 
 ## Decision
+
+`POST /tenants` on tower — a new route category, neither tenant-scoped nor operator-only.
 
 ### `POST /tenants` on tower — a new route category, neither tenant-scoped nor operator-only
 

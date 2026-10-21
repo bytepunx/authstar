@@ -1,15 +1,20 @@
+---
+title: "Story 003: Identity Resolution at Login"
+updated: 2026-08-05
+status: draft
+---
 # Story 003 — Identity Resolution at Login
 
 **Epic:** Claims Enrichment
 **Repo:** tower
 **Status:** Draft
 **New — tower's side of the contract [portcullis Story 006](../proxy/006-oauth2-callback.md)
-already assumes exists.** Per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
-[ADR 0017](../../decisions/0017-account-identity-and-role-model.md),
-[ADR 0023](../../decisions/0023-pii-isolation-via-hashed-contact-records.md),
-[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md),
-[ADR 0028](../../decisions/0028-identity-hash-key-generations.md),
-[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md).
+already assumes exists.** Per [ADR 0001](../../adrs/0001-claims-enrichment-via-tower.md),
+[ADR 0017](../../adrs/0017-account-identity-and-role-model.md),
+[ADR 0023](../../adrs/0023-pii-isolation-via-hashed-contact-records.md),
+[ADR 0027](../../adrs/0027-portcullis-computed-identity-hash.md),
+[ADR 0028](../../adrs/0028-identity-hash-key-generations.md),
+[ADR 0058](../../adrs/0058-analytics-event-shape-corrections.md).
 **Sibling:** [Story 002](002-claims-enrichment-endpoint.md) is the separate, ordinary
 per-request lookup — kept apart so account creation only ever happens through this explicit,
 narrowly-scoped route, never as an implicit branch inside the endpoint hit on every request.

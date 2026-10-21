@@ -1,14 +1,19 @@
+---
+title: "Story 004: Communication History, Opt-Outs, and Suppressions"
+updated: 2026-08-05
+status: draft
+---
 # Story 004 — Communication History, Opt-Outs, and Suppressions
 
 **Epic:** Sending
 **Repo:** herald
 **Status:** Draft
-**New — herald's side of the routes [ADR 0034](../../decisions/0034-herald-api-surface.md)/
-[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md) already specify.**
-Per [ADR 0024](../../decisions/0024-contact-lifecycle-sync-to-herald.md),
-[ADR 0025](../../decisions/0025-versioned-templates-and-encrypted-payloads.md),
-[ADR 0053](../../decisions/0053-lifecycle-status-consolidation.md),
-[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md).
+**New — herald's side of the routes [ADR 0034](../../adrs/0034-herald-api-surface.md)/
+[ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md) already specify.**
+Per [ADR 0024](../../adrs/0024-contact-lifecycle-sync-to-herald.md),
+[ADR 0025](../../adrs/0025-versioned-templates-and-encrypted-payloads.md),
+[ADR 0053](../../adrs/0053-lifecycle-status-consolidation.md),
+[ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `communication`/`optOut`/`suppression`
 shapes, [Story 002](002-send-worker-and-retry.md)'s manual-retry route (already specified there,
 listed here only for completeness of this story's route group).

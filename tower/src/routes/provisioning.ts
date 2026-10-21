@@ -11,7 +11,7 @@ import { isOperatorRequest } from '../lib/operator-auth.js'
 import { fetchState, validateDomain, domainAlreadyTaken, RESERVED_WORD, SLUG_PATTERN } from '../lib/tenant-validation.js'
 import { roleDefinitionKey } from '../lib/role-definition-lookup.js'
 
-// design/decisions/0100-organization-membership-and-scoped-entitlements.md:
+// design/adrs/0100-organization-membership-and-scoped-entitlements.md:
 // every tenant gets these four organization-scope role definitions seeded
 // unconditionally at creation -- role_definition_actor.ts's own `retire`
 // command refuses to retire any of them. `manager`/`member` are tower's own

@@ -1,7 +1,7 @@
 import { constants, generateKeyPairSync, publicEncrypt, randomBytes, createCipheriv, createPublicKey, type KeyObject } from 'node:crypto'
 
 // Publisher-side half of herald's payload-encryption envelope (ADR 0025,
-// design/decisions/0025-versioned-templates-and-encrypted-payloads.md).
+// design/adrs/0025-versioned-templates-and-encrypted-payloads.md).
 // Herald holds the private key; every publisher (tower, keep, portcullis)
 // only ever needs herald's *public* key to encrypt. Algorithm mirrored
 // byte-for-byte from herald's own `payload-crypto.ts` `encryptPayload` --

@@ -1,3 +1,12 @@
+---
+id: ADR-0065
+title: The Upgrade/Checkout Flow
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0065: The Upgrade/Checkout Flow
 
 - **Status:** Accepted
@@ -13,6 +22,8 @@
 > user is already on, the same mechanism ADR 0066 established for the login page.
 
 ## Decision
+
+Requires authentication.
 
 ### Requires authentication
 

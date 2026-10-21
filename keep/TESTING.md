@@ -477,7 +477,7 @@ actor pilot slice did.
    entirely correct, `consequent.find()` itself just never sees it. This affects every
    `find()`-backed route in this codebase (and would affect tower's and any future herald route
    the same way) the moment it runs against real Postgres with `consequent@2.0.0` +
-   `consequent-postgres@2.0.3` (the exact versions `design/docs/tech-stack.md` pins) — not
+   `consequent-postgres@2.0.3` (the exact versions `design/tech/tech-stack.md` pins) — not
    something a single service's own code can work around, since the bug is inside `consequent`'s
    own package. Flagged here for whoever owns the decision to patch it upstream (or via
    `patch-package`) before any of these services' list/search routes can be trusted against a

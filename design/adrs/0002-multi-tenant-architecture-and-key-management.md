@@ -1,3 +1,12 @@
+---
+id: ADR-0002
+title: Multi-Tenant Architecture and Per-Tenant Key Management
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0002: Multi-Tenant Architecture and Per-Tenant Key Management
 
 - **Status:** Accepted
@@ -31,6 +40,8 @@ a much higher-traffic path than claims enrichment (ADR 0001), which only runs fo
 authenticated requests.
 
 ## Decision
+
+Multi-tenant is the target architecture, not an add-on.
 
 ### Multi-tenant is the target architecture, not an add-on
 

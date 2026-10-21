@@ -1,3 +1,12 @@
+---
+id: ADR-0024
+title: Contact Lifecycle Sync to Herald; Plaintext + Hash in Send Requests
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0024: Contact Lifecycle Sync to Herald; Plaintext + Hash in Send Requests
 
 - **Status:** Accepted
@@ -19,6 +28,8 @@ ADR 0023 flagged two unresolved items: opt-out must carry forward when a `contac
 status without gaining the ability to reverse a hash back into a real address.
 
 ## Decision
+
+Two message types keep `optOut` in sync with `contact`'s lifecycle.
 
 ### Two message types keep `optOut` in sync with `contact`'s lifecycle
 

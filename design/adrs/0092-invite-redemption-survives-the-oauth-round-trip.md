@@ -1,3 +1,12 @@
+---
+id: ADR-0092
+title: Invite Redemption Survives the OAuth Round Trip
+status: accepted
+date: 2026-08-19
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0092: Invite Redemption Survives the OAuth Round Trip
 
 - **Status:** Accepted
@@ -27,6 +36,8 @@ prerequisite for [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-sur
 goal (an operator can invite tenant admins and have it actually work) to be true.
 
 ## Decision
+
+`?invite=<token>` on any login-initiating request becomes a short-lived, host-only cookie.
 
 ### `?invite=<token>` on any login-initiating request becomes a short-lived, host-only cookie
 

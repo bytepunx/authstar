@@ -1,3 +1,12 @@
+---
+id: ADR-0076
+title: Admin-Initiated Email Change
+status: accepted
+date: 2026-08-02
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0076: Admin-Initiated Email Change
 
 - **Status:** Accepted
@@ -16,6 +25,8 @@ satisfy: opt-out status doesn't automatically carry forward across a repoint, "o
 anti-spam risk results."
 
 ## Decision
+
+`POST /tenants/{tenantSlug}/accounts/{accountId}/change-email` — deliberately not a `PATCH`.
 
 ### `POST /tenants/{tenantSlug}/accounts/{accountId}/change-email` — deliberately not a `PATCH`
 

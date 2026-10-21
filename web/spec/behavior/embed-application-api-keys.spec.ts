@@ -4,7 +4,7 @@ import { actions, load } from '../../src/routes/(embed)/applications/[applicatio
 import { createFakeTowerClient, fakeAccount, fakeApiKey } from '../fixtures/fake-tower-client'
 import { fakeSession } from '../fixtures/fake-session'
 
-// Behavior tier: design/decisions/0101-api-keys.md's personal-keys embed
+// Behavior tier: design/adrs/0101-api-keys.md's personal-keys embed
 // surface -- the first individual-account-scoped (not organization-scoped)
 // embed route in `web`, gated on `requireSession` alone (self-service).
 

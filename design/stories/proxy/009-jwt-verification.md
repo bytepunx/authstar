@@ -1,10 +1,15 @@
+---
+title: "Story 009: JWT Verification on Incoming Requests"
+updated: 2026-07-25
+status: draft
+---
 # Story 009 — JWT Verification on Incoming Requests
 
 **Epic:** Session Management
 **Repo:** portcullis
 **Status:** Draft
-**Adapted from:** `ref-design` Story 009 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
-[ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md).
+**Adapted from:** `ref-design` Story 009 per [ADR 0001](../../adrs/0001-claims-enrichment-via-tower.md),
+[ADR 0002](../../adrs/0002-multi-tenant-architecture-and-key-management.md).
 
 ---
 

@@ -1,17 +1,22 @@
+---
+title: "Story 002: Stripe Webhook Handling"
+updated: 2026-08-05
+status: draft
+---
 # Story 002 — Stripe Webhook Handling
 
 **Epic:** Billing
 **Repo:** keep
 **Status:** Draft
-**New — keep's side of the mechanism [ADR 0038](../../decisions/0038-plan-mapping-and-subscription-tracking.md)/
-[ADR 0046](../../decisions/0046-tenant-owned-stripe-configuration.md)/
-[ADR 0077](../../decisions/0077-keep-refunds-and-disputes.md) already specify.**
-Per [ADR 0031](../../decisions/0031-keep-tower-entitlement-events.md),
-[ADR 0038](../../decisions/0038-plan-mapping-and-subscription-tracking.md),
-[ADR 0041](../../decisions/0041-keep-api-surface.md),
-[ADR 0044](../../decisions/0044-web-surfaces-and-distribution-model.md),
-[ADR 0046](../../decisions/0046-tenant-owned-stripe-configuration.md),
-[ADR 0077](../../decisions/0077-keep-refunds-and-disputes.md).
+**New — keep's side of the mechanism [ADR 0038](../../adrs/0038-plan-mapping-and-subscription-tracking.md)/
+[ADR 0046](../../adrs/0046-tenant-owned-stripe-configuration.md)/
+[ADR 0077](../../adrs/0077-keep-refunds-and-disputes.md) already specify.**
+Per [ADR 0031](../../adrs/0031-keep-tower-entitlement-events.md),
+[ADR 0038](../../adrs/0038-plan-mapping-and-subscription-tracking.md),
+[ADR 0041](../../adrs/0041-keep-api-surface.md),
+[ADR 0044](../../adrs/0044-web-surfaces-and-distribution-model.md),
+[ADR 0046](../../adrs/0046-tenant-owned-stripe-configuration.md),
+[ADR 0077](../../adrs/0077-keep-refunds-and-disputes.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `customer`/`subscription`/`refund`/
 `dispute` shapes.
 

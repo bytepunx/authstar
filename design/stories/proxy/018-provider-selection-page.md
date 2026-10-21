@@ -1,3 +1,8 @@
+---
+title: "Story 018: Multi-Provider Selection Page"
+updated: 2026-08-01
+status: draft
+---
 # Story 018 — Multi-Provider Selection Page
 
 **Epic:** Utility Endpoints
@@ -5,7 +10,7 @@
 **Status:** Draft
 **Adapted from:** `ref-design` Story 018 — unchanged; scope is now per-application (ADR 0016).
 **Fallback path in practice**: `/oauth2/select` is proxied to `web` first, for tenant-branded
-rendering (Story 023/[ADR 0066](../../decisions/0066-portcullis-proxies-branded-pages-to-web.md)).
+rendering (Story 023/[ADR 0066](../../adrs/0066-portcullis-proxies-branded-pages-to-web.md)).
 This story's own built-in page is reached only if `web` is unreachable — a genuine reliability
 fallback, not something requiring an operator override to ever see.
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0027
+title: Portcullis-Computed Identity Hash Replaces `idp_sub` Storage in Tower
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0027: Portcullis-Computed Identity Hash Replaces `idp_sub` Storage in Tower
 
 - **Status:** Accepted (extended by [ADR 0056](0056-gdpr-data-export.md))
@@ -21,6 +30,8 @@ address to send mail. That means tower doesn't need to store it at all, encrypte
 — it can simply never receive it.
 
 ## Decision
+
+Portcullis computes and holds the hashing key; tower never sees the raw value.
 
 ### Portcullis computes and holds the hashing key; tower never sees the raw value
 

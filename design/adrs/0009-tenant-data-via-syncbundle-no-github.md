@@ -1,3 +1,12 @@
+---
+id: ADR-0009
+title: Tenant Config and Secrets via SyncBundle — No GitHub Dependency
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0009: Tenant Config and Secrets via SyncBundle — No GitHub Dependency
 
 - **Status:** Accepted (path examples corrected by [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md))

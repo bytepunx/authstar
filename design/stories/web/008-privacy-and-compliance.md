@@ -1,14 +1,19 @@
+---
+title: "Story 008: Privacy & Compliance"
+updated: 2026-08-06
+status: draft
+---
 # Story 008 — Privacy & Compliance
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — web's side of the screens [ADR 0055](../../decisions/0055-web-privacy-compliance-screens.md)/
-[ADR 0057](../../decisions/0057-web-data-export-screen.md) already specify.**
-Per [ADR 0055](../../decisions/0055-web-privacy-compliance-screens.md),
-[ADR 0056](../../decisions/0056-gdpr-data-export.md),
-[ADR 0057](../../decisions/0057-web-data-export-screen.md),
-[ADR 0075](../../decisions/0075-stuck-erasure-request-monitoring.md).
+**New — web's side of the screens [ADR 0055](../../adrs/0055-web-privacy-compliance-screens.md)/
+[ADR 0057](../../adrs/0057-web-data-export-screen.md) already specify.**
+Per [ADR 0055](../../adrs/0055-web-privacy-compliance-screens.md),
+[ADR 0056](../../adrs/0056-gdpr-data-export.md),
+[ADR 0057](../../adrs/0057-web-data-export-screen.md),
+[ADR 0075](../../adrs/0075-stuck-erasure-request-monitoring.md).
 **Depends on:** [tower Story 008](../tower/008-contacts-erasure-and-export.md) — every route
 this screen calls, and this story's own server-side export assembly (`web`'s one genuinely
 cross-service orchestration).

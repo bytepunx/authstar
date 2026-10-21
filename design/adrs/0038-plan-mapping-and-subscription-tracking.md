@@ -1,3 +1,12 @@
+---
+id: ADR-0038
+title: Plan-to-Entitlement Mapping and Subscription Tracking
+status: accepted
+date: 2026-07-29
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0038: Plan-to-Entitlement Mapping and Subscription Tracking
 
 - **Status:** Accepted (corrected by [ADR 0046](0046-tenant-owned-stripe-configuration.md))
@@ -25,6 +34,8 @@ subscribed to their own Price X" onto "these authstar entitlements" and drive th
 `entitlement.*` events already specified in ADR 0031.
 
 ## Decision
+
+`planMapping` — tenant-defined, not an authstar-fixed catalog.
 
 ### `planMapping` — tenant-defined, not an authstar-fixed catalog
 

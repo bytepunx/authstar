@@ -1,9 +1,14 @@
+---
+title: "Story 002: Signet Wiring"
+updated: 2026-09-03
+status: draft
+---
 # Story 002 — Signet Wiring
 
 **Epic:** Config/Secrets Compliance
 **Repo:** lookout
 **Status:** Draft
-**Per:** [ADR 0102](../../decisions/0102-signet-precedence-and-fallback-scope.md) — lookout's
+**Per:** [ADR 0102](../../adrs/0102-signet-precedence-and-fallback-scope.md) — lookout's
 first signet scoping; no prior ADR named it.
 
 ---

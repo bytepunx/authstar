@@ -1,3 +1,8 @@
+---
+title: Story 011a — WebSocket Upgrade and Passthrough
+updated: 2026-07-22
+status: draft
+---
 # Story 011a — WebSocket Upgrade and Passthrough
 
 **Epic:** Reverse Proxy

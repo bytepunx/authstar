@@ -1,4 +1,4 @@
-//! API-key verification (design/decisions/0101-api-keys.md) -- portcullis's second
+//! API-key verification (design/adrs/0101-api-keys.md) -- portcullis's second
 //! credential-verification path alongside `enricher.rs`'s session-cookie one. Calls tower's
 //! `POST /verify-api-key` on every request bearing an `Authorization: Bearer
 //! authstar_{apiKeyId}_{secret}` credential (`api_key.rs`).

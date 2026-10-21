@@ -1,15 +1,20 @@
+---
+title: "Story 002: Reporting API"
+updated: 2026-08-06
+status: draft
+---
 # Story 002 — Reporting API
 
 **Epic:** Analytics Storage
 **Repo:** chronicle
 **Status:** Draft
-**New — chronicle's side of the routes [ADR 0036](../../decisions/0036-chronicle-reporting-api-and-retention-config.md)
-already specifies.** Per [ADR 0034](../../decisions/0034-herald-api-surface.md) (auth model
-this mirrors), [ADR 0036](../../decisions/0036-chronicle-reporting-api-and-retention-config.md),
-[ADR 0056](../../decisions/0056-gdpr-data-export.md),
-[ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md),
-[ADR 0059](../../decisions/0059-web-analytics-screens.md).
-**Depends on:** [ADR 0085](../../decisions/0085-chronicle-clickhouse-schema.md)'s
+**New — chronicle's side of the routes [ADR 0036](../../adrs/0036-chronicle-reporting-api-and-retention-config.md)
+already specifies.** Per [ADR 0034](../../adrs/0034-herald-api-surface.md) (auth model
+this mirrors), [ADR 0036](../../adrs/0036-chronicle-reporting-api-and-retention-config.md),
+[ADR 0056](../../adrs/0056-gdpr-data-export.md),
+[ADR 0058](../../adrs/0058-analytics-event-shape-corrections.md),
+[ADR 0059](../../adrs/0059-web-analytics-screens.md).
+**Depends on:** [ADR 0085](../../adrs/0085-chronicle-clickhouse-schema.md)'s
 `analytics_events` table, [Story 001](001-event-consumption.md)'s write path.
 
 ---
@@ -125,5 +130,5 @@ this mirrors), [ADR 0036](../../decisions/0036-chronicle-reporting-api-and-reten
 ## Not Covered Here
 
 - Event consumption/storage — [Story 001](001-event-consumption.md).
-- `web`'s own screens consuming these routes — [ADR 0059](../../decisions/0059-web-analytics-screens.md),
+- `web`'s own screens consuming these routes — [ADR 0059](../../adrs/0059-web-analytics-screens.md),
   `web`'s own future stories.

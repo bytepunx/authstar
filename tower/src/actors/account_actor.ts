@@ -58,7 +58,7 @@ export interface AccountState {
   trialExpiresAt: string | null
   permissions: PermissionGrant[]
   usage: UsageRecord[]
-  // design/decisions/0101-api-keys.md: sourced from keep's plan-mapping
+  // design/adrs/0101-api-keys.md: sourced from keep's plan-mapping
   // entitlement pipeline (`lib/entitlement-consumer.ts`'s new
   // `api-key-limit-changed`/`api-key-rate-limit-changed` cases), same as
   // `organization.apiKeyLimit` below. `apiKeyLimit` defaults to `0`

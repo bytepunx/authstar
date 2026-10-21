@@ -1,3 +1,12 @@
+---
+id: ADR-0012
+title: RabbitMQ User Provisioning via a One-Shot Kubernetes Job
+status: accepted
+date: 2026-07-22
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0012: RabbitMQ User Provisioning via a One-Shot Kubernetes Job
 
 - **Status:** Accepted
@@ -22,6 +31,8 @@ with no background rotation — is irrelevant here: a one-shot Job runs briefly 
 within any SVID's TTL, so the gap that matters for a long-lived service doesn't apply.
 
 ## Decision
+
+RabbitMQ User Provisioning via a One-Shot Kubernetes Job.
 
 A one-shot Kubernetes `Job` (Node.js, `@bytepunx/signet-client`) provisions RabbitMQ users:
 

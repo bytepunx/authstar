@@ -1,17 +1,22 @@
+---
+title: "Story 002: Send Worker and Retry"
+updated: 2026-08-05
+status: draft
+---
 # Story 002 — Send Worker and Retry
 
 **Epic:** Sending
 **Repo:** herald
 **Status:** Draft
-**New — herald's side of the mechanism [ADR 0022](../../decisions/0022-herald-communications-service.md)/
-[ADR 0032](../../decisions/0032-per-tenant-sending-and-can-spam.md)/
-[ADR 0033](../../decisions/0033-herald-send-worker-and-retry.md) already specify.**
-Per [ADR 0022](../../decisions/0022-herald-communications-service.md),
-[ADR 0025](../../decisions/0025-versioned-templates-and-encrypted-payloads.md),
-[ADR 0032](../../decisions/0032-per-tenant-sending-and-can-spam.md),
-[ADR 0033](../../decisions/0033-herald-send-worker-and-retry.md),
-[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md),
-[ADR 0078](../../decisions/0078-herald-template-branding.md).
+**New — herald's side of the mechanism [ADR 0022](../../adrs/0022-herald-communications-service.md)/
+[ADR 0032](../../adrs/0032-per-tenant-sending-and-can-spam.md)/
+[ADR 0033](../../adrs/0033-herald-send-worker-and-retry.md) already specify.**
+Per [ADR 0022](../../adrs/0022-herald-communications-service.md),
+[ADR 0025](../../adrs/0025-versioned-templates-and-encrypted-payloads.md),
+[ADR 0032](../../adrs/0032-per-tenant-sending-and-can-spam.md),
+[ADR 0033](../../adrs/0033-herald-send-worker-and-retry.md),
+[ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md),
+[ADR 0078](../../adrs/0078-herald-template-branding.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `communication`/`template`/
 `sendingConfig`/`optOut`/`suppression` shapes.
 

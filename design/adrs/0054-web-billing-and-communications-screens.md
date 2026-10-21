@@ -1,3 +1,12 @@
+---
+id: ADR-0054
+title: "`web`'s Billing and Communications Screens"
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0054: `web`'s Billing and Communications Screens
 
 - **Status:** Accepted
@@ -7,6 +16,8 @@
 - **Depends on:** [ADR 0052](0052-keep-herald-own-signet-access.md), [ADR 0053](0053-lifecycle-status-consolidation.md)
 
 ## Decision
+
+Billing (keep).
 
 ### Billing (keep)
 

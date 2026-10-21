@@ -49,7 +49,7 @@ export interface InternalClaims {
   accountId?: string
   /**
    * Every organization this account currently belongs to, each with its own `roles` --
-   * an open, catalog-validated vocabulary (design/decisions/0100-organization-
+   * an open, catalog-validated vocabulary (design/adrs/0100-organization-
    * membership-and-scoped-entitlements.md), not a fixed enum, so a new distinction
    * (e.g. a billing-view-only role) never needs another breaking change here. An
    * account can belong to more than one organization at once, each conferring
@@ -71,7 +71,7 @@ export interface InternalClaims {
   /** Present (true) only immediately after tower auto-provisioned a brand-new account. */
   isNewAccount?: boolean
   /**
-   * design/decisions/0101-api-keys.md. Present only on a token minted from a verified
+   * design/adrs/0101-api-keys.md. Present only on a token minted from a verified
    * API-key credential (`Authorization: Bearer authstar_{apiKeyId}_{secret}`), never on
    * a session-derived one -- purely additive, same optional/never-fabricated treatment
    * as `accountId`/`isNewAccount`. Its presence is how a downstream consumer

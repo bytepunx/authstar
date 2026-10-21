@@ -1,10 +1,15 @@
+---
+title: "Story 001: Tower Actor Definitions"
+updated: 2026-08-05
+status: draft
+---
 # Story 001 — Tower Actor Definitions
 
 **Epic:** Domain Model
 **Repo:** tower
 **Status:** Draft
-**New — consolidates the actor model scattered across decisions/0002–0082 into one
-implementation-ready reference.** Per [tech-stack.md](../../docs/tech-stack.md)'s choice of
+**New — consolidates the actor model scattered across adrs/0002–0082 into one
+implementation-ready reference.** Per [tech-stack.md](../../tech/tech-stack.md)'s choice of
 `consequent`/`consequent-postgres`/`fount`/`node-flakes`.
 
 ---
@@ -239,7 +244,7 @@ time behavior, not a shape change), 0056 (`accountId` added to `searchableBy`), 
 - [ ] `grantedRoles`/`trialRoles`/`trialExpiresAt` merge into one effective role set only at
       **token-signing time**, in portcullis — tower never merges them itself (ADR 0018).
 - [ ] `permissions` grants are never interpreted by tower beyond the closed catalog
-      ([tech-stack.md's linked ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md)
+      ([tech-stack.md's linked ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md)
       — the permissions catalog table) — `roles` are opaque, app-interpreted, and tower never
       looks at what one means (ADR 0069).
 - [ ] Self-action needs no `permissions` grant: any route where `{accountId}` matches the
@@ -416,7 +421,7 @@ each has a simpler, more direct answer:
       by this story — stronger delivery guarantees (retry, a periodic reconciliation sweep as a
       safety net) are a reasonable future hardening, not designed in full here, consistent with
       how this design treats other "eventual, best-effort" delivery paths elsewhere (RabbitMQ
-      publish-after-store, [tech-stack.md](../../docs/tech-stack.md)).
+      publish-after-store, [tech-stack.md](../../tech/tech-stack.md)).
 
 ---
 
@@ -425,7 +430,7 @@ each has a simpler, more direct answer:
 - `contact` (Postgres row, not a `consequent` actor) — a future tower story, not yet numbered.
 - Signet secrets that are *not* actors at all (`identity-hash-key` generations,
   `contact-hash-pepper`, signing keypairs) — referenced by the actors above but never modeled
-  as one; see [tech-stack.md](../../docs/tech-stack.md) and ADR 0028/0067/0080 for their actual
+  as one; see [tech-stack.md](../../tech/tech-stack.md) and ADR 0028/0067/0080 for their actual
   shape and lifecycle.
 - `keep`'s and `herald`'s own actors (`subscription`, `planMapping`, `refund`, `dispute`,
   `communication`, `template`, `suppression`, ...) — each service's own Story 001 equivalent,

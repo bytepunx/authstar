@@ -1,3 +1,12 @@
+---
+id: ADR-0082
+title: Tower Actor Boundary Corrections — `provider`, `inviteCode`, `invite`
+status: accepted
+date: 2026-08-02
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0082: Tower Actor Boundary Corrections — `provider`, `inviteCode`, `invite`
 
 - **Status:** Accepted
@@ -31,6 +40,8 @@ the time but never reconciled against each other:
    0047 (`roles` validation), 0053 (status lifecycle) — individually correct, never assembled.
 
 ## Decision
+
+`provider` becomes its own `consequent` actor, composite-keyed like `roleDefinition`.
 
 ### `provider` becomes its own `consequent` actor, composite-keyed like `roleDefinition`
 

@@ -1,13 +1,18 @@
+---
+title: "Story 001: Admin App Shell, Auth, and Section Gating"
+updated: 2026-08-06
+status: draft
+---
 # Story 001 — Admin App Shell, Auth, and Section Gating
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — consolidates the admin app's foundational structure from decisions/0044–0078 into one
-reference.** Per [ADR 0044](../../decisions/0044-web-surfaces-and-distribution-model.md),
-[ADR 0049](../../decisions/0049-web-admin-information-architecture.md),
-[ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md).
-Per [tech-stack.md](../../docs/tech-stack.md)'s choice of SvelteKit 2/Svelte 5.
+**New — consolidates the admin app's foundational structure from adrs/0044–0078 into one
+reference.** Per [ADR 0044](../../adrs/0044-web-surfaces-and-distribution-model.md),
+[ADR 0049](../../adrs/0049-web-admin-information-architecture.md),
+[ADR 0062](../../adrs/0062-tenant-status-enforcement-and-reactivation.md).
+Per [tech-stack.md](../../tech/tech-stack.md)'s choice of SvelteKit 2/Svelte 5.
 
 ---
 
@@ -83,4 +88,4 @@ future stories) plugs into, not a section itself.
   signup page) — these are **not** part of the `_admin` app shell at all, served by `web` as a
   genuinely separate surface (ADR 0044's three/four-surface distinction) — a future story.
 - The embeddable widget library — an entirely separate build target from this app (ADR 0072,
-  [tech-stack.md](../../docs/tech-stack.md)), a future story.
+  [tech-stack.md](../../tech/tech-stack.md)), a future story.

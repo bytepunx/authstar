@@ -1,3 +1,12 @@
+---
+id: ADR-0003
+title: Enrichment Outcome Response Contract
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0003: Enrichment Outcome Response Contract
 
 - **Status:** Accepted
@@ -11,6 +20,8 @@ things unresolved: whether `Deny`'s `reason` is ever visible to the client, and 
 fail-open `Unreachable` response looks like to the upstream application. This ADR settles both.
 
 ## Decision
+
+`Deny.reason` is never exposed to the client.
 
 ### `Deny.reason` is never exposed to the client
 

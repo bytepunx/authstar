@@ -3,7 +3,7 @@ import type { CommunicationTypeState } from '../actors/communication_type_actor.
 import type { CommunicationState } from '../actors/communication_actor.js'
 import { communicationActorId } from './communication-id.js'
 
-// Per design/decisions/0029-herald-payload-retention.md's "Purging is a
+// Per design/adrs/0029-herald-payload-retention.md's "Purging is a
 // scheduled sweep, not a reactive mechanism" -- "the same operational
 // shape as ADR 0012's RabbitMQ-credential-rotation CronJob: a periodic
 // (e.g. daily) herald-owned job finds `communication` records past their

@@ -1,13 +1,18 @@
+---
+title: "Story 006: Communications"
+updated: 2026-08-06
+status: draft
+---
 # Story 006 — Communications
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — web's side of the screens [ADR 0054](../../decisions/0054-web-billing-and-communications-screens.md)
-already specifies.** Per [ADR 0053](../../decisions/0053-lifecycle-status-consolidation.md),
-[ADR 0054](../../decisions/0054-web-billing-and-communications-screens.md),
-[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md),
-[ADR 0078](../../decisions/0078-herald-template-branding.md).
+**New — web's side of the screens [ADR 0054](../../adrs/0054-web-billing-and-communications-screens.md)
+already specifies.** Per [ADR 0053](../../adrs/0053-lifecycle-status-consolidation.md),
+[ADR 0054](../../adrs/0054-web-billing-and-communications-screens.md),
+[ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md),
+[ADR 0078](../../adrs/0078-herald-template-branding.md).
 **Depends on:** [herald Story 001](../herald/001-actor-definitions.md) through
 [Story 005](../herald/005-webhooks-config-rotation-and-activity.md) — every route this screen
 calls is already fully specified there.

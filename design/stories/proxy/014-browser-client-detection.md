@@ -1,3 +1,8 @@
+---
+title: "Story 014: Browser vs API Client Detection"
+updated: 2026-07-22
+status: draft
+---
 # Story 014 — Browser vs API Client Detection
 
 **Epic:** Reverse Proxy

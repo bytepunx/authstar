@@ -235,7 +235,7 @@ async fn build_state_with_enricher_base(
 /// Similar tenant/bundle shape to [`build_state_with_enricher_base`], but wires a real
 /// [`TowerApiKeyVerifier`] pointed at `tower_base` instead of the placeholder
 /// [`UnreachableApiKeyVerifier`] every other helper here uses -- for the
-/// design/decisions/0101-api-keys.md gate tests below, which send `Authorization: Bearer
+/// design/adrs/0101-api-keys.md gate tests below, which send `Authorization: Bearer
 /// authstar_...` directly and never establish a session cookie at all, so no OIDC provider
 /// (and thus no `oidc_base` param) is needed, and the (deliberately unreachable) `enricher` is
 /// never touched.
@@ -1190,7 +1190,7 @@ async fn unreachable_tower_fails_open_with_degraded_token() {
 }
 
 // ---------------------------------------------------------------------------------------------
-// API keys (design/decisions/0101-api-keys.md)
+// API keys (design/adrs/0101-api-keys.md)
 // ---------------------------------------------------------------------------------------------
 
 fn decode_claims(token: &str) -> serde_json::Value {

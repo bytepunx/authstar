@@ -1,20 +1,25 @@
+---
+title: "Story 008: Contacts, Erasure, Data Export, and Email Change"
+updated: 2026-08-05
+status: draft
+---
 # Story 008 — Contacts, Erasure, Data Export, and Email Change
 
 **Epic:** Privacy & Compliance
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0030](../../decisions/0030-tower-api-surface.md)/
-[ADR 0055](../../decisions/0055-web-privacy-compliance-screens.md)/
-[ADR 0056](../../decisions/0056-gdpr-data-export.md)/
-[ADR 0076](../../decisions/0076-admin-initiated-email-change.md) already specify.**
-Per [ADR 0023](../../decisions/0023-pii-isolation-via-hashed-contact-records.md),
-[ADR 0024](../../decisions/0024-contact-lifecycle-sync-to-herald.md),
-[ADR 0026](../../decisions/0026-erasure-cascade.md),
-[ADR 0055](../../decisions/0055-web-privacy-compliance-screens.md),
-[ADR 0056](../../decisions/0056-gdpr-data-export.md),
-[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md),
-[ADR 0075](../../decisions/0075-stuck-erasure-request-monitoring.md),
-[ADR 0076](../../decisions/0076-admin-initiated-email-change.md).
+**New — tower's side of the routes [ADR 0030](../../adrs/0030-tower-api-surface.md)/
+[ADR 0055](../../adrs/0055-web-privacy-compliance-screens.md)/
+[ADR 0056](../../adrs/0056-gdpr-data-export.md)/
+[ADR 0076](../../adrs/0076-admin-initiated-email-change.md) already specify.**
+Per [ADR 0023](../../adrs/0023-pii-isolation-via-hashed-contact-records.md),
+[ADR 0024](../../adrs/0024-contact-lifecycle-sync-to-herald.md),
+[ADR 0026](../../adrs/0026-erasure-cascade.md),
+[ADR 0055](../../adrs/0055-web-privacy-compliance-screens.md),
+[ADR 0056](../../adrs/0056-gdpr-data-export.md),
+[ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md),
+[ADR 0075](../../adrs/0075-stuck-erasure-request-monitoring.md),
+[ADR 0076](../../adrs/0076-admin-initiated-email-change.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `erasureRequest`/`exportRequest`
 shapes and `contact`'s Postgres-row exception.
 
@@ -76,7 +81,7 @@ so a lookup is always a direct key computation, never a search.
       (not a config value — a real constant that must be deliberately extended whenever a new
       PII-holding service joins, ADR 0026), the command flips `status: "completed"`.
 - [ ] No timeout, ever — a request missing one acknowledgment stays `"pending"` indefinitely by
-      design (ADR 0026). Visibility into that state is [ADR 0075](../../decisions/0075-stuck-erasure-request-monitoring.md)'s
+      design (ADR 0026). Visibility into that state is [ADR 0075](../../adrs/0075-stuck-erasure-request-monitoring.md)'s
       concern (a `web` client-side staleness flag, a `steward` cross-tenant view), not this
       story's — nothing here changes to support it beyond the data already being readable.
 
@@ -136,7 +141,7 @@ so a lookup is always a direct key computation, never a search.
 - [ ] Resolves the caller's own `contactId` from the forwarded internal JWT (via `account`,
       resolved from `accountId` — no special permission needed, acting on your own data needs
       only being authenticated as yourself, ADR 0056). Same response shape and behavior as the
-      admin route above, reached through [ADR 0071](../../decisions/0071-self-service-widget-data-access.md)'s
+      admin route above, reached through [ADR 0071](../../adrs/0071-self-service-widget-data-access.md)'s
       `/_authstar/me/export` proxy (which fans out to `web`, not directly to this route — `web`
       still owns the multi-service assembly even for the self-service case).
 
@@ -153,7 +158,7 @@ so a lookup is always a direct key computation, never a search.
       `account.contactId`, and emits `account.contact_changed` (old `contactId`, new `contactId`
       — never plaintext).
 - [ ] Publishes `herald.contact.migrated { tenant, oldContactId, newContactId }` — the exact
-      message [ADR 0024](../../decisions/0024-contact-lifecycle-sync-to-herald.md) already
+      message [ADR 0024](../../adrs/0024-contact-lifecycle-sync-to-herald.md) already
       defined for this purpose (originally for pepper rotation; this is its first real trigger
       for the email-change case specifically). Herald's handling of it is extended (ADR 0076) to
       carry forward `suppression` records, not just `optOut`.

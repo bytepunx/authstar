@@ -1,3 +1,12 @@
+---
+id: ADR-0078
+title: Per-Tenant/Per-Application Template Branding
+status: accepted
+date: 2026-08-02
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0078: Per-Tenant/Per-Application Template Branding
 
 - **Status:** Accepted
@@ -15,6 +24,8 @@ deferred goal — "Math Overflow's emails look like Math Overflow, not generic a
 doesn't actually need a rendering pipeline built from scratch; it needs these two gaps closed.
 
 ## Decision
+
+Rendering: logic-less variable substitution, not a scripting language.
 
 ### Rendering: logic-less variable substitution, not a scripting language
 

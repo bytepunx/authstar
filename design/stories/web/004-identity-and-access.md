@@ -1,12 +1,17 @@
+---
+title: "Story 004: Identity & Access"
+updated: 2026-08-06
+status: draft
+---
 # Story 004 — Identity & Access
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — web's side of the screens [ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md)
-already specifies.** Per [ADR 0047](../../decisions/0047-application-and-role-slug-validation.md),
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0073](../../decisions/0073-provider-discovery-status-feedback.md).
+**New — web's side of the screens [ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md)
+already specifies.** Per [ADR 0047](../../adrs/0047-application-and-role-slug-validation.md),
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md),
+[ADR 0073](../../adrs/0073-provider-discovery-status-feedback.md).
 **Depends on:** [tower Story 004](../tower/004-applications-and-providers.md) (providers),
 [tower Story 005](../tower/005-accounts-roles-and-permissions.md) (accounts/roles/permissions),
 [tower Story 006](../tower/006-role-definitions.md), [tower Story 007](../tower/007-invites-and-invite-codes.md).

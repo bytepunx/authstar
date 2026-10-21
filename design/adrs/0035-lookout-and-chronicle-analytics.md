@@ -1,3 +1,12 @@
+---
+id: ADR-0035
+title: "`lookout` and `chronicle` — Portcullis-Sourced Analytics"
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0035: `lookout` and `chronicle` — Portcullis-Sourced Analytics
 
 - **Status:** Accepted (extended by [ADR 0058](0058-analytics-event-shape-corrections.md))
@@ -20,6 +29,8 @@ identity resolution (ADR 0017) solving the exact deduplication problem that orig
 the application layer (ADR 0016).
 
 ## Decision
+
+Two new services: `lookout` (ingestion) and `chronicle` (storage/query).
 
 ### Two new services: `lookout` (ingestion) and `chronicle` (storage/query)
 

@@ -1,14 +1,19 @@
+---
+title: "Story 011: Tenant Management and Key Rotation"
+updated: 2026-08-05
+status: draft
+---
 # Story 011 — Tenant Management and Key Rotation
 
 **Epic:** Tenant Lifecycle
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md)/
-[ADR 0080](../../decisions/0080-tenant-key-rotation-ceremony.md) already specify.**
-Per [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
-[ADR 0028](../../decisions/0028-identity-hash-key-generations.md),
-[ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md),
-[ADR 0080](../../decisions/0080-tenant-key-rotation-ceremony.md).
+**New — tower's side of the routes [ADR 0062](../../adrs/0062-tenant-status-enforcement-and-reactivation.md)/
+[ADR 0080](../../adrs/0080-tenant-key-rotation-ceremony.md) already specify.**
+Per [ADR 0002](../../adrs/0002-multi-tenant-architecture-and-key-management.md),
+[ADR 0028](../../adrs/0028-identity-hash-key-generations.md),
+[ADR 0062](../../adrs/0062-tenant-status-enforcement-and-reactivation.md),
+[ADR 0080](../../adrs/0080-tenant-key-rotation-ceremony.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `tenant` shape and its async
 `SyncBundle`-push mechanism, reused unchanged by every route below.
 

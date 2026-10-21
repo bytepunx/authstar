@@ -7,7 +7,7 @@ import { requireOperatorAuth, requireOperatorActor } from '../lib/operator-auth.
 import { searchCriteria } from '../lib/consequent-types.js'
 import { organizationRolesValid } from '../lib/role-definition-lookup.js'
 
-// Per design/decisions/0100-organization-membership-and-open-role-catalog.md
+// Per design/adrs/0100-organization-membership-and-open-role-catalog.md
 // (supersedes ADR 0090/0098's `organization.managers[]`/`.successors` and
 // the two-catalog-permission mechanism). Membership -- and standing within
 // it -- lives entirely on `organizationMembership` records, one per

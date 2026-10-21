@@ -1,3 +1,12 @@
+---
+id: ADR-0010
+title: kickr as RabbitMQ's Container Entrypoint
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0010: kickr as RabbitMQ's Container Entrypoint
 
 - **Status:** Accepted

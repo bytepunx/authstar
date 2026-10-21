@@ -1,3 +1,12 @@
+---
+id: ADR-0045
+title: "`steward` — a Separate Operator Console, Distinct from Tenant Admin"
+status: accepted
+date: 2026-07-30
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0045: `steward` — a Separate Operator Console, Distinct from Tenant Admin
 
 - **Status:** Accepted (keep-specific correction below reversed by [ADR 0046](0046-tenant-owned-stripe-configuration.md))
@@ -23,6 +32,8 @@ must work even before any tenant exists (the bootstrap case ADR 0021 already cov
 CLI).
 
 ## Decision
+
+`steward` — a new, separate service, not a mode within `web`.
 
 ### `steward` — a new, separate service, not a mode within `web`
 

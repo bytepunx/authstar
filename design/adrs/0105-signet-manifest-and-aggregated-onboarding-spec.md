@@ -1,3 +1,12 @@
+---
+id: ADR-0105
+title: Per-Service Signet Manifests, Aggregated by authstar-chart
+status: accepted
+date: 2026-09-04
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0105: Per-Service Signet Manifests, Aggregated by authstar-chart
 
 - **Status:** Accepted
@@ -20,6 +29,8 @@ gap is general to any signet-consuming system, not authstar-specific, but authst
 first being solved, and authstar-chart is the first consumer.
 
 ## Decision
+
+Each service ships a `signet-manifest.json`, embedded in its image.
 
 ### Each service ships a `signet-manifest.json`, embedded in its image
 

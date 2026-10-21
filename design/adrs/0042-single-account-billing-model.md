@@ -1,3 +1,12 @@
+---
+id: ADR-0042
+title: Single-Account Billing Model — Tenants Are Customers of the Installation
+status: superseded
+date: 2026-07-29
+updated: 2026-09-23
+supersedes: []
+superseded_by: [ADR-0046]
+---
 # ADR 0042: Single-Account Billing Model — Tenants Are Customers of the Installation
 
 - **Status:** Superseded by [ADR 0046](0046-tenant-owned-stripe-configuration.md)
@@ -27,6 +36,8 @@ each processing their own payments through authstar. This is a standard single-m
 billing shape, not Connect at all.
 
 ## Decision
+
+One Stripe account per installation.
 
 ### One Stripe account per installation
 

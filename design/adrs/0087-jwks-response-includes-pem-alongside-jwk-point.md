@@ -1,3 +1,12 @@
+---
+id: ADR-0087
+title: JWKS Response Includes the PEM-Encoded Public Key Alongside the JWK Point
+status: accepted
+date: 2026-08-12
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0087: JWKS Response Includes the PEM-Encoded Public Key Alongside the JWK Point
 
 - **Status:** Accepted
@@ -33,6 +42,8 @@ only one of the two forms when portcullis already holds both, computed once at k
 never per-request.
 
 ## Decision
+
+Each JWKS key entry carries a `publicKeyPem` member alongside the standard JWK fields.
 
 ### Each JWKS key entry carries a `publicKeyPem` member alongside the standard JWK fields
 

@@ -1,14 +1,19 @@
+---
+title: "Story 007: Permission Enforcement Middleware"
+updated: 2026-08-14
+status: draft
+---
 # Story 007 — Permission Enforcement Middleware
 
 **Epic:** Authorization
 **Repo:** keep
 **Status:** Draft
 **New — every prior keep story assumes this exists and none of them specify it.** Per
-[ADR 0041](../../decisions/0041-keep-api-surface.md),
-[ADR 0046](../../decisions/0046-tenant-owned-stripe-configuration.md),
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md),
-[ADR 0089](../../decisions/0089-internal-jwt-carries-its-own-tenant-hint.md).
+[ADR 0041](../../adrs/0041-keep-api-surface.md),
+[ADR 0046](../../adrs/0046-tenant-owned-stripe-configuration.md),
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md),
+[ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md),
+[ADR 0089](../../adrs/0089-internal-jwt-carries-its-own-tenant-hint.md).
 **Depends on:** [tower Story 014](../tower/014-permission-enforcement-middleware.md) — same
 mechanism, not re-derived here.
 

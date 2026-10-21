@@ -1,3 +1,12 @@
+---
+id: ADR-0064
+title: "`_portal`'s Sign-In Flow — Application-Scoped, Fully Client-Fetchable"
+status: superseded
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: [ADR-0066]
+---
 # ADR 0064: `_portal`'s Sign-In Flow — Application-Scoped, Fully Client-Fetchable
 
 - **Status:** Superseded by [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md)
@@ -14,6 +23,8 @@
 > accurate. Kept below for the record of what was considered.
 
 ## Decision
+
+Each application's `auth.loginUrl` default carries an explicit `?app=` identifier.
 
 ### Each application's `auth.loginUrl` default carries an explicit `?app=` identifier
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0095
+title: Portcullis Forwards Stripe Webhooks to Keep
+status: accepted
+date: 2026-08-22
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0095: Portcullis Forwards Stripe Webhooks to Keep
 
 - **Status:** Accepted
@@ -18,6 +27,8 @@ bytepunx/authstar-keep#1) — the endpoint could be created and given a signing 
 delivery would have 404'd.
 
 ## Decision
+
+New `keepUpstream` bundle field.
 
 ### New `keepUpstream` bundle field
 

@@ -1,16 +1,21 @@
+---
+title: "Story 006: Self-Service Subscription, Stripe Config, and Activity"
+updated: 2026-08-05
+status: draft
+---
 # Story 006 — Self-Service Subscription, Stripe Config, and Activity
 
 **Epic:** Billing
 **Repo:** keep
 **Status:** Draft
-**New — keep's side of the routes [ADR 0041](../../decisions/0041-keep-api-surface.md)/
-[ADR 0052](../../decisions/0052-keep-herald-own-signet-access.md)/
-[ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md)/
-[ADR 0071](../../decisions/0071-self-service-widget-data-access.md) already specify.**
-Per [ADR 0052](../../decisions/0052-keep-herald-own-signet-access.md),
-[ADR 0054](../../decisions/0054-web-billing-and-communications-screens.md),
-[ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md),
-[ADR 0071](../../decisions/0071-self-service-widget-data-access.md).
+**New — keep's side of the routes [ADR 0041](../../adrs/0041-keep-api-surface.md)/
+[ADR 0052](../../adrs/0052-keep-herald-own-signet-access.md)/
+[ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md)/
+[ADR 0071](../../adrs/0071-self-service-widget-data-access.md) already specify.**
+Per [ADR 0052](../../adrs/0052-keep-herald-own-signet-access.md),
+[ADR 0054](../../adrs/0054-web-billing-and-communications-screens.md),
+[ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md),
+[ADR 0071](../../adrs/0071-self-service-widget-data-access.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `subscription`/`stripe-config` sections,
 [tower Story 010](../tower/010-activity-feed.md)'s event-stream-construction approach (reused
 here, not re-derived).

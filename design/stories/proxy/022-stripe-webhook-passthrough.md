@@ -1,9 +1,14 @@
+---
+title: "Story 022: Stripe Webhook Passthrough"
+updated: 2026-07-30
+status: draft
+---
 # Story 022 — Stripe Webhook Passthrough
 
 **Epic:** Utility Endpoints
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0046](../../decisions/0046-tenant-owned-stripe-configuration.md).
+**New — not present in `ref-design`.** Per [ADR 0046](../../adrs/0046-tenant-owned-stripe-configuration.md).
 
 ---
 

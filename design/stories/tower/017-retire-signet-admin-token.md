@@ -1,3 +1,8 @@
+---
+title: "Story 017: Retire Signet Admin Token"
+updated: 2026-09-03
+status: draft
+---
 # Story 017 — Retire Signet Admin Token
 
 **Epic:** Config/Secrets Compliance
@@ -5,7 +10,7 @@
 **Status:** Draft — unblocked, signet-client v0.8.0 and signet server's scoped `GetSOPSPublicKey`
 have shipped. Still needs the one-time `CreatePolicy` grant provisioned (see
 `authstar-integration` acceptance criterion below) before this lands.
-**Per:** [ADR 0103](../../decisions/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
+**Per:** [ADR 0103](../../adrs/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
 
 ---
 

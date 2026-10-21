@@ -1,3 +1,12 @@
+---
+id: ADR-0047
+title: Application and Role Slug Validation — Tower-Owned Role Catalog, Keep's Async Reference Cache
+status: accepted
+date: 2026-07-30
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0047: Application and Role Slug Validation — Tower-Owned Role Catalog, Keep's Async Reference Cache
 
 - **Status:** Accepted
@@ -26,6 +35,8 @@ interpret them. Fixing typo-driven silent failures for both means introducing a 
 catalog, a genuine reversal of that opacity for the sake of catching mistakes early.
 
 ## Decision
+
+`roleDefinition` — a new tower actor, the source of truth for valid role names.
 
 ### `roleDefinition` — a new tower actor, the source of truth for valid role names
 

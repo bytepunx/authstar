@@ -1,3 +1,12 @@
+---
+id: ADR-0044
+title: "`web`'s Three Surfaces and Distribution Model"
+status: accepted
+date: 2026-07-30
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0044: `web`'s Three Surfaces and Distribution Model
 
 - **Status:** Accepted (mechanism corrected by [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md); `_admin` reservation superseded by [ADR 0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md))
@@ -31,6 +40,8 @@ three distinct surfaces, and conflating them would be a mistake — they have ge
 sensitivity profiles and consumption models.
 
 ## Decision
+
+Three surfaces, three distribution models.
 
 ### Three surfaces, three distribution models
 

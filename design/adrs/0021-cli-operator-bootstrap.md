@@ -1,3 +1,12 @@
+---
+id: ADR-0021
+title: CLI-Driven Operator Bootstrap for Admins and OIDC Providers
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0021: CLI-Driven Operator Bootstrap for Admins and OIDC Providers
 
 - **Status:** Accepted
@@ -20,6 +29,8 @@ provision tenants — it operates against tenants that already exist, and is use
 operating team (not tenant admins) to manage admin access and OIDC providers for them.
 
 ## Decision
+
+A bearer-token-gated operator API, mirroring signet's own `AdminService` pattern.
 
 ### A bearer-token-gated operator API, mirroring signet's own `AdminService` pattern
 

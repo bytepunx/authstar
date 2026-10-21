@@ -1,3 +1,12 @@
+---
+id: ADR-0019
+title: Invite Codes as a Distinct, Multi-Redemption Mechanism
+status: accepted
+date: 2026-07-24
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0019: Invite Codes as a Distinct, Multi-Redemption Mechanism
 
 - **Status:** Accepted
@@ -23,6 +32,8 @@ Separately: should coupon codes (discounts, free entitlements) be modeled in tow
 does keep own that entirely?
 
 ## Decision
+
+`inviteCode` — a new, distinct actor.
 
 ### `inviteCode` — a new, distinct actor
 

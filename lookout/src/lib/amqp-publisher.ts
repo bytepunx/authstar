@@ -1,7 +1,7 @@
 import amqplib from 'amqplib'
 import type { Publisher } from './publisher.js'
 
-// design/decisions/0035-lookout-and-chronicle-analytics.md: "non-durable,
+// design/adrs/0035-lookout-and-chronicle-analytics.md: "non-durable,
 // a different reliability tier than everything else on this broker" --
 // analytics traffic accepts loss during a chronicle outage as a deliberate
 // trade-off, not a reliability gap. One topic exchange; routing keys follow

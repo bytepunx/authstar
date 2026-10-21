@@ -1,11 +1,16 @@
+---
+title: "Story 009: Settings"
+updated: 2026-08-06
+status: draft
+---
 # Story 009 — Settings
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — web's side of the screen [ADR 0063](../../decisions/0063-web-settings-screen.md)
-already specifies.** Per [ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md),
-[ADR 0063](../../decisions/0063-web-settings-screen.md).
+**New — web's side of the screen [ADR 0063](../../adrs/0063-web-settings-screen.md)
+already specifies.** Per [ADR 0062](../../adrs/0062-tenant-status-enforcement-and-reactivation.md),
+[ADR 0063](../../adrs/0063-web-settings-screen.md).
 **Depends on:** [tower Story 011](../tower/011-tenant-management-and-key-rotation.md)'s
 `PATCH /tenants/{tenantSlug}` — this screen's only write route.
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0093
+title: Domain-Pending Tenant Provisioning
+status: accepted
+date: 2026-08-20
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0093: Domain-Pending Tenant Provisioning
 
 - **Status:** Accepted
@@ -15,6 +24,8 @@ exact moment the tenant record itself is created, only before anything that need
 host from it runs.
 
 ## Decision
+
+`domain` becomes optional at creation, for both callers.
 
 ### `domain` becomes optional at creation, for both callers
 

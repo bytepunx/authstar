@@ -1,11 +1,11 @@
-// Per design/decisions/0047-application-and-role-slug-validation.md and
+// Per design/adrs/0047-application-and-role-slug-validation.md and
 // design/stories/tower/001-actor-definitions.md's `roleDefinition` section
 // (which corrected ADR 0047's own original key shape -- see that ADR's own
 // 2026-08-05 amendment note).
 //
 // `identifiedBy: 'key'`, purely positional, no static tags: `${tenant}:
 // ${name}` when `scope === 'tenant'`, `${tenant}:organization:${name}` when
-// `scope === 'organization'` (design/decisions/0100-...), `${tenant}:
+// `scope === 'organization'` (design/adrs/0100-...), `${tenant}:
 // ${appSlug}:${name}` when `scope === {application: appSlug}` --
 // disambiguated by segment count alone (the organization case reuses the
 // application case's two-segment shape with a literal `organization` where
@@ -87,7 +87,7 @@ function isActive(state: RoleDefinitionState) {
   return state.status === 'active'
 }
 
-// Baked into authstar itself (design/decisions/0100-organization-membership-
+// Baked into authstar itself (design/adrs/0100-organization-membership-
 // and-scoped-entitlements.md) -- every tenant gets these seeded at
 // provisioning time (routes/provisioning.ts) and can define more org-scope
 // roles beyond them the same way app-scope ones are defined, but these four
@@ -97,7 +97,7 @@ function isActive(state: RoleDefinitionState) {
 // access levels.
 const PROTECTED_ORGANIZATION_ROLES = new Set(['manager', 'member', 'billingAdmin', 'billingViewer'])
 
-// design/decisions/0101-api-keys.md: the first *application*-scope (not
+// design/adrs/0101-api-keys.md: the first *application*-scope (not
 // organization/tenant-scope) baked-in role -- authstar interprets this one
 // role name as its own access-control primitive (routes/api-keys.ts checks
 // for it directly) the same narrow way it already does for the four

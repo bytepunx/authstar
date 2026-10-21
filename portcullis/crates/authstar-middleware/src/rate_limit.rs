@@ -1,4 +1,4 @@
-//! Per design/decisions/0101-api-keys.md -- portcullis's first rate-limiting infrastructure.
+//! Per design/adrs/0101-api-keys.md -- portcullis's first rate-limiting infrastructure.
 //! In-process, single-replica, fixed-window, keyed by `apiKeyId`. Config arrives fresh on every
 //! `/verify-api-key` response (`api_key_verifier::ApiKeyRateLimit`) and is applied against the
 //! existing local bucket for that key -- a config refresh (a plan change taking effect) never

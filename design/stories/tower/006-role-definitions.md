@@ -1,13 +1,18 @@
+---
+title: "Story 006: Role Definitions"
+updated: 2026-08-05
+status: draft
+---
 # Story 006 — Role Definitions
 
 **Epic:** Identity & Access
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0047](../../decisions/0047-application-and-role-slug-validation.md)
-already specifies.** Per [ADR 0024](../../decisions/0024-contact-lifecycle-sync-to-herald.md)
-(the outbound-event precedent this reuses), [ADR 0047](../../decisions/0047-application-and-role-slug-validation.md),
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0053](../../decisions/0053-lifecycle-status-consolidation.md).
+**New — tower's side of the routes [ADR 0047](../../adrs/0047-application-and-role-slug-validation.md)
+already specifies.** Per [ADR 0024](../../adrs/0024-contact-lifecycle-sync-to-herald.md)
+(the outbound-event precedent this reuses), [ADR 0047](../../adrs/0047-application-and-role-slug-validation.md),
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md),
+[ADR 0053](../../adrs/0053-lifecycle-status-consolidation.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `roleDefinition` shape,
 [Story 004](004-applications-and-providers.md)'s `application` actor (referenced by
 application-scoped definitions).

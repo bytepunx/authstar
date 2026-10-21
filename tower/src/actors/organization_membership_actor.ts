@@ -1,4 +1,4 @@
-// Per design/decisions/0100-organization-membership-and-open-role-catalog.md
+// Per design/adrs/0100-organization-membership-and-open-role-catalog.md
 // (supersedes ADR 0090's `account.organizationId`/`organization.managers`/
 // `.successors` model). The sole source of truth for "which accounts belong
 // to which organizations, with what standing" -- one record per (account,

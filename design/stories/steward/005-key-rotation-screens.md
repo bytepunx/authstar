@@ -1,10 +1,15 @@
+---
+title: "Story 005: Key Rotation Screens"
+updated: 2026-08-06
+status: draft
+---
 # Story 005 — Key Rotation Screens
 
 **Epic:** Operator Console
 **Repo:** steward
 **Status:** Draft
-**New — steward's side of the screens [ADR 0080](../../decisions/0080-tenant-key-rotation-ceremony.md)/
-[ADR 0081](../../decisions/0081-herald-key-rotation.md) already specify.**
+**New — steward's side of the screens [ADR 0080](../../adrs/0080-tenant-key-rotation-ceremony.md)/
+[ADR 0081](../../adrs/0081-herald-key-rotation.md) already specify.**
 **Depends on:** [tower Story 011](../tower/011-tenant-management-and-key-rotation.md)'s
 `POST /operator/tenants/{slug}/rotate-keys`, herald's own future
 `POST /operator/rotate-keys` story.

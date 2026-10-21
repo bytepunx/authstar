@@ -1,3 +1,12 @@
+---
+id: ADR-0032
+title: Per-Tenant Sending Adapters and CAN-SPAM Compliance
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0032: Per-Tenant Sending Adapters and CAN-SPAM Compliance
 
 - **Status:** Accepted
@@ -16,6 +25,8 @@ and since it's now the thing sending marketing email, CAN-SPAM's requirements be
 not theoretical.
 
 ## Decision
+
+Adapter architecture, no shared fallback.
 
 ### Adapter architecture, no shared fallback
 

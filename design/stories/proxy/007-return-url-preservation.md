@@ -1,3 +1,8 @@
+---
+title: "Story 007: Return URL Preservation and Post-Login Redirect"
+updated: 2026-07-22
+status: draft
+---
 # Story 007 — Return URL Preservation and Post-Login Redirect
 
 **Epic:** OAuth2 Authentication

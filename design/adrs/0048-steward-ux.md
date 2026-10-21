@@ -1,3 +1,12 @@
+---
+id: ADR-0048
+title: "`steward`'s UX — Screens, Flows, and Two New Tower Endpoints"
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0048: `steward`'s UX — Screens, Flows, and Two New Tower Endpoints
 
 - **Status:** Accepted (extended by [ADR 0060](0060-activity-feed-and-revenue-summary.md))
@@ -25,6 +34,8 @@ should match that scope rather than grow into a general admin dashboard, and sho
 normal, bookmarkable web app.
 
 ## Decision
+
+Connect screen — token entry, not persisted, environment confirmation.
 
 ### Connect screen — token entry, not persisted, environment confirmation
 

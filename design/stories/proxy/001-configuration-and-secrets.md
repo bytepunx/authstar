@@ -1,3 +1,8 @@
+---
+title: "Story 001: Configuration and Secrets via Signet"
+updated: 2026-08-01
+status: draft
+---
 # Story 001 — Configuration and Secrets via Signet
 
 **Epic:** Configuration
@@ -18,12 +23,12 @@ signet's git-native config/secrets delivery (ADR 0004).
 
 ## Background
 
-See [ADR 0004](../../decisions/0004-signet-for-configuration-and-secrets.md) (hard signet
-dependency), [ADR 0014](../../decisions/0014-single-bundle-prefixed-tenant-keys.md) (single
+See [ADR 0004](../../adrs/0004-signet-for-configuration-and-secrets.md) (hard signet
+dependency), [ADR 0014](../../adrs/0014-single-bundle-prefixed-tenant-keys.md) (single
 bundle, prefixed tenant keys — supersedes the earlier per-tenant-namespace design in ADR 0007/
-0013), [ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md)
+0013), [ADR 0002](../../adrs/0002-multi-tenant-architecture-and-key-management.md)
 (per-tenant, per-purpose signing keys), and
-[ADR 0016](../../decisions/0016-application-layer-and-sso-scope.md) (application layer nested
+[ADR 0016](../../adrs/0016-application-layer-and-sso-scope.md) (application layer nested
 inside tenant — a tenant is a customer/company; an application is one of that tenant's
 products, e.g. one of several related sites sharing a login).
 
@@ -64,7 +69,7 @@ products, e.g. one of several related sites sharing a login).
       `cookie` (`domain`/`path`/`maxAge`/`httpOnly`/`secure`). `jwt` key-file-path fields are
       removed entirely — keys arrive as secrets, not file paths (see Story 008).
 - [ ] Each tenant entry also carries `status` (`active` | `suspended` | `deleted`) — added by
-      [ADR 0062](../../decisions/0062-tenant-status-enforcement-and-reactivation.md). Portcullis
+      [ADR 0062](../../adrs/0062-tenant-status-enforcement-and-reactivation.md). Portcullis
       enforces this at the tenant-resolution stage, before any application under it is resolved
       (Story 013).
 - [ ] Each tenant entry also carries `branding` (`name`, `logoUrl`, `primaryColor`) — non-secret.

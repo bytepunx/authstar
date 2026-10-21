@@ -1,3 +1,12 @@
+---
+id: ADR-0006
+title: RabbitMQ as the Inter-Service Message Broker
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0006: RabbitMQ as the Inter-Service Message Broker
 
 - **Status:** Accepted

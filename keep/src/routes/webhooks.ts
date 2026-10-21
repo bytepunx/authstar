@@ -181,7 +181,7 @@ async function publishSeatLimitIfSet(app: FastifyInstance, tenant: string, scope
   })
 }
 
-// design/decisions/0101-api-keys.md: mirrors `publishSeatLimitIfSet`'s
+// design/adrs/0101-api-keys.md: mirrors `publishSeatLimitIfSet`'s
 // null-is-silent convention (a mapping that never set a limit publishes
 // nothing, rather than an explicit "unlimited" event on every activation),
 // but -- unlike that function -- does **not** restrict `scope` to

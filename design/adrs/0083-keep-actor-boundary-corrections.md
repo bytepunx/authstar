@@ -1,3 +1,12 @@
+---
+id: ADR-0083
+title: Keep Actor Boundary Corrections — Keys, Missing Fields, and a Stale Contradiction
+status: accepted
+date: 2026-08-05
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0083: Keep Actor Boundary Corrections — Keys, Missing Fields, and a Stale Contradiction
 
 - **Status:** Accepted
@@ -41,6 +50,8 @@ gap, plus one stale cross-ADR contradiction:
    names was already resolved one ADR later.
 
 ## Decision
+
+`coupon.identifiedBy` becomes `{tenant}:{code}`.
 
 ### `coupon.identifiedBy` becomes `{tenant}:{code}`
 

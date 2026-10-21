@@ -1,3 +1,12 @@
+---
+id: ADR-0008
+title: RabbitMQ Access Without Native SPIFFE Support
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0008: RabbitMQ Access Without Native SPIFFE Support
 
 - **Status:** Accepted

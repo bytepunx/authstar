@@ -7,7 +7,7 @@ service's plain config (`PutServiceConfig`) and secrets (`SyncBundle`) in
 [signet](https://github.com/bytepunx/signet) before the services' own pods
 start.
 
-See [ADR 0104](https://github.com/bytepunx/authstar-design/blob/main/decisions/0104-helm-chart-and-provisioning-hook.md)
+See [ADR 0104](../design/adrs/0104-helm-chart-and-provisioning-hook.md)
 and [Story 001](https://github.com/bytepunx/authstar-design/blob/main/stories/chart/001-chart-layout-and-provisioning-hook.md)
 in `bytepunx/authstar-design` for the design this chart implements.
 
@@ -222,7 +222,7 @@ npm test            # vitest run -- 19 unit tests, hand-written fakes, no real n
 
 ## `manifest.json` -- what each service needs, before you fill in `values.yaml`
 
-Per [ADR 0105](https://github.com/bytepunx/authstar-design/blob/main/decisions/0105-signet-manifest-and-aggregated-onboarding-spec.md),
+Per [ADR 0105](../design/adrs/0105-signet-manifest-and-aggregated-onboarding-spec.md),
 services opt in to shipping a `signet-manifest.json` in their own repo, embedded at
 `/signet-manifest.json` in their published image -- a schema (field names, `config` vs `secret`,
 required, derivable) of what that service needs in signet, never actual values.

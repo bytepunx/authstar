@@ -1,3 +1,12 @@
+---
+id: ADR-0075
+title: Stuck Erasure Request Monitoring
+status: accepted
+date: 2026-08-02
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0075: Stuck Erasure Request Monitoring
 
 - **Status:** Accepted
@@ -15,6 +24,8 @@ explicitly declined to design any staleness indicator or alerting, calling it "a
 operational/observability concern, not a `web` screen-design one."
 
 ## Decision
+
+`web`'s existing erasure-requests list gains a passive staleness indicator — no new data needed.
 
 ### `web`'s existing erasure-requests list gains a passive staleness indicator — no new data needed
 

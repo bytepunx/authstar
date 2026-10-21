@@ -1,3 +1,12 @@
+---
+id: ADR-0007
+title: Signet Tenant/Namespace Mapping and Automated Tenant Onboarding
+status: superseded
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: [ADR-0014]
+---
 # ADR 0007: Signet Tenant/Namespace Mapping and Automated Tenant Onboarding
 
 - **Status:** Superseded by [ADR 0014](0014-single-bundle-prefixed-tenant-keys.md)
@@ -32,6 +41,8 @@ GitHub tooling (or `SyncBundle` for a faster, webhook-independent ingestion path
 signup and git-native provenance are not in tension.
 
 ## Decision
+
+One signet namespace per tenant, not one shared bundle.
 
 ### One signet namespace per tenant, not one shared bundle
 

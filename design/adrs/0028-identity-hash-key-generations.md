@@ -1,3 +1,12 @@
+---
+id: ADR-0028
+title: Multi-Generation Identity Hash Keys with Login-Time Reconciliation
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0028: Multi-Generation Identity Hash Keys with Login-Time Reconciliation
 
 - **Status:** Accepted
@@ -27,6 +36,8 @@ pattern from password-hash migration (bcrypt cost-factor upgrades, algorithm cha
 login moment is the one point a fresh, correlatable computation is actually possible.
 
 ## Decision
+
+`identity-hash-key` becomes an array of generations, still portcullis-only.
 
 ### `identity-hash-key` becomes an array of generations, still portcullis-only
 

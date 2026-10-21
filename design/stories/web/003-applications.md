@@ -1,11 +1,16 @@
+---
+title: "Story 003: Applications"
+updated: 2026-08-06
+status: draft
+---
 # Story 003 — Applications
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — web's side of the screens [ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md)
-already specifies.** Per [ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0079](../../decisions/0079-batched-usage-reporting-credentials.md).
+**New — web's side of the screens [ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md)
+already specifies.** Per [ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md),
+[ADR 0079](../../adrs/0079-batched-usage-reporting-credentials.md).
 **Depends on:** [tower Story 004](../tower/004-applications-and-providers.md)'s application
 routes, [keep Story 005](../keep/005-usage-records-and-credentials.md)'s usage-credential
 routes. Gated by `applications:manage` throughout ([Story 001](001-app-shell-auth-and-section-gating.md)).

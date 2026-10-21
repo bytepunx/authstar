@@ -111,7 +111,7 @@ pub async fn auth_gate(
         .await;
     }
 
-    // design/decisions/0101-api-keys.md: only reached once there's no valid session cookie --
+    // design/adrs/0101-api-keys.md: only reached once there's no valid session cookie --
     // session (browser) auth takes priority over the exact same `Authorization` header transport
     // an API key also uses. Any `Bearer` header at all is, by construction, an attempted API-key
     // credential (a browser session travels exclusively by cookie in this system), so a malformed
@@ -156,7 +156,7 @@ pub async fn auth_gate(
     }
 }
 
-/// design/decisions/0101-api-keys.md. Structurally parallel to `handle_enrichment_outcome` above
+/// design/adrs/0101-api-keys.md. Structurally parallel to `handle_enrichment_outcome` above
 /// (Allow mints a token, Deny/Unreachable don't) but **deliberately does not fail open on
 /// `Unreachable`** -- see `api_key_verifier.rs`'s own header comment for why an unverifiable
 /// credential can't be given the same benefit of the doubt a locally-signature-verified session

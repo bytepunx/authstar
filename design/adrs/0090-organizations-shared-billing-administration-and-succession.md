@@ -1,3 +1,12 @@
+---
+id: ADR-0090
+title: Organizations — Shared Billing Administration and Succession
+status: superseded
+date: 2026-08-17
+updated: 2026-09-23
+supersedes: []
+superseded_by: [ADR-0100]
+---
 # ADR 0090: Organizations — Shared Billing Administration and Succession
 
 - **Status:** Superseded by [ADR 0100](0100-organization-membership-and-open-role-catalog.md)
@@ -25,6 +34,8 @@ authstar-enforced if it's a role. It has to be a `permission` — tower's own cl
 catalogued vocabulary — or it can't be enforced by keep's new route at all.
 
 ## Decision
+
+`organization` actor (tower) — the missing tier between `account` and `tenant`.
 
 ### `organization` actor (tower) — the missing tier between `account` and `tenant`
 

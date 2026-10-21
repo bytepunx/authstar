@@ -1,11 +1,16 @@
+---
+title: "Story 007: Analytics"
+updated: 2026-08-06
+status: draft
+---
 # Story 007 — Analytics
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — web's side of the screens [ADR 0059](../../decisions/0059-web-analytics-screens.md)
-already specifies.** Per [ADR 0058](../../decisions/0058-analytics-event-shape-corrections.md),
-[ADR 0059](../../decisions/0059-web-analytics-screens.md).
+**New — web's side of the screens [ADR 0059](../../adrs/0059-web-analytics-screens.md)
+already specifies.** Per [ADR 0058](../../adrs/0058-analytics-event-shape-corrections.md),
+[ADR 0059](../../adrs/0059-web-analytics-screens.md).
 **Depends on:** [chronicle Story 002](../chronicle/002-reporting-api.md) — every route this
 screen calls.
 

@@ -1,3 +1,12 @@
+---
+id: ADR-0050
+title: "`_portal` — a Second Reserved Application for Hosted Login and Billing Pages"
+status: superseded
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: [ADR-0066]
+---
 # ADR 0050: `_portal` — a Second Reserved Application for Hosted Login and Billing Pages
 
 - **Status:** Superseded by [ADR 0066](0066-portcullis-proxies-branded-pages-to-web.md)
@@ -26,6 +35,8 @@ keys) — a compromise or outage of the public login page shouldn't share blast 
 admin surface, and vice versa.
 
 ## Decision
+
+`_portal` — a second reserved, auto-provisioned application per tenant.
 
 ### `_portal` — a second reserved, auto-provisioned application per tenant
 

@@ -1,9 +1,14 @@
+---
+title: "Story 001: Chart Layout and Signet-Provisioning Hook"
+updated: 2026-09-03
+status: draft
+---
 # Story 001 — Chart Layout and Signet-Provisioning Hook
 
 **Epic:** Deployment
 **Repo:** authstar-chart
 **Status:** Draft
-**Per:** [ADR 0104](../../decisions/0104-helm-chart-and-provisioning-hook.md)
+**Per:** [ADR 0104](../../adrs/0104-helm-chart-and-provisioning-hook.md)
 
 ---
 

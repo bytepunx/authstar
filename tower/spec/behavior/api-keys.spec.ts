@@ -5,7 +5,7 @@ import buildInMemoryConsequent from '../lib/in-memory-consequent.js'
 import { createInternalJwtFixture, bearer, type InternalJwtFixture } from '../lib/internal-jwt.js'
 import type { ConsequentApi } from '../../src/lib/consequent-types.js'
 
-// Behavior tier: design/decisions/0101-api-keys.md's personal + org route
+// Behavior tier: design/adrs/0101-api-keys.md's personal + org route
 // trees (`routes/api-keys.ts`). `requireAppRole`/the org manager+role gate
 // both do a *live* fetch against the owner's current `grantedRoles` rather
 // than trusting anything from the token's own `roles` claim (see

@@ -1,12 +1,17 @@
+---
+title: "Story 008: JWT Session Cookie Issuance"
+updated: 2026-07-25
+status: draft
+---
 # Story 008 — JWT Session Cookie Issuance
 
 **Epic:** Session Management
 **Repo:** portcullis
 **Status:** Draft
-**Adapted from:** `ref-design` Story 008 per [ADR 0001](../../decisions/0001-claims-enrichment-via-tower.md),
-[ADR 0002](../../decisions/0002-multi-tenant-architecture-and-key-management.md),
-[ADR 0014](../../decisions/0014-single-bundle-prefixed-tenant-keys.md),
-[ADR 0027](../../decisions/0027-portcullis-computed-identity-hash.md).
+**Adapted from:** `ref-design` Story 008 per [ADR 0001](../../adrs/0001-claims-enrichment-via-tower.md),
+[ADR 0002](../../adrs/0002-multi-tenant-architecture-and-key-management.md),
+[ADR 0014](../../adrs/0014-single-bundle-prefixed-tenant-keys.md),
+[ADR 0027](../../adrs/0027-portcullis-computed-identity-hash.md).
 
 ---
 

@@ -1,11 +1,16 @@
+---
+title: "Story 012: Signet Precedence and JWKS URL"
+updated: 2026-09-03
+status: draft
+---
 # Story 012 — Signet Precedence and JWKS URL
 
 **Epic:** Config/Secrets Compliance
 **Repo:** web
 **Status:** Draft
-**Per:** [ADR 0102](../../decisions/0102-signet-precedence-and-fallback-scope.md), closing the gap
-separately tracked in [ADR 0086](../../decisions/0086-jwks-endpoint-for-internal-jwt-verification.md)
-and [ADR 0091](../../decisions/0091-tenant-owned-domains-and-the-authstar-admin-surface.md).
+**Per:** [ADR 0102](../../adrs/0102-signet-precedence-and-fallback-scope.md), closing the gap
+separately tracked in [ADR 0086](../../adrs/0086-jwks-endpoint-for-internal-jwt-verification.md)
+and [ADR 0091](../../adrs/0091-tenant-owned-domains-and-the-authstar-admin-surface.md).
 
 ---
 

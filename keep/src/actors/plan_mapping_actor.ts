@@ -21,7 +21,7 @@ export interface GrantedRole {
   role: string
 }
 
-// design/decisions/0101-api-keys.md. `apiKeyRateLimit` mirrors keep's own
+// design/adrs/0101-api-keys.md. `apiKeyRateLimit` mirrors keep's own
 // `EntitlementPublisher`-facing shape 1:1 (see entitlement-publisher.ts) --
 // no separate route-layer type, since nothing here transforms it.
 export interface ApiKeyRateLimit {
@@ -37,7 +37,7 @@ export interface PlanMappingState {
   seatLimit: number | null
   grantedRoles: GrantedRole[]
   meter: string | null
-  // design/decisions/0101-api-keys.md, added after this actor's own
+  // design/adrs/0101-api-keys.md, added after this actor's own
   // original ADR 0083 design -- same mechanical addition `meter` above
   // already went through (field + default -> Create/UpdateCommand ->
   // create()/update() -> created()/updated()). `null` = unlimited, matching

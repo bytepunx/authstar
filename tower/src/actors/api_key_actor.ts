@@ -1,4 +1,4 @@
-// Per design/decisions/0101-api-keys.md. A long-lived, programmatic
+// Per design/adrs/0101-api-keys.md. A long-lived, programmatic
 // credential scoped to a subset of roles its owner (an account or an
 // organization) currently holds for one specific application -- shown to
 // the caller once, at creation, never again. `grantedRoles` is the

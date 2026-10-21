@@ -1,14 +1,19 @@
+---
+title: "Story 004: Trials and Coupons"
+updated: 2026-08-05
+status: draft
+---
 # Story 004 — Trials and Coupons
 
 **Epic:** Billing
 **Repo:** keep
 **Status:** Draft
-**New — keep's side of the routes [ADR 0041](../../decisions/0041-keep-api-surface.md) already
-specifies.** Per [ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0019](../../decisions/0019-invite-codes.md),
-[ADR 0039](../../decisions/0039-keep-trials-and-coupons.md),
-[ADR 0053](../../decisions/0053-lifecycle-status-consolidation.md),
-[ADR 0083](../../decisions/0083-keep-actor-boundary-corrections.md).
+**New — keep's side of the routes [ADR 0041](../../adrs/0041-keep-api-surface.md) already
+specifies.** Per [ADR 0018](../../adrs/0018-trial-roles-and-keep-boundary.md),
+[ADR 0019](../../adrs/0019-invite-codes.md),
+[ADR 0039](../../adrs/0039-keep-trials-and-coupons.md),
+[ADR 0053](../../adrs/0053-lifecycle-status-consolidation.md),
+[ADR 0083](../../adrs/0083-keep-actor-boundary-corrections.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `trial`/`coupon` shapes.
 
 ---

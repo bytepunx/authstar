@@ -1,10 +1,15 @@
+---
+title: "Story 001: Herald Actor Definitions"
+updated: 2026-08-05
+status: draft
+---
 # Story 001 — Herald Actor Definitions
 
 **Epic:** Domain Model
 **Repo:** herald
 **Status:** Draft
-**New — consolidates the actor model scattered across decisions/0022–0084 into one
-implementation-ready reference.** Per [tech-stack.md](../../docs/tech-stack.md)'s choice of
+**New — consolidates the actor model scattered across adrs/0022–0084 into one
+implementation-ready reference.** Per [tech-stack.md](../../tech/tech-stack.md)'s choice of
 `consequent`/`consequent-postgres`/`fount`/`node-flakes` (shared with tower/keep) and
 [tower Story 001](../tower/001-actor-definitions.md)'s established conventions.
 
@@ -14,7 +19,7 @@ implementation-ready reference.** Per [tech-stack.md](../../docs/tech-stack.md)'
 
 Same domain-model shape as tower and keep — `consequent` actors, `_actor.ts` files under
 `./actors/`. Every shape below is the **final** form, incorporating
-[ADR 0084](../../decisions/0084-herald-actor-boundary-corrections.md)'s corrections — herald was
+[ADR 0084](../../adrs/0084-herald-actor-boundary-corrections.md)'s corrections — herald was
 the last of the three `consequent`-backed services to get this pass, and had the least-declared
 key material of the three: no actor here ever had an explicit `identifiedBy` stated anywhere
 before now.
@@ -243,7 +248,7 @@ addition), 0084 (confirms the existing bare-`tenant` key needs no fix).
 ## Herald's own keys — pure signet secrets, no queryable actor
 
 Neither key below is a `consequent` actor — both are signet-managed secrets, generated only via
-[ADR 0081](../../decisions/0081-herald-key-rotation.md)'s operator route, same category as
+[ADR 0081](../../adrs/0081-herald-key-rotation.md)'s operator route, same category as
 tower's own signing keypairs.
 
 - [ ] **Payload-encryption keypair** (ADR 0025) — public key distributed to every publisher

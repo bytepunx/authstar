@@ -1,9 +1,14 @@
+---
+title: "Story 024: Self-Service Identity Linking"
+updated: 2026-08-01
+status: draft
+---
 # Story 024 — Self-Service Identity Linking
 
 **Epic:** OAuth2 Authentication
 **Repo:** portcullis
 **Status:** Draft
-**New — not present in `ref-design`.** Per [ADR 0070](../../decisions/0070-self-service-identity-linking.md).
+**New — not present in `ref-design`.** Per [ADR 0070](../../adrs/0070-self-service-identity-linking.md).
 
 ---
 

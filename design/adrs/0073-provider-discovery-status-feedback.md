@@ -1,3 +1,12 @@
+---
+id: ADR-0073
+title: Provider Discovery Status Feedback
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0073: Provider Discovery Status Feedback
 
 - **Status:** Accepted
@@ -16,6 +25,8 @@ today at all — portcullis's only outbound channel is analytics, to lookout/chr
 different system entirely, built for event counts, not "is this resource currently healthy."
 
 ## Decision
+
+A new, narrow write-back path: `POST /provider-discovery-status`.
 
 ### A new, narrow write-back path: `POST /provider-discovery-status`
 

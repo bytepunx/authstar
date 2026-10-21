@@ -1,3 +1,9 @@
+---
+title: Tech Stack Reference
+updated: 2026-09-23
+status: active
+topics: [all]
+---
 # Tech Stack Reference
 
 Concrete library/framework choices for implementing authstar's services, one level more

@@ -1,3 +1,8 @@
+---
+title: "Story 019: CORS Handling"
+updated: 2026-07-22
+status: draft
+---
 # Story 019 — CORS Handling
 
 **Epic:** Utility Endpoints

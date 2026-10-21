@@ -1,18 +1,23 @@
+---
+title: "Story 007: Invites and Invite Codes"
+updated: 2026-08-05
+status: draft
+---
 # Story 007 — Invites and Invite Codes
 
 **Epic:** Identity & Access
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0030](../../decisions/0030-tower-api-surface.md)/
-[ADR 0047](../../decisions/0047-application-and-role-slug-validation.md) already specify.**
-Per [ADR 0018](../../decisions/0018-trial-roles-and-keep-boundary.md),
-[ADR 0019](../../decisions/0019-invite-codes.md),
-[ADR 0021](../../decisions/0021-cli-operator-bootstrap.md),
-[ADR 0023](../../decisions/0023-pii-isolation-via-hashed-contact-records.md),
-[ADR 0047](../../decisions/0047-application-and-role-slug-validation.md),
-[ADR 0053](../../decisions/0053-lifecycle-status-consolidation.md),
-[ADR 0067](../../decisions/0067-tenant-creation-and-provisioning.md),
-[ADR 0082](../../decisions/0082-tower-actor-boundary-corrections.md).
+**New — tower's side of the routes [ADR 0030](../../adrs/0030-tower-api-surface.md)/
+[ADR 0047](../../adrs/0047-application-and-role-slug-validation.md) already specify.**
+Per [ADR 0018](../../adrs/0018-trial-roles-and-keep-boundary.md),
+[ADR 0019](../../adrs/0019-invite-codes.md),
+[ADR 0021](../../adrs/0021-cli-operator-bootstrap.md),
+[ADR 0023](../../adrs/0023-pii-isolation-via-hashed-contact-records.md),
+[ADR 0047](../../adrs/0047-application-and-role-slug-validation.md),
+[ADR 0053](../../adrs/0053-lifecycle-status-consolidation.md),
+[ADR 0067](../../adrs/0067-tenant-creation-and-provisioning.md),
+[ADR 0082](../../adrs/0082-tower-actor-boundary-corrections.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `invite`/`inviteCode` shapes,
 [Story 003](003-identity-resolution-at-login.md) (redemption is wired into that same call).
 

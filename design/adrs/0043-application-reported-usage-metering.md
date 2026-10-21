@@ -1,3 +1,12 @@
+---
+id: ADR-0043
+title: Application-Reported Usage Metering
+status: accepted
+date: 2026-07-30
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0043: Application-Reported Usage Metering
 
 - **Status:** Accepted
@@ -19,6 +28,8 @@ app-side awareness is unavoidable. The goal is minimizing that awareness to the 
 possible surface, not eliminating it.
 
 ## Decision
+
+The app reports usage by calling back through the same gate, using only what it already has.
 
 ### The app reports usage by calling back through the same gate, using only what it already has
 

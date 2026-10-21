@@ -1,3 +1,12 @@
+---
+id: ADR-0041
+title: Keep's HTTP API Surface
+status: accepted
+date: 2026-07-29
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0041: Keep's HTTP API Surface
 
 - **Status:** Accepted (corrected by [ADR 0046](0046-tenant-owned-stripe-configuration.md))
@@ -13,6 +22,8 @@
 > reserved path, since it's tenant-scoped again. Both sections below are updated to reflect this.
 
 ## Decision
+
+Auth model — same as tower/herald/chronicle; "web reaches keep directly" means bypassing tower, not portcullis.
 
 ### Auth model — same as tower/herald/chronicle; "web reaches keep directly" means bypassing tower, not portcullis
 

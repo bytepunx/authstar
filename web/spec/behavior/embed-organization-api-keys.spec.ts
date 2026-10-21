@@ -4,7 +4,7 @@ import { actions, load } from '../../src/routes/(embed)/organizations/[organizat
 import { createFakeTowerClient, fakeApiKey, fakeOrganization } from '../fixtures/fake-tower-client'
 import { fakeSession } from '../fixtures/fake-session'
 
-// Behavior tier: design/decisions/0101-api-keys.md's org-scoped keys embed
+// Behavior tier: design/adrs/0101-api-keys.md's org-scoped keys embed
 // surface -- reuses the *existing* org embed layout/membership gate via
 // ordinary SvelteKit route nesting (no new layout file), so this spec only
 // covers this page's own load/actions, not the membership gate itself

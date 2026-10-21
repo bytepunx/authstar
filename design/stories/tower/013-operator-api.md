@@ -1,16 +1,21 @@
+---
+title: "Story 013: Operator API"
+updated: 2026-08-05
+status: draft
+---
 # Story 013 — Operator API
 
 **Epic:** Operator Access
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0021](../../decisions/0021-cli-operator-bootstrap.md)/
-[ADR 0048](../../decisions/0048-steward-ux.md)/[ADR 0075](../../decisions/0075-stuck-erasure-request-monitoring.md)
-already specify.** Per [ADR 0021](../../decisions/0021-cli-operator-bootstrap.md),
-[ADR 0023](../../decisions/0023-pii-isolation-via-hashed-contact-records.md),
-[ADR 0030](../../decisions/0030-tower-api-surface.md),
-[ADR 0045](../../decisions/0045-steward-operator-console.md),
-[ADR 0048](../../decisions/0048-steward-ux.md),
-[ADR 0075](../../decisions/0075-stuck-erasure-request-monitoring.md).
+**New — tower's side of the routes [ADR 0021](../../adrs/0021-cli-operator-bootstrap.md)/
+[ADR 0048](../../adrs/0048-steward-ux.md)/[ADR 0075](../../adrs/0075-stuck-erasure-request-monitoring.md)
+already specify.** Per [ADR 0021](../../adrs/0021-cli-operator-bootstrap.md),
+[ADR 0023](../../adrs/0023-pii-isolation-via-hashed-contact-records.md),
+[ADR 0030](../../adrs/0030-tower-api-surface.md),
+[ADR 0045](../../adrs/0045-steward-operator-console.md),
+[ADR 0048](../../adrs/0048-steward-ux.md),
+[ADR 0075](../../adrs/0075-stuck-erasure-request-monitoring.md).
 **Depends on:** Stories 004, 005, 007, 010, 011 — most of this surface is those same handlers,
 reused, not reimplemented.
 

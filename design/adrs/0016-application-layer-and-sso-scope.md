@@ -1,3 +1,12 @@
+---
+id: ADR-0016
+title: Application Layer Nested Within Tenant; SSO Scope Limited to Shared-Parent-Domain
+status: accepted
+date: 2026-07-22
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0016: Application Layer Nested Within Tenant; SSO Scope Limited to Shared-Parent-Domain
 
 - **Status:** Accepted
@@ -16,6 +25,8 @@ prior identity-actor discussion); (2) needs its own answer, given browser cookie
 hard boundary, not a config choice.
 
 ## Decision
+
+A new `application` layer, nested inside tenant.
 
 ### A new `application` layer, nested inside tenant
 

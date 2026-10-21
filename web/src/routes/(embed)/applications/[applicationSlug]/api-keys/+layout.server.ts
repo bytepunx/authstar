@@ -1,7 +1,7 @@
 import type { LayoutServerLoad } from './$types'
 import { requireSession } from '$lib/server/guard'
 
-// design/decisions/0101-api-keys.md. The first individual-account-scoped
+// design/adrs/0101-api-keys.md. The first individual-account-scoped
 // (not organization-scoped) embed surface in `web` -- gated on
 // `requireSession` alone, no membership check, since a personal API key is
 // self-service (an account manages its own keys, never someone else's).

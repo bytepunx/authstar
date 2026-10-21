@@ -1,3 +1,12 @@
+---
+id: ADR-0051
+title: "`web`'s Applications and Identity & Access Screens"
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0051: `web`'s Applications and Identity & Access Screens
 
 - **Status:** Accepted
@@ -13,6 +22,8 @@ Designing these two sections in detail against tower's exact actor shapes (ADR 0
 ADR covers both the screen designs and the corrections found along the way.
 
 ## Decision
+
+Applications section.
 
 ### Applications section
 

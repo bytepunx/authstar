@@ -1,10 +1,15 @@
+---
+title: "Story 015: Gate Rejection Responses"
+updated: 2026-07-22
+status: draft
+---
 # Story 015 — Gate Rejection Responses
 
 **Epic:** Reverse Proxy
 **Repo:** portcullis
 **Status:** Draft
 **Adapted from:** `ref-design` Story 015 ("Unauthenticated API Client Response") — broadened
-per [ADR 0003](../../decisions/0003-enrichment-outcome-response-contract.md) to cover every way
+per [ADR 0003](../../adrs/0003-enrichment-outcome-response-contract.md) to cover every way
 the gate (Story 013) can reject a request, not just the missing-session-JWT case.
 
 ---
@@ -18,7 +23,7 @@ server-side, nothing that leaks *why* to the caller.
 
 **Scope:** every response in this story applies to **protected routes only**. On an exempt
 route, a `Deny` or fail-closed `Unreachable` outcome never produces any of these responses — the
-request is forwarded instead, per [ADR 0015](../../decisions/0015-exempt-routes-never-blocked.md).
+request is forwarded instead, per [ADR 0015](../../adrs/0015-exempt-routes-never-blocked.md).
 
 ---
 

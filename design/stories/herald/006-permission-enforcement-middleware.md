@@ -1,14 +1,19 @@
+---
+title: "Story 006: Permission Enforcement Middleware"
+updated: 2026-08-14
+status: draft
+---
 # Story 006 — Permission Enforcement Middleware
 
 **Epic:** Sending
 **Repo:** herald
 **Status:** Draft
 **New — every prior herald story assumes this exists and none of them specify it.** Per
-[ADR 0034](../../decisions/0034-herald-api-surface.md),
-[ADR 0049](../../decisions/0049-web-admin-information-architecture.md),
-[ADR 0051](../../decisions/0051-web-applications-and-identity-access-screens.md),
-[ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md),
-[ADR 0089](../../decisions/0089-internal-jwt-carries-its-own-tenant-hint.md).
+[ADR 0034](../../adrs/0034-herald-api-surface.md),
+[ADR 0049](../../adrs/0049-web-admin-information-architecture.md),
+[ADR 0051](../../adrs/0051-web-applications-and-identity-access-screens.md),
+[ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md),
+[ADR 0089](../../adrs/0089-internal-jwt-carries-its-own-tenant-hint.md).
 **Depends on:** [tower Story 014](../tower/014-permission-enforcement-middleware.md) — same
 mechanism, not re-derived here.
 
@@ -37,7 +42,7 @@ same generic-403 posture. No herald-specific exemption beyond the route table be
 | Communication types/templates CRUD | `communication-types:manage` | [003](003-communication-types-and-templates.md) |
 | Communication history read | `communications:read` | [004](004-communication-history-opt-outs-and-suppressions.md) |
 | Opt-outs read/write | `opt-outs:manage` | [004](004-communication-history-opt-outs-and-suppressions.md) |
-| Suppressions read/write (admin-facing) | `suppressions:manage` | [004](004-communication-history-opt-outs-and-suppressions.md), [ADR 0074](../../decisions/0074-herald-bounce-complaint-and-suppression.md) |
+| Suppressions read/write (admin-facing) | `suppressions:manage` | [004](004-communication-history-opt-outs-and-suppressions.md), [ADR 0074](../../adrs/0074-herald-bounce-complaint-and-suppression.md) |
 | Sending config read/write | `sending-config:manage` | [005](005-webhooks-config-rotation-and-activity.md) (ADR 0049) |
 | Operator key rotation, activity feed | operator bearer token, not a `permissions` grant | [005](005-webhooks-config-rotation-and-activity.md) — same mechanism as tower Story 013, not this story's concern |
 

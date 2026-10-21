@@ -1,11 +1,16 @@
+---
+title: "Story 015: Organization Lifecycle: Multi-Org Membership and an Open Role Catalog"
+updated: 2026-08-29
+status: shipped
+---
 # Story 015 — Organization Lifecycle: Multi-Org Membership and an Open Role Catalog
 
 **Epic:** Billing
 **Repo:** tower
 **Status:** Shipped
-**Per:** [ADR 0100](../../decisions/0100-organization-membership-and-open-role-catalog.md) (supersedes
-[ADR 0090](../../decisions/0090-organizations-shared-billing-administration-and-succession.md)/
-[ADR 0098](../../decisions/0098-organization-permission-lifecycle.md), which this story's own first
+**Per:** [ADR 0100](../../adrs/0100-organization-membership-and-open-role-catalog.md) (supersedes
+[ADR 0090](../../adrs/0090-organizations-shared-billing-administration-and-succession.md)/
+[ADR 0098](../../adrs/0098-organization-permission-lifecycle.md), which this story's own first
 draft was written against — see git history for that version).
 **Depends on:** [Story 001](001-actor-definitions.md), [Story 006](006-role-definitions.md)'s
 `roleDefinition`/`rolesValid` mechanism (reused for organization-scope roles, not duplicated).
@@ -92,5 +97,5 @@ vocabulary.
 - Entitlement publishing for organization-scoped subscriptions (keep's side) — see ADR 0100's own
   Decision section and `keep`'s `webhooks.ts`.
 - The embeddable, brandable customer-facing UI for this surface — see
-  [ADR 0099](../../decisions/0099-hosted-tenant-brandable-ui-surfaces.md) and its concrete
+  [ADR 0099](../../adrs/0099-hosted-tenant-brandable-ui-surfaces.md) and its concrete
   implementation in `authstar/web`'s `(embed)` route group.

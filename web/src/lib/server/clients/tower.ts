@@ -76,7 +76,7 @@ export interface ApplicationUpdateInput {
 	status?: 'active' | 'suspended' | 'deleted'
 }
 
-// ADR 0100 (design/decisions/0100-organization-membership-and-open-role-
+// ADR 0100 (design/adrs/0100-organization-membership-and-open-role-
 // catalog.md, supersedes ADR 0090). `grantedRoles`/`seatLimit` are
 // populated only by keep's entitlement events, never by any route here
 // directly -- read-only in this client, same as tower itself treats them.
@@ -86,7 +86,7 @@ export interface Organization {
 	name: string
 	grantedRoles: Array<{ application: string; role: string }>
 	seatLimit: number | null
-	// design/decisions/0101-api-keys.md -- same keep entitlement pipeline as
+	// design/adrs/0101-api-keys.md -- same keep entitlement pipeline as
 	// `seatLimit` above.
 	apiKeyLimit: number | null
 	apiKeyRateLimit: ApiKeyRateLimit | null
@@ -127,7 +127,7 @@ export interface OrganizationInvite {
 	expiresAt: string | null
 }
 
-// design/decisions/0101-api-keys.md's own `RoleGrant` shape (tower's
+// design/adrs/0101-api-keys.md's own `RoleGrant` shape (tower's
 // account_actor.ts) -- `scope: 'tenant'` grants apply to every application,
 // `{application}` grants apply to just that one. Used here only for the
 // "which roles can I currently grant to a key" checklist -- callers filter
@@ -157,7 +157,7 @@ export interface ApiKeyRateLimit {
 	burst?: number
 }
 
-// design/decisions/0101-api-keys.md. `grantedRoles` here is plain role-name
+// design/adrs/0101-api-keys.md. `grantedRoles` here is plain role-name
 // strings (not `AccountRoleGrant`'s `{name, scope}` shape) -- a key is
 // already pinned to one `application`, so no per-role scope wrapper is
 // needed, matching tower's own `apiKeyActor` state shape exactly.

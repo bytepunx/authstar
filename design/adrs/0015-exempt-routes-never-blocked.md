@@ -1,3 +1,12 @@
+---
+id: ADR-0015
+title: Exempt Routes Are Never Blocked by the Enrichment Outcome
+status: accepted
+date: 2026-07-22
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0015: Exempt Routes Are Never Blocked by the Enrichment Outcome
 
 - **Status:** Accepted

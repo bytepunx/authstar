@@ -1,13 +1,18 @@
+---
+title: "Story 005: Billing"
+updated: 2026-08-06
+status: draft
+---
 # Story 005 — Billing
 
 **Epic:** Admin App
 **Repo:** web
 **Status:** Draft
-**New — web's side of the screens [ADR 0054](../../decisions/0054-web-billing-and-communications-screens.md)
-already specifies.** Per [ADR 0052](../../decisions/0052-keep-herald-own-signet-access.md),
-[ADR 0054](../../decisions/0054-web-billing-and-communications-screens.md),
-[ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md),
-[ADR 0077](../../decisions/0077-keep-refunds-and-disputes.md).
+**New — web's side of the screens [ADR 0054](../../adrs/0054-web-billing-and-communications-screens.md)
+already specifies.** Per [ADR 0052](../../adrs/0052-keep-herald-own-signet-access.md),
+[ADR 0054](../../adrs/0054-web-billing-and-communications-screens.md),
+[ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md),
+[ADR 0077](../../adrs/0077-keep-refunds-and-disputes.md).
 **Depends on:** [keep Story 001](../keep/001-actor-definitions.md) through
 [Story 006](../keep/006-self-service-config-and-activity.md) — every route this screen calls is
 already fully specified there.

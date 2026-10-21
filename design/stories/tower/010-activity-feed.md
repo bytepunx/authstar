@@ -1,15 +1,20 @@
+---
+title: "Story 010: Activity Feed"
+updated: 2026-08-05
+status: draft
+---
 # Story 010 — Activity Feed
 
 **Epic:** Activity & Observability
 **Repo:** tower
 **Status:** Draft
-**New — tower's side of the routes [ADR 0048](../../decisions/0048-steward-ux.md)/
-[ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md) already specify.**
-Per [ADR 0021](../../decisions/0021-cli-operator-bootstrap.md),
-[ADR 0048](../../decisions/0048-steward-ux.md),
-[ADR 0060](../../decisions/0060-activity-feed-and-revenue-summary.md).
+**New — tower's side of the routes [ADR 0048](../../adrs/0048-steward-ux.md)/
+[ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md) already specify.**
+Per [ADR 0021](../../adrs/0021-cli-operator-bootstrap.md),
+[ADR 0048](../../adrs/0048-steward-ux.md),
+[ADR 0060](../../adrs/0060-activity-feed-and-revenue-summary.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s actor shapes;
-[tech-stack.md](../../docs/tech-stack.md)'s `consequent` choice — this story leans directly on
+[tech-stack.md](../../tech/tech-stack.md)'s `consequent` choice — this story leans directly on
 its real `getEventStream` API.
 
 ---

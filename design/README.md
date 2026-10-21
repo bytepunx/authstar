@@ -4,7 +4,7 @@ Design decisions, stories, and reference documentation for the authstar project.
 
 ## Contents
 
-- `decisions/` — architecture decision records (ADRs). The authoritative, dated record of
+- `adrs/` — architecture decision records (ADRs). The authoritative, dated record of
   settled design calls across authstar's services. Consult this before implementing anything
   that touches a decision already recorded here.
 - `stories/` — user-facing feature specifications, organized per service.

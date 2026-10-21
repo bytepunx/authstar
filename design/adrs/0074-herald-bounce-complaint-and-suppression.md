@@ -1,3 +1,12 @@
+---
+id: ADR-0074
+title: Bounce/Complaint Handling and Suppression Lists
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0074: Bounce/Complaint Handling and Suppression Lists
 
 - **Status:** Accepted
@@ -17,6 +26,8 @@ next adapter after SMTP, ADR 0032), which do have a standard provider-originated
 mechanism.
 
 ## Decision
+
+Scope: API-based adapters only — SMTP bounce/complaint handling stays explicitly out of scope.
 
 ### Scope: API-based adapters only — SMTP bounce/complaint handling stays explicitly out of scope
 

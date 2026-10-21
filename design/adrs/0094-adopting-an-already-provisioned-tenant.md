@@ -1,3 +1,12 @@
+---
+id: ADR-0094
+title: Adopting an Already-Provisioned Tenant
+status: accepted
+date: 2026-08-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0094: Adopting an Already-Provisioned Tenant
 
 - **Status:** Accepted

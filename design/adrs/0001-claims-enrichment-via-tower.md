@@ -1,3 +1,12 @@
+---
+id: ADR-0001
+title: Claims Enrichment via Tower
+status: accepted
+date: 2026-07-21
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0001: Claims Enrichment via Tower
 
 - **Status:** Accepted
@@ -23,6 +32,8 @@ failures are handled, and how a person's identity is represented when they can a
 via more than one OIDC provider.
 
 ## Decision
+
+Scope: enricher calls tower only.
 
 ### Scope: enricher calls tower only
 

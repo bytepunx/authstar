@@ -1,10 +1,15 @@
+---
+title: "Story 004: Activity and Stuck Erasure Requests"
+updated: 2026-08-06
+status: draft
+---
 # Story 004 — Activity and Stuck Erasure Requests
 
 **Epic:** Operator Console
 **Repo:** steward
 **Status:** Draft
-**New — steward's side of the screens [ADR 0048](../../decisions/0048-steward-ux.md)/
-[ADR 0075](../../decisions/0075-stuck-erasure-request-monitoring.md) already specify.**
+**New — steward's side of the screens [ADR 0048](../../adrs/0048-steward-ux.md)/
+[ADR 0075](../../adrs/0075-stuck-erasure-request-monitoring.md) already specify.**
 **Depends on:** [tower Story 010](../tower/010-activity-feed.md)'s operator-scoped activity
 route, [tower Story 013](../tower/013-operator-api.md)'s `GET /operator/erasure-requests/stuck`.
 

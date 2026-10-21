@@ -1,3 +1,12 @@
+---
+id: ADR-0061
+title: "`web`'s Overview Screen"
+status: accepted
+date: 2026-08-01
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0061: `web`'s Overview Screen
 
 - **Status:** Accepted
@@ -7,6 +16,8 @@
 - **Depends on:** [ADR 0060](0060-activity-feed-and-revenue-summary.md)
 
 ## Decision
+
+Three independent tiles, each shown or hidden by its own permission.
 
 ### Three independent tiles, each shown or hidden by its own permission
 

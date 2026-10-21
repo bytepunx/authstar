@@ -1,13 +1,18 @@
+---
+title: "Story 005: Usage Records and Usage-Reporting Credentials"
+updated: 2026-08-05
+status: draft
+---
 # Story 005 — Usage Records and Usage-Reporting Credentials
 
 **Epic:** Billing
 **Repo:** keep
 **Status:** Draft
-**New — keep's side of the routes [ADR 0041](../../decisions/0041-keep-api-surface.md) already
-specifies.** Per [ADR 0030](../../decisions/0030-tower-api-surface.md),
-[ADR 0043](../../decisions/0043-application-reported-usage-metering.md),
-[ADR 0079](../../decisions/0079-batched-usage-reporting-credentials.md),
-[ADR 0083](../../decisions/0083-keep-actor-boundary-corrections.md).
+**New — keep's side of the routes [ADR 0041](../../adrs/0041-keep-api-surface.md) already
+specifies.** Per [ADR 0030](../../adrs/0030-tower-api-surface.md),
+[ADR 0043](../../adrs/0043-application-reported-usage-metering.md),
+[ADR 0079](../../adrs/0079-batched-usage-reporting-credentials.md),
+[ADR 0083](../../adrs/0083-keep-actor-boundary-corrections.md).
 **Depends on:** [Story 001](001-actor-definitions.md)'s `usageRecord`/
 `usageReportingCredential` shapes.
 

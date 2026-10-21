@@ -1,3 +1,12 @@
+---
+id: ADR-0036
+title: "`chronicle`'s Reporting API and Retention Configuration"
+status: accepted
+date: 2026-07-25
+updated: 2026-09-23
+supersedes: []
+superseded_by: []
+---
 # ADR 0036: `chronicle`'s Reporting API and Retention Configuration
 
 - **Status:** Accepted
@@ -15,6 +24,8 @@ needs to be configuration, not a hardcoded DDL value, and the query/reporting AP
 consume was deferred until the storage design settled.
 
 ## Decision
+
+Retention is signet-delivered configuration, defaulting to 24 months.
 
 ### Retention is signet-delivered configuration, defaulting to 24 months
 
