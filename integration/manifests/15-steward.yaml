@@ -1,0 +1,93 @@
+# SIGNET_* bootstrap now set here (ADR 0102 / steward story 006), enabling
+# Signet-Configured Mode for steward's two plain config URLs (towerUrl/
+# heraldUrl, sourced from config/authstar/steward.yaml, overriding
+# TOWER_URL/HERALD_URL below if both are present) once steward's own
+# companion PR adds the dialWorkload/getServiceBundle wiring. Until then,
+# steward stays in today's Env-Only Mode unchanged (per ADR 0102, that mode
+# remains legitimate for steward) -- TOWER_URL/HERALD_URL stay set below as
+# that mode's fallback. No SIGNET_ADMIN_ADDR: steward makes no admin/GitOps
+# calls. Steward never holds an operator bearer token itself (ADR 0045/0048)
+# -- a human types tower's operatorToken secret into steward's own Connect
+# UI each session, so nothing here needs to source that secret; unaffected
+# by this change.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: steward
+  namespace: authstar
+  labels:
+    app: steward
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: steward
+  template:
+    metadata:
+      labels:
+        app: steward
+    spec:
+      serviceAccountName: steward
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: steward
+          image: bytepunx/authstar-steward:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          # TCP-only (no dedicated health route on any of these services yet):
+          # confirmed for real that a service can be "1/1 Running" in
+          # kubectl's eyes while its HTTP listener has actually stopped
+          # accepting connections (a self-restart-on-signet-bundle-change
+          # whose shutdown hung instead of exiting, observed live against
+          # this exact cluster) -- with no probe at all, Kubernetes has no
+          # way to detect or recover from that. A TCP probe at least catches
+          # "port stopped accepting connections", which is what actually
+          # happened.
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
+            - name: TOWER_URL
+              value: http://tower.authstar.svc.cluster.local:8080
+            - name: HERALD_URL
+              value: http://herald.authstar.svc.cluster.local:8080
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: steward
+  namespace: authstar
+spec:
+  selector:
+    app: steward
+  ports:
+    - port: 3000
+      targetPort: 3000

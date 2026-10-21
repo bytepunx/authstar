@@ -1,0 +1,92 @@
+# SIGNET_* bootstrap now set here (ADR 0102 / lookout story 002). Lookout
+# has exactly one signet-scoped setting -- LOOKOUT_RABBITMQ_URL -- and the
+# secret scope for it (secrets/authstar/lookout/rabbitmqUrl.yaml) was
+# already provisioned but never consumed: the hardcoded plaintext value
+# below (including this specific cluster's real broker credential) is
+# exactly the gap story 002 closes. Per that story's own minimal bootstrap
+# list, no SIGNET_ADMIN_ADDR is set here -- lookout makes no admin/GitOps
+# calls (ADR 0035's "stays simple by construction").
+#
+# This manifest change is only safe/backward-compatible once lookout's own
+# companion PR (story 002, adding the dialWorkload/getServiceBundle wiring)
+# has merged -- see this repo's own PR description for the exact
+# merge-order dependency. Until then, lookout will crash on startup:
+# presence of SIGNET_ADDR alone doesn't help it if its own code doesn't yet
+# dial signet with it.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: lookout
+  namespace: authstar
+  labels:
+    app: lookout
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: lookout
+  template:
+    metadata:
+      labels:
+        app: lookout
+    spec:
+      serviceAccountName: lookout
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: lookout
+          image: bytepunx/authstar-lookout:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+          # TCP-only (no dedicated health route on any of these services yet):
+          # confirmed for real that a service can be "1/1 Running" in
+          # kubectl's eyes while its HTTP listener has actually stopped
+          # accepting connections (a self-restart-on-signet-bundle-change
+          # whose shutdown hung instead of exiting, observed live against
+          # this exact cluster) -- with no probe at all, Kubernetes has no
+          # way to detect or recover from that. A TCP probe at least catches
+          # "port stopped accepting connections", which is what actually
+          # happened.
+          livenessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: lookout
+  namespace: authstar
+spec:
+  selector:
+    app: lookout
+  ports:
+    - port: 3000
+      targetPort: 3000
