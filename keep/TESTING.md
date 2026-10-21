@@ -131,14 +131,13 @@ pass added on top:**
 - Story 005 (usage records and credentials) — recording with meter validation and idempotency,
   admin list/detail, credential issuance/listing/revocation.
 - Story 006 — `stripe-config` GET/PATCH with set-time validation (write-only, never returns the
-  secret). `GET /me/subscription` and `GET /tenants/{tenantSlug}/activity` are **not**
-  implemented (see below).
+  secret). `GET /me/subscription` (S-0006, `routes/me.ts`, `spec/behavior/me.spec.ts`): tenant
+  and account from the forwarded internal JWT, plan name joined from the plan mapping, nulls
+  when the account has no subscription, 403 for a missing, degraded, or account-less token.
+  `GET /tenants/{tenantSlug}/activity` is **not** implemented (see below).
 
 **Deliberately left uncovered (explicit follow-up, not partial/broken work):**
 
-- `GET /me/subscription` (Story 006) — resolves off a forwarded internal JWT keyed by
-  portcullis; no JWT verification path exists in this slice at all (no `jose` wiring), and
-  faking one convincingly felt like a separate, real piece of work rather than a quick add.
 - `GET /tenants/{tenantSlug}/activity` (Story 006) — same `getEventStream`-across-actor-types
   mechanism as tower Story 010, reused rather than re-derived per that story's own text; not
   implemented here purely for time, not because it's hard.

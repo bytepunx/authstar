@@ -12,6 +12,7 @@ pub mod identities;
 pub mod identity_hash;
 pub mod jwt;
 pub mod keys;
+pub mod me;
 pub mod oauth;
 pub mod provider;
 pub mod rate_limit;

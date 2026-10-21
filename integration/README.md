@@ -558,6 +558,15 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
   problems with abandoned clusters left running — this pass's own cluster was torn down
   at the end; confirm the next person does the same.
 
+## Step 4b: the self-service widget route (added by S-0006)
+
+After the login step, the scenario calls `/_authstar/me/subscription` through portcullis with the
+real `jwt` session cookie, so the auth gate mints the internal JWT and forwards it to keep's
+`GET /me/subscription` (ADR 0071). The logged-in account holds no subscription, so the pass
+condition is the all-null `{status, planName, currentPeriodEnd}` shape with HTTP 200. This step
+was added without a cluster to run it on; the first run after S-0006 lands should confirm it and
+update this note.
+
 ## Not yet done
 
 - **Keep's trial-grant path** (`POST /tenants/:slug/trials`) — the other keep billing

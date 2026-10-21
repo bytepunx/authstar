@@ -164,6 +164,7 @@ else
 
     if grep -qi '^set-cookie: jwt=' "$callback_headers"; then
       pass "portcullis + Dex login -- real jwt session cookie issued"
+      session_jwt="$(grep -i '^set-cookie: jwt=' "$callback_headers" | sed -E 's/^[Ss]et-[Cc]ookie: jwt=([^;]+);.*/\1/' | tr -d '\r')"
     else
       callback_status="$(grep -i '^HTTP/' "$callback_headers" | tail -1)"
       fail "login step 6 (portcullis callback, $callback_status) -- no jwt cookie in response"
@@ -204,6 +205,29 @@ if [[ "$webhook_status" == "200" ]]; then
   pass "keep billing webhook (real Stripe HMAC signature verified)"
 else
   fail "keep billing webhook (HTTP $webhook_status): $(echo "$webhook_response" | head -1)"
+fi
+
+##############################################################################
+log "step 4b: self-service widget route -- portcullis /_authstar/me/subscription -> keep (S-0006, ADR 0071)"
+##############################################################################
+# Through portcullis with the real session cookie from step 2, so the gate mints the
+# internal JWT keep verifies. The account from step 3 has no subscription (step 4's
+# webhook is scoped to cus_scenario, not this login), so the contract is the
+# all-null shape, not a 404 (design/stories/keep/006).
+if [[ -z "${session_jwt:-}" ]]; then
+  fail "me/subscription -- no session cookie from the login step to call it with"
+else
+  me_response="$(curl -s "${PORTCULLIS_URL}/_authstar/me/subscription" \
+    -H "Host: ${TENANT_SLUG}.authstar.app" \
+    -H "Cookie: jwt=${session_jwt}" \
+    -w '\n%{http_code}')"
+  me_status="$(echo "$me_response" | tail -1)"
+  me_body="$(echo "$me_response" | head -1)"
+  if [[ "$me_status" == "200" ]] && echo "$me_body" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if set(d)=={"status","planName","currentPeriodEnd"} else 1)' 2>/dev/null; then
+    pass "me/subscription through portcullis (gate -> internal JWT -> keep): $me_body"
+  else
+    fail "me/subscription through portcullis (HTTP $me_status): $me_body"
+  fi
 fi
 
 ##############################################################################
