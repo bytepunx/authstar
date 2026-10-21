@@ -7,7 +7,6 @@ wip_limits:
   in-progress: 2
   review: 3
 order:
-  - S-0006
   - S-0008
   - S-0003
   - S-0009
@@ -24,9 +23,6 @@ placed:
   S-0005:
     by: claude
     at: 2026-10-21T05:13:56Z
-  S-0006:
-    by: claude
-    at: 2026-10-21T05:29:49Z
   S-0007:
     by: claude
     at: 2026-10-21T05:29:49Z
