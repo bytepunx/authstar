@@ -3,12 +3,15 @@ id: S-0008
 type: story
 nature: feature
 title: Plan-mapping editor picks from the tenant's live Stripe prices
-status: backlog
+status: ready
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-10-21T05:13:12Z
-transitions: []
+updated: 2026-10-21T05:29:49Z
+transitions:
+  - to: ready
+    at: 2026-10-21T05:29:49Z
+    by: claude
 tags: []
 ---
 # S-0008 Plan-mapping editor picks from the tenant's live Stripe prices

@@ -3,12 +3,15 @@ id: S-0006
 type: story
 nature: feature
 title: Serve GET /_authstar/me/subscription for the subscription-status widget
-status: backlog
+status: ready
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-10-21T05:13:12Z
-transitions: []
+updated: 2026-10-21T05:29:49Z
+transitions:
+  - to: ready
+    at: 2026-10-21T05:29:49Z
+    by: claude
 tags: []
 ---
 # S-0006 Serve GET /_authstar/me/subscription for the subscription-status widget

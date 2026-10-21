@@ -30,3 +30,5 @@ A redelivered or duplicated Stripe event changes nothing and publishes nothing a
 ## Notes
 
 `keep/src/routes/webhooks.ts`, `keep/src/actors/subscription_actor.ts`, `keep/spec/behavior/webhooks.spec.ts`. The checkout path re-wraps the subscription's `current_period_end` into a fake top-level field after `getSubscription` normalizes it; one shape should remain.
+
+The ADRs this story implements, recorded by S-0004: ADR-0107 (status mirror, `paymentFailureAttempts` threshold, `entitlement` state on the subscription, `invoice.paid` restore, dispute scope via the charge), ADR-0108 (`planMapping.roles` with `grantedRoles` accepted as an input alias), ADR-0109 (keep refuses `{tenant}` scope and publishes none).

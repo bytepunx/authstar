@@ -3,13 +3,16 @@ id: E-0002
 type: epic
 nature: feature
 title: Billing end to end, with loci as the first paying tenant
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-21T05:12:30Z
-updated: 2026-10-21T05:13:56Z
+updated: 2026-10-21T05:29:21Z
 transitions:
   - to: ready
     at: 2026-10-21T05:13:56Z
+    by: claude
+  - to: in-progress
+    at: 2026-10-21T05:25:51Z
     by: claude
 tags: []
 ---
@@ -25,8 +28,10 @@ A tenant can connect its Stripe account, map prices to roles, send a user throug
 - S-0006 Serve GET /_authstar/me/subscription for the subscription-status widget
 - S-0007 Hosted upgrade page that starts a Stripe checkout
 - S-0008 Plan-mapping editor picks from the tenant's live Stripe prices
+- S-0014 Tower retires the tenant entitlement scope
 
 ## Notes
 
 From the 2026-10-20 audit: keep implements checkout, portal, plan mappings, trials, coupons, usage credentials, read-only billing views, and signature-verified webhooks, but nothing in web or steward calls checkout or portal sessions; the hosted upgrade page (ADR-0065) and `GET /me/subscription` (story keep/006) do not exist; webhooks have no event-id dedup; `invoice.payment_failed` revokes roles while keep's record stays `active`; dispute scope is read from metadata Stripe never copies; tenant-scoped role grants are dropped by tower; and `grantedRoles` means opposite things in keep and tower. The semantics stories come first.
 - 2026-10-21T05:13:56Z: moved to ready: follows S-0004, which moved to ready
+- 2026-10-21T05:25:51Z: moved to in-progress: follows S-0004, which moved to in-progress
