@@ -1,0 +1,87 @@
+# tower is the only service whose signet-admin.ts wiring calls signet's
+# GitOpsService (self-service tenant provisioning pushes new secrets/config)
+# — that RPC lives on signet's admin port (8444, gated by the chart's
+# admin.clusterAccess flag — see kluster-lib/addon/signet.go), NOT the
+# regular workload port (8443) tower/src/server.ts's dialWorkload/
+# getServiceBundle calls use. SIGNET_ADMIN_ADDR must be set explicitly:
+# tower's own fallback (`SIGNET_ADMIN_ADDR ?? SIGNET_ADDR`) would silently
+# point GitOps calls at the wrong port otherwise.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tower
+  namespace: authstar
+  labels:
+    app: tower
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tower
+  template:
+    metadata:
+      labels:
+        app: tower
+    spec:
+      serviceAccountName: tower
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: tower
+          image: bytepunx/authstar-tower:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          # TCP-only (no dedicated health route on any of these services yet):
+          # confirmed for real that a service can be "1/1 Running" in
+          # kubectl's eyes while its HTTP listener has actually stopped
+          # accepting connections (a self-restart-on-signet-bundle-change
+          # whose shutdown hung instead of exiting, observed live against
+          # this exact cluster) -- with no probe at all, Kubernetes has no
+          # way to detect or recover from that. A TCP probe at least catches
+          # "port stopped accepting connections", which is what actually
+          # happened.
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_ADMIN_ADDR
+              value: signet.signet.svc.cluster.local:8444
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tower
+  namespace: authstar
+spec:
+  selector:
+    app: tower
+  ports:
+    - port: 8080
+      targetPort: 8080

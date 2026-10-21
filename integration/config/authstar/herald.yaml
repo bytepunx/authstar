@@ -1,0 +1,30 @@
+# Plain (non-secret) config for herald.
+#
+# dbConnectionString/rabbitmqUrl deliberately NOT here: they're credentials,
+# and server.ts's `bundle.field ?? secrets.field` fallback means config WINS
+# over secrets when both are set -- this file used to duplicate both with a
+# stale guest/guest placeholder, which silently overrode the real,
+# correctly-provisioned secrets/authstar/herald/rabbitmqUrl.yaml value the
+# moment config sync started actually working (see this repo's own git log
+# for the config/authstar/<service>/config.yaml -> config/authstar/<service>.yaml
+# path-flattening fix -- config never synced at all before that, which is the
+# only reason this mistake went unnoticed for as long as it did). Confirmed
+# for real against a live cluster: RabbitMQ's own broker log showed literal
+# user 'guest' being rejected, sourced from exactly this file.
+#
+# payloadKeyGenerations/unsubscribeKeyGenerations are secret-only (see
+# secrets/authstar/herald/) -- herald/src/server.ts:34-46 flags those two
+# key names as an unratified, best-effort schema of its own, not covered by
+# any ADR yet.
+#
+# This file used to be comment-only (no real YAML mapping) -- a real,
+# previously-unnoticed gap, not just a docs omission: herald's own
+# server.ts already reads `bundle.towerBaseUrl ?? secrets.towerBaseUrl` and
+# throws "signet bundle missing towerBaseUrl" if both are absent (ADR
+# 0089 -- herald's own copy of towerBaseUrl for its tenant-JWKS
+# resolution, same bundle field name and reasoning as keep's copy below).
+# A comment-only file also parses to `nil`, not a mapping, which made
+# signetd log a parse error on every sync cycle regardless (see this
+# repo's README "Not yet done" section) -- fixed as a side effect of this
+# field actually existing now.
+towerBaseUrl: http://tower.authstar.svc.cluster.local:8080

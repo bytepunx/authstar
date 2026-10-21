@@ -1,0 +1,24 @@
+# Plain (non-secret) config for keep.
+#
+# dbConnectionString/rabbitmqUrl deliberately NOT here: they're credentials,
+# and server.ts's `bundle.field ?? secrets.field` fallback means config WINS
+# over secrets when both are set -- this file used to duplicate both with a
+# stale guest/guest placeholder, which silently overrode the real,
+# correctly-provisioned secrets/authstar/keep/rabbitmqUrl.yaml value the
+# moment config sync started actually working (see this repo's own git log
+# for the config/authstar/<service>/config.yaml -> config/authstar/<service>.yaml
+# path-flattening fix -- config never synced at all before that, which is the
+# only reason this mistake went unnoticed for as long as it did). Confirmed
+# for real against a live cluster: RabbitMQ's own broker log showed literal
+# user 'guest' being rejected, sourced from exactly this file.
+#
+# towerBaseUrl: keep's own startup role/application reference backfill
+# (src/lib/role-reference-backfill.ts's createTowerReferenceClient, wired
+# into server.ts after this file was first authored -- a real gap this run
+# found: keep crashed on startup with "signet bundle missing towerBaseUrl").
+# In-cluster Service DNS name + port, no trailing slash (the client appends
+# a leading-slash path directly).
+towerBaseUrl: http://tower.authstar.svc.cluster.local:8080
+
+# Per-tenant Stripe key material is secret-only (see secrets/authstar/keep/),
+# never placed here.
