@@ -1,0 +1,86 @@
+# SIGNET_ADMIN_ADDR is required: herald/src/server.ts gained its own
+# createSignetAdmin wiring under ADR 0025 (pushing herald's payload-
+# encryption public key to signet) after this comment was first written --
+# the "no admin wiring" claim above is stale as of that change. Same
+# fallback-to-wrong-port risk tower's own manifest comment already
+# documents (herald's own `SIGNET_ADMIN_ADDR ?? address` fallback would
+# otherwise silently point GitOps calls at the workload port).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: herald
+  namespace: authstar
+  labels:
+    app: herald
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: herald
+  template:
+    metadata:
+      labels:
+        app: herald
+    spec:
+      serviceAccountName: herald
+      imagePullSecrets:
+        - name: dockerhub-pull
+      containers:
+        - name: herald
+          image: bytepunx/authstar-herald:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8080
+          # TCP-only (no dedicated health route on any of these services yet):
+          # confirmed for real that a service can be "1/1 Running" in
+          # kubectl's eyes while its HTTP listener has actually stopped
+          # accepting connections (a self-restart-on-signet-bundle-change
+          # whose shutdown hung instead of exiting, observed live against
+          # this exact cluster) -- with no probe at all, Kubernetes has no
+          # way to detect or recover from that. A TCP probe at least catches
+          # "port stopped accepting connections", which is what actually
+          # happened.
+          livenessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          readinessProbe:
+            tcpSocket:
+              port: 8080
+            initialDelaySeconds: 5
+            periodSeconds: 5
+            failureThreshold: 3
+          env:
+            - name: SIGNET_NAMESPACE
+              value: authstar
+            - name: SIGNET_ADDR
+              value: signet.signet.svc.cluster.local:8443
+            - name: SIGNET_ADMIN_ADDR
+              value: signet.signet.svc.cluster.local:8444
+            - name: SIGNET_TRUST_DOMAIN
+              value: authstar.cluster.local
+            - name: SPIFFE_ENDPOINT_SOCKET
+              value: unix:///run/spire/sockets/spire-agent.sock
+          volumeMounts:
+            - name: spiffe
+              mountPath: /run/spire/sockets
+              readOnly: true
+      volumes:
+        - name: spiffe
+          csi:
+            driver: csi.spiffe.io
+            readOnly: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: herald
+  namespace: authstar
+spec:
+  selector:
+    app: herald
+  ports:
+    - port: 8080
+      targetPort: 8080

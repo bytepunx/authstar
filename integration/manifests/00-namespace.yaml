@@ -1,0 +1,63 @@
+# All 8 authstar services deploy into this one namespace, on purpose: signet's
+# convention-first automatic-access rule (see scripts/provision.sh's own
+# comment) grants a workload access to its signet bundle purely from its
+# SPIFFE ID matching "ns/<signet-namespace>/sa/<signet-service>" — no policy
+# object needed. Since every service's SIGNET_NAMESPACE is "authstar" (ADR
+# 0014), the Kubernetes namespace they actually run in must ALSO be literally
+# named "authstar", with a ServiceAccount named after the service itself —
+# spire-controller-manager's default ClusterSPIFFEID template derives the
+# SPIFFE ID from exactly those two names. Get either wrong and the workload's
+# real SPIFFE ID won't match what signet expects, and every getServiceBundle
+# call 403s.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: authstar
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: tower
+  namespace: authstar
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: keep
+  namespace: authstar
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: herald
+  namespace: authstar
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: lookout
+  namespace: authstar
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: chronicle
+  namespace: authstar
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: steward
+  namespace: authstar
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: web
+  namespace: authstar
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: portcullis
+  namespace: authstar

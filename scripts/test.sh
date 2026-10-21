@@ -1,6 +1,12 @@
 #!/usr/bin/env sh
-# Behavior tests: fast, no external dependencies. Run on every iteration.
-# Replace the body with this project's command; keep the exit code honest.
+# Behavior tests: fast, no external dependencies. Run on every iteration (`make test`).
+# Each npm project's own `npm test` is its behavior and e2e tiers; portcullis runs cargo test.
 set -eu
 cd "$(dirname "$0")/.."
-echo "test.sh: no tests configured yet; see design/conventions/code-quality.md"
+. scripts/lib-projects.sh
+for p in $NODE_PROJECTS; do
+  [ -d "$p/node_modules" ] || { echo "test.sh: $p has no node_modules; run make install" >&2; exit 2; }
+  run_in "$p" npm test
+done
+run_in portcullis cargo test --workspace
+run_in portcullis cargo clippy --workspace --all-targets -- -D warnings
