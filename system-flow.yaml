@@ -32,6 +32,9 @@ projects:
   - name: herald
     path: herald
     kind: node
+  - name: integration
+    path: integration
+    kind: shell
   - name: keep
     path: keep
     kind: node

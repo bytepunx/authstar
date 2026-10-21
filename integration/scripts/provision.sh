@@ -99,7 +99,7 @@ log "config/ (plain, non-secret) files are already committed as static YAML in t
 log "no secrets exist yet for steward or web: both are pending signet-client wiring on the app side (see README.md); their config/ files are already committed"
 
 log "provisioning ADR 0103 cross-service policy grants (herald, tower)"
-# Per ADR 0103 (design/decisions/0103-spiffe-scoped-signet-writes-retire-
+# Per ADR 0103 (design/adrs/0103-spiffe-scoped-signet-writes-retire-
 # admin-tokens.md) and herald/008, tower/017: herald and tower now write
 # into another service's bundle using their own SPIFFE workload identity
 # instead of a signetAdminToken admin bearer token, which needs a one-time

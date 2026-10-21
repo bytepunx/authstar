@@ -2,6 +2,9 @@
 
 ## What this is
 
+> Since 2026-10-21 this harness lives in the `bytepunx/authstar` monorepo as `integration/`. The service repositories it builds from are its siblings at `../<service>`, which is the layout `scripts/deploy-local.sh` already expects. Design links point at `../design/adrs/`.
+
+
 Local/CI orchestration for standing up the full authstar stack on a disposable
 Kubernetes cluster: signet provisioning (secrets/config for all 8 services), the
 Deployment/Service manifests for all 8, the scripts that drive both plus the cluster
@@ -132,7 +135,7 @@ scripts/down.sh         # kluster down — ALWAYS run this when finished
    secret set` encrypts against whatever `.sops.yaml` currently names.
 4. Author all 22 placeholder secrets via `signet secret set`, one call per entry in
    `lib-secrets.sh`'s `SECRET_ENTRIES` list.
-5. Provision the four [ADR 0103](../design/decisions/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
+5. Provision the four [ADR 0103](../design/adrs/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
    cross-service policy grants via `signet policy create` — herald's SPIFFE ID → `put` on
    tower's, keep's, and portcullis's namespace/service, and tower's SPIFFE ID → `put` on
    portcullis's namespace/service. keep needs none (it only ever writes its own bundle).
@@ -199,7 +202,7 @@ All secrets use tenant slug `acme` for consistency with portcullis's own
 `examples/signet_smoke.rs` live smoke test, which already asserts against
 `tenant-acme-session-key`.
 
-Per [ADR 0103](../design/decisions/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
+Per [ADR 0103](../design/adrs/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)
 (herald/008, keep/009, tower/017), none of tower/keep/herald hold a `signetAdminToken`
 anymore — each now authenticates its own signet writes (own-bundle, and any cross-service
 write) with its own SPIFFE workload identity instead of an admin bearer token. The
@@ -564,7 +567,7 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
   by re-establishing forwards fresh each run rather than fixing the underlying flakiness;
   a longer-running test harness (e.g. a CI job) would want retry/reconnect logic instead.
 - ~~A rotation mechanism for tower's and herald's own `signetAdminToken`~~ — **resolved by
-  [ADR 0103](../design/decisions/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)**
+  [ADR 0103](../design/adrs/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md)**
   (herald/008, keep/009, tower/017): rather than building a rotation mechanism for it, the
   admin token is retired outright — tower/keep/herald now authenticate signet writes with
   their own SPIFFE workload identity, which SPIRE already rotates on its own. The original
