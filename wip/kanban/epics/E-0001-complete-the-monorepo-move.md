@@ -3,13 +3,16 @@ id: E-0001
 type: epic
 nature: improvement
 title: Complete the monorepo move
-status: ready
+status: in-progress
 owner: alex
 created: 2026-10-21T04:58:53Z
-updated: 2026-10-21T04:58:53Z
+updated: 2026-10-21T05:05:27Z
 transitions:
   - to: ready
     at: 2026-10-21T04:58:53Z
+    by: claude
+  - to: in-progress
+    at: 2026-10-21T05:05:27Z
     by: claude
 tags: []
 ---
@@ -28,3 +31,4 @@ One repository, `bytepunx/authstar`, holds every authstar component including th
 
 Found on 2026-10-20: the components were imported on 2026-09-23 but the scaffolding was never committed, there was no remote, the design docs were template text, `flai check --strict` failed with 194 warnings, per-component CI was orphaned in subdirectories, and `integration` was left out.
 - 2026-10-21T04:58:53Z: moved to ready: follows S-0001, which moved to ready
+- 2026-10-21T05:05:27Z: moved to in-progress: follows S-0001, which moved to in-progress
