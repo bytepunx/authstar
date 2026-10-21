@@ -113,3 +113,4 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0106](0106-design-records-live-in-the-system-flow-layout.md) | Design records live in the system-flow layout | accepted |
 | [0107](0107-keep-mirrors-stripe-s-subscription-status-and-degrades-plan-roles-after-a-grace.md) | Keep mirrors Stripe's subscription status and degrades plan roles after a grace period | accepted, refines 0038 and 0077 |
 | [0108](0108-plan-mappings-grant-roles-granted-roles-is-tower-s-set-in-effect.md) | Plan mappings grant roles; granted roles is tower's set in effect | accepted, refines 0018 and 0038 |
+| [0109](0109-entitlement-scopes-are-accounts-and-organizations-the-tenant-scope-is-retired.md) | Entitlement scopes are accounts and organizations; the tenant scope is retired | accepted, refines 0031, 0046 and 0100 |
