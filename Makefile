@@ -1,7 +1,10 @@
-.PHONY: check test integration smoke board stats dashboard dashboard-stop lint-md
+.PHONY: check install test integration smoke board stats dashboard dashboard-stop lint-md
 
 check: ## Validate the repo against the system-flow standard
 	scripts/check.sh
+
+install: ## Install every component's dependencies from its lockfile
+	scripts/install.sh
 
 test: ## Behavior tests, fast, run on every iteration
 	scripts/test.sh

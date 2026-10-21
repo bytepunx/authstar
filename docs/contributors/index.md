@@ -21,9 +21,20 @@ authstar is one repository holding every component. Start with [`design/system/o
 | A component's code | Its folder at the root: `portcullis/`, `tower/`, `keep/`, `herald/`, `lookout/`, `chronicle/`, `steward/`, `web/`, `clients/`, `chart/` |
 | The full stack on a disposable cluster | [`integration/`](../../integration/README.md): k3d bring-up, SOPS-encrypted secrets, manifests, and the scripted golden-path scenario |
 
-## Running a component's tests
+## Running the tests
 
-Each component keeps its own test tiers and commands; its `TESTING.md` or `README.md` says which. The Node components run `npm ci && npm test` for the behaviour and end-to-end tiers; `portcullis` runs `cargo test --workspace`. Root-level `make test`, `make integration`, and `make smoke` are being wired to run every component (story S-0002).
+Three tiers, each run only after the cheaper one passes. The Make targets call the scripts in `scripts/`, and CI runs the same scripts.
+
+| Command | Runs | Needs |
+|---------|------|-------|
+| `make install` | `npm ci` in every npm project and `cargo fetch` for portcullis | Node 22 or newer, npm, cargo |
+| `make test` | Every npm project's `npm test` (behavior and e2e tiers), then `cargo test` and clippy for portcullis | nothing external |
+| `make integration` | `npm run test:integration` in every service that has one; testcontainers start Postgres, RabbitMQ, and ClickHouse | a running Docker daemon |
+| `make smoke` | The golden-path scenario in `integration/` against a disposable k3d cluster | the cluster `integration/README.md` describes |
+
+To run one project's tests alone, run its own `npm test` or `cargo test` in its folder; each project's `TESTING.md` says what its tiers cover.
+
+CI (`.github/workflows/ci.yml`) runs `make test`'s content as a matrix on every push and pull request, and on `main` builds and pushes the image of each service whose folder changed.
 
 ## Making a change
 
