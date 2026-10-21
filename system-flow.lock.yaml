@@ -1,0 +1,62 @@
+# Written by flai. What the template rendered, and with which variables, used by flai upgrade (ADR-0015).
+template:
+  repo: "https://github.com/bytepunx/system-flow-template"
+  ref: "v1.0.16"
+  version: "1.0.16"
+  applied: 2026-10-21T04:59:56Z
+files:
+  ".editorconfig": 09685bc21d9ae40f75e66f19040ba14822a267216f5f87013246642c9b7b9c90
+  ".gitattributes": d2f6bf1e76fa8f91884b63edda8942c4b814d322145c350ea7537511142a2a47
+  ".github/pull_request_template.md": ffc89dd0e0f9673064dcd8b6fdaff0e31b8d79fdac9aac74f31257cad2a6bad9
+  ".github/workflows/system-flow-check.yml": 7da4e66c0a667c612b6d1078669b598b4aa75cd41883646e177285ed43968d51
+  ".gitignore": 1e7b356af2b2b59fbc77e520d33ba19a52578a54f0e3cffa563729203ca60a7f
+  ".markdownlint.yaml": e6dcb35b1a55a7d48928ef87a6557d09ef324d4d67282b826b4fdbcad9cc9abe
+  ".mcp.json": 11465e1bde2331a69378b7adc04b3c7d35e9e1be592ed199ab30f970e9fc2af8
+  "CLAUDE.md": 8add9b0991a497e40586c6b8900988dc537d04c4b07ce4bc3cedce4dca062eb6
+  "Makefile": eb18abbfd72073fee144acc3e020ceabb789329d7f1ed22f035081c3cf651c19
+  "README.md": 0f3e0cb7324c25e423548f27eb309ee26bd3c3fe8ecd7540d87ead4a53263439
+  "design/README.md": afe91ac593c3b8de442f5975b8f6c9bcdd876c595d72e65cae10ea279acb1635
+  "design/adrs/0000-template.md": cb6bc81cfacfd6b9300ef5e81e2823860e3bd642da7c1b3ed9fc22188090711a
+  "design/adrs/README.md": 74cb3f32d0b99283ab66dcb8af6dfaaec4cddf643e43b0d1a24eefb96bedaead
+  "design/conventions/README.md": e2d0e41999ef1591b66c8877208aa7a9f10b203587cbffc5822a973ef708fb1c
+  "design/conventions/code-quality.md": 80796b1ee33db01784c49095a29a8d039509c20aa22333eb8adad4dc3f246779
+  "design/conventions/communication.md": 2ca837b8c5489c8280559cb55971c049b16b57d87bfd55bd4400fa4bae83afcd
+  "design/conventions/continuous-improvement.md": 3690ef69eb7ff0b14a91599448db6d9b5c8212eddf62f6907768787ede62b204
+  "design/conventions/decisions.md": dbcfca1062187961e3b92e82b8720a149f166473a070de0f2cbd1da0a35e80e7
+  "design/conventions/documentation.md": 6dd1771395f034681a5f0082aa8d27117819eaa3c723e493d78ff499794157f9
+  "design/conventions/git.md": d8222c02fd491847ab0849eafa3ba9442ff5ee488136497d247f58e579f25627
+  "design/conventions/logging.md": b3058a7df3102714c80b2be7c065d7fdcd6b8f67a5de7204c6431306b93c15cb
+  "design/conventions/safety.md": 66661b413d33e19e4f8dbd4056acfdf46c022eacaf90032aa79a773a39cf1572
+  "design/conventions/session-start.md": c1314bbd16258d5ea9e14a6a2539568bc76b70e509a1b96346ae1a20130654a2
+  "design/conventions/telemetry.md": c4ba6fdc725bd5ad054ae04c904d45c76ca6f4833524f6e97588444ee629fb8b
+  "design/conventions/tooling.md": e5b43b3ffaf62d96faa20fabf12c593370d4b1023293f0c450cfb7ec6d790a6d
+  "design/conventions/work-management.md": 8d6ac9f4e1aee5197072b2ae03d7234d392a2123e4d9b2bb21963f54c3faddfb
+  "design/issues/README.md": 312bbd920041f757e7063a90308c3c4f2150de41689eb5009ff09f47001d99ee
+  "design/issues/summary.md": 0e050ee521540d0b605055441d13c898fb62ab18e17ee59386768512f03e3269
+  "design/system/README.md": ed2822a86076ca4151e44f50ae4ca6eb7e4d5dd8e8f6ac2273590109794df363
+  "design/system/overview.md": ef2fe6489befdde5732a8117c11c1ef26af05be845dbcefa3d029ef3c24f708e
+  "design/tech/README.md": 0e20d7eeb05207b8a371617db24329354b832be61a875151aeafe7721cf0ab25
+  "docs/README.md": 990af26659780223abc238be0bb89a2c1a547813c2a8f6a3c3c522ad9b389a96
+  "docs/contributors/index.md": 45ea29c211fed0a0bcf105262938ad55fe2ad803e19c6207a329e854c419d19b
+  "docs/operators/index.md": 88a682d2ff141701e3d29131a5443610f3b595d2f465e0cc34fb1974cd944a2e
+  "docs/users/index.md": 15385f452e124a3fb7c5e8479367af1dfa0f2200a80423a8164dd8363f17c5a6
+  "scripts/README.md": 991ee3cf8572b9255e3a9dd08496ec12870116f6a81c16f2f2ba6fc905864f4f
+  "scripts/check.sh": 9523df1e1e1b87bb8455a50e2d746c9999ed17c471f07bca184afc369732f492
+  "scripts/integration.sh": c40c90380bde69b4d89e49a5bd20acbb1b054a6c2a114c36ddd35dec4d663b25
+  "scripts/smoke.sh": 4776969a52618b9c6f543a6b807623ee890c2b0e8bd2afef723bd54007d1cea5
+  "scripts/test.sh": 99098e9398e7fa61aadf8febaeaafa1b29063a3927ee28828deb6de39fe038af
+  "wip/README.md": 569006524febe835f9f8d2ca744d2213655d09cc9de02cae5bcc67d39e27bdea
+  "wip/agents/README.md": 1c03076df7de959fde75d06433eada34edecf309878bd8aa13266e1847f56bfd
+  "wip/agents/index.md": 0356ca3d1719a79499ffd0bf5fdf5d311cd0a7c7c0b48e74c33075a8e8953629
+  "wip/archive/.gitkeep": e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  "wip/kanban/board.md": 00294886cf568037b26a8f5a3a9e8bace5911d437404c7a6cf3422a09dc4bc61
+  "wip/kanban/epics/.gitkeep": e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  "wip/kanban/stories/.gitkeep": e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  "wip/kanban/tasks/.gitkeep": e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+  "wip/threads/README.md": 1b4be15169fa84ca5b9189df60ec81f0a39a18dc4e6f22e1d1f226376eeee392
+vars:
+  "description": "authentication and authorization"
+  "owner": "bytepunx"
+  "project_key": "auth"
+  "project_name": "authstar"
+  "repo_url": "https://github.com/bytepunx/authstar"

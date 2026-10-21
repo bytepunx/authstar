@@ -1,0 +1,23 @@
+---
+title: Board
+updated: 2026-10-21
+status: active
+wip_limits:
+  ready: 5
+  in-progress: 2
+  review: 3
+order:
+  - S-0001
+  - S-0002
+  - S-0003
+placed:
+  S-0001:
+    by: claude
+    at: 2026-10-21T04:58:53Z
+---
+
+# Board
+
+Columns: backlog, ready, in-progress, review, done. Limits apply to stories. `order` is the pull order: ready stories first, then backlog stories in refinement order. Change it with `flai order <story> --before|--after <other>`, `--top`, or `--bottom`, or by dragging a card within its column on the dashboard's board; stories it does not name come last, by ID.
+
+Auto-accept: stories tagged `auto-accept` may be moved from review to done by an agent.

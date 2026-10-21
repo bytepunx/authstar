@@ -1,0 +1,57 @@
+version: 1
+name: "authstar"
+key: "auth"
+description: "authentication and authorization"
+owner: "bytepunx"
+repo: "https://github.com/bytepunx/authstar"
+template:
+  repo: "https://github.com/bytepunx/system-flow-template"
+  ref: "v1.0.16"
+  version: "1.0.16"
+  applied: 2026-10-21T04:59:56Z
+layout:
+  design: design
+  docs: docs
+  wip: wip
+projects:
+  - name: hook
+    path: chart/hook
+    kind: node
+  - name: chronicle
+    path: chronicle
+    kind: node
+  - name: typescript
+    path: clients/typescript
+    kind: node
+  - name: core
+    path: clients/typescript/core
+    kind: node
+  - name: fastify
+    path: clients/typescript/fastify
+    kind: node
+  - name: herald
+    path: herald
+    kind: node
+  - name: keep
+    path: keep
+    kind: node
+  - name: lookout
+    path: lookout
+    kind: node
+  - name: portcullis
+    path: portcullis
+    kind: rust
+  - name: steward
+    path: steward
+    kind: sveltekit
+  - name: tower
+    path: tower
+    kind: node
+  - name: web
+    path: web
+    kind: sveltekit
+dashboard:
+  image: ghcr.io/bytepunx/flaiover
+  tag: latest
+  port: 4242
+  bind: 0.0.0.0 # 127.0.0.1 to keep the dashboard on this host only
