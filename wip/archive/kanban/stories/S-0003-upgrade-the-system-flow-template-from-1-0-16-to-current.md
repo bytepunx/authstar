@@ -3,11 +3,11 @@ id: S-0003
 type: story
 nature: improvement
 title: Upgrade the system-flow template from 1.0.16 to current
-status: in-progress
+status: done
 parent: E-0001
 owner: alex
 created: 2026-10-21T04:58:53Z
-updated: 2026-11-06T17:53:07Z
+updated: 2026-11-06T17:56:15Z
 transitions:
   - to: ready
     at: 2026-10-21T04:58:53Z
@@ -15,41 +15,52 @@ transitions:
   - to: in-progress
     at: 2026-11-06T17:47:26Z
     by: agent-S-0003
+  - to: review
+    at: 2026-11-06T17:53:32Z
+    by: agent-S-0003
+  - to: done
+    at: 2026-11-06T17:56:15Z
+    by: bytepunx
 tags: [template, tooling]
 topics: [tooling, documentation]
-touches: [system-flow.yaml, system-flow.lock.yaml, CLAUDE.md, Makefile, ".gitattributes", ".github/pull_request_template.md", ".claude/settings.json", ".claude/agents/explorer.md", ".claude/agents/verifier.md", design/README.md, design/adrs/README.md, design/adrs/0000-template.md, design/analysis/README.md, design/components/README.md, design/conventions/README.md, design/conventions/code-quality.md, design/conventions/communication.md, design/conventions/continuous-improvement.md, design/conventions/decisions.md, design/conventions/delegation.md, design/conventions/design-system.md, design/conventions/documentation.md, design/conventions/git.md, design/conventions/logging.md, design/conventions/safety.md, design/conventions/session-start.md, design/conventions/strategic-agents.md, design/conventions/telemetry.md, design/conventions/tooling.md, design/conventions/work-management.md, design/digest/README.md, design/experiments/README.md, design/experiments/template.md, design/issues/summary.md, design/system/README.md, design/system/overview.md, design/tech/README.md, design/workflows/README.md, design/workflows/formulas/README.md, design/workflows/formulas/analysis-cadence.md, design/workflows/formulas/import.md, design/workflows/formulas/publish.md, design/workflows/roles/README.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, docs/contributors/index.md, docs/operators/index.md, docs/users/index.md, scripts/README.md, scripts/check.sh, scripts/close-out.sh, scripts/fetch.sh, scripts/lint-md.sh, wip/README.md, wip/agents/README.md, wip/agents/index.md, wip/kanban/board.md, wip/messages/README.md]
+touches: [system-flow.yaml, system-flow.lock.yaml, CLAUDE.md, Makefile, ".gitattributes", ".github/pull_request_template.md", ".claude/settings.json", ".claude/agents/explorer.md", ".claude/agents/verifier.md", design/README.md, design/adrs/README.md, design/adrs/0000-template.md, design/analysis/README.md, design/components/README.md, design/conventions/README.md, design/conventions/code-quality.md, design/conventions/communication.md, design/conventions/continuous-improvement.md, design/conventions/decisions.md, design/conventions/delegation.md, design/conventions/design-system.md, design/conventions/documentation.md, design/conventions/git.md, design/conventions/logging.md, design/conventions/safety.md, design/conventions/session-start.md, design/conventions/strategic-agents.md, design/conventions/telemetry.md, design/conventions/tooling.md, design/conventions/work-management.md, design/digest/README.md, design/experiments/README.md, design/experiments/template.md, design/issues/summary.md, design/system/README.md, design/system/overview.md, design/tech/README.md, design/workflows/README.md, design/workflows/formulas/README.md, design/workflows/formulas/analysis-cadence.md, design/workflows/formulas/import.md, design/workflows/formulas/publish.md, design/workflows/roles/README.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, docs/contributors/index.md, docs/operators/index.md, docs/users/index.md, scripts/README.md, scripts/check.sh, scripts/close-out.sh, scripts/fetch.sh, scripts/lint-md.sh, wip/README.md, wip/agents/README.md, wip/agents/index.md, wip/kanban/board.md, wip/messages/README.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md]
 after: [S-0001]
 usage:
   source: log
-  seconds: 190
-  estimated: true
-  priced_by: estimate
+  seconds: 378
+  priced_by: harness
   turns:
     - day: 2026-11-06
-      work: 30
+      ceremony: 1
+      test_runs: 3
+      hand_edits: 1
+      work: 48
   models:
     - model: claude-opus-5-5
-      input: 66
-      output: 386
-      cache_read: 2834431
-      cache_write: 120192
-      cost: 1.0507
+      input: 128
+      output: 23957
+      cache_read: 6830419
+      cache_write: 204389
+      cost: 3.3601
   strategic:
     - kind: orchestrator
-      seconds: 15
+      seconds: 51
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 77
-          cache_read: 265010
-          cache_write: 40663
-          cost: 0.4276
+          input: 37
+          output: 259
+          cache_read: 968257
+          cache_write: 141818
+          cost: 1.3693
 cost_of_delay:
   inputs:
     penalty_per_week: 0
     by: bytepunx
     at: 2026-11-06T17:53:07Z
+  value: 0
+  by: planner-S-0003
+  at: 2026-11-06T17:54:02Z
 forecast:
   duration: 3h
   delivery: 2026-11-06T21:00:00Z
@@ -85,15 +96,15 @@ Planned 2026-11-06 by planner-S-0003.
 
 `flai upgrade --dry-run` on 2026-11-06 reports `1.0.16 -> 1.1.22`: 25 add, 14 merge, 11 replace, 8 conflict, 16 unchanged. It does not add `design/system/workflow.md`, so the fourth criterion applies to what it does add: `design/components/README.md`, `design/workflows/` (roles and formulas), `design/digest/`, `design/experiments/`, `design/analysis/`, and the conflicted `design/system/overview.md`.
 
-Touches: the story declared none and `flai touches suggest` needs a starting path, so every touch comes from the dry run's file list (layout). It names the 60 files the upgrade adds, merges, replaces, or conflicts on, plus `system-flow.yaml` and `system-flow.lock.yaml` (from the first criterion). No folder touches: the upgrade's file list is known in full.
+Touches: the story declared none and `flai touches suggest` needs a starting path, so every touch comes from the dry run's file list (layout). It names the 60 files the upgrade adds, merges, replaces, or conflicts on, plus `system-flow.yaml` and `system-flow.lock.yaml` (from the first criterion). No folder touches: the upgrade's file list is known in full. The story's agent later declared one more touch, the issue file `design/issues/I-0004-...` it recorded (declared), and it is kept.
 
 `after`: S-0001 (done) is kept as declared. It wrote the scaffolding and lock at 1.0.16 that this story upgrades from.
 
-Risk: S-0002's work (root `Makefile` targets, `scripts/test.sh`, `scripts/integration.sh`, `scripts/smoke.sh`, `scripts/lib-projects.sh`, `scripts/README.md`, `docs/contributors/index.md`, `.github/workflows/ci.yml`) is on `origin/story/S-0002` and not on `main`, though S-0002 is accepted. On `main` the upgrade replaces `Makefile`, `scripts/README.md`, and `scripts/check.sh` as unedited. If S-0002 merges first, they become conflicts. The plan's thread asks which order holds.
+S-0002's work is on `origin/story/S-0002` and not on `main`, though S-0002 is accepted. T-0021 applied the upgrade first, so `Makefile`, `scripts/README.md`, and `scripts/check.sh` were replaced as unedited. When S-0002 merges, `Makefile` and `scripts/README.md` conflict, and S-0002's side is additive (TH-0005).
 
-Forecast: `flai forecast` gives 1h, the project's `planning.default_duration`, because no done story has usage yet. Raised to 3h: one upgrade run, 8 conflicts merged by hand against the template, roughly ten new living-design and role files to fill, then `flai check --strict`, the markdown lint, and `make test`. Delivery: 3h from now. S-0003 is 2nd in the pull order and the in-progress limit is 2, so it can start at once.
+Forecast: `flai forecast` gave 1h, the project's `planning.default_duration`, because no done story had usage yet. Raised to 3h for one upgrade run, 8 conflicts merged by hand against the template, the living-design and role files to read and fill, and then `flai check --strict`, the markdown lint, and `make test`. Delivery was 3h from the start, as 2nd in the pull order with an in-progress limit of 2.
 
-Cost of delay: `flai cod` refuses because neither S-0003 nor E-0001 has inputs, and `planning.hour_rate` is not set. The inputs are the operator's. The plan's thread asks for them, and no value is written until they are given.
+Cost of delay: 0 USD a week. The operator gave `penalty_per_week` 0 on 2026-11-06 (TH-0006), and `flai cod S-0003` gives 0.00 USD a week from it. The value is written as given, with no adjustment, because no other input exists.
 
 ### Verification
 

@@ -15,6 +15,33 @@ transitions:
     at: 2026-10-21T05:25:51Z
     by: claude
 tags: []
+usage:
+  source: sum
+  seconds: 447
+  priced_by: harness
+  turns:
+    - day: 2026-11-06
+      ceremony: 1
+      hand_edits: 3
+      work: 46
+  models:
+    - model: claude-opus-5-5
+      input: 198
+      output: 50245
+      cache_read: 13040713
+      cache_write: 268727
+      cost: 5.5657
+  strategic:
+    - kind: orchestrator
+      seconds: 52
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 36
+          output: 242
+          cache_read: 854161
+          cache_write: 144159
+          cost: 1.3556
 ---
 # E-0002 Billing end to end, with loci as the first paying tenant
 

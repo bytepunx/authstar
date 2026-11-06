@@ -3,16 +3,56 @@ id: S-0008
 type: story
 nature: feature
 title: Plan-mapping editor picks from the tenant's live Stripe prices
-status: ready
+status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-10-21T05:29:49Z
+updated: 2026-11-06T17:54:45Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
     by: claude
-tags: []
+  - to: in-progress
+    at: 2026-11-06T17:47:20Z
+    by: agent-S-0008
+blocked:
+  - from: 2026-11-06T17:54:45Z
+    reason: awaiting the operator on TH-0009
+tags: [web]
+touches: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md]
+usage:
+  source: log
+  seconds: 447
+  priced_by: harness
+  turns:
+    - day: 2026-11-06
+      ceremony: 1
+      hand_edits: 3
+      work: 46
+  models:
+    - model: claude-opus-5-5
+      input: 198
+      output: 50245
+      cache_read: 13040713
+      cache_write: 268727
+      cost: 5.5657
+  strategic:
+    - kind: orchestrator
+      seconds: 52
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 36
+          output: 242
+          cache_read: 854161
+          cache_write: 144159
+          cost: 1.3556
+forecast:
+  duration: 5h
+  delivery: 2026-11-06T22:47:00Z
+  basis: "Planner's estimate for five tasks across keep and web, including an ADR and a live-tier case, in place of flai's 1h default, which rests on no history; the story started at 17:47Z."
+  by: planner-S-0008
+  at: 2026-11-06T17:49:09Z
 ---
 # S-0008 Plan-mapping editor picks from the tenant's live Stripe prices
 
@@ -26,7 +66,55 @@ Creating a plan mapping in web lists the tenant's active Stripe prices and produ
 - [ ] Keep's fake Stripe covers the listing in behavior tests and the live tier covers it against test mode
 
 ## Tasks
+- T-0016 Record keep's stripe-prices route in an ADR and the overview
+- T-0017 Keep's Stripe client lists a tenant's active prices, and the fake does too
+- T-0018 Keep serves GET /tenants/{tenantSlug}/stripe-prices from the tenant's own key
+- T-0019 Live tier lists a real test-mode price through keep's stripe-prices route
+- T-0020 Web's keep client fetches the tenant's Stripe prices for the new-mapping page
+- T-0022 Plan-mapping form offers the listed prices and keeps a pasted ID as a fallback
+- T-0026 Web's plan-mapping form offers the tenant's live Stripe prices
 
 ## Notes
 
 `web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts` takes a pasted ID; keep's `stripe-client.ts` has no prices list call.
+
+### Verification
+
+No criterion is ticked yet, because no test has run on this story's code:
+
+- `flai test` and `make test` run only the template's placeholder `scripts/test.sh`. S-0002's real test tiers never reached main (I-0003). No component has `node_modules`. TH-0009 asks whether to run keep's and web's npm tests directly.
+- Criterion 3's live half needs `STRIPE_LIVE_TEST_SECRET_KEY`, and no test-mode key exists in this environment. The live case in `keep/spec/live/stripe-live.spec.ts` skips with the rest of the suite until someone runs `npm run test:live` in `keep/` with a key.
+
+### Planning
+
+Touches. Before planning, the story declared only the ADR its agent wrote, so the rest are predicted. All of them are files, and none is a folder.
+
+| Touch | Source | Why |
+|-------|--------|-----|
+| `design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md` | declared | `flai adr new --commit` added it in T-0016 as 0107. The story's agent renumbered it to 0110 (ADR-0110), because S-0004's ADRs 0107 to 0109 sit on its branch. The touch moved with the file. |
+| `design/adrs/README.md`, `design/system/overview.md` | declared, design | The route is a new contract between web and keep. It refines ADR-0041 and carries out ADR-0046 (`decisions.md`). |
+| `keep/src/lib/stripe-client.ts` | declared in Notes | Named above. The client has no prices list call. |
+| `keep/spec/lib/fake-stripe-client.ts` | layout | This is keep's fake Stripe, which criterion 3 names. |
+| `keep/src/routes/stripe-prices.ts` | layout | New file. Keep has one file per route group (`keep/TESTING.md`). |
+| `keep/src/lib/build-app.ts` | co-change, layout | Every route group is registered here. |
+| `keep/spec/behavior/stripe-prices.spec.ts` | layout | New behavior spec for the route. |
+| `keep/spec/live/stripe-live.spec.ts` | layout | Keep's live tier, which criterion 3 names. |
+| `keep/TESTING.md` | layout | Lists the route groups and the live cases. |
+| `web/src/lib/server/clients/keep.ts`, `web/spec/fixtures/fake-keep-client.ts` | layout | Web's keep client and its fake. |
+| `web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts` | declared in Notes | Named above. |
+| `web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte` | layout | The form itself. |
+| `web/spec/behavior/billing-plan-mappings.spec.ts` | co-change, layout | Web's existing behavior spec for this page. |
+| `docs/users/index.md` | declared by T-0026 | The story's agent added it for the user-facing change. S-0003 claims it too, and the two agents agree the order. |
+| `design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md`, `design/issues/summary.md` | declared | The story's agent added them to record an issue it met. |
+
+`flai touches suggest` also listed `keep/src/server.ts`, `keep/spec/lib/test-app.ts`, `keep/package.json`, and other route files. They are left out on purpose. `test-app.ts` already exposes `stripeState`. `server.ts` already wires the real client factory. Nothing here adds a dependency, since the Stripe SDK already lists prices.
+
+Tag. `web` is the component the story delivers to: the editor is the increment. Keep's new route is an additive change, released as a patch.
+
+After. None. S-0008 reads nothing that another open story writes. S-0004 (done) decided the plan-mapping semantics, and this story does not change them.
+
+Forecast. 5h, adjusted from `flai forecast`'s 1h. That figure is `planning.default_duration` with no done story to learn from, and it counts no touches. There are five tasks across two components, with an ADR and an opt-in live-tier case, so 5h is the planner's estimate. Delivery is 5h from when the story started at 17:47Z.
+
+Cost of delay. Not yet set. Neither S-0008 nor E-0002 has inputs, so `flai cod S-0008` cannot give a value. The inputs are asked for on TH-0003.
+
+Tasks. T-0020 and T-0022 duplicated T-0026, which the story's agent wrote while planning ran. The story's agent cancelled them, as TH-0008 proposed. The plan is T-0016 and T-0017, then T-0018 and T-0026, then T-0019.

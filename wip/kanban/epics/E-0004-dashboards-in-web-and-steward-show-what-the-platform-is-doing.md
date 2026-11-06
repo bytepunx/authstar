@@ -12,6 +12,31 @@ transitions:
     at: 2026-10-21T05:13:56Z
     by: claude
 tags: []
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: planner
+      seconds: 533
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 703
+          output: 41094
+          cache_read: 40492920
+          cache_write: 599557
+          cost: 13.8644
+    - kind: orchestrator
+      seconds: 33
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 23
+          output: 168
+          cache_read: 555518
+          cache_write: 78429
+          cost: 0.8839
 ---
 # E-0004 Dashboards in web and steward show what the platform is doing
 

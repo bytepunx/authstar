@@ -1,0 +1,30 @@
+---
+id: MS-0003
+title: T-0021 of S-0003 changed paths S-0006's claim covers
+from: S-0003
+to: S-0006
+about: [".claude/agents/explorer.md", ".claude/agents/verifier.md", ".claude/settings.json", ".gitattributes", ".github/pull_request_template.md", CLAUDE.md, Makefile, design/adrs/0000-template.md, design/analysis/README.md, design/components/README.md, design/conventions/README.md, design/conventions/code-quality.md, design/conventions/communication.md, design/conventions/continuous-improvement.md, design/conventions/decisions.md, design/conventions/delegation.md, design/conventions/design-system.md, design/conventions/documentation.md, design/conventions/git.md, design/conventions/logging.md, design/conventions/safety.md, design/conventions/session-start.md, design/conventions/strategic-agents.md, design/conventions/telemetry.md, design/conventions/tooling.md, design/conventions/work-management.md, design/digest/README.md, design/experiments/README.md, design/experiments/template.md, design/system/README.md, design/workflows/README.md, design/workflows/formulas/README.md, design/workflows/formulas/analysis-cadence.md, design/workflows/formulas/import.md, design/workflows/formulas/publish.md, design/workflows/roles/README.md, design/workflows/roles/analyzer.md, design/workflows/roles/curator.md, design/workflows/roles/orchestrator.md, design/workflows/roles/planner.md, docs/operators/index.md, docs/users/index.md, scripts/README.md, scripts/check.sh, scripts/close-out.sh, scripts/fetch.sh, scripts/lint-md.sh, system-flow.lock.yaml, system-flow.yaml, wip/README.md, wip/agents/README.md, wip/messages/README.md, design/README.md]
+status: closed
+participants: [agent-S-0003, bytepunx]
+created: 2026-11-06T17:48:50Z
+updated: 2026-11-06T17:56:15Z
+---
+
+# MS-0003 T-0021 of S-0003 changed paths S-0006's claim covers
+
+Between S-0003 and S-0006, about `.claude/agents/explorer.md`, `.claude/agents/verifier.md`, `.claude/settings.json`, `.gitattributes`, `.github/pull_request_template.md`, `CLAUDE.md`, `Makefile`, `design/adrs/0000-template.md`, `design/analysis/README.md`, `design/components/README.md`, `design/conventions/README.md`, `design/conventions/code-quality.md`, `design/conventions/communication.md`, `design/conventions/continuous-improvement.md`, `design/conventions/decisions.md`, `design/conventions/delegation.md`, `design/conventions/design-system.md`, `design/conventions/documentation.md`, `design/conventions/git.md`, `design/conventions/logging.md`, `design/conventions/safety.md`, `design/conventions/session-start.md`, `design/conventions/strategic-agents.md`, `design/conventions/telemetry.md`, `design/conventions/tooling.md`, `design/conventions/work-management.md`, `design/digest/README.md`, `design/experiments/README.md`, `design/experiments/template.md`, `design/system/README.md`, `design/workflows/README.md`, `design/workflows/formulas/README.md`, `design/workflows/formulas/analysis-cadence.md`, `design/workflows/formulas/import.md`, `design/workflows/formulas/publish.md`, `design/workflows/roles/README.md`, `design/workflows/roles/analyzer.md`, `design/workflows/roles/curator.md`, `design/workflows/roles/orchestrator.md`, `design/workflows/roles/planner.md`, `docs/operators/index.md`, `docs/users/index.md`, `scripts/README.md`, `scripts/check.sh`, `scripts/close-out.sh`, `scripts/fetch.sh`, `scripts/lint-md.sh`, `system-flow.lock.yaml`, `system-flow.yaml`, `wip/README.md`, `wip/agents/README.md`, `wip/messages/README.md`, `design/README.md`.
+
+## Entries
+
+### 2026-11-06T17:48:50Z agent-S-0003 S-0003
+T-0021 of S-0003 changed paths S-0006's claim covers.
+
+T-0021, Apply flai upgrade to 1.1.22, keeping the conflicted files for hand merging, committed 0f60029 on story/S-0003, `chore: [S-0003] apply system-flow template 1.1.22 over 1.0.16`, changing `.claude/agents/explorer.md`, `.claude/agents/verifier.md`, `.claude/settings.json`, `.gitattributes`, `.github/pull_request_template.md`, `CLAUDE.md`, `Makefile`, `design/adrs/0000-template.md`, `design/analysis/README.md`, `design/components/README.md`, `design/conventions/README.md`, `design/conventions/code-quality.md`, `design/conventions/communication.md`, `design/conventions/continuous-improvement.md`, `design/conventions/decisions.md`, `design/conventions/delegation.md`, `design/conventions/design-system.md`, `design/conventions/documentation.md`, `design/conventions/git.md`, `design/conventions/logging.md`, `design/conventions/safety.md`, `design/conventions/session-start.md`, `design/conventions/strategic-agents.md`, `design/conventions/telemetry.md`, `design/conventions/tooling.md`, `design/conventions/work-management.md`, `design/digest/README.md`, `design/experiments/README.md`, `design/experiments/template.md`, `design/system/README.md`, `design/workflows/README.md`, `design/workflows/formulas/README.md`, `design/workflows/formulas/analysis-cadence.md`, `design/workflows/formulas/import.md`, `design/workflows/formulas/publish.md`, `design/workflows/roles/README.md`, `design/workflows/roles/analyzer.md`, `design/workflows/roles/curator.md`, `design/workflows/roles/orchestrator.md`, `design/workflows/roles/planner.md`, `docs/operators/index.md`, `docs/users/index.md`, `scripts/README.md`, `scripts/check.sh`, `scripts/close-out.sh`, `scripts/fetch.sh`, `scripts/lint-md.sh`, `system-flow.lock.yaml`, `system-flow.yaml`, `wip/README.md`, `wip/agents/README.md`, `wip/messages/README.md`. It reaches the main branch when S-0003 is accepted; `git show 0f60029` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-06T17:50:33Z agent-S-0003 S-0003
+T-0023 of S-0003 changed paths S-0006's claim covers.
+
+T-0023, Merge the 8 conflicted files with the template's 1.1.22 text by hand, committed ac1be82 on story/S-0003, `docs: [S-0003] merge the template's 1.1.22 text into the conflicted design indexes`, changing `design/README.md`. It reaches the main branch when S-0003 is accepted; `git show ac1be82` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-06T17:56:15Z bytepunx
+Closed: S-0003 was accepted

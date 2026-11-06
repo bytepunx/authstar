@@ -22,6 +22,21 @@ transitions:
     at: 2026-11-06T17:38:17Z
     by: bytepunx
 tags: []
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 13
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 12
+          output: 66
+          cache_read: 239347
+          cache_write: 54924
+          cost: 0.1046
 ---
 # S-0001 Land the scaffolding, fold the design records in, and import integration
 
