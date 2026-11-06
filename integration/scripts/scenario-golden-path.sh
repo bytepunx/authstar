@@ -23,8 +23,11 @@
 #   - keep: a real Stripe-signature-verified webhook call (keep's own HMAC
 #     scheme, computable in bash via openssl -- no Stripe account needed)
 #   - chronicle: lookout's genuinely unauthenticated /events ingestion route,
-#     then a self-minted HS256 JWT using chronicle's own configured dev
-#     secret (real auth check, not bypassed)
+#     then chronicle's report route without a token, which must answer 401.
+#     Chronicle verifies only the ES256 internal JWT portcullis mints, per
+#     tenant against https://authstar.<domain>/.well-known/jwks.json (S-0009);
+#     the harness cannot serve that host in-cluster yet (I-0007), so reading
+#     the report with a portcullis-forwarded token is skipped until S-0017
 #   - herald: a real key rotation followed by a real invite, verified by
 #     querying herald's own Postgres communication_event table directly
 #     (kubectl exec + psql -- no HTTP status alone can distinguish "sent"
@@ -72,8 +75,10 @@ trap 'kill $(jobs -p) 2>/dev/null || true; rm -rf "$WORKDIR"' EXIT
 
 PASS=0
 FAIL=0
+SKIP=0
 pass() { log "PASS: $1"; PASS=$((PASS + 1)); }
 fail() { log "FAIL: $1"; FAIL=$((FAIL + 1)); }
+skip() { log "SKIP: $1"; SKIP=$((SKIP + 1)); }
 
 port_forward() {
   local svc="$1" local_port="$2" remote_port="$3" namespace="${4:-$AUTHSTAR_NAMESPACE}"
@@ -103,7 +108,6 @@ LOOKOUT_URL="http://localhost:${LOOKOUT_LOCAL_PORT}"
 CHRONICLE_URL="http://localhost:${CHRONICLE_LOCAL_PORT}"
 
 TOWER_OPERATOR_TOKEN="${TOWER_OPERATOR_TOKEN:-dev-placeholder-nWvzdBisvYWVX4ZqZ4iE3k7jC-dmh5nbrU_9DcI536A}"
-CHRONICLE_JWT_SECRET="${CHRONICLE_JWT_SECRET:-dev-only-insecure-secret}"
 
 ##############################################################################
 log "step 1/6: tenant provisioning (tower, real, idempotent)"
@@ -296,46 +300,26 @@ ingest_status="$(echo "$ingest_response" | tail -1)"
 if [[ "$ingest_status" != "202" ]]; then
   fail "lookout event ingestion (HTTP $ingest_status): $(echo "$ingest_response" | head -1)"
 else
-  chronicle_jwt="$(python3 - "$CHRONICLE_JWT_SECRET" <<'PYEOF'
-import sys, hmac, hashlib, base64, json, time
-
-def b64url(data):
-    return base64.urlsafe_b64encode(data).rstrip(b'=')
-
-secret = sys.argv[1].encode()
-header = b64url(json.dumps({"alg": "HS256", "typ": "JWT"}, separators=(",", ":")).encode())
-payload = b64url(json.dumps({"permissions": ["analytics:read"], "iat": int(time.time()), "exp": int(time.time()) + 300}, separators=(",", ":")).encode())
-signing_input = header + b"." + payload
-sig = b64url(hmac.new(secret, signing_input, hashlib.sha256).digest())
-print((signing_input + b"." + sig).decode())
-PYEOF
-)"
-
-  # Give chronicle's RabbitMQ consumer a moment to write the row before
-  # querying. Chronicle enforces a max 92-day report window, so use a
-  # narrow one around today rather than an arbitrary wide range.
+  # Chronicle accepts only the ES256 internal JWT portcullis mints. Without
+  # one it must refuse the report: a 401 proves chronicle is up and enforces
+  # its verification rather than serving tenant data unauthenticated.
   report_from="$(date -u -v-1d +%Y-%m-%d 2>/dev/null || date -u -d '1 day ago' +%Y-%m-%d)"
   report_to="$(date -u -v+1d +%Y-%m-%d 2>/dev/null || date -u -d '1 day' +%Y-%m-%d)"
-  found=0
-  for _ in $(seq 1 10); do
-    report="$(curl -s "${CHRONICLE_URL}/tenants/${TENANT_SLUG}/analytics/reports/auth-funnel?from=${report_from}&to=${report_to}" \
-      -H "Authorization: Bearer ${chronicle_jwt}")"
-    logins="$(echo "$report" | python3 -c 'import json,sys; print(json.load(sys.stdin).get("signupConversion",{}).get("logins",0))' 2>/dev/null || echo 0)"
-    if [[ "$logins" -gt 0 ]]; then
-      found=1
-      break
-    fi
-    sleep 1
-  done
-
-  if [[ "$found" == "1" ]]; then
-    pass "chronicle analytics (real lookout->RabbitMQ->ClickHouse->report chain, logins=$logins)"
+  unauth_status="$(curl -s -o /dev/null -w '%{http_code}' \
+    "${CHRONICLE_URL}/tenants/${TENANT_SLUG}/analytics/reports/auth-funnel?from=${report_from}&to=${report_to}")"
+  if [[ "$unauth_status" == "401" ]]; then
+    pass "chronicle refuses the auth-funnel report without an internal JWT (401)"
   else
-    fail "chronicle analytics -- event ingested (202) but never appeared in the auth-funnel report"
+    fail "chronicle auth-funnel report without an internal JWT answered $unauth_status, expected 401"
   fi
+
+  # Reading the report needs a portcullis-forwarded ES256 token that
+  # chronicle can verify against the tenant's JWKS in-cluster, which the
+  # harness cannot serve yet (I-0007). S-0017 adds it and this read.
+  skip "chronicle report read with a portcullis-forwarded ES256 token (waits on S-0017, I-0007)"
 fi
 
 ##############################################################################
-log "golden path complete: ${PASS} passed, ${FAIL} failed"
+log "golden path complete: ${PASS} passed, ${FAIL} failed, ${SKIP} skipped"
 ##############################################################################
 [[ "$FAIL" -eq 0 ]] || exit 1

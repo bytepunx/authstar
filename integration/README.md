@@ -193,7 +193,7 @@ the other 6 is extrapolated from ADR 0004's generic pattern plus tower/keep/hera
 | keep | `dbConnectionString`, `rabbitmqUrl`, `stripe-secret-key-acme`, `stripe-webhook-secret-acme`, `credentialSalt` | `dbConnectionString`, `rabbitmqUrl`, `towerBaseUrl` | Yes |
 | herald | `dbConnectionString`, `rabbitmqUrl`, `operatorToken` | `dbConnectionString`, `rabbitmqUrl`, `towerBaseUrl` | Yes |
 | lookout | `rabbitmqUrl` | `rabbitmqUrl` | **No** — reads `LOOKOUT_RABBITMQ_URL` env var directly; scope provisioned ahead of the wiring landing (bootstrap `SIGNET_*` env vars now set in `manifests/13-lookout.yaml`, but only take effect once lookout's own companion PR merges) |
-| chronicle | `clickhousePassword`, `rabbitmqUrl`, `internalJwtSecret` | `clickhouseUrl`, `clickhouseUsername`, `clickhouseDatabase`, `retentionMonths`, `maxDateRangeDays`, `queryTimeoutMs`, `rateLimitMax`, `rateLimitWindowMs` | **No** — reads `CHRONICLE_*` env vars directly; bootstrap `SIGNET_*` env vars now set in `manifests/14-chronicle.yaml`, but only take effect once chronicle's own companion PR merges |
+| chronicle | `clickhousePassword`, `rabbitmqUrl` | `clickhouseUrl`, `clickhouseUsername`, `clickhouseDatabase`, `towerBaseUrl`, `retentionMonths`, `maxDateRangeDays`, `queryTimeoutMs`, `rateLimitMax`, `rateLimitWindowMs` | Yes — `SIGNET_*` set in `manifests/14-chronicle.yaml` selects Signet-Configured Mode; no shared JWT secret since S-0009 (see `docs/operators/chronicle-configuration.md`) |
 | portcullis | `tenant-acme-session-key`, `tenant-acme-internal-key`, `tenant-acme-identity-hash-key-1`, `tenant-acme-provider-dex-client-secret` | `webUpstream`, `towerUpstream`, `tenants.acme.*` (full `Bundle` struct shape) | Yes (Rust, `authstar-config` crate) |
 | steward | *(none)* | `towerUrl`, `heraldUrl` | **No** `@bytepunx/signet-client` dependency at all; reads plain env vars |
 | web | *(none)* | `towerBaseUrl`, `keepBaseUrl`, `publicTowerBaseUrl`, `internalJwtJwksUrl` | **No** `@bytepunx/signet-client` dependency at all; reads plain env vars |
@@ -271,7 +271,7 @@ first). Run it directly: `./scripts/scenario-golden-path.sh`. Every step drives 
 API call — no mocking — and reports PASS/FAIL per step, exiting non-zero if anything
 failed. See the script's own header comment for the exact auth mechanics per step (why
 tower's operator routes rather than a JWT-verified path, why keep uses a self-computed
-Stripe webhook signature, why chronicle mints its own HS256 token, and why herald's step
+Stripe webhook signature, why chronicle's report read is skipped until S-0017, and why herald's step
 deliberately stops short of sending a real email — see "A critical, unresolved bug"
 below).
 
@@ -527,7 +527,8 @@ golden path was "proven working end-to-end" — that claim did not survive a fre
   rotation followed by a real invite that herald genuinely decrypts (verified by querying
   its own `communication_event` table directly, not by trusting the invite's HTTP status
   alone — see "A second, deeper, separate bug" above), and a real lookout → RabbitMQ →
-  ClickHouse → chronicle-report chain.
+  ClickHouse → chronicle-report chain. Since S-0009, step 6 checks only that chronicle
+  refuses the report without a token; the token read waits on S-0017 (see below).
 - The GitHub repository (`bytepunx/authstar-integration`, private) received real pushes
   throughout this pass — the deploy-key/`repo add`/`repo sync` steps work as designed.
 
@@ -591,10 +592,13 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
   (`{}`) instead of `nil`, closing the parse error now that `manifests/13-lookout.yaml`
   actually sets bootstrap `SIGNET_*` vars (once lookout's own companion PR merges, sync
   cycles against this file will stop erroring).
-- Chronicle's HS256-vs-tower's-ES256 internal-JWT algorithm mismatch (flagged by an
-  earlier pass of this repo, still real, still unaddressed) — chronicle's `analytics:read`
-  routes accept a self-minted HS256 token using a known dev secret specifically because a
-  genuine portcullis-forwarded internal JWT can never pass its check.
+- Chronicle's report read with a genuine token (S-0017, I-0007). Since S-0009 chronicle
+  verifies only the ES256 internal JWT portcullis mints, per tenant against
+  `https://authstar.<tenant domain>/.well-known/jwks.json`; its HS256 shared secret is gone.
+  The harness cannot serve that host in-cluster: portcullis listens plain HTTP, nothing
+  terminates TLS, no in-cluster DNS maps the tenant host, and step 1 gives `acme` no
+  domain. Step 6 therefore checks that chronicle refuses an unauthenticated report (401)
+  and skips the token read until S-0017 adds the TLS front, DNS, and domain.
 - Web's own JWKS wiring — `INTERNAL_JWT_JWKS_URL` is now set, in both
   `config/authstar/web.yaml` (`internalJwtJwksUrl`, signet-sourced once web's own
   companion PR lands) and `manifests/16-web.yaml` (`INTERNAL_JWT_JWKS_URL` env var, for
