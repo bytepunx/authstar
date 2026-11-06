@@ -3,8 +3,9 @@
 # were already fully provisioned (matching ADR 0036's original list), but
 # chronicle's own src/lib/config.ts/server.ts had never actually gained a
 # signet dial to read them -- confirmed real, all thirteen settings were
-# plain CHRONICLE_* process.env reads with CHRONICLE_INTERNAL_JWT_SECRET
-# defaulting to the literal 'dev-only-insecure-secret' verbatim below.
+# plain CHRONICLE_* process.env reads. Chronicle no longer has a shared JWT
+# secret: it verifies the ES256 internal JWT against the tenant's JWKS, with
+# towerBaseUrl from config/authstar/chronicle.yaml (S-0009).
 # Chronicle's own companion PR (story 003) adds the dialWorkload/
 # getServiceBundle wiring keep/herald/tower already use; this manifest
 # change is only safe/backward-compatible once that PR has merged (see

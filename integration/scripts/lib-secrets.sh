@@ -60,7 +60,6 @@ SECRET_ENTRIES=(
   "lookout/rabbitmqUrl"
   "chronicle/clickhousePassword"
   "chronicle/rabbitmqUrl"
-  "chronicle/internalJwtSecret"
   "portcullis/tenant-acme-session-key"
   "portcullis/tenant-acme-internal-key"
   "portcullis/tenant-acme-identity-hash-key-1"
@@ -180,7 +179,6 @@ SECRET_VALUE__herald__operatorToken='dev-placeholder-LKL0D3M7tKg2ZpRXgB3c29lviez
 SECRET_VALUE__lookout__rabbitmqUrl='amqp://rmq-e723a8343b2dd491:c68cd68864a92438478140b78988be85c7ba571a@rabbitmq.rabbitmq.svc.cluster.local:5672/'
 SECRET_VALUE__chronicle__clickhousePassword='clickhouse'
 SECRET_VALUE__chronicle__rabbitmqUrl='amqp://rmq-e723a8343b2dd491:c68cd68864a92438478140b78988be85c7ba571a@rabbitmq.rabbitmq.svc.cluster.local:5672/'
-SECRET_VALUE__chronicle__internalJwtSecret='8a900dc6787a1a88b320691ab42efecf20078e542c6c8e9aa1db5794e7ce18e4'
 SECRET_VALUE__portcullis__tenant_acme_session_key='-----BEGIN EC PRIVATE KEY-----
 MHcCAQEEICPtVZCzAstGsDJCz6C/uWD9TKa4hCSvMIrst/IyizW+oAoGCCqGSM49
 AwEHoUQDQgAEfCWfmH+EVU4g/glZdLuOW+ETjP6jtvs7JMGFrPDMAT427mRZClza

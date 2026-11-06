@@ -3,7 +3,7 @@
 # NOTE: as of this writing, chronicle/src/lib/config.ts has NO signet-client
 # wiring either — it reads CHRONICLE_* env vars directly (explicit code
 # comment: "a real signet client isn't wired up in this pilot slice").
-# clickhousePassword/rabbitmqUrl/internalJwtSecret are secret-only (see
+# clickhousePassword/rabbitmqUrl are secret-only (see
 # secrets/authstar/chronicle/); the rest are plain per ADR 0036 ("chronicle
 # gets its own signet bundle... holding retentionMonths alongside its
 # ClickHouse and RabbitMQ connection details"). Field names below are this
@@ -17,3 +17,10 @@ maxDateRangeDays: 92
 queryTimeoutMs: 10000
 rateLimitMax: 60
 rateLimitWindowMs: 60000
+# towerBaseUrl: chronicle asks tower for a tenant's registered domain and
+# verifies the portcullis-forwarded ES256 internal JWT against
+# https://authstar.<domain>/.well-known/jwks.json (ADR 0089, ADR 0091).
+# Same field and value as herald.yaml and keep.yaml; chronicle's
+# signet-bundle-config.ts fails startup naming it when it is absent.
+# There is no shared verification secret any more.
+towerBaseUrl: http://tower.authstar.svc.cluster.local:8080

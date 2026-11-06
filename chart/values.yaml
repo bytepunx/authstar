@@ -109,11 +109,14 @@ chronicle:
         secretKeyRef:
           name: chronicle-secrets
           key: RABBITMQ_URL
-    - name: CHRONICLE_INTERNAL_JWT_SECRET
-      valueFrom:
-        secretKeyRef:
-          name: chronicle-secrets
-          key: INTERNAL_JWT_SECRET
+    # Tower answers a tenant's registered domain, from which chronicle builds
+    # the tenant's JWKS URL to verify the ES256 internal JWT (ADR 0089, ADR
+    # 0091). Plain fetch() like herald's and keep's, and like them with no
+    # SPIFFE-bundle CA trust wiring for this call yet (I-0001).
+    - name: CHRONICLE_TOWER_BASE_URL
+      value: "https://tower.authstar-platform.svc.cluster.local:8080"
+    - name: NODE_TLS_REJECT_UNAUTHORIZED
+      value: "0"
   config: {}
   secrets: {}
 

@@ -1,6 +1,6 @@
 # Chronicle's own code has supported Signet-Configured Mode since ADR 0102/
 # Story 003 (merged) -- bootstrap coordinates below activate it, at which
-# point clickhousePassword/rabbitmqUrl/internalJwtSecret (and the rest of
+# point clickhousePassword/rabbitmqUrl/towerBaseUrl (and the rest of
 # chronicle's ADR 0036 scope) come from the signet bundle the hook
 # provisions (values.chronicle.config/secrets), not the extraEnv secretKeyRefs
 # below. Those extraEnv entries are left in place as the Env-Only Mode
