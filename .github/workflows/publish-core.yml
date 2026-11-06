@@ -16,7 +16,7 @@ permissions:
   # there's no long-lived NPM_TOKEN secret to store, rotate, or have expire
   # out from under a release. Requires the package to have a Trusted
   # Publisher configured on npmjs.com pointing at this exact repo + workflow
-  # file (bytepunx/authstar-clients, publish-core.yml) -- a one-time,
+  # file (bytepunx/authstar, publish-core.yml); it was registered for bytepunx/authstar-clients and must be re-registered by the package owner before this workflow can publish -- a one-time,
   # npm-website-side setup step for an @bytepunx package owner, not
   # something expressible in this file.
   id-token: write
@@ -27,20 +27,20 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: typescript/core
+        working-directory: clients/typescript/core
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
           node-version: "22"
           cache: npm
-          cache-dependency-path: typescript/package-lock.json
+          cache-dependency-path: clients/typescript/package-lock.json
           registry-url: "https://registry.npmjs.org"
 
       - name: npm ci
-        working-directory: typescript
+        working-directory: clients/typescript
         run: npm ci
 
       - name: Build

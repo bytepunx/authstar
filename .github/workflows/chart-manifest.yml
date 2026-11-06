@@ -1,16 +1,23 @@
 name: Verify signet manifest
 
+# chart/manifest.json aggregates each service image's embedded signet manifest
+# (ADR-0105); this checks it is current against the images on Docker Hub.
+
 on:
   push:
     branches: [main]
+    paths: [chart/**]
   pull_request:
-    branches: [main]
+    paths: [chart/**]
 
 jobs:
   check:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: chart
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Install yq
         run: |

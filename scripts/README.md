@@ -5,9 +5,11 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | Script | Does |
 |--------|------|
 | `check.sh` | Runs `flai check --strict` on this repository; with `CLOSE_OUT_STORY` set, as `flai verify` sets it for the tiers it runs, scoped to the story with `--story` and `--record-issues`, so findings outside it are notes recorded in issues; else with `MERGE_QUEUE_STORIES` set, as the merge queue's batch and bisection set it to the stories they verify, comma-separated, scoped to them with `--story` alone, so a finding outside every one is a note and none is recorded |
-| `test.sh` | Behavior tests, fast, every iteration (`make test`); the `test` tier of `system-flow.yaml`'s `tests` |
-| `integration.sh` | Integration tests against real adapters (`make integration`); the `integration` tier |
-| `smoke.sh` | End-to-end smoke tests (`make smoke`); the `smoke` tier |
+| `test.sh` | Behavior and e2e tiers: every npm project's `npm test`, then `cargo test` and clippy for portcullis (`make test`) |
+| `integration.sh` | Integration tier: `npm run test:integration` in every service that has one; needs Docker (`make integration`) |
+| `smoke.sh` | The golden-path scenario in `integration/` against a running k3d cluster (`make smoke`) |
+| `install.sh` | `npm ci` in every npm project and `cargo fetch` for portcullis (`make install`) |
 | `fetch.sh` | `git fetch --tags`: the remote's branch and tags into this checkout, since flai never fetches. The publish formula's first step, which runs it from the main checkout before `flai release --evaluate --require-met` and `flai release --pending` (ADR-0240) |
+| `lib-projects.sh` | Sourced by the above: the project lists and the `run_in` helper |
 | `lint-md.sh` | markdownlint-cli2 over every markdown file with `.markdownlint.yaml` (`make lint-md`); the `markdown` tier |
 | `close-out.sh` | Before a story goes to review, in its worktree, on its branch: `flai verify <story> --record-issues`, which runs every check (no rebase left unfinished, the branch contains the main branch, the narrative's `## Current state` and `## Next steps`, `flai check --strict` scoped to the story, then the tiers of `system-flow.yaml`'s `tests` that the branch's changes select, `integration` and `smoke` on every story), so the close-out and `flai verify` never disagree; then the commit with the `git commit` options given, which also commits the issues `--record-issues` recorded, the check with `flai verify <story> --sync-only` that the branch still contains the main branch, which passes over commits on it that change only `wip/` paths the branch does not change, and the clean worktree check. It stops at the first step that fails, and every run ends with one line naming the story, the outcome, and the step it stopped at, so nobody runs it again to learn why it stopped. Add a check as a tier in `tests`, not as a step here |
