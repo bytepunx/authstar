@@ -80,6 +80,10 @@ spec:
               value: authstar.cluster.local
             - name: SPIFFE_ENDPOINT_SOCKET
               value: unix:///run/spire/sockets/spire-agent.sock
+            # Chronicle's plain fetch() to tower's https towerBaseUrl has no
+            # SPIFFE-bundle CA trust wiring yet, as in the chart (I-0001).
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
           volumeMounts:
             - name: spiffe
               mountPath: /run/spire/sockets

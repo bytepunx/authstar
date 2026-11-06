@@ -20,7 +20,10 @@ rateLimitWindowMs: 60000
 # towerBaseUrl: chronicle asks tower for a tenant's registered domain and
 # verifies the portcullis-forwarded ES256 internal JWT against
 # https://authstar.<domain>/.well-known/jwks.json (ADR 0089, ADR 0091).
-# Same field and value as herald.yaml and keep.yaml; chronicle's
-# signet-bundle-config.ts fails startup naming it when it is absent.
+# https, as portcullis.yaml's towerUpstream: tower's server always runs
+# SPIFFE mTLS, so http:// cannot connect (herald.yaml and keep.yaml still
+# say http://). manifests/14-chronicle.yaml sets
+# NODE_TLS_REJECT_UNAUTHORIZED=0 for this call, as the chart does (I-0001).
+# chronicle's signet-bundle-config.ts fails startup naming it when absent.
 # There is no shared verification secret any more.
-towerBaseUrl: http://tower.authstar.svc.cluster.local:8080
+towerBaseUrl: https://tower.authstar.svc.cluster.local:8080
