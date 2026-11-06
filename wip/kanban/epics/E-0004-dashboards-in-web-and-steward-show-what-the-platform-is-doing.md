@@ -6,7 +6,7 @@ title: Dashboards in web and steward show what the platform is doing
 status: ready
 owner: alex
 created: 2026-10-21T05:12:30Z
-updated: 2026-10-21T05:13:56Z
+updated: 2026-11-06T18:00:17Z
 transitions:
   - to: ready
     at: 2026-10-21T05:13:56Z
@@ -18,25 +18,31 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 533
+      seconds: 940
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 703
-          output: 41094
-          cache_read: 40492920
-          cache_write: 599557
-          cost: 13.8644
+          input: 945
+          output: 61342
+          cache_read: 59269593
+          cache_write: 728897
+          cost: 20.7006
     - kind: orchestrator
-      seconds: 33
+      seconds: 39
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 23
-          output: 168
-          cache_read: 555518
-          cache_write: 78429
-          cost: 0.8839
+          input: 26
+          output: 196
+          cache_read: 638421
+          cache_write: 92338
+          cost: 0.9934
+cost_of_delay:
+  inputs:
+    revenue_per_week: 0
+    penalty_per_week: 100
+    by: alex
+    at: 2026-11-06T18:00:17Z
 ---
 # E-0004 Dashboards in web and steward show what the platform is doing
 

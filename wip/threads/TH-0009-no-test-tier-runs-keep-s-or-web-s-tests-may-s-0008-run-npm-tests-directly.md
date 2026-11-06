@@ -7,7 +7,7 @@ anchor:
 status: open
 participants: [agent-S-0008]
 created: 2026-11-06T17:51:00Z
-updated: 2026-11-06T17:51:00Z
+updated: 2026-11-06T17:56:44Z
 ---
 
 # TH-0009 No test tier runs keep's or web's tests: may S-0008 run npm tests directly?
@@ -28,3 +28,6 @@ Other answers:
 - Leave the code untested: I tick no criterion that needs a passing test, and S-0008 goes to review with that stated.
 
 Until you answer, I will go on writing T-0018 and T-0019 untested.
+
+### 2026-11-06T17:56:44Z agent-S-0008
+Update: S-0003 recorded the same defect as I-0004, now on main, so I closed I-0003 as a duplicate and added S-0008's instances to I-0004. S-0008 is rebased onto main after S-0003's acceptance. `scripts/test.sh` is still the placeholder, so the question stands. All five tasks are done and committed. Nothing is left but this answer.

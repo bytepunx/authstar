@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-06T17:54:45Z
+updated: 2026-11-06T18:01:11Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -17,36 +17,47 @@ transitions:
     by: agent-S-0008
 blocked:
   - from: 2026-11-06T17:54:45Z
+    until: 2026-11-06T17:56:15Z
+    reason: awaiting the operator on TH-0009
+  - from: 2026-11-06T17:56:59Z
     reason: awaiting the operator on TH-0009
 tags: [web]
-touches: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md]
+topics: [billing]
+touches: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md]
 usage:
   source: log
-  seconds: 447
+  seconds: 488
   priced_by: harness
   turns:
     - day: 2026-11-06
-      ceremony: 1
-      hand_edits: 3
-      work: 46
+      ceremony: 3
+      hand_edits: 4
+      work: 52
   models:
     - model: claude-opus-5-5
-      input: 198
-      output: 50245
-      cache_read: 13040713
-      cache_write: 268727
-      cost: 5.5657
+      input: 220
+      output: 54253
+      cache_read: 15347171
+      cache_write: 293309
+      cost: 6.3039
   strategic:
     - kind: orchestrator
-      seconds: 52
+      seconds: 79
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 242
-          cache_read: 854161
-          cache_write: 144159
-          cost: 1.3556
+          input: 52
+          output: 357
+          cache_read: 1220131
+          cache_write: 193230
+          cost: 1.8319
+cost_of_delay:
+  inputs:
+    revenue_per_week: 0
+    penalty_per_week: 0
+    time_lost_per_cycle: 15m
+    by: alex
+    at: 2026-11-06T17:59:54Z
 forecast:
   duration: 5h
   delivery: 2026-11-06T22:47:00Z
@@ -82,7 +93,7 @@ Creating a plan mapping in web lists the tenant's active Stripe prices and produ
 
 No criterion is ticked yet, because no test has run on this story's code:
 
-- `flai test` and `make test` run only the template's placeholder `scripts/test.sh`. S-0002's real test tiers never reached main (I-0003). No component has `node_modules`. TH-0009 asks whether to run keep's and web's npm tests directly.
+- `flai test` and `make test` run only the template's placeholder `scripts/test.sh`. S-0002's real test tiers never reached main (I-0004). No component has `node_modules`. TH-0009 asks whether to run keep's and web's npm tests directly.
 - Criterion 3's live half needs `STRIPE_LIVE_TEST_SECRET_KEY`, and no test-mode key exists in this environment. The live case in `keep/spec/live/stripe-live.spec.ts` skips with the rest of the suite until someone runs `npm run test:live` in `keep/` with a key.
 
 ### Planning
@@ -105,16 +116,16 @@ Touches. Before planning, the story declared only the ADR its agent wrote, so th
 | `web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte` | layout | The form itself. |
 | `web/spec/behavior/billing-plan-mappings.spec.ts` | co-change, layout | Web's existing behavior spec for this page. |
 | `docs/users/index.md` | declared by T-0026 | The story's agent added it for the user-facing change. S-0003 claims it too, and the two agents agree the order. |
-| `design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md`, `design/issues/summary.md` | declared | The story's agent added them to record an issue it met. |
+| `design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md`, `design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md`, `design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md`, `design/issues/summary.md` | declared | The story's agent added them to record the issues it met. |
 
 `flai touches suggest` also listed `keep/src/server.ts`, `keep/spec/lib/test-app.ts`, `keep/package.json`, and other route files. They are left out on purpose. `test-app.ts` already exposes `stripeState`. `server.ts` already wires the real client factory. Nothing here adds a dependency, since the Stripe SDK already lists prices.
 
-Tag. `web` is the component the story delivers to: the editor is the increment. Keep's new route is an additive change, released as a patch.
+Tag and topic. `web` is the component the story delivers to: the editor is the increment. Keep's new route is an additive change, released as a patch. The topic is `billing`.
 
 After. None. S-0008 reads nothing that another open story writes. S-0004 (done) decided the plan-mapping semantics, and this story does not change them.
 
 Forecast. 5h, adjusted from `flai forecast`'s 1h. That figure is `planning.default_duration` with no done story to learn from, and it counts no touches. There are five tasks across two components, with an ADR and an opt-in live-tier case, so 5h is the planner's estimate. Delivery is 5h from when the story started at 17:47Z.
 
-Cost of delay. Not yet set. Neither S-0008 nor E-0002 has inputs, so `flai cod S-0008` cannot give a value. The inputs are asked for on TH-0003.
+Cost of delay. Not yet set. The operator gave the inputs on TH-0003: revenue 0, penalty 0, and 15m lost per cycle. `flai cod S-0008` still refuses, because `planning.hour_rate` is unset and the 15m cannot be priced without it. TH-0003 asks the operator for the rate.
 
 Tasks. T-0020 and T-0022 duplicated T-0026, which the story's agent wrote while planning ran. The story's agent cancelled them, as TH-0008 proposed. The plan is T-0016 and T-0017, then T-0018 and T-0026, then T-0019.

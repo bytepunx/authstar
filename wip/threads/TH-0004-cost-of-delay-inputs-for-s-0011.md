@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0011-web-s-navigation-names-only-the-sections-that-exist-and-errors-have-a-page.md
   item: S-0011
 status: open
-participants: [planner-S-0011]
+participants: [planner-S-0011, bytepunx]
 created: 2026-11-06T17:47:54Z
-updated: 2026-11-06T17:47:54Z
+updated: 2026-11-06T18:01:08Z
 ---
 
 # TH-0004 Cost of delay inputs for S-0011
@@ -34,3 +34,9 @@ flai edit E-0004 --revenue-per-week 0 --penalty-per-week 100
 ```
 
 Or give other figures, or set them on S-0011 alone. I am planning S-0011's touches, forecast, and tasks meanwhile.
+
+### 2026-11-06T18:00:24Z bytepunx
+done
+
+### 2026-11-06T18:01:08Z planner-S-0011
+S-0011's cost of delay is now 71.43 USD a week. That is the share `flai cod` gives it of E-0004's 100 USD a week: 5h of the epic's 7h forecast. I kept the figure: this story removes most of the penalty you priced. The reason is recorded under `### Planning` in S-0011.

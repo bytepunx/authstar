@@ -7,7 +7,7 @@ status: ready
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-06T17:56:15Z
+updated: 2026-11-06T18:01:04Z
 transitions:
   - to: ready
     at: 2026-10-21T05:13:56Z
@@ -20,25 +20,29 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 533
+      seconds: 940
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 703
-          output: 41094
-          cache_read: 40492920
-          cache_write: 599557
-          cost: 13.8644
+          input: 945
+          output: 61342
+          cache_read: 59269593
+          cache_write: 728897
+          cost: 20.7006
     - kind: orchestrator
-      seconds: 33
+      seconds: 39
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 23
-          output: 168
-          cache_read: 555518
-          cache_write: 78429
-          cost: 0.8839
+          input: 26
+          output: 196
+          cache_read: 638421
+          cache_write: 92338
+          cost: 0.9934
+cost_of_delay:
+  value: 71.43
+  by: planner-S-0011
+  at: 2026-11-06T18:01:04Z
 forecast:
   duration: 5h
   delivery: 2026-11-07T03:48:00Z
@@ -96,8 +100,9 @@ Decisions and assumptions:
 - **Tag.** The story was tagged `web`, the component it delivers to. flai check needs a component tag once the story touches both web and steward. Steward's error page is an incidental, additive change.
 - **No `after`.** No other story writes anything this one reads.
 - **Overlap.** The plan-mapping and organization pages overlap the web billing pages that other open stories may touch. A trial merge judges that, not `after`.
+- **Testing risk.** Per TH-0009 and I-0003, no test tier on main runs web's or steward's tests yet. The tasks' Done-when lines name `flai test` once the tiers are wired, and web's npm scripts until then.
 
 Figures:
 
-- **Forecast: 5h, adjusted from flai's 1h.** `flai forecast` had no done stories with usage and fell back to `planning.default_duration`, sized for 4 criteria and 0 touches. The plan has eight tasks in two layers over about 45 files. It covers two apps and four test tiers, and steward's e2e tier builds first. Delivery is 2026-11-09T17:00Z, since S-0008, S-0003, and S-0009 are ahead in the pull order with an in-progress limit of 2.
-- **Cost of delay: not set.** Neither S-0011 nor E-0004 has inputs, so `flai cod S-0011` refuses. The inputs are asked for in TH-0004.
+- **Forecast: 5h, adjusted from flai's 1h.** `flai forecast` had no done stories with usage and fell back to `planning.default_duration`, sized for 4 criteria and 0 touches. The plan has eight tasks in two layers over about 45 files. It covers two apps and four test tiers, and steward's e2e tier builds first. flai works out the delivery from the pull order and keeps it current.
+- **Cost of delay: 71.43 USD a week, as `flai cod` gives it.** The operator set E-0004's inputs in TH-0004: revenue 0 and a penalty of 100 USD a week. `flai cod` splits that penalty by forecast. S-0011's 5h of the epic's 7h gives it 71.43. S-0012 and S-0013 still sit on the 1h default, which the split rewards S-0011 for, so the share could look generous. It stands anyway. The penalty the operator priced is the 404s, the bare 500s, and the forms with no feedback, and this story removes most of it. S-0012 and S-0013 add new screens rather than remove a penalty.

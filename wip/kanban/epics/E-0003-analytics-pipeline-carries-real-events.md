@@ -6,7 +6,7 @@ title: Analytics pipeline carries real events
 status: in-progress
 owner: alex
 created: 2026-10-21T05:12:30Z
-updated: 2026-11-06T17:53:46Z
+updated: 2026-11-06T18:00:32Z
 transitions:
   - to: ready
     at: 2026-10-21T05:13:56Z
@@ -21,15 +21,22 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 15
+      seconds: 21
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 12
-          output: 86
-          cache_read: 305686
-          cache_write: 42932
-          cost: 0.4608
+          input: 15
+          output: 115
+          cache_read: 388589
+          cache_write: 56841
+          cost: 0.5703
+cost_of_delay:
+  inputs:
+    revenue_per_week: 0
+    penalty_per_week: 0
+    time_lost_per_cycle: 30m
+    by: alex
+    at: 2026-11-06T18:00:32Z
 ---
 # E-0003 Analytics pipeline carries real events
 

@@ -3,11 +3,11 @@ id: S-0006
 type: story
 nature: feature
 title: Serve GET /_authstar/me/subscription for the subscription-status widget
-status: review
+status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-10-21T05:40:40Z
+updated: 2026-11-06T17:56:48Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-21T05:40:40Z
     by: claude
+  - to: in-progress
+    at: 2026-11-06T17:56:48Z
+    by: bytepunx
 tags: [keep, portcullis]
 ---
 # S-0006 Serve GET /_authstar/me/subscription for the subscription-status widget
@@ -43,3 +46,4 @@ The `<authstar-subscription-status>` widget web already ships gets a real answer
 `web/src/widgets/subscription-status.ts` fetches the route; `keep/TESTING.md` lists it as missing; ADR-0071 and ADR-0041 define the surface.
 
 Criterion 3 is unticked: the golden-path step 4b is written and documented, but this session had no k3d cluster to run it on. Whoever next runs `integration/scripts/scenario-golden-path.sh` ticks it. Verified on 2026-10-21: keep `npm test` 156+2, portcullis `cargo test --workspace` and clippy clean, web `npm test` green.
+- 2026-11-06T17:56:48Z: moved to in-progress: Final criterion requires a test against kluster
