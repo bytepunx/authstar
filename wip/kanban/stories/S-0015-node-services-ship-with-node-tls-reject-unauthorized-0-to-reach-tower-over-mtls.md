@@ -6,7 +6,7 @@ title: "Node services ship with NODE_TLS_REJECT_UNAUTHORIZED=0 to reach tower ov
 status: backlog
 owner: bytepunx
 created: 2026-11-06T17:38:17Z
-updated: 2026-11-06T18:11:52Z
+updated: 2026-11-06T21:11:51Z
 transitions: []
 tags: [herald, keep, steward, web, chart, spiffe, mtls]
 touches: [design/adrs/0111-node-services-verify-tower-against-the-spire-trust-bundle.md, design/adrs/README.md, design/tech/tech-stack.md, herald/src/lib/tower-tls.ts, herald/src/server.ts, herald/spec/behavior/tower-tls.spec.ts, herald/spec/lib/spiffe-test-certs.ts, herald/package.json, herald/package-lock.json, herald/TESTING.md, keep/src/lib/tower-tls.ts, keep/src/server.ts, keep/src/lib/role-reference-backfill.ts, keep/spec/behavior/tower-tls.spec.ts, keep/spec/lib/spiffe-test-certs.ts, keep/package.json, keep/package-lock.json, keep/TESTING.md, steward/src/lib/server/tower-tls.ts, steward/src/hooks.server.ts, steward/tests/behavior/tower-tls.spec.ts, steward/tests/helpers/spiffe-test-certs.ts, steward/package.json, steward/package-lock.json, steward/TESTING.md, web/src/lib/server/tower-tls.ts, web/src/hooks.server.ts, web/spec/behavior/tower-tls.spec.ts, web/spec/fixtures/spiffe-test-certs.ts, web/package.json, web/package-lock.json, web/TESTING.md, chart/values.yaml, chart/README.md, design/stories/chart/001-chart-layout-and-provisioning-hook.md, design/issues/I-0001-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md, design/issues/summary.md]
@@ -28,10 +28,10 @@ usage:
 draft: true
 forecast:
   duration: 4h
-  delivery: 2026-11-07T06:54:00Z
-  basis: "planning.default_duration of 1h raised to 4h for seven tasks in four layers, four of them adding dependencies and a real-TLS spec to a service; delivery is flai forecast's 8th-in-pull-order date plus those three hours."
-  by: planner-S-0015
-  at: 2026-11-06T18:11:52Z
+  delivery: 2026-11-07T09:12:00Z
+  basis: "Its own forecast of 4h; 8th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0011, S-0007, S-0005, S-0010, S-0013, S-0012 and S-0014."
+  by: flai
+  at: 2026-11-06T21:11:51Z
 ---
 # S-0015 Node services ship with NODE_TLS_REJECT_UNAUTHORIZED=0 to reach tower over mTLS
 

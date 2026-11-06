@@ -7,7 +7,7 @@ status: ready
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-06T18:01:04Z
+updated: 2026-11-06T21:11:49Z
 transitions:
   - to: ready
     at: 2026-10-21T05:13:56Z
@@ -45,10 +45,10 @@ cost_of_delay:
   at: 2026-11-06T18:01:04Z
 forecast:
   duration: 5h
-  delivery: 2026-11-07T03:48:00Z
-  basis: "Its own forecast of 5h; 1st in the pull order with an in-progress limit of 2, behind S-0008 and S-0009."
+  delivery: 2026-11-07T02:12:00Z
+  basis: "Its own forecast of 5h; 1st in the pull order with an in-progress limit of 4, behind S-0006 and S-0008."
   by: flai
-  at: 2026-11-06T17:56:15Z
+  at: 2026-11-06T21:11:49Z
 ---
 # S-0011 Web's navigation names only the sections that exist and errors have a page
 

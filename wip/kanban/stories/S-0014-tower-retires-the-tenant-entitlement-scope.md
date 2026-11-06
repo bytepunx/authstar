@@ -7,7 +7,7 @@ status: backlog
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:29:21Z
-updated: 2026-11-06T18:21:56Z
+updated: 2026-11-06T21:11:51Z
 transitions: []
 tags: [tower]
 topics: [billing, tower, testing]
@@ -37,10 +37,10 @@ cost_of_delay:
     at: 2026-11-06T18:21:56Z
 forecast:
   duration: 3h
-  delivery: 2026-11-07T02:54:00Z
-  basis: "No history (1 done story with usage), so 3h of judgement over the 1h default: four tasks in three layers across tower, steward, and docs; delivery is flai's play of the pull order, 7th behind nine stories, with 3h in place of 1h."
-  by: planner-S-0014
-  at: 2026-11-06T18:10:21Z
+  delivery: 2026-11-07T07:48:00Z
+  basis: "Its own forecast of 3h; 7th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0011, S-0007, S-0005, S-0010, S-0013 and S-0012."
+  by: flai
+  at: 2026-11-06T21:11:51Z
 ---
 # S-0014 Tower retires the tenant entitlement scope
 

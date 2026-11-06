@@ -7,7 +7,7 @@ status: backlog
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-06T19:46:15Z
+updated: 2026-11-06T21:11:50Z
 transitions: []
 tags: [steward]
 touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md]
@@ -32,10 +32,10 @@ cost_of_delay:
   at: 2026-11-06T18:36:38Z
 forecast:
   duration: 4h
-  delivery: 2026-11-07T03:54:00Z
-  basis: "Planner's 4h for five tasks over about 12 files in steward, in place of the 1h default flai uses with only 1 done story of history; delivery is flai forecast's 2026-11-07T00:54Z moved out by the 3h added."
-  by: planner-S-0013
-  at: 2026-11-06T18:36:38Z
+  delivery: 2026-11-07T05:12:00Z
+  basis: "Its own forecast of 4h; 5th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0011, S-0007, S-0005 and S-0010."
+  by: flai
+  at: 2026-11-06T21:11:50Z
 ---
 # S-0013 Steward shows tenant activity and stuck erasure requests
 

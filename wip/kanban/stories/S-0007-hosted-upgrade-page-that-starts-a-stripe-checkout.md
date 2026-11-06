@@ -7,7 +7,7 @@ status: backlog
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-06T18:21:07Z
+updated: 2026-11-06T21:11:49Z
 transitions: []
 tags: [web, keep, portcullis]
 topics: [billing]
@@ -35,10 +35,10 @@ cost_of_delay:
     at: 2026-11-06T18:21:07Z
 forecast:
   duration: 8h
-  delivery: 2026-11-07T02:10:00Z
-  basis: Planner's estimate for six tasks in three layers across keep, portcullis, web, and the integration harness, with an ADR and a test-mode golden-path step, in place of flai's 1h default, which rests on one done story and counted no touches.
-  by: planner-S-0007
-  at: 2026-11-06T18:10:37Z
+  delivery: 2026-11-07T05:12:00Z
+  basis: "Its own forecast of 8h; 2nd in the pull order with an in-progress limit of 4, behind S-0006, S-0008 and S-0011."
+  by: flai
+  at: 2026-11-06T21:11:49Z
 ---
 # S-0007 Hosted upgrade page that starts a Stripe checkout
 

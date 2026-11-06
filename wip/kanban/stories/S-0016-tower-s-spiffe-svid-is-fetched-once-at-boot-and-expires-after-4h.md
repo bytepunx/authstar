@@ -6,7 +6,7 @@ title: Tower's SPIFFE SVID is fetched once at boot and expires after 4h
 status: backlog
 owner: bytepunx
 created: 2026-11-06T17:38:17Z
-updated: 2026-11-06T18:21:21Z
+updated: 2026-11-06T21:11:51Z
 transitions: []
 tags: [tower, spiffe, mtls]
 touches: [tower/src/lib/spiffe-mtls.ts, tower/src/server.ts, tower/spec/behavior/spiffe-svid-rotation.spec.ts, tower/spec/lib/spiffe-test-certs.ts, tower/TESTING.md, design/issues/I-0002-tower-s-spiffe-svid-is-fetched-once-at-boot-and-expires-after-4h.md, design/issues/summary.md]
@@ -50,10 +50,10 @@ cost_of_delay:
     at: 2026-11-06T18:21:21Z
 forecast:
   duration: 2h
-  delivery: 2026-11-07T01:48:00Z
-  basis: "planning.default_duration of 1h raised to 2h for four tasks in three layers, one a real-TLS handshake test; delivery is flai forecast's 9th-in-pull-order date plus that hour."
-  by: planner-S-0016
-  at: 2026-11-06T18:08:08Z
+  delivery: 2026-11-07T07:12:00Z
+  basis: "Its own forecast of 2h; 9th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0011, S-0007, S-0005, S-0010, S-0013, S-0012, S-0014 and S-0015."
+  by: flai
+  at: 2026-11-06T21:11:51Z
 ---
 # S-0016 Tower's SPIFFE SVID is fetched once at boot and expires after 4h
 
