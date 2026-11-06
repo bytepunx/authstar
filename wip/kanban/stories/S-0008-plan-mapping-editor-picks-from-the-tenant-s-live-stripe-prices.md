@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-06T18:01:11Z
+updated: 2026-11-06T18:35:14Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -20,37 +20,49 @@ blocked:
     until: 2026-11-06T17:56:15Z
     reason: awaiting the operator on TH-0009
   - from: 2026-11-06T17:56:59Z
+    until: 2026-11-06T18:03:46Z
     reason: awaiting the operator on TH-0009
+  - from: 2026-11-06T18:05:04Z
+    until: 2026-11-06T18:09:29Z
+    reason: awaiting the operator on TH-0009
+  - from: 2026-11-06T18:09:46Z
+    until: 2026-11-06T18:09:57Z
+    reason: awaiting the operator on TH-0009
+  - from: 2026-11-06T18:10:06Z
+    until: 2026-11-06T18:16:37Z
+    reason: awaiting the operator on TH-0009
+  - from: 2026-11-06T18:35:14Z
+    reason: awaiting the operator on TH-0027
 tags: [web]
 topics: [billing]
-touches: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md]
+touches: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md, design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/I-0009-no-test-tier-type-checks-web-or-steward-scripts-test-sh-runs-vitest-only-never.md]
 usage:
   source: log
-  seconds: 488
+  seconds: 1692
   priced_by: harness
   turns:
     - day: 2026-11-06
-      ceremony: 3
-      hand_edits: 4
-      work: 52
+      ceremony: 6
+      hand_edits: 5
+      work: 110
   models:
     - model: claude-opus-5-5
-      input: 220
-      output: 54253
-      cache_read: 15347171
-      cache_write: 293309
-      cost: 6.3039
+      input: 352
+      output: 77312
+      cache_read: 34815190
+      cache_write: 385251
+      cost: 11.3948
   strategic:
     - kind: orchestrator
-      seconds: 79
+      seconds: 109
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 52
-          output: 357
-          cache_read: 1220131
-          cache_write: 193230
-          cost: 1.8319
+          input: 79
+          output: 565
+          cache_read: 1944620
+          cache_write: 299271
+          cost: 2.7876
 cost_of_delay:
   inputs:
     revenue_per_week: 0
@@ -72,8 +84,8 @@ forecast:
 Creating a plan mapping in web lists the tenant's active Stripe prices and products instead of asking for a pasted price ID, as ADR-0046 requires.
 
 ## Acceptance criteria
-- [ ] Keep exposes a read-only route listing the tenant's active prices with product name, amount, currency, and interval, from the tenant's own Stripe key
-- [ ] Web's plan-mapping form offers those prices and submits the chosen ID; pasting remains possible for a price the list does not show
+- [x] Keep exposes a read-only route listing the tenant's active prices with product name, amount, currency, and interval, from the tenant's own Stripe key
+- [x] Web's plan-mapping form offers those prices and submits the chosen ID; pasting remains possible for a price the list does not show
 - [ ] Keep's fake Stripe covers the listing in behavior tests and the live tier covers it against test mode
 
 ## Tasks
@@ -84,6 +96,7 @@ Creating a plan mapping in web lists the tenant's active Stripe prices and produ
 - T-0020 Web's keep client fetches the tenant's Stripe prices for the new-mapping page
 - T-0022 Plan-mapping form offers the listed prices and keeps a pasted ID as a fallback
 - T-0026 Web's plan-mapping form offers the tenant's live Stripe prices
+- T-0085 Renumber S-0008's closed duplicate issue from I-0003 to I-0008
 
 ## Notes
 
@@ -91,10 +104,8 @@ Creating a plan mapping in web lists the tenant's active Stripe prices and produ
 
 ### Verification
 
-No criterion is ticked yet, because no test has run on this story's code:
-
-- `flai test` and `make test` run only the template's placeholder `scripts/test.sh`. S-0002's real test tiers never reached main (I-0004). No component has `node_modules`. TH-0009 asks whether to run keep's and web's npm tests directly.
-- Criterion 3's live half needs `STRIPE_LIVE_TEST_SECRET_KEY`, and no test-mode key exists in this environment. The live case in `keep/spec/live/stripe-live.spec.ts` skips with the rest of the suite until someone runs `npm run test:live` in `keep/` with a key.
+- Criteria 1 and 2 are verified. After the operator merged S-0002 and S-0004 into main, `make install` ran in the worktree. `flai test` on keep's and web's changed paths then passed: `scripts/test.sh`, every npm project's `npm test` plus portcullis's `cargo test` and clippy, in 7m21s. Keep's `npm test` type-checks with `tsc` first. Web's does not (I-0009), so `npm run check` (svelte-check) ran once in `web/`: 0 errors, 0 warnings.
+- Criterion 3 is half verified, and stays unticked. Its fake half passes: `keep/spec/behavior/stripe-prices.spec.ts` runs against the fake Stripe in `make test`. Its live half needs `STRIPE_LIVE_TEST_SECRET_KEY`, and no test-mode key exists in this environment. The case in `keep/spec/live/stripe-live.spec.ts` skips with the rest of the opt-in suite. To verify it, run `npm run test:live` in `keep/` with a test-mode key, then tick criterion 3.
 
 ### Planning
 

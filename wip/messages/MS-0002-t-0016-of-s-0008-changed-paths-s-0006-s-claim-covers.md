@@ -3,16 +3,16 @@ id: MS-0002
 title: T-0016 of S-0008 changed paths S-0006's claim covers
 from: S-0008
 to: S-0006
-about: [design/system/overview.md, keep/spec/lib/fake-stripe-client.ts, keep/src/lib/stripe-client.ts, docs/users/index.md, web/spec/behavior/billing-plan-mappings.spec.ts, web/spec/fixtures/fake-keep-client.ts, web/src/lib/server/clients/keep.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, design/adrs/0107-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, keep/TESTING.md, keep/spec/behavior/stripe-prices.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/stripe-prices.ts, keep/spec/live/stripe-live.spec.ts]
+about: [design/system/overview.md, keep/spec/lib/fake-stripe-client.ts, keep/src/lib/stripe-client.ts, docs/users/index.md, web/spec/behavior/billing-plan-mappings.spec.ts, web/spec/fixtures/fake-keep-client.ts, web/src/lib/server/clients/keep.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, design/adrs/0107-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, keep/TESTING.md, keep/spec/behavior/stripe-prices.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/stripe-prices.ts, keep/spec/live/stripe-live.spec.ts, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md, design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md]
 status: open
 participants: [agent-S-0008]
 created: 2026-11-06T17:48:36Z
-updated: 2026-11-06T17:54:14Z
+updated: 2026-11-06T18:17:57Z
 ---
 
 # MS-0002 T-0016 of S-0008 changed paths S-0006's claim covers
 
-Between S-0008 and S-0006, about `design/system/overview.md`, `keep/spec/lib/fake-stripe-client.ts`, `keep/src/lib/stripe-client.ts`, `docs/users/index.md`, `web/spec/behavior/billing-plan-mappings.spec.ts`, `web/spec/fixtures/fake-keep-client.ts`, `web/src/lib/server/clients/keep.ts`, `web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts`, `web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte`, `design/adrs/0107-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md`, `design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md`, `keep/TESTING.md`, `keep/spec/behavior/stripe-prices.spec.ts`, `keep/src/lib/build-app.ts`, `keep/src/routes/stripe-prices.ts`, `keep/spec/live/stripe-live.spec.ts`.
+Between S-0008 and S-0006, about `design/system/overview.md`, `keep/spec/lib/fake-stripe-client.ts`, `keep/src/lib/stripe-client.ts`, `docs/users/index.md`, `web/spec/behavior/billing-plan-mappings.spec.ts`, `web/spec/fixtures/fake-keep-client.ts`, `web/src/lib/server/clients/keep.ts`, `web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts`, `web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte`, `design/adrs/0107-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md`, `design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md`, `keep/TESTING.md`, `keep/spec/behavior/stripe-prices.spec.ts`, `keep/src/lib/build-app.ts`, `keep/src/routes/stripe-prices.ts`, `keep/spec/live/stripe-live.spec.ts`, `design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md`, `design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md`, `design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md`.
 
 ## Entries
 
@@ -40,3 +40,8 @@ T-0018, Keep serves GET /tenants/{tenantSlug}/stripe-prices from the tenant's ow
 T-0019 of S-0008 changed paths S-0006's claim covers.
 
 T-0019, Live tier lists a real test-mode price through keep's stripe-prices route, committed f7a6927 on story/S-0008, `test: [S-0008] live tier lists a real test-mode price through keep's stripe-prices route`, changing `keep/TESTING.md`, `keep/spec/live/stripe-live.spec.ts`. It reaches the main branch when S-0008 is accepted; `git show f7a6927` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-06T18:17:57Z agent-S-0008 S-0008
+T-0085 of S-0008 changed paths S-0006's claim covers.
+
+T-0085, Renumber S-0008's closed duplicate issue from I-0003 to I-0008, committed 935527d on story/S-0008, `docs: [S-0008] renumber the closed duplicate issue from I-0003 to I-0008`, changing `design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md`, `design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md`, `design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md`. It reaches the main branch when S-0008 is accepted; `git show 935527d` shows it until then. Reply here if it breaks your work, or adjust to it early.

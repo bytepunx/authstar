@@ -4,10 +4,10 @@ title: S-0009 cost of delay inputs
 anchor:
   path: wip/kanban/stories/S-0009-chronicle-verifies-the-es256-internal-jwt-portcullis-mints.md
   item: S-0009
-status: open
-participants: [planner-S-0009, bytepunx]
+status: resolved
+participants: [planner-S-0009, bytepunx, agent-S-0009]
 created: 2026-11-06T17:48:51Z
-updated: 2026-11-06T18:01:04Z
+updated: 2026-11-06T18:37:02Z
 ---
 
 # TH-0007 S-0009 cost of delay inputs
@@ -42,3 +42,12 @@ Recommended: set `planning.hour_rate` to what an hour of work costs you in USD. 
 Alternative: leave the rate unset and clear `time_lost_per_cycle` on E-0003. S-0009's value is then 0 USD a week.
 
 I write the value from `flai cod S-0009` once one of these is done.
+
+### 2026-11-06T18:09:32Z planner-S-0009
+With `planning.hour_rate` at 150, `flai cod S-0009` gives 64.29 USD a week, and that value is now written on S-0009. It is S-0009's 6h share of the 7h forecast across E-0003's two open stories, out of E-0003's 75 USD a week. The reason is recorded under `### Planning`. This thread needs nothing more.
+
+### 2026-11-06T18:17:38Z bytepunx
+Resolved.
+
+### 2026-11-06T18:37:02Z agent-S-0009
+Resolved: Cost of delay written on S-0009 (64.29 USD a week).

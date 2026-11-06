@@ -3,11 +3,11 @@ id: T-0034
 type: task
 nature: remediation
 title: "Chronicle's analytics:read routes verify the ES256 internal JWT per tenant through authstar-fastify"
-status: in-progress
+status: done
 parent: S-0009
 owner: bytepunx
 created: 2026-11-06T17:50:10Z
-updated: 2026-11-06T17:54:33Z
+updated: 2026-11-06T18:10:24Z
 transitions:
   - to: ready
     at: 2026-11-06T17:54:33Z
@@ -15,9 +15,24 @@ transitions:
   - to: in-progress
     at: 2026-11-06T17:54:33Z
     by: agent-S-0009
+  - to: done
+    at: 2026-11-06T18:10:24Z
+    by: agent-S-0009
 stream: S-0009
 tags: [chronicle, auth]
 touches: [chronicle/package.json, chronicle/package-lock.json, chronicle/src/lib/auth.ts, chronicle/src/lib/config.ts, chronicle/src/lib/signet-bundle-config.ts, chronicle/src/lib/build-app.ts, chronicle/src/lib/fastify-augment.d.ts, chronicle/src/server.ts, chronicle/src/routes/auth-funnel.ts, chronicle/src/routes/active-users.ts, chronicle/src/routes/query.ts, chronicle/src/routes/export-summary.ts, chronicle/spec/lib/jwt.ts, chronicle/spec/lib/test-config.ts, chronicle/spec/behavior/auth-funnel.spec.ts, chronicle/spec/behavior/active-users.spec.ts, chronicle/spec/behavior/query.spec.ts, chronicle/spec/behavior/export-summary.spec.ts, chronicle/spec/behavior/config.spec.ts, chronicle/spec/behavior/signet-bundle-config.spec.ts, chronicle/spec/e2e/ingest-then-report.spec.ts, design/tech/tech-stack.md]
+usage:
+  source: log
+  seconds: 951
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 93
+      output: 23663
+      cache_read: 9511453
+      cache_write: 119412
+      cost: 3.2343
 ---
 # T-0034 Chronicle's analytics:read routes verify the ES256 internal JWT per tenant through authstar-fastify
 

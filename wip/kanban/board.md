@@ -4,7 +4,7 @@ updated: 2026-11-06
 status: active
 wip_limits:
   ready: 5
-  in-progress: 2
+  in-progress: 4
   review: 3
 order:
   - S-0011

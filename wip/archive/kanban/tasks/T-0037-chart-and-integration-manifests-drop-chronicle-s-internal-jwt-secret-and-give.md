@@ -3,16 +3,37 @@ id: T-0037
 type: task
 nature: remediation
 title: Chart and integration manifests drop chronicle's internal JWT secret and give it towerBaseUrl
-status: backlog
+status: done
 parent: S-0009
 owner: bytepunx
 created: 2026-11-06T17:51:01Z
-updated: 2026-11-06T17:51:01Z
-transitions: []
+updated: 2026-11-06T18:04:24Z
+transitions:
+  - to: ready
+    at: 2026-11-06T18:03:05Z
+    by: agent-S-0009
+  - to: in-progress
+    at: 2026-11-06T18:03:05Z
+    by: agent-S-0009
+  - to: done
+    at: 2026-11-06T18:04:24Z
+    by: agent-S-0009
 stream: S-0009
 tags: [chronicle, chart, integration]
 touches: [chart/values.yaml, chart/templates/chronicle/deployment.yaml, chart/README.md, integration/manifests/14-chronicle.yaml, integration/config/authstar/chronicle.yaml, integration/secrets/authstar/chronicle/internalJwtSecret.yaml, integration/scripts/lib-secrets.sh]
 after: [T-0034]
+usage:
+  source: log
+  seconds: 79
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 2074
+      cache_read: 833836
+      cache_write: 10468
+      cost: 0.2835
 ---
 # T-0037 Chart and integration manifests drop chronicle's internal JWT secret and give it towerBaseUrl
 

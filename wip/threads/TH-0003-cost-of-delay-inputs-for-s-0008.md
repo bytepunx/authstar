@@ -4,10 +4,10 @@ title: Cost of delay inputs for S-0008
 anchor:
   path: wip/kanban/stories/S-0008-plan-mapping-editor-picks-from-the-tenant-s-live-stripe-prices.md
   item: S-0008
-status: open
+status: resolved
 participants: [planner-S-0008, bytepunx]
 created: 2026-11-06T17:46:31Z
-updated: 2026-11-06T18:00:52Z
+updated: 2026-11-06T18:08:49Z
 ---
 
 # TH-0003 Cost of delay inputs for S-0008
@@ -38,3 +38,6 @@ Recommended: set `planning.hour_rate` to what an hour of work costs you in USD, 
 Alternative: leave the rate unset and clear `time_lost_per_cycle` on S-0008. Its value is then 0 USD a week, as S-0003's is.
 
 I write the value from `flai cod S-0008` once one of these is done.
+
+### 2026-11-06T18:08:49Z bytepunx
+Resolved.

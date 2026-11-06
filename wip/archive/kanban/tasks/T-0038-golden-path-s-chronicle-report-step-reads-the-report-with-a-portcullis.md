@@ -3,16 +3,44 @@ id: T-0038
 type: task
 nature: remediation
 title: Golden path's chronicle-report step reads the report with a portcullis-forwarded ES256 token
-status: backlog
+status: cancelled
 parent: S-0009
 owner: bytepunx
 created: 2026-11-06T17:51:20Z
-updated: 2026-11-06T17:51:20Z
-transitions: []
+updated: 2026-11-06T18:36:41Z
+transitions:
+  - to: ready
+    at: 2026-11-06T18:07:08Z
+    by: agent-S-0009
+  - to: in-progress
+    at: 2026-11-06T18:07:08Z
+    by: agent-S-0009
+  - to: ready
+    at: 2026-11-06T18:10:36Z
+    by: agent-S-0009
+  - to: cancelled
+    at: 2026-11-06T18:30:05Z
+    by: agent-S-0009
+blocked:
+  - from: 2026-11-06T18:10:36Z
+    until: 2026-11-06T18:36:41Z
+    reason: "harness cannot serve a tenant's JWKS in-cluster (I-0007); awaiting the operator on TH-0021"
 stream: S-0009
 tags: [chronicle, integration]
 touches: [integration/scripts/scenario-golden-path.sh, integration/config/authstar/portcullis.yaml, integration/manifests/17-portcullis.yaml, integration/README.md]
 after: [T-0037, T-0036]
+usage:
+  source: log
+  seconds: 208
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 11252
+      cache_read: 4522967
+      cache_write: 56784
+      cost: 1.538
 ---
 # T-0038 Golden path's chronicle-report step reads the report with a portcullis-forwarded ES256 token
 
@@ -36,3 +64,4 @@ Replace the self-minted HS256 token in step 6/6 of `integration/scripts/scenario
 ## Notes
 
 The step needs the scripted login's account to hold `analytics:read`. Tower's tenant provisioning grants the admin permissions (see `tower/src/routes/provisioning.ts`). If the only working path needs portcullis code, or TLS termination the harness cannot get from config, stop and raise it on the S-0009 plan thread: it is outside this story's touches. Add any new manifest the DNS or TLS wiring needs to this task's touches when you close it.
+- 2026-11-06T18:30:05Z: moved to cancelled: criterion 3's harness half moved to S-0017 on TH-0021 (option A)

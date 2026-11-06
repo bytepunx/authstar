@@ -3,16 +3,37 @@ id: T-0039
 type: task
 nature: improvement
 title: docs/operators lists chronicle's configuration and the overview drops the shared-secret gap
-status: backlog
+status: done
 parent: S-0009
 owner: bytepunx
 created: 2026-11-06T17:51:26Z
-updated: 2026-11-06T17:51:26Z
-transitions: []
+updated: 2026-11-06T18:09:22Z
+transitions:
+  - to: ready
+    at: 2026-11-06T18:07:08Z
+    by: agent-S-0009
+  - to: in-progress
+    at: 2026-11-06T18:07:09Z
+    by: agent-S-0009
+  - to: done
+    at: 2026-11-06T18:09:22Z
+    by: agent-S-0009
 stream: S-0009
 tags: [chronicle, docs]
 touches: [docs/operators/chronicle-configuration.md, docs/operators/index.md, design/system/overview.md]
 after: [T-0037]
+usage:
+  source: log
+  seconds: 133
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 5608
+      cache_read: 2254078
+      cache_write: 28299
+      cost: 0.7665
 ---
 # T-0039 docs/operators lists chronicle's configuration and the overview drops the shared-secret gap
 

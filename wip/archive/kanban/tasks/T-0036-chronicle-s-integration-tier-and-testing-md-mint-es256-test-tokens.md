@@ -3,16 +3,37 @@ id: T-0036
 type: task
 nature: remediation
 title: Chronicle's integration tier and TESTING.md mint ES256 test tokens
-status: backlog
+status: done
 parent: S-0009
 owner: bytepunx
 created: 2026-11-06T17:50:44Z
-updated: 2026-11-06T17:50:44Z
-transitions: []
+updated: 2026-11-06T18:10:28Z
+transitions:
+  - to: ready
+    at: 2026-11-06T18:04:46Z
+    by: agent-S-0009
+  - to: in-progress
+    at: 2026-11-06T18:04:46Z
+    by: agent-S-0009
+  - to: done
+    at: 2026-11-06T18:10:28Z
+    by: agent-S-0009
 stream: S-0009
 tags: [chronicle, testing]
 touches: [chronicle/spec/integration/clickhouse.integration.spec.ts, chronicle/spec/integration/rabbitmq.integration.spec.ts, chronicle/TESTING.md]
 after: [T-0034]
+usage:
+  source: log
+  seconds: 342
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 3294
+      cache_read: 1324238
+      cache_write: 16625
+      cost: 0.4503
 ---
 # T-0036 Chronicle's integration tier and TESTING.md mint ES256 test tokens
 

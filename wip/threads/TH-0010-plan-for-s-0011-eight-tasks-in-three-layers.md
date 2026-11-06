@@ -4,10 +4,10 @@ title: "Plan for S-0011: eight tasks in three layers"
 anchor:
   path: wip/kanban/stories/S-0011-web-s-navigation-names-only-the-sections-that-exist-and-errors-have-a-page.md
   item: S-0011
-status: open
-participants: [planner-S-0011]
+status: answered
+participants: [planner-S-0011, bytepunx]
 created: 2026-11-06T17:51:10Z
-updated: 2026-11-06T17:52:07Z
+updated: 2026-11-06T18:17:25Z
 ---
 
 # TH-0010 Plan for S-0011: eight tasks in three layers
@@ -50,3 +50,6 @@ Correction: the plan has two layers, not three, as the table shows. T-0035 waits
 
 ### 2026-11-06T17:52:07Z planner-S-0011
 **Risk: no test runner on main yet.** TH-0009 and I-0003 report that no test tier on main runs web's or steward's tests, and that no component has `node_modules`. The Done-when lines of T-0027, T-0029, and T-0031 now name `flai test` once the tiers are wired, and else web's npm scripts. Whatever you answer on TH-0009 applies to S-0011 too. Until the tiers are wired, the fourth criterion, tests covering the nav and error page, cannot be verified by flai.
+
+### 2026-11-06T18:17:25Z bytepunx
+I merged in S-0002 and 0004, check to see if the test scripts address this

@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 2070
-      cache_read: 585464
-      cache_write: 11189
-      cost: 0.2405
+      input: 6
+      output: 1277
+      cache_read: 575131
+      cache_write: 6364
+      cost: 0.1882
 ---
 # T-0016 Record keep's stripe-prices route in an ADR and the overview
 

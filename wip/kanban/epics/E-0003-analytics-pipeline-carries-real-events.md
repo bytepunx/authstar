@@ -6,7 +6,7 @@ title: Analytics pipeline carries real events
 status: in-progress
 owner: alex
 created: 2026-10-21T05:12:30Z
-updated: 2026-11-06T18:00:32Z
+updated: 2026-11-06T18:29:54Z
 transitions:
   - to: ready
     at: 2026-10-21T05:13:56Z
@@ -17,19 +17,31 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 0
-  models: []
+  seconds: 2672
+  priced_by: harness
+  turns:
+    - day: 2026-11-06
+      ceremony: 4
+      hand_edits: 5
+      work: 94
+  models:
+    - model: claude-opus-5-5
+      input: 352
+      output: 90022
+      cache_read: 36185200
+      cache_write: 454288
+      cost: 12.3047
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 73
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 15
-          output: 115
-          cache_read: 388589
-          cache_write: 56841
-          cost: 0.5703
+          input: 47
+          output: 333
+          cache_read: 1377529
+          cache_write: 244933
+          cost: 1.9026
 cost_of_delay:
   inputs:
     revenue_per_week: 0
@@ -47,6 +59,7 @@ An authentication event at portcullis reaches ClickHouse through lookout and Rab
 ## Stories
 - S-0009 Chronicle verifies the ES256 internal JWT portcullis mints
 - S-0010 Portcullis emits authentication events to lookout
+- S-0017 Golden path reads chronicle's report with a portcullis-forwarded ES256 token
 
 ## Notes
 
