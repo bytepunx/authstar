@@ -46,7 +46,7 @@ interface LoadedConfig {
 async function loadConfig(logger: Logger): Promise<LoadedConfig> {
   const signetAddr = process.env.SIGNET_ADDR
   if (!signetAddr) {
-    return { config: loadEnvConfig((message) => logger.warn(message)) }
+    return { config: loadEnvConfig() }
   }
 
   const namespace = requireEnv('SIGNET_NAMESPACE')
@@ -113,7 +113,18 @@ async function main(): Promise<void> {
     logger,
   })
 
-  const app = await buildApp({ clickhouse, config, logger: true })
+  // Resolves a tenant's registered domain against tower the first time that
+  // tenant's slug is seen; perTenantJwksKeyProvider caches the result for
+  // the life of the process, so this is at most one round trip per tenant,
+  // not per request. Same lookup as keep's and herald's server.ts.
+  const resolveTenantDomain = async (tenantSlug: string): Promise<string | undefined> => {
+    const response = await fetch(`${config.towerBaseUrl}/tenants/${encodeURIComponent(tenantSlug)}`)
+    if (!response.ok) return undefined
+    const state = (await response.json()) as { domain?: string }
+    return state.domain
+  }
+
+  const app = await buildApp({ clickhouse, config, resolveTenantDomain, logger: true })
   const port = Number.parseInt(process.env.PORT ?? '3000', 10)
   await app.listen({ port, host: '0.0.0.0' })
   logger.info({ port, signetConfigured: Boolean(signet) }, 'chronicle listening')

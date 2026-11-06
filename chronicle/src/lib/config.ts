@@ -1,8 +1,9 @@
 // Chronicle's own signet bundle (ADR 0004's pattern, ADR 0036, formalized by
 // ADR 0102 / Story 003) holds `retentionMonths` plus ClickHouse and RabbitMQ
-// connection details, and (per this same auth model as herald, ADR 0034) the
-// key material chronicle uses to independently verify the
-// portcullis-forwarded internal JWT.
+// connection details, and tower's base URL, which chronicle asks for a
+// tenant's registered domain so it can fetch that tenant's JWKS and verify
+// the portcullis-forwarded ES256 internal JWT (ADR 0086, ADR 0089, ADR 0091).
+// There is no shared verification secret.
 //
 // Two operating modes, gated purely on whether `SIGNET_ADDR` is set (ADR
 // 0102): Env-Only Mode (this file, unchanged from before this story) is what
@@ -28,11 +29,11 @@ export interface ChronicleConfig {
   // (ADR 0085) -- changing it later is a schema migration, not a live
   // config reload (Story 001).
   retentionMonths: number
-  // The shared verification key for the portcullis-forwarded internal JWT
-  // (ADR 0034's auth model, applied to chronicle here). HS256 -- unaffected
-  // by this story (see server.ts / PR description: only *where* this value
-  // comes from changes, never its algorithm).
-  internalJwtSecret: string
+  // Tower's base URL. Chronicle calls `GET /tenants/:slug` there to resolve
+  // a tenant's registered domain, then verifies the internal JWT against
+  // `https://authstar.<domain>/.well-known/jwks.json` (ADR 0091). Same field
+  // name as keep's and herald's bundle `towerBaseUrl`.
+  towerBaseUrl: string
   reporting: {
     // Guardrails named in Story 002 / ADR 0036.
     maxDateRangeDays: number
@@ -44,12 +45,6 @@ export interface ChronicleConfig {
   }
 }
 
-// The literal cluster manifests set verbatim today (ADR 0102's Context #1).
-// Reachable *only* from `loadEnvConfig` (Env-Only Mode) -- never from
-// `resolveConfigFromBundle`, which has no reference to this constant at all,
-// so it is structurally unreachable once `SIGNET_ADDR` is set.
-export const DEV_ONLY_INTERNAL_JWT_SECRET = 'dev-only-insecure-secret'
-
 function envInt(name: string, fallback: number): number {
   const raw = process.env[name]
   if (raw === undefined || raw === '') return fallback
@@ -57,24 +52,10 @@ function envInt(name: string, fallback: number): number {
   return Number.isFinite(parsed) ? parsed : fallback
 }
 
-// Env-Only Mode's config loader -- today's exact behavior (ADR 0102 requires
-// this mode to stay a legitimate, unchanged path for local dev), with one
-// addition: a loud warning when the insecure dev JWT secret default is
-// actually in use, so it's never silently running in an environment that
-// forgot to set `CHRONICLE_INTERNAL_JWT_SECRET`. `warn` defaults to
-// `console.warn` but is injectable so tests can assert on it without
-// spying on the global console.
-export function loadEnvConfig(warn: (message: string) => void = (message) => console.warn(message)): ChronicleConfig {
-  const internalJwtSecret = process.env.CHRONICLE_INTERNAL_JWT_SECRET
-  if (!internalJwtSecret) {
-    warn(
-      `chronicle: CHRONICLE_INTERNAL_JWT_SECRET is not set -- using the insecure default dev secret ` +
-        `('${DEV_ONLY_INTERNAL_JWT_SECRET}'). This is only acceptable for local development. ` +
-        `Set CHRONICLE_INTERNAL_JWT_SECRET directly, or set SIGNET_ADDR (and the rest of chronicle's ` +
-        `signet bootstrap vars) to source it from signet instead.`,
-    )
-  }
-
+// Env-Only Mode's config loader (ADR 0102 keeps this mode a legitimate path
+// for local dev): plain `process.env` reads with local defaults. No setting
+// here is a secret that could fall back to an insecure literal.
+export function loadEnvConfig(): ChronicleConfig {
   return {
     clickhouse: {
       url: process.env.CHRONICLE_CLICKHOUSE_URL ?? 'http://localhost:8123',
@@ -86,7 +67,7 @@ export function loadEnvConfig(warn: (message: string) => void = (message) => con
       url: process.env.CHRONICLE_RABBITMQ_URL ?? 'amqp://localhost:5672',
     },
     retentionMonths: envInt('CHRONICLE_RETENTION_MONTHS', 24),
-    internalJwtSecret: internalJwtSecret ?? DEV_ONLY_INTERNAL_JWT_SECRET,
+    towerBaseUrl: process.env.CHRONICLE_TOWER_BASE_URL ?? 'http://localhost:8080',
     reporting: {
       maxDateRangeDays: envInt('CHRONICLE_MAX_DATE_RANGE_DAYS', 92),
       queryTimeoutMs: envInt('CHRONICLE_QUERY_TIMEOUT_MS', 10_000),

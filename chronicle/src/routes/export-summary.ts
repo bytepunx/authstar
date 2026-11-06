@@ -28,7 +28,7 @@ const exportSummaryRoutes: FastifyPluginAsync = async function (app: FastifyInst
   app.post('/tenants/:tenantSlug/analytics/export-summary', {
     schema: { params: paramsSchema, body: bodySchema },
     preHandler: [
-      requirePermission(app.config.internalJwtSecret, 'analytics:read'),
+      requirePermission('analytics:read'),
       rateLimitPreHandler(app.rateLimiter),
     ],
   }, async (request) => {

@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import buildApp from '../../src/lib/build-app.js'
 import InMemoryClickHouseClient from '../lib/in-memory-clickhouse.js'
 import { buildTestConfig } from '../lib/test-config.js'
-import { bearerHeader } from '../lib/jwt.js'
+import { analyticsReadAuthCases, bearerHeader, testJwt } from '../lib/jwt.js'
 import type { AnalyticsEventRow } from '../../src/lib/types.js'
 
 function row(overrides: Partial<AnalyticsEventRow>): AnalyticsEventRow {
@@ -33,20 +33,21 @@ describe('POST /tenants/:tenantSlug/analytics/query', () => {
 
   beforeEach(async () => {
     clickhouse = new InMemoryClickHouseClient()
-    app = await buildApp({ clickhouse, config: buildTestConfig() })
+    app = await buildApp({ clickhouse, authstarGetKey: testJwt.getKey, config: buildTestConfig() })
   })
 
   afterEach(async () => {
     await app.close()
   })
 
-  it('rejects a request with no bearer token (401)', async () => {
+  it.each(analyticsReadAuthCases)('%s', async (_case, headers, status) => {
     const response = await app.inject({
       method: 'POST',
       url: '/tenants/acme/analytics/query',
+      headers: await headers(),
       payload: { metric: 'count', groupBy: [], dateRange },
     })
-    expect(response.statusCode).toBe(401)
+    expect(response.statusCode).toBe(status)
   })
 
   it('rejects a groupBy value outside the allowed vocabulary (400, not silently ignored)', async () => {
@@ -90,7 +91,7 @@ describe('POST /tenants/:tenantSlug/analytics/query', () => {
   })
 
   it('is rate limited per tenant (429 once the configured max is exceeded)', async () => {
-    app = await buildApp({ clickhouse, config: buildTestConfig({ reporting: { ...buildTestConfig().reporting, rateLimit: { max: 2, windowMs: 60_000 } } }) })
+    app = await buildApp({ clickhouse, authstarGetKey: testJwt.getKey, config: buildTestConfig({ reporting: { ...buildTestConfig().reporting, rateLimit: { max: 2, windowMs: 60_000 } } }) })
 
     const makeRequest = async () => app.inject({
       method: 'POST',

@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import buildApp from '../../src/lib/build-app.js'
 import InMemoryClickHouseClient from '../lib/in-memory-clickhouse.js'
 import { buildTestConfig } from '../lib/test-config.js'
-import { bearerHeader } from '../lib/jwt.js'
+import { analyticsReadAuthCases, bearerHeader, testJwt } from '../lib/jwt.js'
 import type { AnalyticsEventRow } from '../../src/lib/types.js'
 
 function row(overrides: Partial<AnalyticsEventRow>): AnalyticsEventRow {
@@ -31,20 +31,21 @@ describe('POST /tenants/:tenantSlug/analytics/export-summary', () => {
 
   beforeEach(async () => {
     clickhouse = new InMemoryClickHouseClient()
-    app = await buildApp({ clickhouse, config: buildTestConfig() })
+    app = await buildApp({ clickhouse, authstarGetKey: testJwt.getKey, config: buildTestConfig() })
   })
 
   afterEach(async () => {
     await app.close()
   })
 
-  it('rejects a request with no bearer token (401)', async () => {
+  it.each(analyticsReadAuthCases)('%s', async (_case, headers, status) => {
     const response = await app.inject({
       method: 'POST',
       url: '/tenants/acme/analytics/export-summary',
+      headers: await headers(),
       payload: { identityHashes: ['hash-1'] },
     })
-    expect(response.statusCode).toBe(401)
+    expect(response.statusCode).toBe(status)
   })
 
   it('rejects an unknown top-level field (400, additionalProperties: false actually enforced)', async () => {

@@ -1,6 +1,6 @@
 ---
 title: Tech Stack Reference
-updated: 2026-09-23
+updated: 2026-11-06
 status: active
 topics: [all]
 ---
@@ -106,6 +106,13 @@ What `ref-proxy` doesn't have, that real portcullis needs (the genuine gap this 
 - Whatever HTTP framework serves its reporting API (ADR 0036) — fastify, for consistency with
   every other Node HTTP service in this design, even though chronicle itself isn't
   consequent-backed.
+- **Internal-JWT verification**: `@bytepunx/authstar-fastify` `^1.0.0` (resolved 1.0.0), the
+  same pin as herald. Its `authstarFastifyPlugin` with `perTenantJwksKeyProvider` verifies the
+  ES256 token portcullis forwards against `https://authstar.<tenant domain>/.well-known/jwks.json`,
+  the domain resolved through tower's `GET /tenants/:slug` (ADR 0086, ADR 0089, ADR 0091).
+  It replaces chronicle's former HS256 shared-secret check. Alternative considered: calling
+  `verifyInternalJwt` from `@bytepunx/authstar-core` in chronicle's own preHandler; rejected
+  because the plugin is that same verification already wired for Fastify, as herald uses it.
 - `vitest`.
 
 ## web, steward (SvelteKit)

@@ -5,9 +5,7 @@ import type { ChronicleConfig } from './config.js'
 // sourced exclusively from the fetched bundle/secrets. A field this module
 // expects that's missing from the bundle is a startup failure naming the
 // exact missing field/secret -- never a silent fallback to an env var, and
-// never a hardcoded literal default (in particular, `DEV_ONLY_INTERNAL_JWT_SECRET`
-// from config.ts is never imported or referenced here, so it is structurally
-// unreachable from this path). This mirrors tower's own
+// never a hardcoded literal default. This mirrors tower's own
 // `signet-bundle-config.ts` (Story 016), which the same ADR drove.
 //
 // Kept as pure functions operating on an already-fetched bundle/secrets
@@ -57,7 +55,7 @@ export function decodeBundleSecrets(bundle: Record<string, unknown> | undefined)
 // decoded secrets. Field mapping (Story 003):
 //   secrets.clickhousePassword       -> clickhouse.password
 //   bundle.rabbitmqUrl ?? secrets.rabbitmqUrl -> rabbitmq.url
-//   secrets.internalJwtSecret        -> internalJwtSecret
+//   bundle.towerBaseUrl ?? secrets.towerBaseUrl -> towerBaseUrl
 //   bundle.clickhouseUrl/Username/Database, retentionMonths,
 //   maxDateRangeDays, queryTimeoutMs, rateLimitMax, rateLimitWindowMs
 //                                     -> corresponding plain config fields
@@ -70,6 +68,12 @@ export function resolveConfigFromBundle(bundle: Record<string, unknown>, secrets
   const rabbitmqUrl =
     typeof bundle.rabbitmqUrl === 'string' && bundle.rabbitmqUrl !== '' ? bundle.rabbitmqUrl : requireSecretString(secrets, 'rabbitmqUrl')
 
+  // Same lookup as keep's and herald's server.ts: bundle field first, then
+  // the secret of the same name, and a loud failure when neither is there.
+  const towerBaseUrl =
+    typeof bundle.towerBaseUrl === 'string' && bundle.towerBaseUrl !== '' ? bundle.towerBaseUrl : secrets.towerBaseUrl
+  if (!towerBaseUrl) throw missingFieldError('towerBaseUrl')
+
   return {
     clickhouse: {
       url: requireBundleString(bundle, 'clickhouseUrl'),
@@ -81,7 +85,7 @@ export function resolveConfigFromBundle(bundle: Record<string, unknown>, secrets
       url: rabbitmqUrl,
     },
     retentionMonths: requireBundleInt(bundle, 'retentionMonths'),
-    internalJwtSecret: requireSecretString(secrets, 'internalJwtSecret'),
+    towerBaseUrl,
     reporting: {
       maxDateRangeDays: requireBundleInt(bundle, 'maxDateRangeDays'),
       queryTimeoutMs: requireBundleInt(bundle, 'queryTimeoutMs'),

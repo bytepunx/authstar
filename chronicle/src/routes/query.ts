@@ -65,7 +65,7 @@ const queryRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.post('/tenants/:tenantSlug/analytics/query', {
     schema: { params: paramsSchema, body: bodySchema },
     preHandler: [
-      requirePermission(app.config.internalJwtSecret, 'analytics:read'),
+      requirePermission('analytics:read'),
       rateLimitPreHandler(app.rateLimiter),
     ],
   }, async (request, reply) => {

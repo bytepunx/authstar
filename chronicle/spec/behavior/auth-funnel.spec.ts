@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import buildApp from '../../src/lib/build-app.js'
 import InMemoryClickHouseClient from '../lib/in-memory-clickhouse.js'
 import { buildTestConfig } from '../lib/test-config.js'
-import { bearerHeader } from '../lib/jwt.js'
+import { analyticsReadAuthCases, bearerHeader, testJwt } from '../lib/jwt.js'
 import type { AnalyticsEventRow } from '../../src/lib/types.js'
 
 // Behavior tier: `GET /tenants/:tenantSlug/analytics/reports/auth-funnel`
@@ -37,28 +37,20 @@ describe('GET /tenants/:tenantSlug/analytics/reports/auth-funnel', () => {
 
   beforeEach(async () => {
     clickhouse = new InMemoryClickHouseClient()
-    app = await buildApp({ clickhouse, config: buildTestConfig() })
+    app = await buildApp({ clickhouse, authstarGetKey: testJwt.getKey, config: buildTestConfig() })
   })
 
   afterEach(async () => {
     await app.close()
   })
 
-  it('rejects a request with no bearer token (401)', async () => {
+  it.each(analyticsReadAuthCases)('%s', async (_case, headers, status) => {
     const response = await app.inject({
       method: 'GET',
       url: '/tenants/acme/analytics/reports/auth-funnel?from=2026-08-01T00:00:00Z&to=2026-08-02T00:00:00Z',
+      headers: await headers(),
     })
-    expect(response.statusCode).toBe(401)
-  })
-
-  it('rejects a token lacking analytics:read (403)', async () => {
-    const response = await app.inject({
-      method: 'GET',
-      url: '/tenants/acme/analytics/reports/auth-funnel?from=2026-08-01T00:00:00Z&to=2026-08-02T00:00:00Z',
-      headers: await bearerHeader(['some-other:permission']),
-    })
-    expect(response.statusCode).toBe(403)
+    expect(response.statusCode).toBe(status)
   })
 
   it('rejects a date range beyond the configured maximum (400)', async () => {

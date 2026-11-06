@@ -26,7 +26,7 @@ const querystringSchema = {
 const authFunnelRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.get('/tenants/:tenantSlug/analytics/reports/auth-funnel', {
     schema: { params: paramsSchema, querystring: querystringSchema },
-    preHandler: requirePermission(app.config.internalJwtSecret, 'analytics:read'),
+    preHandler: requirePermission('analytics:read'),
   }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const { from, to, application } = request.query as { from: string; to: string; application?: string }

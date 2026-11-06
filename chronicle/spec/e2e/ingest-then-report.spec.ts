@@ -6,7 +6,7 @@ import createAnalyticsMessageHandler from '../../src/consumer/message-handler.js
 import InMemoryClickHouseClient from '../lib/in-memory-clickhouse.js'
 import FakeChannel, { fakeMessage } from '../lib/fake-channel.js'
 import { buildTestConfig } from '../lib/test-config.js'
-import { bearerHeader } from '../lib/jwt.js'
+import { bearerHeader, testJwt } from '../lib/jwt.js'
 
 // End-to-end tier: a realistic sequence -- analytics events arrive on the
 // (fake) broker, the consumer writes them into the (in-memory) ClickHouse
@@ -25,7 +25,7 @@ describe('events consumed off the broker are queryable through the reporting API
   beforeEach(async () => {
     clickhouse = new InMemoryClickHouseClient()
     channel = new FakeChannel()
-    app = await buildApp({ clickhouse, config: buildTestConfig() })
+    app = await buildApp({ clickhouse, authstarGetKey: testJwt.getKey, config: buildTestConfig() })
   })
 
   afterEach(async () => {

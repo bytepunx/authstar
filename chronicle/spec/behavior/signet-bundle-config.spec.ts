@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest'
 import { decodeBundleSecrets, resolveConfigFromBundle } from '../../src/lib/signet-bundle-config.js'
-import { DEV_ONLY_INTERNAL_JWT_SECRET } from '../../src/lib/config.js'
 
 // ADR 0102 / Story 003: once chronicle is in Signet-Configured Mode, every
 // non-bootstrap setting is sourced exclusively from the fetched bundle --
@@ -17,11 +16,11 @@ const validBundle: Record<string, unknown> = {
   queryTimeoutMs: 10_000,
   rateLimitMax: 60,
   rateLimitWindowMs: 60_000,
+  towerBaseUrl: 'http://tower.authstar.svc.cluster.local:8080',
 }
 
 const validSecrets: Record<string, string> = {
   clickhousePassword: 'ch-secret',
-  internalJwtSecret: 'signet-sourced-jwt-secret',
 }
 
 describe('decodeBundleSecrets', () => {
@@ -49,7 +48,7 @@ describe('resolveConfigFromBundle', () => {
       },
       rabbitmq: { url: 'amqp://broker.internal:5672' },
       retentionMonths: 24,
-      internalJwtSecret: 'signet-sourced-jwt-secret',
+      towerBaseUrl: 'http://tower.authstar.svc.cluster.local:8080',
       reporting: {
         maxDateRangeDays: 92,
         queryTimeoutMs: 10_000,
@@ -64,16 +63,15 @@ describe('resolveConfigFromBundle', () => {
     expect(config.rabbitmq.url).toBe('amqp://from-secret:5672')
   })
 
-  it('the dev JWT secret literal is unreachable -- omitting secrets.internalJwtSecret throws rather than defaulting to it', () => {
-    const { internalJwtSecret: _drop, ...secretsWithoutJwt } = validSecrets
-    expect(() => resolveConfigFromBundle(validBundle, secretsWithoutJwt)).toThrow(/internalJwtSecret/)
+  it('falls back from bundle.towerBaseUrl to secrets.towerBaseUrl when the bundle field is absent', () => {
+    const { towerBaseUrl: _drop, ...bundleWithoutTower } = validBundle
+    const config = resolveConfigFromBundle(bundleWithoutTower, { ...validSecrets, towerBaseUrl: 'http://tower.from-secret:8080' })
+    expect(config.towerBaseUrl).toBe('http://tower.from-secret:8080')
+  })
 
-    // And even on success, the dev literal never appears anywhere in the
-    // resolved config -- proving there is no code path in this module that
-    // could substitute it.
-    const config = resolveConfigFromBundle(validBundle, validSecrets)
-    expect(config.internalJwtSecret).not.toBe(DEV_ONLY_INTERNAL_JWT_SECRET)
-    expect(JSON.stringify(config)).not.toContain(DEV_ONLY_INTERNAL_JWT_SECRET)
+  it('throws naming "towerBaseUrl" when neither bundle.towerBaseUrl nor secrets.towerBaseUrl is present', () => {
+    const { towerBaseUrl: _drop, ...bundleWithoutTower } = validBundle
+    expect(() => resolveConfigFromBundle(bundleWithoutTower, validSecrets)).toThrow(/towerBaseUrl/)
   })
 
   it.each([

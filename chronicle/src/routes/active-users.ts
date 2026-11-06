@@ -31,7 +31,7 @@ const querystringSchema = {
 const activeUsersRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.get('/tenants/:tenantSlug/analytics/reports/active-users', {
     schema: { params: paramsSchema, querystring: querystringSchema },
-    preHandler: requirePermission(app.config.internalJwtSecret, 'analytics:read'),
+    preHandler: requirePermission('analytics:read'),
   }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const { from, to, granularity, application } = request.query as {

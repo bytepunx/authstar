@@ -1,4 +1,5 @@
 import Fastify, { type FastifyInstance } from 'fastify'
+import { authstarFastifyPlugin, perTenantJwksKeyProvider, type JWTVerifyGetKey } from '@bytepunx/authstar-fastify'
 import type { ClickHouseApi } from './types.js'
 import type { ChronicleConfig } from './config.js'
 import TenantRateLimiter from './rate-limit.js'
@@ -11,6 +12,15 @@ export interface BuildAppOptions {
   clickhouse: ClickHouseApi
   config: ChronicleConfig
   logger?: boolean
+  // Internal-JWT verification key. Chronicle is one shared deployment for
+  // every tenant, so it has no Host to resolve a tenant from (ADR 0089):
+  // this defaults to `perTenantJwksKeyProvider(resolveTenantDomain)`, which
+  // reads the `tenant` hint off the token's protected header and fetches
+  // `https://authstar.<domain>/.well-known/jwks.json` for that tenant's
+  // registered domain (ADR 0091). Tests pass a `staticKeyProvider` pinned
+  // to a local keypair as `authstarGetKey`, so they never fetch JWKS.
+  resolveTenantDomain?: (tenantSlug: string) => string | undefined | Promise<string | undefined>
+  authstarGetKey?: JWTVerifyGetKey
 }
 
 // A single place to assemble the fastify instance so behavior/e2e/
@@ -34,6 +44,14 @@ export default async function buildApp(options: BuildAppOptions): Promise<Fastif
   app.decorate('clickhouse', options.clickhouse)
   app.decorate('config', options.config)
   app.decorate('rateLimiter', new TenantRateLimiter(options.config.reporting.rateLimit))
+
+  const authstarGetKey = options.authstarGetKey
+    ?? perTenantJwksKeyProvider(options.resolveTenantDomain ?? (() => undefined))
+  // `required: false`: the plugin leaves `request.authstar` undefined on a
+  // missing or unverifiable token, and `requirePermission` (auth.ts) turns
+  // that into chronicle's 401, keeping 403 for a verified token that names
+  // another tenant or lacks the permission.
+  await app.register(authstarFastifyPlugin, { getKeyForRequest: () => authstarGetKey, required: false })
 
   await app.register(registerAuthFunnelRoutes)
   await app.register(registerActiveUsersRoutes)

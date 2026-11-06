@@ -3,7 +3,7 @@ import type { FastifyInstance } from 'fastify'
 import buildApp from '../../src/lib/build-app.js'
 import InMemoryClickHouseClient from '../lib/in-memory-clickhouse.js'
 import { buildTestConfig } from '../lib/test-config.js'
-import { bearerHeader } from '../lib/jwt.js'
+import { analyticsReadAuthCases, bearerHeader, testJwt } from '../lib/jwt.js'
 import type { AnalyticsEventRow } from '../../src/lib/types.js'
 
 function row(overrides: Partial<AnalyticsEventRow>): AnalyticsEventRow {
@@ -31,11 +31,20 @@ describe('GET /tenants/:tenantSlug/analytics/reports/active-users', () => {
 
   beforeEach(async () => {
     clickhouse = new InMemoryClickHouseClient()
-    app = await buildApp({ clickhouse, config: buildTestConfig() })
+    app = await buildApp({ clickhouse, authstarGetKey: testJwt.getKey, config: buildTestConfig() })
   })
 
   afterEach(async () => {
     await app.close()
+  })
+
+  it.each(analyticsReadAuthCases)('%s', async (_case, headers, status) => {
+    const response = await app.inject({
+      method: 'GET',
+      url: '/tenants/acme/analytics/reports/active-users?from=2026-08-01T00:00:00Z&to=2026-08-02T00:00:00Z&granularity=day',
+      headers: await headers(),
+    })
+    expect(response.statusCode).toBe(status)
   })
 
   it('requires a granularity query param (400 without one)', async () => {
