@@ -58,3 +58,8 @@ dashboard:
   tag: latest
   port: 4242
   bind: 0.0.0.0 # 127.0.0.1 to keep the dashboard on this host only
+agent:
+  harness: claude-code
+  model: claude-opus-5-5
+  config:
+    effort: high
