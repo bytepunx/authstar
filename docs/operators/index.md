@@ -6,6 +6,21 @@ status: draft
 
 # authstar for operators
 
+## Configuration
+
+One page per service lists every setting it reads, where it comes from, and its default.
+
+- [Chronicle configuration](chronicle-configuration.md)
+
+### Settings by kind
+
+| Kind | Service | Settings | Details |
+|------|---------|----------|---------|
+| Argument | chronicle | none | |
+| Environment variable | chronicle | `SIGNET_ADDR`, `SIGNET_NAMESPACE`, `SIGNET_TRUST_DOMAIN`, `SIGNET_SERVICE`, `SIGNET_ADMIN_ADDR`, `SPIFFE_ENDPOINT_SOCKET`, `PORT`, `LOG_LEVEL`, `NODE_TLS_REJECT_UNAUTHORIZED`; with no `SIGNET_ADDR`, every `CHRONICLE_*` setting | [Process and bootstrap variables](chronicle-configuration.md#process-and-bootstrap-variables), [Settings](chronicle-configuration.md#settings) |
+| Stored configuration (signet) | chronicle | `clickhouseUrl`, `clickhouseUsername`, `clickhouseDatabase`, `towerBaseUrl`, `retentionMonths`, `maxDateRangeDays`, `queryTimeoutMs`, `rateLimitMax`, `rateLimitWindowMs` | [Settings](chronicle-configuration.md#settings) |
+| Stored secret (signet) | chronicle | `clickhousePassword`, `rabbitmqUrl` | [Settings](chronicle-configuration.md#settings) |
+
 Start here.
 
 ## The dashboard

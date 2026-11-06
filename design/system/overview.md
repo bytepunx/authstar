@@ -1,6 +1,6 @@
 ---
 title: System overview
-updated: 2026-10-21
+updated: 2026-11-06
 status: active
 topics: [all]
 ---
@@ -70,7 +70,7 @@ The components were imported into this repository on 2026-09-23. What is known t
 
 - The repository move was unfinished: no remote, uncommitted scaffolding, per-component CI orphaned. Epic [E-0001](../../wip/kanban/epics/E-0001-complete-the-monorepo-move.md).
 - Billing has no front door: nothing calls checkout or portal sessions, the hosted upgrade page and `GET /me/subscription` do not exist, and webhooks have no event-id idempotency. Epic [E-0002](../../wip/kanban/epics/E-0002-billing-end-to-end-with-loci-as-the-first-paying-tenant.md); the semantics are decided in ADR-0107 to ADR-0109.
-- The analytics pipeline carries nothing: portcullis does not emit to lookout, and chronicle verifies a shared-secret token that portcullis never mints. Epic [E-0003](../../wip/kanban/epics/E-0003-analytics-pipeline-carries-real-events.md).
+- The analytics pipeline carries nothing: portcullis does not emit to lookout. Chronicle now verifies the ES256 internal JWT portcullis mints, per tenant against the tenant's JWKS with the domain resolved through tower, as web and the SDKs do; its shared secret is gone (S-0009). Epic [E-0003](../../wip/kanban/epics/E-0003-analytics-pipeline-carries-real-events.md).
 - Web's navigation names eight sections and two have routes; no dashboard or chart exists in web or steward. Epic [E-0004](../../wip/kanban/epics/E-0004-dashboards-in-web-and-steward-show-what-the-platform-is-doing.md).
 
 ## Principles
