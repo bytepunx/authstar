@@ -1,0 +1,44 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__flai__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "out=$(flai guard 2>&1); s=$?; [ \"$s\" -eq 2 ] && { echo \"$out\" >&2; exit 2; }; case \"$s\" in 126|127) printf 'flai guard did not run (exit %s): %s\\nno guarded call passes until flai is installed and on PATH\\n' \"$s\" \"$out\" >&2; exit 2;; esac; exit 0"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|MultiEdit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$FLAI_ROLE\" ] || [ -n \"$FLAI_STORY\" ] || exit 0; out=$(flai guard 2>&1); s=$?; [ \"$s\" -eq 2 ] && { echo \"$out\" >&2; exit 2; }; case \"$s\" in 126|127) printf 'flai guard did not run (exit %s): %s\\nno guarded call passes until flai is installed and on PATH\\n' \"$s\" \"$out\" >&2; exit 2;; esac; exit 0"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$FLAI_STORY\" ] || exit 0; flai guard >/dev/null 2>&1; exit 0"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"$FLAI_STORY\" ] || exit 0; flai guard >/dev/null 2>&1; exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}

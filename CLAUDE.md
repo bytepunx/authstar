@@ -8,9 +8,9 @@ This repository follows the system-flow standard. This file is the map. The norm
 
 Before any change, read in this order:
 
-1. `design/conventions/README.md` and every file it lists, in its order. These are the rules you work by. `flai prime --cat` prints them in one call.
-2. `wip/agents/index.md`. If a stream is active, read its `## Current state` and `## Next steps`, run `git status`, reconcile, read its `## Open questions` (threads are mirrored there; `flai thread list` shows them all), and append a log entry. With the `flai` MCP server connected (`.mcp.json`), call `inbox` here and at the start of every turn, at every task transition, and before moving a story to review: it lists threads awaiting you, the ready stories in pull order, and what others changed since you last looked. Hold `wait_for_events` when idle if you stay running.
-3. `wip/kanban/board.md`. If no stream is active, pull the top `ready` story in `order` within the WIP limit and open its narrative with `flai stream open`, write its tasks if it has none, then work in the worktree it prints and run `flai stream sync` at every task transition.
+1. `design/conventions/README.md` and every file it lists, in its order. These are the rules you work by. Starting a story with `flai story start` (step 3) primes you with its pack; with a story already in progress, prime with `flai prime --story <id>` (or the `flai` MCP tool `prime`): within a size budget it prints the conventions the story's topics select and what the story names, whole, save a large file it names only by its path written out, which it briefs; and it briefs the design, tech, and ADRs its topics and links select. A brief is not the document: when one bears on the story, read the section that does, or the whole document, with the MCP tool `doc_get` and its heading (`flai doc show <path> --heading "<heading>"`) before relying on it or changing what it describes; `doc_search` (`flai doc search`) finds sections by their words. Without a story, `flai prime --cat` prints every convention whole.
+2. `wip/agents/index.md`. If a stream is active, read its `## Current state` and `## Next steps`, run `git status`, reconcile, read its `## Open questions` (threads are mirrored there; `flai thread list` shows them all), and append a log entry. With the `flai` MCP server connected (`.mcp.json`), call `inbox` here and at the start of every turn, at every task transition, and before moving a story to review: it lists threads awaiting you, the ready stories in pull order, and what others changed since you last looked. Whenever you have no story of your own in progress, hold `wait_for_work` and do what it answers: it names the next story to pull as soon as one is ready and the WIP limit leaves room.
+3. `wip/kanban/board.md`. If no stream is active, pull the top `ready` story in `order` within the WIP limit and start it with `flai story start S-nnnn` (or the `flai` MCP tool `story_start`), which moves it to `in-progress`, opens its narrative and worktree, primes, and answers the inbox in one call. Write its tasks if it has none, or review the planner's, then work in the worktree it prints and run `flai stream sync` at every task transition.
 
 Precedence when rules conflict: an explicit instruction from the operator in this conversation, then the project additions below each convention's marker, then the convention baseline, then your own defaults. When the operator's instruction conflicts with a convention, follow the operator, record the conflict in the narrative's `## Decisions`, and raise it in `## Open questions` if it looks like the convention should change. When a convention seems wrong, propose the edit in `## Open questions` and keep following it until the operator or a template release changes it. Never deviate silently and never edit a baseline rule yourself.
 
@@ -18,17 +18,22 @@ Precedence when rules conflict: an explicit instruction from the operator in thi
 
 | Path | Purpose | You may |
 |------|---------|---------|
-| `design/conventions/` | How agents work here, one file per topic | Read all of it every session. Add project rules below the marker only. |
-| `design/adrs/` | Architecture decisions, one per file, immutable once accepted | Add a new ADR. Never edit an accepted one except to set `superseded_by`. |
+| `design/conventions/` | How agents work here, one file per topic | Read what `flai prime` gives you every session. Add project rules below the marker only. |
+| `design/adrs/` | Architecture decisions, one per file, immutable once accepted | Add a new ADR. Never edit an accepted one except to set `superseded_by` or its `topics` (`flai adr topics`). |
 | `design/system/` | The living design, always current | Edit whenever a conversation resolves a new detail, direction, standard, or decision. |
 | `design/tech/` | Every technology in use, its version, where, and why | Edit whenever a dependency is added, upgraded, or removed. |
 | `design/issues/` | Recurring friction, defects, blockers, with counts and cost | Record occurrences; keep `summary.md` current. |
+| `design/experiments/` | What each experiment found, one results document per `experiment` story | Write your experiment story's results document from `template.md` before review. |
+| `design/analysis/` | What the analyzer found, one report per run, indexed in `README.md` | Read them. Only the analyzer writes here. |
+| `design/digest/` | What past stories learned, one fact per file, `D-nnnn-<slug>.md`; `flai digest list` is its index | Read them. Write only with `flai digest`. |
+| `design/components/` | Supporting files for components: one `*.examples.json` per component, its named sets of props | Keep the examples of a component you change in step with its props; `flai check` reports `components.examples`. |
+| `design/workflows/` | What flai runs as data: `roles/`, one file per strategic role, from which flai generates its harness definition (ADR-0207) | Read them. Change a role through a story; `flai check` validates them. |
 | `docs/<audience>/` | Outward-facing documentation per audience | Edit whenever user-facing behaviour changes. |
 | `wip/kanban/` | Work items: `epics/`, `stories/`, `tasks/`, `board.md` | Create and transition items with `flai`. |
 | `wip/agents/` | Your narrative, one file per story | Keep `## Current state` and `## Next steps` true. |
 | `wip/archive/` | Finished items and narratives | Do not edit. `flai archive` moves things here. |
 | `scripts/` | Purpose-named shell scripts behind the `Makefile` | Add a script rather than inlining a command sequence. |
-| `system-flow.yaml` | Project manifest | Edit only `name`, `description`, `dashboard`. `flai` owns the rest. |
+| `system-flow.yaml` | Project manifest | Edit only `name`, `description`, `dashboard`. `flai subproject` adds, changes, and removes sub-projects. `flai` owns the rest. |
 
 Do not create top-level folders beyond these and the sub-projects listed in `system-flow.yaml`.
 
