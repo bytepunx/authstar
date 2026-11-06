@@ -1,8 +1,10 @@
 # Architecture Decision Records
 
-One decision per file, numbered in order of acceptance. Never edit an accepted ADR except to set `superseded_by`. To change a decision, write a new ADR that supersedes it, then update the living design.
+One decision per file, numbered in order of acceptance. Never edit an accepted ADR except to set `superseded_by`, or its `topics` with `flai adr topics`. To change a decision, write a new ADR that supersedes it, then update the living design.
 
-Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs page: the number, the file, its front matter, and the row below are made for you, from the sections in `0000-template.md`. `flai check` warns when a file has no row here or a row has no file.
+Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs page: the number, the file, and its front matter are made for you, from the sections in `0000-template.md`. From a story's worktree, `flai adr new --commit` also commits it on the story's branch and adds it to the story's touches.
+
+The table below is generated from the ADR files by `flai adr index`, and written the same way by `flai adr new` and `flai adr accept`. Each row is one file's link, title, and status cell: its `status`, then the ADRs it supersedes, refines, and is superseded by. How much of an older ADR a newer one replaces is said in the newer one. Never edit the table by hand: `flai check` reports a table that differs from what the files render, and the next regeneration undoes the edit.
 
 | ADR | Title | Status |
 |-----|-------|--------|
@@ -12,13 +14,13 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0004](0004-signet-for-configuration-and-secrets.md) | Configuration and Secrets via Signet (Hard Dependency) | accepted |
 | [0005](0005-kluster-for-local-development-and-testing.md) | kluster for Local Development and Testing | accepted |
 | [0006](0006-rabbitmq-as-message-broker.md) | RabbitMQ as the Inter-Service Message Broker | accepted |
-| [0007](0007-signet-tenant-namespace-mapping.md) | Signet Tenant/Namespace Mapping and Automated Tenant Onboarding | superseded |
+| [0007](0007-signet-tenant-namespace-mapping.md) | Signet Tenant/Namespace Mapping and Automated Tenant Onboarding | superseded, superseded by 0014 |
 | [0008](0008-rabbitmq-identity-without-native-spiffe.md) | RabbitMQ Access Without Native SPIFFE Support | accepted |
 | [0009](0009-tenant-data-via-syncbundle-no-github.md) | Tenant Config and Secrets via SyncBundle — No GitHub Dependency | accepted |
 | [0010](0010-kickr-for-rabbitmq-container.md) | kickr as RabbitMQ's Container Entrypoint | accepted |
 | [0011](0011-minimizing-towers-signet-footprint.md) | Minimizing Tower's Signet Configuration Footprint | accepted |
 | [0012](0012-rabbitmq-user-provisioning-job.md) | RabbitMQ User Provisioning via a One-Shot Kubernetes Job | accepted |
-| [0013](0013-tenant-discovery.md) | Tenant Discovery via Signet | superseded |
+| [0013](0013-tenant-discovery.md) | Tenant Discovery via Signet | superseded, superseded by 0014 |
 | [0014](0014-single-bundle-prefixed-tenant-keys.md) | Single Bundle with Prefixed Tenant Keys | accepted |
 | [0015](0015-exempt-routes-never-blocked.md) | Exempt Routes Are Never Blocked by the Enrichment Outcome | accepted |
 | [0016](0016-application-layer-and-sso-scope.md) | Application Layer Nested Within Tenant; SSO Scope Limited to Shared-Parent-Domain | accepted |
@@ -42,12 +44,12 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0034](0034-herald-api-surface.md) | Herald's HTTP API Surface | accepted |
 | [0035](0035-lookout-and-chronicle-analytics.md) | `lookout` and `chronicle` — Portcullis-Sourced Analytics | accepted |
 | [0036](0036-chronicle-reporting-api-and-retention-config.md) | `chronicle`'s Reporting API and Retention Configuration | accepted |
-| [0037](0037-stripe-connect-tenant-owned-merchant-accounts.md) | Stripe Connect Standard Accounts — Tenants Own the Merchant Relationship | superseded |
+| [0037](0037-stripe-connect-tenant-owned-merchant-accounts.md) | Stripe Connect Standard Accounts — Tenants Own the Merchant Relationship | superseded, superseded by 0042 |
 | [0038](0038-plan-mapping-and-subscription-tracking.md) | Plan-to-Entitlement Mapping and Subscription Tracking | accepted |
 | [0039](0039-keep-trials-and-coupons.md) | Trials and Coupons in Keep | accepted |
 | [0040](0040-keep-erasure-response.md) | Keep's Response to Contact Erasure | accepted |
 | [0041](0041-keep-api-surface.md) | Keep's HTTP API Surface | accepted |
-| [0042](0042-single-account-billing-model.md) | Single-Account Billing Model — Tenants Are Customers of the Installation | superseded |
+| [0042](0042-single-account-billing-model.md) | Single-Account Billing Model — Tenants Are Customers of the Installation | superseded, superseded by 0046 |
 | [0043](0043-application-reported-usage-metering.md) | Application-Reported Usage Metering | accepted |
 | [0044](0044-web-surfaces-and-distribution-model.md) | `web`'s Three Surfaces and Distribution Model | accepted |
 | [0045](0045-steward-operator-console.md) | `steward` — a Separate Operator Console, Distinct from Tenant Admin | accepted |
@@ -55,7 +57,7 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0047](0047-application-and-role-slug-validation.md) | Application and Role Slug Validation — Tower-Owned Role Catalog, Keep's Async Reference Cache | accepted |
 | [0048](0048-steward-ux.md) | `steward`'s UX — Screens, Flows, and Two New Tower Endpoints | accepted |
 | [0049](0049-web-admin-information-architecture.md) | `web`'s Admin Surface — Information Architecture | accepted |
-| [0050](0050-portal-reserved-application.md) | `_portal` — a Second Reserved Application for Hosted Login and Billing Pages | superseded |
+| [0050](0050-portal-reserved-application.md) | `_portal` — a Second Reserved Application for Hosted Login and Billing Pages | superseded, superseded by 0066 |
 | [0051](0051-web-applications-and-identity-access-screens.md) | `web`'s Applications and Identity & Access Screens | accepted |
 | [0052](0052-keep-herald-own-signet-access.md) | Keep and Herald Gain Narrow Signet Access for Self-Managed Tenant Secrets | accepted |
 | [0053](0053-lifecycle-status-consolidation.md) | Lifecycle State Transitions via `PATCH`, Not a Separate `DELETE` — Consolidated Fix | accepted |
@@ -69,7 +71,7 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0061](0061-web-overview-screen.md) | `web`'s Overview Screen | accepted |
 | [0062](0062-tenant-status-enforcement-and-reactivation.md) | Tenant Status Enforcement, Suspension, and Reactivation | accepted |
 | [0063](0063-web-settings-screen.md) | `web`'s Settings Screen | accepted |
-| [0064](0064-portal-signin-flow.md) | `_portal`'s Sign-In Flow — Application-Scoped, Fully Client-Fetchable | superseded |
+| [0064](0064-portal-signin-flow.md) | `_portal`'s Sign-In Flow — Application-Scoped, Fully Client-Fetchable | superseded, superseded by 0066 |
 | [0065](0065-portal-upgrade-flow.md) | The Upgrade/Checkout Flow | accepted |
 | [0066](0066-portcullis-proxies-branded-pages-to-web.md) | Portcullis Proxies Branded Pages to `web` — Same Host, No Redirect, No `_portal` | accepted |
 | [0067](0067-tenant-creation-and-provisioning.md) | Tenant Creation and Provisioning API | accepted |
@@ -95,14 +97,14 @@ Record a new one with `flai adr new "<title>"`, or from the dashboard's ADRs pag
 | [0087](0087-jwks-response-includes-pem-alongside-jwk-point.md) | JWKS Response Includes the PEM-Encoded Public Key Alongside the JWK Point | accepted |
 | [0088](0088-session-internal-key-rotation-overlap.md) | Session/Internal Key Rotation-with-Overlap | accepted |
 | [0089](0089-internal-jwt-carries-its-own-tenant-hint.md) | The Internal JWT Carries Its Own Tenant Hint | accepted |
-| [0090](0090-organizations-shared-billing-administration-and-succession.md) | Organizations — Shared Billing Administration and Succession | superseded |
+| [0090](0090-organizations-shared-billing-administration-and-succession.md) | Organizations — Shared Billing Administration and Succession | superseded, superseded by 0100 |
 | [0091](0091-tenant-owned-domains-and-the-authstar-admin-surface.md) | Tenant-Owned Domains and the Reserved `authstar` Admin Surface | accepted |
 | [0092](0092-invite-redemption-survives-the-oauth-round-trip.md) | Invite Redemption Survives the OAuth Round Trip | accepted |
 | [0093](0093-domain-pending-tenant-provisioning.md) | Domain-Pending Tenant Provisioning | accepted |
 | [0094](0094-adopting-an-already-provisioned-tenant.md) | Adopting an Already-Provisioned Tenant | accepted |
 | [0095](0095-portcullis-forwards-stripe-webhooks-to-keep.md) | Portcullis Forwards Stripe Webhooks to Keep | accepted |
 | [0097](0097-cloudflared-tunnel-credentials-via-signet.md) | cloudflared Tunnel Credentials via Signet + kickr | accepted |
-| [0098](0098-organization-permission-lifecycle.md) | Organization Permission Lifecycle and Entitlement Fan-Out | superseded |
+| [0098](0098-organization-permission-lifecycle.md) | Organization Permission Lifecycle and Entitlement Fan-Out | superseded, superseded by 0100 |
 | [0099](0099-hosted-tenant-brandable-ui-surfaces.md) | Hosted, Tenant-Brandable UI Surfaces for Platform-Owned Concepts | proposed |
 | [0100](0100-organization-membership-and-open-role-catalog.md) | Multi-Organization Membership and an Open Org-Role Catalog | accepted |
 | [0101](0101-api-keys.md) | API Keys — User-Scoped and Org-Scoped, Tenant-Plan-Gated | accepted |

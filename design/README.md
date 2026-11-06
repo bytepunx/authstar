@@ -1,20 +1,19 @@
-# authstar-design
+# design
 
-Design decisions, stories, and reference documentation for the authstar project.
+Internal documentation for authstar. Outward-facing documentation lives in `docs/`.
 
-## Contents
+| Folder | Purpose | Lifecycle |
+|--------|---------|-----------|
+| `adrs/` | Architecture Decision Records, one decision at one point in time per file | Immutable once accepted, superseded by newer ADRs |
+| `system/` | The living design of the system as it is right now | Edited whenever a conversation resolves new details, direction, standards, or decisions |
+| `tech/` | Every active technology: version, where used, why | Edited whenever a dependency changes |
+| `stories/` | The behaviour contracts each component was built against, one folder per component, kept from the `authstar-design` repository ([ADR-0106](adrs/0106-design-records-live-in-the-system-flow-layout.md)) | Read before changing a component; new work is tracked in `wip/kanban`, not as new files here |
+| `conventions/` | How agents work in this repository, one file per topic | The baseline above each marker is replaced by `flai upgrade`; project rules go below it |
+| `issues/` | Recurring friction, defects, and blockers, with counts and cost, and `summary.md` | Each occurrence is recorded; `summary.md` is kept current |
+| `experiments/` | What each experiment found: hypothesis, success measure, what was done, results, and a recommendation | One per `experiment` story, written before it is accepted; kept as the record of what was tried |
+| `analysis/` | What the analyzer found: one report per run, its focus, the window its metrics cover, and each finding with its evidence, severity, and estimated impact | Written by the analyzer alone, one per run, and listed in its `README.md`; kept as the record of what was found |
+| `digest/` | What past stories learned: one fact per file, `D-nnnn-<slug>.md`, a decision, an operator's answer, a confirmed or overruled recommendation, or an issue's cause and fix, with its sources, topics, and paths, for priming | Written only through `flai digest`, by the digest's keeper; no index, since `flai digest list` is one; never deleted, only absorbed or compacted by a change of status |
+| `components/` | Supporting files for the project's components: one examples file per component, `<sub-project>/<path>.examples.json`, its named sets of props | Written by the Components page's save and by the stories that change a component; `flai check` keeps each in step with its component's props |
+| `workflows/` | What flai runs as data: `roles/`, one file per strategic role, its action, triggers, calls, permissions, and the fields flai generates its harness definition from, with its prompt as the body (ADR-0207) | Changed only through a story the operator accepts, since a role runs as the operator; no role edits it; `flai check` validates each file, and `flai upgrade` merges a baseline one as it merges a convention |
 
-- `adrs/` — architecture decision records (ADRs). The authoritative, dated record of
-  settled design calls across authstar's services. Consult this before implementing anything
-  that touches a decision already recorded here.
-- `stories/` — user-facing feature specifications, organized per service.
-- `docs/` — supplementary reference material (provider setup guides, operational runbooks, etc.)
-- `scripts/clone-siblings.sh` — clones every other `bytepunx/authstar-*` repo as a sibling
-  directory of this one (e.g. `~/git/authstar/tower`, `~/git/authstar/keep`, ...). Requires
-  the `gh` CLI, authenticated against the `bytepunx` org.
-
-## Related repos
-
-See the root `claude.md` at the workspace level (`~/git/authstar/claude.md`) for the full
-system overview. Each service (`portcullis`, `tower`, `keep`, `web`) is its own repository
-under the `bytepunx` GitHub organization.
+Markdown only, YAML front matter on every file, Mermaid for diagrams, but for the two JSON exceptions `conventions/documentation.md` names: the design token file and the examples files under `components/`. When an ADR changes a decision, update `system/` and `tech/` in the same change.
