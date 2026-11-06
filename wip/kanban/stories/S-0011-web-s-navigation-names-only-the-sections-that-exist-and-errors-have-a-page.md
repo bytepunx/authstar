@@ -7,7 +7,7 @@ status: ready
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-06T17:51:34Z
+updated: 2026-11-06T17:56:15Z
 transitions:
   - to: ready
     at: 2026-10-21T05:13:56Z
@@ -41,10 +41,10 @@ usage:
           cost: 0.8839
 forecast:
   duration: 5h
-  delivery: 2026-11-09T17:00:00Z
-  basis: "Planner's estimate over flai's 1h default: eight tasks in two layers change about 45 files across web and steward, behind three stories in the pull order with an in-progress limit of 2."
-  by: planner-S-0011
-  at: 2026-11-06T17:51:34Z
+  delivery: 2026-11-07T03:48:00Z
+  basis: "Its own forecast of 5h; 1st in the pull order with an in-progress limit of 2, behind S-0008 and S-0009."
+  by: flai
+  at: 2026-11-06T17:56:15Z
 ---
 # S-0011 Web's navigation names only the sections that exist and errors have a page
 
