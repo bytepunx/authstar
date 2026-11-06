@@ -3,11 +3,11 @@ id: S-0002
 type: story
 nature: improvement
 title: Root CI and Make targets run every component's tests
-status: review
+status: done
 parent: E-0001
 owner: alex
 created: 2026-10-21T04:58:53Z
-updated: 2026-10-21T05:25:41Z
+updated: 2026-11-06T17:38:38Z
 transitions:
   - to: ready
     at: 2026-10-21T04:58:53Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-21T05:25:41Z
     by: claude
+  - to: done
+    at: 2026-11-06T17:38:38Z
+    by: bytepunx
 tags: []
 ---
 # S-0002 Root CI and Make targets run every component's tests
