@@ -4,7 +4,7 @@ import type { FastifyInstance } from 'fastify'
 import RealClickHouseClient from '../../src/lib/clickhouse-client.js'
 import buildApp from '../../src/lib/build-app.js'
 import { buildTestConfig } from '../lib/test-config.js'
-import { bearerHeader } from '../lib/jwt.js'
+import { bearerHeader, testJwt } from '../lib/jwt.js'
 import type { AnalyticsEventRow } from '../../src/lib/types.js'
 
 // Integration tier: `RealClickHouseClient` against a real, disposable
@@ -61,7 +61,7 @@ describe('chronicle -- real ClickHouse', () => {
     })
     await clickhouse.ensureSchema(24)
 
-    app = await buildApp({ clickhouse, config: buildTestConfig() })
+    app = await buildApp({ clickhouse, config: buildTestConfig(), authstarGetKey: testJwt.getKey })
   }, 120_000) // ClickHouse images can be slow to pull/start on a cold cache
 
   afterAll(async () => {

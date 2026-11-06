@@ -24,9 +24,14 @@ still the right default.
   status codes, and Story 002's specific acceptance criteria (the invite-redemption
   limitation, tenant-wide vs. per-application active-user dedup, the `groupBy`/`filters`
   vocabulary's `400` on anything outside it).
-- Auth is exercised for real, not bypassed: `spec/lib/jwt.ts` signs an actual HS256 JWT with
-  the same secret the test `ChronicleConfig` uses, so every behavior test that hits a route
-  goes through `requirePermission`'s real signature verification.
+- Auth is exercised for real, not bypassed: `spec/lib/jwt.ts` mints ES256 internal JWTs as
+  portcullis does (header `{alg: ES256, kid, tenant}`) with a throwaway keypair, and
+  `testJwt.getKey`, a `staticKeyProvider` pinned to that keypair, is passed to `buildApp()` as
+  `authstarGetKey`. Every test that hits a route goes through `authstarFastifyPlugin`'s real
+  signature verification and `requirePermission`, without fetching a JWKS. Each route's spec
+  runs `analyticsReadAuthCases`: 200 for a valid `analytics:read` token; 401 for no token, an
+  unknown key, or an HS256 token; 403 for a missing permission, another tenant, or a degraded
+  token.
 
 ## `spec/e2e/*.spec.ts` -- full flows, still no external dependencies
 
