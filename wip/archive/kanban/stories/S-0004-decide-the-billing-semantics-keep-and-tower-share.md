@@ -3,11 +3,11 @@ id: S-0004
 type: story
 nature: research
 title: Decide the billing semantics keep and tower share
-status: review
+status: done
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:11Z
-updated: 2026-10-21T05:29:48Z
+updated: 2026-11-06T17:38:45Z
 transitions:
   - to: ready
     at: 2026-10-21T05:13:56Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-21T05:29:48Z
     by: claude
+  - to: done
+    at: 2026-11-06T17:38:45Z
+    by: bytepunx
 tags: []
 touches: [design/adrs/0107-keep-mirrors-stripe-s-subscription-status-and-degrades-plan-roles-after-a-grace.md, design/adrs/README.md, design/adrs/0108-plan-mappings-grant-roles-granted-roles-is-tower-s-set-in-effect.md, design/adrs/0109-entitlement-scopes-are-accounts-and-organizations-the-tenant-scope-is-retired.md]
 ---
