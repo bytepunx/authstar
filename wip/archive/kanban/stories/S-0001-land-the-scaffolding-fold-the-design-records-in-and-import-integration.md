@@ -3,11 +3,11 @@ id: S-0001
 type: story
 nature: improvement
 title: Land the scaffolding, fold the design records in, and import integration
-status: review
+status: done
 parent: E-0001
 owner: alex
 created: 2026-10-21T04:58:53Z
-updated: 2026-10-21T05:11:28Z
+updated: 2026-11-06T17:38:17Z
 transitions:
   - to: ready
     at: 2026-10-21T04:58:53Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-10-21T05:11:28Z
     by: claude
+  - to: done
+    at: 2026-11-06T17:38:17Z
+    by: bytepunx
 tags: []
 ---
 # S-0001 Land the scaffolding, fold the design records in, and import integration
