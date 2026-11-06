@@ -113,3 +113,6 @@ The table below is generated from the ADR files by `flai adr index`, and written
 | [0104](0104-helm-chart-and-provisioning-hook.md) | Helm Chart for authstar, with a Signet-Provisioning Hook | accepted |
 | [0105](0105-signet-manifest-and-aggregated-onboarding-spec.md) | Per-Service Signet Manifests, Aggregated by authstar-chart | accepted |
 | [0106](0106-design-records-live-in-the-system-flow-layout.md) | Design records live in the system-flow layout | accepted |
+| [0107](0107-keep-mirrors-stripe-s-subscription-status-and-degrades-plan-roles-after-a-grace.md) | Keep mirrors Stripe's subscription status and degrades plan roles after a grace period | accepted, refines 0038 and 0077 |
+| [0108](0108-plan-mappings-grant-roles-granted-roles-is-tower-s-set-in-effect.md) | Plan mappings grant roles; granted roles is tower's set in effect | accepted, refines 0018 and 0038 |
+| [0109](0109-entitlement-scopes-are-accounts-and-organizations-the-tenant-scope-is-retired.md) | Entitlement scopes are accounts and organizations; the tenant scope is retired | accepted, refines 0031, 0046 and 0100 |
