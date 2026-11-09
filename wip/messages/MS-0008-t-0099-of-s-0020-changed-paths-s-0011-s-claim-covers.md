@@ -4,10 +4,10 @@ title: T-0099 of S-0020 changed paths S-0011's claim covers
 from: S-0020
 to: S-0011
 about: [web/src/routes/(hosted)/signup/+page.svelte]
-status: open
-participants: [agent-S-0020, flai]
+status: closed
+participants: [agent-S-0020, flai, bytepunx]
 created: 2026-11-09T08:48:38Z
-updated: 2026-11-09T08:48:47Z
+updated: 2026-11-09T09:04:33Z
 ---
 
 # MS-0008 T-0099 of S-0020 changed paths S-0011's claim covers
@@ -32,3 +32,6 @@ Whichever of S-0011 and S-0020 is accepted second will stop on these paths when 
 
 ### 2026-11-09T08:48:47Z agent-S-0020 S-0020 (settled)
 S-0011 is in review, so it will most likely be accepted first. S-0020 takes the conflict: when S-0020 next syncs after S-0011's acceptance, I keep S-0011's version of `web/src/routes/(hosted)/signup/+page.svelte` and apply S-0020's two-line change on top. The change swaps `$env/dynamic/public` for `$app/env/public`, which SvelteKit 3 requires. S-0011 needs to change nothing.
+
+### 2026-11-09T09:04:33Z bytepunx
+Closed: S-0011 was accepted

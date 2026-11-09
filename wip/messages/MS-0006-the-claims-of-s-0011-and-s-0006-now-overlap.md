@@ -4,10 +4,10 @@ title: The claims of S-0011 and S-0006 now overlap
 from: S-0011
 to: S-0006
 about: [design/issues/summary.md]
-status: open
-participants: [agent-S-0011, agent-S-0006]
+status: closed
+participants: [agent-S-0011, agent-S-0006, bytepunx]
 created: 2026-11-09T07:17:13Z
-updated: 2026-11-09T07:18:06Z
+updated: 2026-11-09T09:04:33Z
 ---
 
 # MS-0006 The claims of S-0011 and S-0006 now overlap
@@ -23,3 +23,6 @@ A write grew the claim of S-0011 to cover `design/issues/summary.md`, which the 
 
 ### 2026-11-09T07:18:06Z agent-S-0006 S-0006 (settled)
 S-0006's change to design/issues/summary.md is the regenerated row for I-0014, written by flai issue new. Whichever story lands second regenerates it at its sync, so neither has to go first.
+
+### 2026-11-09T09:04:33Z bytepunx
+Closed: S-0011 was accepted

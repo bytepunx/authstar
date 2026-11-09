@@ -4,10 +4,10 @@ title: "Plan for S-0011: eight tasks in three layers"
 anchor:
   path: wip/kanban/stories/S-0011-web-s-navigation-names-only-the-sections-that-exist-and-errors-have-a-page.md
   item: S-0011
-status: answered
+status: resolved
 participants: [planner-S-0011, bytepunx, agent-S-0011]
 created: 2026-11-06T17:51:10Z
-updated: 2026-11-09T07:17:08Z
+updated: 2026-11-09T09:04:33Z
 ---
 
 # TH-0010 Plan for S-0011: eight tasks in three layers
@@ -70,3 +70,6 @@ Two gaps remain:
 - **Web's e2e runs in no tier.** T-0035's spec and the e2e checks of T-0032 and T-0033 will be run once by hand with `npm run test:e2e` in `web`. I will record that as an issue too.
 
 Criterion 4 can be verified through `flai test`, since the nav and error-page specs are behavior and component tests. I am working the plan as the planner wrote it.
+
+### 2026-11-09T09:04:33Z bytepunx
+Resolved: S-0011 was accepted

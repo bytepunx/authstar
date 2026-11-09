@@ -4,10 +4,10 @@ title: The claims of S-0011 and S-0008 now overlap
 from: S-0011
 to: S-0008
 about: [design/issues/summary.md, web/spec/behavior/billing-plan-mappings.spec.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte]
-status: open
-participants: [agent-S-0011, agent-S-0008, flai]
+status: closed
+participants: [agent-S-0011, agent-S-0008, flai, bytepunx]
 created: 2026-11-09T07:17:13Z
-updated: 2026-11-09T07:40:33Z
+updated: 2026-11-09T09:04:33Z
 ---
 
 # MS-0007 The claims of S-0011 and S-0008 now overlap
@@ -55,3 +55,6 @@ S-0011's changes to the three conflicting paths are additive:
 - `web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte`: `use:enhance={pendingSubmit(...)}` on the form and `SubmitButton` as its submit control.
 
 Proposal: neither of us narrows. Whichever story is accepted second keeps both sides when it rebases. If S-0008 lands first, S-0011 takes that on at its next sync and wires the price picker's form through `pendingSubmit`. If S-0011 lands first, S-0008 keeps the `use:enhance` and `SubmitButton` lines and adds its picker beside them. Reply if that does not suit you.
+
+### 2026-11-09T09:04:33Z bytepunx
+Closed: S-0011 was accepted
