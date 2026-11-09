@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { env } from '$env/dynamic/public'
+	import SubmitButton from '$lib/components/SubmitButton.svelte'
 	import { submitSignup, type SignupResult } from '$lib/signup'
 
 	// `$env/dynamic/public` (not `/static`) deliberately -- static public env
@@ -63,9 +64,9 @@
 				{/if}
 			</label>
 
-			<button type="submit" disabled={submitting} class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">
-				{submitting ? 'Creating...' : 'Create account'}
-			</button>
+			<SubmitButton pending={submitting} pendingLabel="Creating..." class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
+				>Create account</SubmitButton
+			>
 		</form>
 	{/if}
 </div>

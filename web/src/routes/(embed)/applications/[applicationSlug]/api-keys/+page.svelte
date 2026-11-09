@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { enhance } from '$app/forms'
+	import SubmitButton, { pendingSubmit } from '$lib/components/SubmitButton.svelte'
 	import type { ActionData, PageData } from './$types'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
+	const pending = $state<Record<string, boolean>>({})
 </script>
 
 <h1 class="text-lg font-semibold authstar-embed-primary">API keys</h1>
@@ -43,9 +46,13 @@
 							{/each}
 						</span>
 						{#if key.status === 'active'}
-							<form method="POST" action="?/revoke">
+							<form method="POST" action="?/revoke" use:enhance={pendingSubmit(pending, `revoke:${key.apiKeyId}`)}>
 								<input type="hidden" name="apiKeyId" value={key.apiKeyId} />
-								<button type="submit" class="text-xs text-red-600 underline">Revoke</button>
+								<SubmitButton
+									pending={pending[`revoke:${key.apiKeyId}`]}
+									pendingLabel="Revoking..."
+									class="text-xs text-red-600 underline">Revoke</SubmitButton
+								>
 							</form>
 						{/if}
 					</li>
@@ -56,7 +63,7 @@
 
 	<section class="mt-6 max-w-md">
 		<h2 class="text-sm font-semibold text-slate-500">Create a new key</h2>
-		<form method="POST" action="?/create" class="mt-2 flex flex-col gap-3">
+		<form method="POST" action="?/create" use:enhance={pendingSubmit(pending, 'create')} class="mt-2 flex flex-col gap-3">
 			<label class="flex flex-col gap-1 text-xs">
 				Name
 				<input name="name" required class="rounded border border-slate-300 px-2 py-1 text-sm" />
@@ -70,7 +77,11 @@
 					</label>
 				{/each}
 			</fieldset>
-			<button type="submit" class="w-fit rounded px-3 py-1.5 text-sm text-white authstar-embed-primary-bg">Create key</button>
+			<SubmitButton
+				pending={pending.create}
+				pendingLabel="Creating..."
+				class="w-fit rounded px-3 py-1.5 text-sm text-white authstar-embed-primary-bg">Create key</SubmitButton
+			>
 		</form>
 	</section>
 {/if}

@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { enhance } from '$app/forms'
+	import SubmitButton, { pendingSubmit } from '$lib/components/SubmitButton.svelte'
 	import type { ActionData, PageData } from './$types'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 	const org = $derived(data.organization)
 	const self = $derived(data.members.find((m) => m.accountId === data.session.accountId))
+	const pending = $state<Record<string, boolean>>({})
 </script>
 
 <h1 class="text-lg font-semibold authstar-embed-primary">{org.name}</h1>
@@ -39,26 +42,50 @@
 					{#if data.isManager}
 						{#each data.roleCatalog.filter((r) => r.name !== 'member') as roleDef (roleDef.name)}
 							{#if member.roles.includes(roleDef.name)}
-								<form method="POST" action="?/revokeRole">
+								<form
+									method="POST"
+									action="?/revokeRole"
+									use:enhance={pendingSubmit(pending, `revokeRole:${member.accountId}:${roleDef.name}`)}
+								>
 									<input type="hidden" name="accountId" value={member.accountId} />
 									<input type="hidden" name="role" value={roleDef.name} />
-									<button type="submit" class="text-xs text-slate-500 underline">-{roleDef.name}</button>
+									<SubmitButton
+										pending={pending[`revokeRole:${member.accountId}:${roleDef.name}`]}
+										pendingLabel="Revoking..."
+										class="text-xs text-slate-500 underline">-{roleDef.name}</SubmitButton
+									>
 								</form>
 							{:else}
-								<form method="POST" action="?/grantRole">
+								<form
+									method="POST"
+									action="?/grantRole"
+									use:enhance={pendingSubmit(pending, `grantRole:${member.accountId}:${roleDef.name}`)}
+								>
 									<input type="hidden" name="accountId" value={member.accountId} />
 									<input type="hidden" name="role" value={roleDef.name} />
-									<button type="submit" class="text-xs text-slate-500 underline">+{roleDef.name}</button>
+									<SubmitButton
+										pending={pending[`grantRole:${member.accountId}:${roleDef.name}`]}
+										pendingLabel="Granting..."
+										class="text-xs text-slate-500 underline">+{roleDef.name}</SubmitButton
+									>
 								</form>
 							{/if}
 						{/each}
 					{/if}
 					{#if data.isManager || member.accountId === data.session.accountId}
-						<form method="POST" action="?/removeMember">
+						<form
+							method="POST"
+							action="?/removeMember"
+							use:enhance={pendingSubmit(pending, `removeMember:${member.accountId}`)}
+						>
 							<input type="hidden" name="accountId" value={member.accountId} />
-							<button type="submit" class="text-xs text-red-600 underline">
+							<SubmitButton
+								pending={pending[`removeMember:${member.accountId}`]}
+								pendingLabel={member.accountId === data.session.accountId ? 'Leaving...' : 'Removing...'}
+								class="text-xs text-red-600 underline"
+							>
 								{member.accountId === data.session.accountId ? 'Leave' : 'Remove'}
-							</button>
+							</SubmitButton>
 						</form>
 					{/if}
 				</span>
@@ -77,17 +104,28 @@
 		{#if self.successorAccountId}
 			<div class="mt-2 text-sm">
 				Currently: <span class="font-medium">{self.successorAccountId}</span>
-				<form method="POST" action="?/clearSuccessor" class="mt-1">
-					<button type="submit" class="text-xs text-slate-500 underline">Clear</button>
+				<form method="POST" action="?/clearSuccessor" use:enhance={pendingSubmit(pending, 'clearSuccessor')} class="mt-1">
+					<SubmitButton pending={pending.clearSuccessor} pendingLabel="Clearing..." class="text-xs text-slate-500 underline"
+						>Clear</SubmitButton
+					>
 				</form>
 			</div>
 		{:else}
-			<form method="POST" action="?/setSuccessor" class="mt-2 flex items-end gap-2">
+			<form
+				method="POST"
+				action="?/setSuccessor"
+				use:enhance={pendingSubmit(pending, 'setSuccessor')}
+				class="mt-2 flex items-end gap-2"
+			>
 				<label class="flex flex-col gap-1 text-xs">
 					accountId
 					<input name="successorAccountId" class="rounded border border-slate-300 px-2 py-1 text-sm" />
 				</label>
-				<button type="submit" class="rounded border border-slate-300 px-3 py-1.5 text-xs">Set</button>
+				<SubmitButton
+					pending={pending.setSuccessor}
+					pendingLabel="Saving..."
+					class="rounded border border-slate-300 px-3 py-1.5 text-xs">Set</SubmitButton
+				>
 			</form>
 		{/if}
 	</section>
@@ -96,7 +134,7 @@
 {#if data.isManager}
 	<section class="mt-6 max-w-md">
 		<h2 class="text-sm font-semibold text-slate-500">Invite a new member</h2>
-		<form method="POST" action="?/invite" class="mt-2 flex flex-col gap-3">
+		<form method="POST" action="?/invite" use:enhance={pendingSubmit(pending, 'invite')} class="mt-2 flex flex-col gap-3">
 			<label class="flex flex-col gap-1 text-xs">
 				Email
 				<input name="email" type="email" class="rounded border border-slate-300 px-2 py-1 text-sm" />
@@ -110,7 +148,11 @@
 					</label>
 				{/each}
 			</fieldset>
-			<button type="submit" class="w-fit rounded px-3 py-1.5 text-sm text-white authstar-embed-primary-bg">Send invite</button>
+			<SubmitButton
+				pending={pending.invite}
+				pendingLabel="Sending..."
+				class="w-fit rounded px-3 py-1.5 text-sm text-white authstar-embed-primary-bg">Send invite</SubmitButton
+			>
 		</form>
 	</section>
 {/if}
