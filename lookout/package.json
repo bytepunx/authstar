@@ -29,19 +29,19 @@
     "pino": "^9.0.0"
   },
   "devDependencies": {
-    "@testcontainers/rabbitmq": "^10.10.4",
+    "@testcontainers/rabbitmq": "^12.2.1",
     "@types/amqplib": "^0.10.8",
     "@types/node": "^22.0.0",
     "@vitest/coverage-v8": "^5.1.0",
-    "testcontainers": "^10.10.4",
+    "testcontainers": "^12.2.1",
     "tsx": "^4.19.0",
     "typescript": "~5.7.0",
     "vitest": "^5.1.0"
   },
   "allowScripts": {
-    "cpu-features@0.0.10": true,
-    "esbuild@0.28.1": true,
-    "protobufjs@7.6.5": true,
-    "ssh2@1.17.0": true
+    "cpu-features": false,
+    "esbuild": false,
+    "protobufjs": false,
+    "ssh2": false
   }
 }
