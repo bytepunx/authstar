@@ -1,14 +1,13 @@
 <script lang="ts">
-	import { env } from '$env/dynamic/public'
-	import SubmitButton from '$lib/components/SubmitButton.svelte'
+	import { PUBLIC_TOWER_BASE_URL } from '$app/env/public'
 	import { submitSignup, type SignupResult } from '$lib/signup'
 
-	// `$env/dynamic/public` (not `/static`) deliberately -- static public env
-	// vars must be defined at *build* time or the build fails outright; this
+	// A dynamic (not `static`) public variable, deliberately (src/env.ts) -- static
+	// public env vars must be defined at *build* time or the build fails outright; this
 	// page's tower URL varies by deployment (ADR: signup is reachable at a
 	// fixed non-tenant host, tower's own public ingress address isn't known
 	// at image-build time) and has a safe local-dev fallback below.
-	const towerBaseUrl = env.PUBLIC_TOWER_BASE_URL ?? 'http://localhost:3000'
+	const towerBaseUrl = PUBLIC_TOWER_BASE_URL ?? 'http://localhost:3000'
 
 	let name = $state('')
 	let slug = $state('')
@@ -64,9 +63,9 @@
 				{/if}
 			</label>
 
-			<SubmitButton pending={submitting} pendingLabel="Creating..." class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
-				>Create account</SubmitButton
-			>
+			<button type="submit" disabled={submitting} class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">
+				{submitting ? 'Creating...' : 'Create account'}
+			</button>
 		</form>
 	{/if}
 </div>

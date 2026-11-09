@@ -1,5 +1,6 @@
 import { sveltekit } from '@sveltejs/kit/vite'
 import { defineConfig } from 'vitest/config'
+import { kitConfig } from './kit.config.ts'
 
 // Node-environment vitest config: spec/behavior (SvelteKit +page.server.ts /
 // +server.ts load-function and form-action contract tests, backend calls
@@ -9,7 +10,7 @@ import { defineConfig } from 'vitest/config'
 // right shape for web's "integration" tier). Widget/component tests need a
 // DOM and live in vitest.components.config.ts instead.
 export default defineConfig({
-  plugins: [sveltekit()],
+  plugins: [sveltekit(kitConfig)],
   test: {
     environment: 'node',
     include: ['spec/behavior/**/*.spec.ts', 'spec/integration/**/*.spec.ts'],

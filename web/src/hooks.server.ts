@@ -1,4 +1,4 @@
-import type { Handle } from '@sveltejs/kit'
+import type { Handle } from '@sveltejs/kit/hooks'
 import { jwksKeyProvider, perTenantJwksKeyProvider } from '@bytepunx/authstar-core'
 import { InvalidInternalJwtError, verifyInternalJwt } from '$lib/server/jwt'
 import { createTowerClient } from '$lib/server/clients/tower'

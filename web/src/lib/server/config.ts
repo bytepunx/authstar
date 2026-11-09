@@ -1,4 +1,4 @@
-import { env } from '$env/dynamic/private'
+import * as env from '$app/env/private'
 import { dialWorkload, type WorkloadConnection } from '@bytepunx/signet-client'
 
 // ADR 0102 ("Signet Precedence, Fallback Scope, and Missing-Field
@@ -21,7 +21,7 @@ import { dialWorkload, type WorkloadConnection } from '@bytepunx/signet-client'
 //   hardcoded literal default.
 //
 // `PUBLIC_TOWER_BASE_URL` is deliberately untouched by any of this -- it's
-// read via `$env/dynamic/public` directly in `signup/+page.svelte`,
+// read via `$app/env/public` directly in `signup/+page.svelte`,
 // intentionally outside the signet/secret boundary since it's
 // client-visible (ADR 0102, web consequences).
 //
@@ -46,13 +46,13 @@ export interface LoadConfigDeps {
 	env: Record<string, string | undefined>
 }
 
-// `env` defaults to the real `$env/dynamic/private` binding; both deps are
+// `env` defaults to the real `$app/env/private` bindings (src/env.ts); both deps are
 // injectable so tests can exercise both modes (and the fail-loud path)
 // without depending on SvelteKit's dynamic-env module snapshot timing or a
 // real SPIFFE workload socket -- the same "fake the boundary, not the
 // framework" shape this repo's other spec/behavior tests use for
 // tower/keep clients.
-const defaultDeps: LoadConfigDeps = { dial: dialWorkload, env }
+const defaultDeps: LoadConfigDeps = { dial: dialWorkload, env: { ...env } }
 
 function requireEnv(vars: Record<string, string | undefined>, name: string): string {
 	const value = vars[name]

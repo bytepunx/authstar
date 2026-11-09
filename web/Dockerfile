@@ -38,7 +38,7 @@ COPY --chown=node:node package.json ./
 
 USER node
 EXPOSE 3000
-# adapter-node's generated entrypoint (svelte.config.js confirms adapter-node). HOST/PORT default
+# adapter-node's generated entrypoint (kit.config.ts configures adapter-node). HOST/PORT default
 # to 0.0.0.0:3000 (build/env.js); TOWER_BASE_URL/PUBLIC_TOWER_BASE_URL/INTERNAL_JWT_JWKS_URL and
 # other runtime config are read from plain env vars (.env.example) -- no signet-client wiring
 # exists yet for web.
