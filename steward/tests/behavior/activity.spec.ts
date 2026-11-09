@@ -12,7 +12,7 @@ const page = {
       actorType: 'account',
       actorId: 'acc-1',
       eventType: 'account.role-granted',
-      summary: "Role 'tenant:manage' granted (tenant-wide)",
+      summary: 'Recovery grant applied by an operator',
       actingAs: 'jane.operator',
     },
     {

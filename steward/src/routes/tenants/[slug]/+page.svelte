@@ -7,6 +7,8 @@
   import type {
     Account,
     AccountListResponse,
+    ActivityEntry,
+    ActivityListResponse,
     Application,
     ApplicationListResponse,
     CreateApplicationRequest,
@@ -97,6 +99,14 @@
   let retiringRole = $state<string | undefined>(undefined)
   let retireRoleError = $state<string | undefined>(undefined)
 
+  // -- Activity (Story 004) -------------------------------------------
+  // Tower's first page (its default of 50), newest first as tower orders
+  // it. `actingAs` is the self-reported label an operator gave at connect
+  // time (ADR 0048): shown as such, never as verified identity.
+  let activity = $state<ActivityEntry[]>([])
+  let activityLoading = $state(false)
+  let activityError = $state<string | undefined>(undefined)
+
   onMount(() => {
     if (!session.connected) {
       goto('/connect')
@@ -106,6 +116,7 @@
     void loadHolders()
     void loadApplications()
     void loadRoleDefinitions()
+    void loadActivity()
   })
 
   async function loadDetail() {
@@ -200,6 +211,19 @@
       roleDefinitionsError = err instanceof ApiError ? err.message : 'Failed to load role definitions.'
     } finally {
       roleDefinitionsLoading = false
+    }
+  }
+
+  async function loadActivity() {
+    activityLoading = true
+    activityError = undefined
+    try {
+      const result = await apiCall<ActivityListResponse>(`/api/tenants/${encodeURIComponent(slug)}/activity`)
+      activity = result.data
+    } catch (err) {
+      activityError = err instanceof ApiError ? err.message : 'Failed to load activity.'
+    } finally {
+      activityLoading = false
     }
   }
 
@@ -569,6 +593,32 @@
   </form>
   {#if createRoleError}
     <p class="error" role="alert">{createRoleError}</p>
+  {/if}
+</section>
+
+<section>
+  <h2>Activity</h2>
+
+  {#if activityError}
+    <p class="error" role="alert">{activityError}</p>
+  {/if}
+
+  {#if activityLoading}
+    <p>Loading...</p>
+  {:else}
+    <ul>
+      {#each activity as entry, i (entry.timestamp + entry.eventType + entry.actorId + i)}
+        <li>
+          <time datetime={entry.timestamp}>{entry.timestamp}</time>
+          {entry.actorType} {entry.actorId}: {entry.eventType} -- {entry.summary}
+          {#if entry.actingAs}
+            (acting as {entry.actingAs}, self-reported)
+          {/if}
+        </li>
+      {:else}
+        <li>No activity yet.</li>
+      {/each}
+    </ul>
   {/if}
 </section>
 
