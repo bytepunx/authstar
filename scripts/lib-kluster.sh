@@ -138,3 +138,45 @@ ch_exec() {
 rmq_exec() {
   kc -n "$KLUSTER_RMQ_NAMESPACE" exec "$KLUSTER_RMQ_POD" -c "$KLUSTER_RMQ_CONTAINER" -- sh -c "$1"
 }
+
+# signet_connect port-forwards signet's admin port and writes an admin token
+# file under FLAI_KLUSTER_STATE; call signet_disconnect when done (an EXIT trap).
+signet_connect() {
+  KLUSTER_SIGNET_SERVER="localhost:${KLUSTER_SIGNET_LOCAL_PORT:-18444}"
+  KLUSTER_SIGNET_TOKEN_FILE="$FLAI_KLUSTER_STATE/signet-admin.token"
+  if kluster_dry_run; then
+    kc -n signet port-forward deploy/signet "${KLUSTER_SIGNET_LOCAL_PORT:-18444}:8444"
+    kc -n signet create token signet-admin --audience signet --duration=1h
+    return 0
+  fi
+  kluster_need signet
+  mkdir -p "$FLAI_KLUSTER_STATE"
+  (umask 077 && kc -n signet create token signet-admin --audience signet --duration=1h > "$KLUSTER_SIGNET_TOKEN_FILE") \
+    || kluster_die "could not make a signet-admin token in namespace signet; is the kluster up with signet?"
+  kc -n signet port-forward deploy/signet "${KLUSTER_SIGNET_LOCAL_PORT:-18444}:8444" >/dev/null 2>&1 &
+  KLUSTER_SIGNET_PF_PID=$!
+  _sc_try=0
+  until signet --server "$KLUSTER_SIGNET_SERVER" --token-file "$KLUSTER_SIGNET_TOKEN_FILE" status >/dev/null 2>&1; do
+    _sc_try=$((_sc_try + 1))
+    [ "$_sc_try" -lt 30 ] || kluster_die "signet's admin port did not answer on $KLUSTER_SIGNET_SERVER within 30s; is ${KLUSTER_SIGNET_LOCAL_PORT:-18444} free?"
+    sleep 1
+  done
+}
+
+# signet_disconnect stops signet_connect's port-forward, by its PID, and removes the token file.
+signet_disconnect() {
+  if [ -n "${KLUSTER_SIGNET_PF_PID:-}" ]; then
+    kill "$KLUSTER_SIGNET_PF_PID" 2>/dev/null || true
+    KLUSTER_SIGNET_PF_PID=""
+  fi
+  [ -z "${KLUSTER_SIGNET_TOKEN_FILE:-}" ] || rm -f "$KLUSTER_SIGNET_TOKEN_FILE"
+}
+
+# signet_cli runs the signet CLI against signet_connect's port-forward; a dry run prints it.
+signet_cli() {
+  if kluster_dry_run; then
+    printf '+ signet --server %s --token-file <token> %s\n' "${KLUSTER_SIGNET_SERVER:-localhost:18444}" "$*"
+    return 0
+  fi
+  signet --server "$KLUSTER_SIGNET_SERVER" --token-file "$KLUSTER_SIGNET_TOKEN_FILE" "$@"
+}
