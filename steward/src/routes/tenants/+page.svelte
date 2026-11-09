@@ -1,9 +1,9 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import { goto } from '$app/navigation'
-  import { session } from '$lib/client/session.svelte.js'
-  import { apiCall, ApiError } from '$lib/client/api.js'
-  import type { CreateTenantErrorBody, CreateTenantRequest, CreateTenantResponse, Tenant, TenantListResponse } from '$lib/types.js'
+  import { session } from '#lib/client/session.svelte.js'
+  import { apiCall, ApiError } from '#lib/client/api.js'
+  import type { CreateTenantErrorBody, CreateTenantRequest, CreateTenantResponse, Tenant, TenantListResponse } from '#lib/types.js'
 
   let search = $state('')
   let tenants = $state<Tenant[]>([])

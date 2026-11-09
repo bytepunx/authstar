@@ -1,8 +1,8 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
-  import { session } from '$lib/client/session.svelte.js'
-  import type { ConnectResult } from '$lib/types.js'
+  import { session } from '#lib/client/session.svelte.js'
+  import type { ConnectResult } from '#lib/types.js'
 
   let token = $state('')
   let actorLabel = $state('')

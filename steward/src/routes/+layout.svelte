@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { session } from '$lib/client/session.svelte.js'
+  import { session } from '#lib/client/session.svelte.js'
   import { goto } from '$app/navigation'
 
   let { children } = $props()

@@ -5,11 +5,11 @@
 // see tower-client.ts's own comment. This proxy is written against the
 // operator path tower should expose; it will 404 until that lands.
 import type { RequestHandler } from './$types.js'
-import { createTowerClient } from '$lib/server/tower-client.js'
-import { loadEnv } from '$lib/server/env.js'
-import { extractOperatorAuth } from '$lib/server/request-auth.js'
-import { respondFromBackend } from '$lib/server/respond.js'
-import type { CreateRoleDefinitionRequest } from '$lib/types.js'
+import { createTowerClient } from '#lib/server/tower-client.js'
+import { loadEnv } from '#lib/server/env.js'
+import { extractOperatorAuth } from '#lib/server/request-auth.js'
+import { respondFromBackend } from '#lib/server/respond.js'
+import type { CreateRoleDefinitionRequest } from '#lib/types.js'
 
 export const GET: RequestHandler = async (event) => {
   const { token } = extractOperatorAuth(event)

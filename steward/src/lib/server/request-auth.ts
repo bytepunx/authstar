@@ -46,13 +46,13 @@ export function extractOperatorAuth(
   const match = /^Bearer\s+(.+)$/i.exec(authHeader)
   const token = match?.[1]?.trim()
   if (!token) {
-    throw error(401, { message: 'missing operator bearer token' })
+    throw error(401, 'missing operator bearer token')
   }
 
   const actorLabel = event.request.headers.get('x-operator-actor') ?? undefined
 
   if (requireActor && MUTATING_METHODS.has(event.request.method) && !actorLabel) {
-    throw error(400, { message: 'X-Operator-Actor is required for mutating requests' })
+    throw error(400, 'X-Operator-Actor is required for mutating requests')
   }
 
   return { token, actorLabel }

@@ -2,8 +2,8 @@
   import { onMount } from 'svelte'
   import { page } from '$app/state'
   import { goto } from '$app/navigation'
-  import { session } from '$lib/client/session.svelte.js'
-  import { apiCall, ApiError } from '$lib/client/api.js'
+  import { session } from '#lib/client/session.svelte.js'
+  import { apiCall, ApiError } from '#lib/client/api.js'
   import type {
     Account,
     AccountListResponse,
@@ -19,7 +19,7 @@
     RotateTenantKeysResponse,
     TenantDetailResponse,
     TenantRotationKey,
-  } from '$lib/types.js'
+  } from '#lib/types.js'
 
   const slug = $derived(page.params.slug!)
 

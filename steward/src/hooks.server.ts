@@ -13,6 +13,6 @@
 // fails `init` and therefore fails server startup loudly, rather than
 // deferring the error to the first request.
 
-import { initSignetSourcedEnv } from '$lib/server/signet-config.js'
+import { initSignetSourcedEnv } from '#lib/server/signet-config.js'
 
 export const init = initSignetSourcedEnv

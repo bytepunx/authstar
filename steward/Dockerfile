@@ -29,7 +29,7 @@ COPY --chown=node:node package.json ./
 
 USER node
 EXPOSE 3000
-# adapter-node's generated entrypoint (svelte.config.js confirms adapter-node, chosen per its own
+# adapter-node's generated entrypoint (vite.config.ts's sveltekit() call confirms adapter-node, chosen per its own
 # comment: steward is "a plain long-lived Node process reached only via direct port-forward").
 # HOST/PORT default to 0.0.0.0:3000 (build/env.js); TOWER_URL and other runtime config are read
 # from plain env vars -- no signet-client wiring exists yet for steward.

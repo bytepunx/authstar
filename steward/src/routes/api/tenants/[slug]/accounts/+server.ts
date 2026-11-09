@@ -4,10 +4,10 @@
 // ADR 0048's own reasoning that permission holders are a small enough
 // population not to need a dedicated backend filter.
 import type { RequestHandler } from './$types.js'
-import { createTowerClient } from '$lib/server/tower-client.js'
-import { loadEnv } from '$lib/server/env.js'
-import { extractOperatorAuth } from '$lib/server/request-auth.js'
-import { respondFromBackend } from '$lib/server/respond.js'
+import { createTowerClient } from '#lib/server/tower-client.js'
+import { loadEnv } from '#lib/server/env.js'
+import { extractOperatorAuth } from '#lib/server/request-auth.js'
+import { respondFromBackend } from '#lib/server/respond.js'
 
 export const GET: RequestHandler = async (event) => {
   const { token } = extractOperatorAuth(event)

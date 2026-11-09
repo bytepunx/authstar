@@ -36,12 +36,17 @@ export async function apiCall<T>(path: string, options: ApiCallOptions = {}): Pr
   if (session.actorLabel) {
     headers['X-Operator-Actor'] = session.actorLabel
   }
-  if (options.body !== undefined) {
+  const method = options.method ?? 'GET'
+  // Every mutating call says it is JSON, bodiless ones too: SvelteKit 3's CSRF
+  // check refuses a POST/PUT/PATCH/DELETE with no Content-Type unless its
+  // Origin matches the server's, and adapter-node takes that to be https while
+  // operators reach steward over a plain-http port-forward.
+  if (options.body !== undefined || method !== 'GET') {
     headers['Content-Type'] = 'application/json'
   }
 
   const response = await fetch(path, {
-    method: options.method ?? 'GET',
+    method,
     headers,
     body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
   })

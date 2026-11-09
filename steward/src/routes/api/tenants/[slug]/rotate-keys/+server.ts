@@ -2,11 +2,11 @@
 // `POST /operator/tenants/{tenantSlug}/rotate-keys { keys: [...] }`
 // (tower Story 011).
 import type { RequestHandler } from './$types.js'
-import { createTowerClient } from '$lib/server/tower-client.js'
-import { loadEnv } from '$lib/server/env.js'
-import { extractOperatorAuth } from '$lib/server/request-auth.js'
-import { respondFromBackend } from '$lib/server/respond.js'
-import type { RotateTenantKeysRequest } from '$lib/types.js'
+import { createTowerClient } from '#lib/server/tower-client.js'
+import { loadEnv } from '#lib/server/env.js'
+import { extractOperatorAuth } from '#lib/server/request-auth.js'
+import { respondFromBackend } from '#lib/server/respond.js'
+import type { RotateTenantKeysRequest } from '#lib/types.js'
 
 const VALID_KEYS = new Set(['session', 'internal', 'identity-hash'])
 

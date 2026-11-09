@@ -4,7 +4,7 @@
 // port-forward means re-entering the token. This module is the one place
 // that touches sessionStorage so that discipline isn't scattered.
 
-import { browser } from '$app/environment'
+import { browser } from '$app/env'
 
 const STORAGE_KEY = 'steward.session'
 

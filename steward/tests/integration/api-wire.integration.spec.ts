@@ -26,6 +26,21 @@ describe('steward server <-> fake tower, over real HTTP', () => {
     await backend?.close()
   })
 
+  // SvelteKit 3's CSRF check refuses a POST, PUT, PATCH, or DELETE with no
+  // Content-Type, or a form one, unless its Origin is the server's own; and
+  // adapter-node takes the server's own origin to be https, while operators
+  // reach steward over a plain-http port-forward. So steward's client
+  // (#lib/client/api.ts) sends `Content-Type: application/json` on every
+  // mutating call, bodiless ones too, and the calls below do the same.
+
+  it('refuses a bodiless mutating request with no JSON Content-Type (SvelteKit CSRF check)', async () => {
+    const response = await fetch(`${steward.url}/api/tenants/globex/reactivate`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test' },
+    })
+    expect(response.status).toBe(403)
+  })
+
   it('confirms a valid token through a real network round trip', async () => {
     const response = await fetch(`${steward.url}/api/connect`, {
       method: 'POST',
@@ -66,7 +81,7 @@ describe('steward server <-> fake tower, over real HTTP', () => {
   it('rejects a mutating request missing X-Operator-Actor at the real HTTP layer', async () => {
     const response = await fetch(`${steward.url}/api/tenants/globex/reactivate`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${backend.state.validToken}` },
+      headers: { Authorization: `Bearer ${backend.state.validToken}`, 'Content-Type': 'application/json' },
     })
     expect(response.status).toBe(400)
   })
@@ -74,7 +89,7 @@ describe('steward server <-> fake tower, over real HTTP', () => {
   it('reactivates a suspended tenant end to end, verifiable in a subsequent search', async () => {
     const reactivate = await fetch(`${steward.url}/api/tenants/globex/reactivate`, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test' },
+      headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test', 'Content-Type': 'application/json' },
     })
     expect(reactivate.status).toBe(200)
 
@@ -156,7 +171,7 @@ describe('steward server <-> fake tower, over real HTTP', () => {
       `${steward.url}/api/tenants/acme/accounts/acc-2/permissions/${encodeURIComponent('billing:read')}?applicationScope=billing`,
       {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test' },
+        headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test', 'Content-Type': 'application/json' },
       },
     )
     expect(revoke.status).toBe(204)
@@ -189,7 +204,7 @@ describe('steward server <-> fake tower, over real HTTP', () => {
       `${steward.url}/api/tenants/acme/role-definitions/${encodeURIComponent('plan:family')}?applicationScope=loci`,
       {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test' },
+        headers: { Authorization: `Bearer ${backend.state.validToken}`, 'X-Operator-Actor': 'integration-test', 'Content-Type': 'application/json' },
       },
     )
     expect(retire.status).toBe(200)
