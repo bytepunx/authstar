@@ -49,6 +49,11 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 	const applications = new Map<string, Map<string, ApplicationDetail>>()
 	let nextCredentialId = 1
 
+	// Test-only: `${method} ${pathname}` -> the status to answer with, set by
+	// `POST /__fail` so an e2e spec can make one tower route fail; `/__reset`
+	// clears it.
+	const failures = new Map<string, number>()
+
 	// ADR 0100 -- a bare-bones stand-in for tower's organizations,
 	// organizationMembership records, and organization-invites surfaces.
 	// Like the rest of this fixture, it doesn't enforce tower's own
@@ -145,6 +150,7 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 		// Test-only convenience: reset in-memory state between tests/specs.
 		if (req.method === 'POST' && url.pathname === '/__reset') {
 			applications.clear()
+			failures.clear()
 			nextCredentialId = 1
 			organizations.clear()
 			memberships.clear()
@@ -202,6 +208,21 @@ export function createFakeTowerServer(options: FakeTowerServerOptions = {}): Ser
 				.setExpirationTime('5m')
 				.sign(privateKey)
 			send(res, 200, { token })
+			return
+		}
+
+		// Test-only: make one route answer `status` until the next `/__reset`,
+		// so e2e specs can drive web's handling of a failing tower.
+		if (req.method === 'POST' && url.pathname === '/__fail') {
+			const body = (await readJsonBody(req)) as { method?: string; path?: string; status?: number }
+			failures.set(`${String(body.method ?? 'GET').toUpperCase()} ${String(body.path ?? '')}`, Number(body.status ?? 500))
+			send(res, 204)
+			return
+		}
+
+		const failStatus = failures.get(`${req.method} ${url.pathname}`)
+		if (failStatus !== undefined) {
+			send(res, failStatus, { error: 'fake tower failure' })
 			return
 		}
 

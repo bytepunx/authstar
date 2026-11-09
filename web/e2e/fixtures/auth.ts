@@ -52,3 +52,17 @@ export async function authenticateAs(
 		authorization: `Bearer ${token}`,
 	})
 }
+
+/**
+ * Makes the fake tower answer `status` for one route (`method` and `path`,
+ * such as `GET /tenants/acme/applications`) until the next `/__reset`, so a
+ * spec can drive `web`'s handling of a failing upstream.
+ */
+export async function failTowerRoute(
+	request: APIRequestContext,
+	method: string,
+	path: string,
+	status: number,
+): Promise<void> {
+	await request.post(`${FAKE_BACKEND_URL}/__fail`, { data: { method, path, status } })
+}
