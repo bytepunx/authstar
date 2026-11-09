@@ -4,7 +4,6 @@
 
 > Since 2026-10-21 this harness lives in the `bytepunx/authstar` monorepo as `integration/`. The service repositories it builds from are its siblings at `../<service>`, which is the layout `scripts/deploy-local.sh` already expects. Design links point at `../design/adrs/`.
 
-
 Local/CI orchestration for standing up the full authstar stack on a disposable
 Kubernetes cluster: signet provisioning (secrets/config for all 8 services), the
 Deployment/Service manifests for all 8, the scripts that drive both plus the cluster
@@ -37,7 +36,7 @@ signetd's next reconciliation cycle. Nothing this repo (or `authstar-tower`/
 
 ## Directory layout
 
-```
+```text
 .sops.yaml              placeholder creation_rules; rewritten for real by
                          `signet sops-key update-config` the first time
                          scripts/provision.sh runs against a live cluster
@@ -110,9 +109,32 @@ config/authstar/<service>.yaml
                          theoretical.
 ```
 
+## Story namespaces through flai's `kluster:` block
+
+`system-flow.yaml`'s `kluster:` block lets flai run this harness's cluster. It deploys each story in review into its own namespace and promotes main into `authstar` (system-flow's `design/system/kluster.md`). The cluster is `kluster.yaml` in this folder, profile `authstar`, which installs signet, RabbitMQ, Postgres, ClickHouse, and Dex once. Every namespace shares them.
+
+| Step | Script | What it does |
+|------|--------|--------------|
+| Build, one per service | [`scripts/kluster-build.sh`](../scripts/kluster-build.sh) | Builds `docker.io/bytepunx/authstar-<service>:$FLAI_KLUSTER_TAG`. flai then loads it into the cluster's nodes |
+| Deploy | [`scripts/kluster-deploy.sh`](../scripts/kluster-deploy.sh) | Applies the namespace and `manifests/admin-rbac.yaml`, then makes the namespace's own settings: a RabbitMQ vhost and user named after the namespace, and Postgres databases `<prefix>tower`, `<prefix>keep`, `<prefix>herald` plus ClickHouse `<prefix>chronicle`. It seeds signet bundles under the signet namespace of the same name, with fresh keys and operator tokens, and the four ADR 0103 policies. It applies `manifests/1[0-7]-*.yaml`, renamed into the namespace and tag, and waits for the eight rollouts |
+| Teardown | [`scripts/kluster-teardown.sh`](../scripts/kluster-teardown.sh) | Removes the vhost, user, databases, and policies; flai then deletes the namespace. The signet bundles stay, since the signet CLI cannot delete one |
+
+A story's namespace is its ID in lower case, `s-0019`, with prefix `s0019_`. The default namespace `authstar` has no prefix, so main keeps the profile's names. Its deploy first removes the Deployments and CronJobs the profile made from `latest`. The deploy keeps the namespace's operator tokens, for the golden path, in `.flai-cache/kluster/state/<namespace>/tokens.env`.
+
+From the operator's shell, never an agent's:
+
+```sh
+flai kluster up                 # bring the cluster up from integration/kluster.yaml
+flai kluster deploy S-0019      # build, load, and deploy a story into s-0019
+flai kluster teardown S-0019    # remove s-0019 and what it made in the shared services
+flai kluster promote            # build and deploy main's head into authstar
+```
+
+With the `kluster` host action on, `flai serve` runs these on its own as stories enter and leave review. `KLUSTER_DRY_RUN=1` makes the deploy and teardown scripts print each cluster command instead of running it. The `FLAI_KLUSTER_*` variables must be set by hand then, as the header of `scripts/lib-kluster.sh` lists them.
+
 ## Provisioning + deployment flow
 
-```
+```text
 scripts/up.sh          # kluster up --profile authstar; kluster use <cluster>
 scripts/provision.sh   # admin RBAC, SOPS key, secrets, deploy key,
                         # repo registration + sync
@@ -384,8 +406,8 @@ path acks, it doesn't nack-and-loop.
 **The real, confirmed root cause**: `communication`'s composite actor id
 (`${tenant}:${idempotencyKey}`) routinely exceeds `consequent-postgres`'s `character(42)`
 id column — the same platform-level constraint tower's own `TESTING.md` already documents
-for contact ids and invite tokens. tower's real invite-sent publish uses `idempotencyKey:
-\`invite:${token}:sent\`` (52 characters on its own), so the composite easily lands at
+for contact ids and invite tokens. tower's real invite-sent publish uses `idempotencyKey` set to
+`` `invite:${token}:sent` `` (52 characters on its own), so the composite easily lands at
 50–60+ characters for a real tenant. `communication.create`'s underlying Postgres INSERT
 failed with "value too long for type character(42)" — identically, deterministically, on
 every single redelivery — and `comms-consumer.ts`'s `nack(msg, false, true)` on *any*
@@ -434,7 +456,7 @@ now-fixed response-checking confirms zero errors — but tower still never sees 
 even restarting immediately afterward with no intervening `repo sync`. Traced to
 signetd's own logs:
 
-```
+```text
 ERROR store secret path=secrets/authstar/tower/heraldPayloadPublicKey.yaml err="sops decrypt: parse sops file: sops metadata not found"
 ```
 

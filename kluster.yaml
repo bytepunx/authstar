@@ -1,6 +1,0 @@
-# The project's local Kubernetes cluster, which flai brings up with kluster
-# (design/system/kluster.md). Change the profile, or add addons, from the
-# dashboard's Klusters page before the first bring-up.
-name: authstar-local
-provider: k3d
-profile: signet

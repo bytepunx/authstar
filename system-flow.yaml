@@ -66,4 +66,25 @@ agent:
 planning:
   hour_rate: 150
 kluster:
-  config: kluster.yaml
+  config: integration/kluster.yaml
+  namespace: authstar
+  components:
+    - name: tower
+      build: [scripts/kluster-build.sh, tower]
+    - name: keep
+      build: [scripts/kluster-build.sh, keep]
+    - name: herald
+      build: [scripts/kluster-build.sh, herald]
+    - name: lookout
+      build: [scripts/kluster-build.sh, lookout]
+    - name: chronicle
+      build: [scripts/kluster-build.sh, chronicle]
+    - name: steward
+      build: [scripts/kluster-build.sh, steward]
+    - name: web
+      build: [scripts/kluster-build.sh, web]
+    - name: portcullis
+      build: [scripts/kluster-build.sh, portcullis]
+  deploy: [scripts/kluster-deploy.sh]
+  teardown: [scripts/kluster-teardown.sh]
+  timeout: 30m
