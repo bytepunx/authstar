@@ -2,6 +2,7 @@
 title: SvelteKit
 updated: 2026-11-09
 status: active
+topics: [web, steward, sveltekit]
 ---
 
 # SvelteKit

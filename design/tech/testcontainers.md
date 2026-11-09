@@ -2,6 +2,7 @@
 title: testcontainers
 updated: 2026-11-09
 status: active
+topics: [node, sveltekit]
 ---
 
 # testcontainers
