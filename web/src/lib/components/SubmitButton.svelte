@@ -1,5 +1,5 @@
 <script module lang="ts">
-	import type { SubmitFunction } from '@sveltejs/kit'
+	import type { SubmitFunction } from '$app/forms'
 
 	/** A `use:enhance` submit function that marks `pending[key]` while the form's action runs. */
 	export function pendingSubmit(pending: Record<string, boolean>, key: string): SubmitFunction {
