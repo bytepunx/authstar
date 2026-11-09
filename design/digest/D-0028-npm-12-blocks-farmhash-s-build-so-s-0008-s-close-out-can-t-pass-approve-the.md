@@ -2,9 +2,9 @@
 id: D-0028
 title: "npm 12 blocks farmhash's build, so S-0008's close-out can't pass: approve the install scripts: running that command fails across all projects"
 kind: answer
-sources: [TH-0030]
-topics: [billing, keep, node, web, sveltekit, code, all]
-paths: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md, design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/I-0009-no-test-tier-type-checks-web-or-steward-scripts-test-sh-runs-vitest-only-never.md, design/issues/I-0011-keep-s-live-portal-session-test-sends-a-pre-adr-0100-token-and-gets-403.md, design/issues/I-0013-npm-12-blocks-dependency-install-scripts-so-farmhash-is-never-built-and-herald.md]
+sources: [TH-0030, S-0011, I-0016]
+topics: [dependencies, testing, tooling, node, herald, keep]
+paths: [herald/package.json, keep/package.json, Makefile, design/issues/I-0016-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md]
 date: 2026-11-09
 status: active
 absorbed_by: ""
@@ -14,18 +14,18 @@ cited: []
 
 # D-0028 npm 12 blocks farmhash's build, so S-0008's close-out can't pass: approve the install scripts: running that command fails across all projects
 
-The operator, bytepunx, answered TH-0030 at 2026-11-09T07:40:26Z.
+**Fact:** this host's npm, 12.2.2, blocks every dependency's install scripts unless the project's `package.json` approves them under `allowScripts`. So `make install` leaves `farmhash`'s native binary unbuilt. Suites that load farmhash then fail with `Cannot find module './build/Debug/farmhash.node'`: herald and keep, and tower in S-0011's worktree. `esbuild`, `protobufjs`, `cpu-features`, and `ssh2` are blocked too, but no test needs them. chart/hook, chronicle, and clients pass with them blocked.
 
-What was asked:
+Approve farmhash per project, only where it is installed:
 
-```text
-All three of S-0008's criteria are verified and ticked, and the live test passed. The close-out still can't pass, for a reason outside S-0008's code.
+```sh
+for p in herald keep; do (cd "$p" && npm install-scripts approve farmhash); done
 ```
 
-The answer:
+- npm 12 refuses the whole approval with `ENOMATCH` when a project does not install every package named. That is why the first command offered, which named farmhash, esbuild, and protobufjs in every project, failed. The operator answered on TH-0030 on 2026-11-09: "running that command fails across all projects".
+- `--dry-run` writes the `allowScripts` entry anyway. Do not use it to preview.
+- Never run a blocked script by hand to get past this, because that bypasses npm's supply-chain check. S-0011's agent ran farmhash's `prebuild-install` by hand in its worktree, and recorded I-0016. I-0016 duplicates I-0013 on S-0008's branch.
 
-```text
-running that command fails across all projects
-```
+S-0020 ("Fix broken nodejs builds") carries the `allowScripts` entries with the npm audit's version bumps (D-0029). TH-0030 had no final answer when this was written.
 
-Source: TH-0030.
+Source: TH-0030, S-0011, I-0016.

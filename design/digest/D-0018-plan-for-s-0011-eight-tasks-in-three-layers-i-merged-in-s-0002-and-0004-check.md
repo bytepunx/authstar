@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0011]
 ---
 
 # D-0018 Plan for S-0011: eight tasks in three layers: I merged in S-0002 and 0004, check to see if the test scripts address this

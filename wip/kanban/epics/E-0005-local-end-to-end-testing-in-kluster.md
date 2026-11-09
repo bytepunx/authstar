@@ -18,15 +18,15 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 29
+      seconds: 82
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 75
-          cache_read: 231674
-          cache_write: 74171
-          cost: 0.3589
+          input: 26
+          output: 187
+          cache_read: 754661
+          cache_write: 137062
+          cost: 1.0304
 ---
 # E-0005 Local end-to-end testing in kluster
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 25.2915
-accrued_seconds: 1535
-tasks_completed: 88
-last_run: 2026-11-09T08:35:20Z
+accrued_cost: 27.2545
+accrued_seconds: 1709
+tasks_completed: 94
+last_run: 2026-11-09T17:54:23Z
 ---
 
 # Orchestrator activity
@@ -628,6 +628,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 27
 - Cost: 0.0735 USD, estimated
 
+### 2026-11-09T09:05:53Z
+
+- Summary: release-due S-0011: did not publish. system-flow.yaml has no orchestration block, so publish is off. Pending: S-0001, S-0002, S-0009, S-0011, 4 stories, 135.72 USD/week, policy judgement (default), not met. Publishing is the operator's.
+- Items: S-0011
+- Seconds: 37
+- Cost: 0.4678 USD, estimated
+
+### 2026-11-09T09:06:12Z
+
+- Summary: I did not publish a release for S-0011, and I took no other action.
+- Items: none
+- Seconds: 19
+- Cost: 0.0663 USD, estimated
+
+### 2026-11-09T09:43:03Z
+
+- Summary: Left S-0020 in review untouched: system-flow.yaml has no orchestration block, so accept_reviews and every other permission is off; acceptance is the operator's.
+- Items: S-0020
+- Seconds: 26
+- Cost: 0.5698 USD, estimated
+
+### 2026-11-09T09:43:24Z
+
+- Summary: I left S-0020 in review without changing anything. It's yours to accept.
+- Items: none
+- Seconds: 21
+- Cost: 0.0992 USD, estimated
+
+### 2026-11-09T17:54:05Z
+
+- Summary: Reason planned:S-0019 (planner wrote T-0087..T-0093, plan on TH-0029): took no action. system-flow.yaml has no orchestration block, so plan_backlog_stories, answer_threads, and set_cost_of_delay are off; TH-0029's plan approval, its cost of delay inputs (recommended time_lost_per_cycle 2h), and its kluster.yaml shared-services question stay with the operator. No policy figure applies: S-0019 has no cost of delay value.
+- Items: S-0019
+- Seconds: 53
+- Cost: 0.6715 USD, estimated
+
+### 2026-11-09T17:54:23Z
+
+- Summary: I changed nothing for S-0019: the operator has given me no permission to act on its plan. That plan is now waiting for your answer on TH-0029.
+- Items: none
+- Seconds: 18
+- Cost: 0.0884 USD, estimated
+
 ## Refusals
 
 ### 2026-11-06T17:57:35Z
@@ -683,4 +725,14 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-09T08:19:19Z
 
 - Call: `flai manifest show orchestration 2>&1`
+- Needs: none
+
+### 2026-11-09T09:05:40Z
+
+- Call: `flai manifest get orchestration 2>&1`
+- Needs: none
+
+### 2026-11-09T17:53:56Z
+
+- Call: `flai manifest get orchestration`
 - Needs: none

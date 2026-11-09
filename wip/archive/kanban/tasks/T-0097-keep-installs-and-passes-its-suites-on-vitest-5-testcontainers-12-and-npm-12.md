@@ -23,16 +23,16 @@ tags: [keep, node, dependencies]
 touches: [keep/package.json, keep/package-lock.json, keep/vitest.config.ts, keep/spec/integration/plan-mappings.integration.spec.ts, keep/spec/integration/entitlement-publishing.integration.spec.ts]
 usage:
   source: log
-  seconds: 1728
+  seconds: 1738
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 16
-      output: 170
-      cache_read: 1373922
-      cache_write: 11780
-      cost: 0.5037
+      output: 3598
+      cache_read: 1424364
+      cache_write: 46039
+      cost: 0.6099
 ---
 # T-0097 keep installs and passes its suites on vitest 5, testcontainers 12, and npm 12
 

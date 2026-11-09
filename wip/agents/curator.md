@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 3.7387
-accrued_seconds: 395
-tasks_completed: 2
-last_run: 2026-11-06T21:15:16Z
+accrued_cost: 5.1610
+accrued_seconds: 550
+tasks_completed: 3
+last_run: 2026-11-09T09:07:16Z
 ---
 
 # Curator activity
@@ -27,3 +27,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0002, D-0003, D-0004, D-0006, D-0008, D-0009, D-0010, D-0011, D-0013, D-0014, D-0015, D-0016, D-0017, D-0018, D-0019, D-0020, D-0021, D-0022, D-0023, D-0024, D-0025, D-0026
 - Seconds: 201
 - Cost: 2.1738 USD, estimated
+
+### 2026-11-09T09:07:16Z
+
+- Summary: Wrote D-0030, D-0031, D-0032 and D-0033 from S-0011; merged S-0011 and TH-0030 into D-0028 and S-0011 into D-0011, and rewrote D-0027 and D-0029 to state their facts; absorbed none; `flai digest compact` compacted none.
+- Trigger: accepted S-0011
+- Items: D-0001, D-0011, D-0018, D-0026, D-0027, D-0028, D-0029, D-0030, D-0031, D-0032, D-0033
+- Seconds: 155
+- Cost: 1.4223 USD, estimated

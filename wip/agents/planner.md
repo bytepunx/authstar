@@ -1,9 +1,9 @@
 ---
 kind: planner
-accrued_cost: 34.6243
-accrued_seconds: 1238
-tasks_completed: 6
-last_run: 2026-11-06T18:13:36Z
+accrued_cost: 42.8282
+accrued_seconds: 3995
+tasks_completed: 7
+last_run: 2026-11-09T08:49:01Z
 ---
 
 # Planner activity
@@ -58,3 +58,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: S-0007, T-0051, T-0055, T-0057, T-0061, T-0066, T-0071
 - Seconds: 0
 - Cost: 0.0000 USD
+
+### 2026-11-09T08:49:01Z
+
+- Summary: I planned S-0020: six tasks (T-0096 to T-0101), its touches, a 5h forecast, a cost of delay of 300 USD a week, and its notes. There was no thread called "asked" to read: `flai thread show asked` found nothing, and S-0020 had no earlier plan, so I planned it from scratch.
+- Trigger: asked
+- Items: S-0019, T-0087, T-0088, T-0089, T-0090, T-0091, T-0092, T-0093
+- Seconds: 2757
+- Cost: 8.2039 USD, estimated

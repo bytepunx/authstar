@@ -3,10 +3,10 @@ id: S-0020
 type: story
 nature: remediation
 title: Fix broken nodejs builds
-status: in-progress
+status: done
 owner: bytepunx
 created: 2026-11-09T08:02:53Z
-updated: 2026-11-09T08:48:52Z
+updated: 2026-11-09T20:44:26Z
 transitions:
   - to: ready
     at: 2026-11-09T08:02:56Z
@@ -14,9 +14,15 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:08:44Z
     by: agent-S-0020
+  - to: review
+    at: 2026-11-09T09:41:44Z
+    by: agent-S-0020
+  - to: done
+    at: 2026-11-09T20:44:26Z
+    by: bytepunx
 tags: [herald, keep, steward, web, chronicle, tower, lookout]
 topics: [dependencies, testing]
-touches: [herald/package.json, herald/package-lock.json, herald/vitest.config.ts, herald/spec/integration/rabbitmq.integration.spec.ts, herald/spec/integration/herald.integration.spec.ts, keep/package.json, keep/package-lock.json, keep/vitest.config.ts, keep/spec/integration/plan-mappings.integration.spec.ts, keep/spec/integration/entitlement-publishing.integration.spec.ts, steward/package.json, steward/package-lock.json, steward/svelte.config.js, steward/vite.config.ts, steward/tsconfig.json, steward/src/lib/server/request-auth.ts, steward/src/lib/server/respond.ts, steward/src/routes/api/connect/+server.ts, web/package.json, web/package-lock.json, web/svelte.config.js, web/vite.config.ts, web/vitest.config.ts, web/vitest.components.config.ts, web/vite.widgets.config.ts, web/tsconfig.json, web/src/hooks.server.ts, web/src/lib/server/guard.ts, chronicle/package.json, chronicle/package-lock.json, tower/package.json, tower/package-lock.json, lookout/package.json, lookout/package-lock.json, lookout/spec/integration/events.integration.spec.ts, design/tech/tech-stack.md, steward/Dockerfile, steward/src/hooks.server.ts, steward/src/lib/client/api.ts, steward/src/lib/client/session.svelte.ts, steward/src/routes/+layout.svelte, steward/src/routes/+page.svelte, steward/src/routes/api/tenants/+server.ts, "steward/src/routes/api/tenants/[slug]/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/[accountId]/permissions/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/[accountId]/permissions/[grant]/+server.ts", "steward/src/routes/api/tenants/[slug]/applications/+server.ts", "steward/src/routes/api/tenants/[slug]/applications/[appSlug]/+server.ts", "steward/src/routes/api/tenants/[slug]/invites/+server.ts", "steward/src/routes/api/tenants/[slug]/reactivate/+server.ts", "steward/src/routes/api/tenants/[slug]/role-definitions/+server.ts", "steward/src/routes/api/tenants/[slug]/role-definitions/[name]/+server.ts", "steward/src/routes/api/tenants/[slug]/rotate-keys/+server.ts", steward/src/routes/connect/+page.svelte, steward/src/routes/tenants/+page.svelte, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/integration/api-wire.integration.spec.ts, web/Dockerfile, web/kit.config.ts, web/src/env.ts, web/src/lib/server/config.ts, web/src/routes/(hosted)/signup/+page.svelte]
+touches: [herald/package.json, herald/package-lock.json, herald/vitest.config.ts, herald/spec/integration/rabbitmq.integration.spec.ts, herald/spec/integration/herald.integration.spec.ts, keep/package.json, keep/package-lock.json, keep/vitest.config.ts, keep/spec/integration/plan-mappings.integration.spec.ts, keep/spec/integration/entitlement-publishing.integration.spec.ts, steward/package.json, steward/package-lock.json, steward/svelte.config.js, steward/vite.config.ts, steward/tsconfig.json, steward/src/lib/server/request-auth.ts, steward/src/lib/server/respond.ts, steward/src/routes/api/connect/+server.ts, web/package.json, web/package-lock.json, web/svelte.config.js, web/vite.config.ts, web/vitest.config.ts, web/vitest.components.config.ts, web/vite.widgets.config.ts, web/tsconfig.json, web/src/hooks.server.ts, web/src/lib/server/guard.ts, chronicle/package.json, chronicle/package-lock.json, tower/package.json, tower/package-lock.json, lookout/package.json, lookout/package-lock.json, lookout/spec/integration/events.integration.spec.ts, design/tech/tech-stack.md, steward/Dockerfile, steward/src/hooks.server.ts, steward/src/lib/client/api.ts, steward/src/lib/client/session.svelte.ts, steward/src/routes/+layout.svelte, steward/src/routes/+page.svelte, steward/src/routes/api/tenants/+server.ts, "steward/src/routes/api/tenants/[slug]/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/[accountId]/permissions/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/[accountId]/permissions/[grant]/+server.ts", "steward/src/routes/api/tenants/[slug]/applications/+server.ts", "steward/src/routes/api/tenants/[slug]/applications/[appSlug]/+server.ts", "steward/src/routes/api/tenants/[slug]/invites/+server.ts", "steward/src/routes/api/tenants/[slug]/reactivate/+server.ts", "steward/src/routes/api/tenants/[slug]/role-definitions/+server.ts", "steward/src/routes/api/tenants/[slug]/role-definitions/[name]/+server.ts", "steward/src/routes/api/tenants/[slug]/rotate-keys/+server.ts", steward/src/routes/connect/+page.svelte, steward/src/routes/tenants/+page.svelte, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/integration/api-wire.integration.spec.ts, web/Dockerfile, web/kit.config.ts, web/src/env.ts, web/src/lib/server/config.ts, web/src/routes/(hosted)/signup/+page.svelte, design/tech/npm.md, design/tech/sveltekit.md, design/tech/testcontainers.md, design/tech/vitest.md, web/src/lib/components/SubmitButton.svelte, design/tech/README.md, steward/src/routes/+error.svelte]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -24,33 +30,48 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2376
-  estimated: true
-  priced_by: estimate
+  seconds: 5592
+  priced_by: harness
   turns:
     - day: 2026-11-09
-      ceremony: 1
-      test_runs: 4
-      hand_edits: 1
-      work: 31
+      ceremony: 5
+      test_runs: 6
+      hand_edits: 4
+      work: 71
   models:
     - model: claude-opus-5-5
-      input: 358
-      output: 2322
-      cache_read: 28697273
-      cache_write: 910952
-      cost: 10.7627
+      input: 514
+      output: 112534
+      cache_read: 44549785
+      cache_write: 1439967
+      cost: 19.0761
   strategic:
+    - kind: planner
+      seconds: 2757
+      estimated: true
+      models:
+        - model: claude-haiku-5-5
+          input: 52
+          output: 24917
+          cache_read: 2023935
+          cache_write: 118030
+          cost: 0.1187
+        - model: claude-opus-5-5
+          input: 333
+          output: 47466
+          cache_read: 26031594
+          cache_write: 241030
+          cost: 8.0852
     - kind: orchestrator
-      seconds: 114
+      seconds: 140
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 50
-          output: 406
-          cache_read: 1403824
-          cache_write: 198013
-          cost: 1.8585
+          input: 64
+          output: 494
+          cache_read: 1836598
+          cache_write: 261994
+          cost: 2.4283
 cost_of_delay:
   inputs:
     revenue_per_week: 0
@@ -74,7 +95,7 @@ forecast:
 Forcing audit fixes has broken herald, keep, steward, and web. Each need to be fixed to work with the latest dependencies.
 
 ## Acceptance criteria
-- [ ] All tests pass across every nodejs project
+- [x] All tests pass across every nodejs project
 
 ## Tasks
 - T-0096 herald installs and passes its suites on vitest 5, testcontainers 12, and npm 12
@@ -90,6 +111,11 @@ Forcing audit fixes has broken herald, keep, steward, and web. Each need to be f
 - T-0106 design/tech records SvelteKit 3, vitest 5, testcontainers 12, and npm 12's install-script approvals
 
 ## Notes
+
+### At acceptance
+
+- S-0020's `allowScripts` entries approve farmhash in herald and keep, and tower already approved it. That resolves I-0016 and the draft story S-0021 made from it. Recommended: cancel S-0021 and close I-0016 when S-0020 is accepted.
+- web still imports through a `$lib` alias that SvelteKit 3 deprecates and warns about on every run (`design/tech/sveltekit.md`). Recommended follow-up: move web to `#lib` subpath imports, as steward now does.
 
 ### Planning
 

@@ -3,8 +3,8 @@ id: D-0027
 title: "S-0008 criterion 3: the live test needs a Stripe test-mode key this environment lacks: the key is set in the environment but when I run the test script I see 1 skipped test file with 12 skipped tests"
 kind: answer
 sources: [TH-0027]
-topics: [billing, keep, node, web, sveltekit, code, all]
-paths: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md, design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/I-0009-no-test-tier-type-checks-web-or-steward-scripts-test-sh-runs-vitest-only-never.md]
+topics: [billing, keep, testing, node]
+paths: [keep/spec/live/stripe-live.spec.ts, keep/TESTING.md]
 date: 2026-11-09
 status: active
 absorbed_by: ""
@@ -14,20 +14,10 @@ cited: []
 
 # D-0027 S-0008 criterion 3: the live test needs a Stripe test-mode key this environment lacks: the key is set in the environment but when I run the test script I see 1 skipped test file with 12 skipped tests
 
-The operator, bytepunx, answered TH-0027 at 2026-11-09T06:59:51Z.
+**Fact:** keep's live Stripe suite (`npm run test:live` in `keep`) reads `STRIPE_LIVE_TEST_SECRET_KEY` from the environment. A shell that sets the variable without exporting it hides it from npm and vitest, so the whole suite skips: 1 skipped file, 12 skipped tests. Export it first, with `export STRIPE_LIVE_TEST_SECRET_KEY`, or prefix the command with `STRIPE_LIVE_TEST_SECRET_KEY="$STRIPE_LIVE_TEST_SECRET_KEY"`. The operator holds the test-mode key in their own shell environment. It is not in the repository.
 
-What was asked:
+On TH-0027, S-0008's agent asked the operator to run the live half of S-0008's criterion 3. The operator answered on 2026-11-09: "the key is set in the environment but when I run the test script I see 1 skipped test file with 12 skipped tests". The agent found that the variable was not exported. With it exported, 11 of 12 tests passed, `listActivePrices (GET /stripe-prices)` among them.
 
-```text
-S-0008's criteria 1 and 2 are verified and ticked. The keep and web tests pass through `flai test` on the merged tiers, and web's svelte-check is clean. Criterion 3 has two halves:
-- the fake half passes, in `keep/spec/behavior/stripe-prices.spec.ts`;
-- the live half is written but has never run. The case in `keep/spec/live/stripe-live.spec.ts` needs `STRIPE_LIVE_TEST_SECRET_KEY`, and there is no Stripe test-mode key here.
-```
-
-The answer:
-
-```text
-the key is set in the environment but when I run the test script I see 1 skipped test file with 12 skipped tests
-```
+The one failure is the Billing Portal case (`expected 403 to be 201`). Its token predates ADR 0100's organization-membership check. S-0008's agent recorded it as I-0011 on S-0008's branch, apart from S-0008's own work.
 
 Source: TH-0027.

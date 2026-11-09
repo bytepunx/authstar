@@ -23,16 +23,16 @@ tags: [chronicle, tower, lookout, node, dependencies]
 touches: [chronicle/package.json, chronicle/package-lock.json, tower/package.json, tower/package-lock.json, lookout/package.json, lookout/package-lock.json, lookout/spec/integration/events.integration.spec.ts]
 usage:
   source: log
-  seconds: 1727
+  seconds: 1741
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 28
-      output: 129
-      cache_read: 2355239
-      cache_write: 18441
-      cost: 0.8628
+      output: 6078
+      cache_read: 2406230
+      cache_write: 77776
+      cost: 1.0303
 ---
 # T-0100 chronicle, tower, and lookout carry the audit's bumps and still pass their suites
 

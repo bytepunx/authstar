@@ -23,16 +23,16 @@ tags: [herald, node, dependencies]
 touches: [herald/package.json, herald/package-lock.json, herald/vitest.config.ts, herald/spec/integration/rabbitmq.integration.spec.ts, herald/spec/integration/herald.integration.spec.ts]
 usage:
   source: log
-  seconds: 1728
+  seconds: 1729
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 10
-      output: 161
-      cache_read: 895721
-      cache_write: 10697
-      cost: 0.3295
+      output: 2275
+      cache_read: 900814
+      cache_write: 29117
+      cost: 0.3857
 ---
 # T-0096 herald installs and passes its suites on vitest 5, testcontainers 12, and npm 12
 

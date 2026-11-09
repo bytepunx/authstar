@@ -23,16 +23,16 @@ tags: [steward, sveltekit, dependencies]
 touches: [steward/package.json, steward/package-lock.json, steward/svelte.config.js, steward/vite.config.ts, steward/tsconfig.json, steward/src/lib/server/request-auth.ts, steward/src/lib/server/respond.ts, steward/src/routes/api/connect/+server.ts, steward/Dockerfile, steward/src/hooks.server.ts, steward/src/lib/client/api.ts, steward/src/lib/client/session.svelte.ts, steward/src/routes/+layout.svelte, steward/src/routes/+page.svelte, steward/src/routes/api/tenants/+server.ts, "steward/src/routes/api/tenants/[slug]/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/[accountId]/permissions/+server.ts", "steward/src/routes/api/tenants/[slug]/accounts/[accountId]/permissions/[grant]/+server.ts", "steward/src/routes/api/tenants/[slug]/applications/+server.ts", "steward/src/routes/api/tenants/[slug]/applications/[appSlug]/+server.ts", "steward/src/routes/api/tenants/[slug]/invites/+server.ts", "steward/src/routes/api/tenants/[slug]/reactivate/+server.ts", "steward/src/routes/api/tenants/[slug]/role-definitions/+server.ts", "steward/src/routes/api/tenants/[slug]/role-definitions/[name]/+server.ts", "steward/src/routes/api/tenants/[slug]/rotate-keys/+server.ts", steward/src/routes/connect/+page.svelte, steward/src/routes/tenants/+page.svelte, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/integration/api-wire.integration.spec.ts]
 usage:
   source: log
-  seconds: 1728
+  seconds: 1745
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 118
-      output: 763
-      cache_read: 10931639
-      cache_write: 280282
-      cost: 4.0755
+      input: 130
+      output: 28509
+      cache_read: 11286102
+      cache_write: 364797
+      cost: 4.8327
 ---
 # T-0098 steward builds and passes its suites on SvelteKit 3, vite 8, and vite-plugin-svelte 7
 

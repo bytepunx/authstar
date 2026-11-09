@@ -23,16 +23,16 @@ tags: [web, sveltekit, dependencies]
 touches: [web/package.json, web/package-lock.json, web/svelte.config.js, web/vite.config.ts, web/vitest.config.ts, web/vitest.components.config.ts, web/vite.widgets.config.ts, web/tsconfig.json, web/src/hooks.server.ts, web/src/lib/server/guard.ts, web/Dockerfile, web/src/lib/server/config.ts, web/src/routes/(hosted)/signup/+page.svelte, web/kit.config.ts, web/src/env.ts]
 usage:
   source: log
-  seconds: 1727
+  seconds: 1747
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 110
-      output: 611
-      cache_read: 9824671
-      cache_write: 452743
-      cost: 3.7358
+      input: 119
+      output: 26163
+      cache_read: 10357380
+      cache_write: 334778
+      cost: 4.435
 ---
 # T-0099 web builds and passes its suites on SvelteKit 3 and adapter-node 6
 

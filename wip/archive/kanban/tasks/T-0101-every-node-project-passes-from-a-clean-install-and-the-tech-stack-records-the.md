@@ -3,11 +3,11 @@ id: T-0101
 type: task
 nature: remediation
 title: Every node project passes from a clean install, and the tech stack records the new versions
-status: in-progress
+status: done
 parent: S-0020
 owner: bytepunx
 created: 2026-11-09T08:09:50Z
-updated: 2026-11-09T08:49:03Z
+updated: 2026-11-09T09:17:12Z
 transitions:
   - to: ready
     at: 2026-11-09T08:49:02Z
@@ -15,10 +15,25 @@ transitions:
   - to: in-progress
     at: 2026-11-09T08:49:03Z
     by: agent-S-0020
+  - to: done
+    at: 2026-11-09T09:17:12Z
+    by: agent-S-0020
 stream: S-0020
 tags: [node, dependencies, testing]
 touches: [design/tech/tech-stack.md, design/tech/README.md, design/tech/sveltekit.md, design/tech/vitest.md, design/tech/testcontainers.md, design/tech/npm.md]
 after: [T-0096, T-0097, T-0098, T-0099, T-0100]
+usage:
+  source: log
+  seconds: 1689
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 90
+      output: 19694
+      cache_read: 7796542
+      cache_write: 252005
+      cost: 3.3385
 ---
 # T-0101 Every node project passes from a clean install, and the tech stack records the new versions
 

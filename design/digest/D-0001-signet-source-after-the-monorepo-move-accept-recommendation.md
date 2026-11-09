@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0031]
 ---
 
 # D-0001 Signet source after the monorepo move: accept recommendation
