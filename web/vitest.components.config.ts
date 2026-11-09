@@ -1,4 +1,5 @@
 import { svelte } from '@sveltejs/vite-plugin-svelte'
+import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
 
 // jsdom-environment vitest config: spec/components holds two different
@@ -15,8 +16,13 @@ export default defineConfig({
   // compiles components in SSR mode -- `mount()` (what
   // @testing-library/svelte actually calls) only exists in Svelte's
   // client-side runtime. This is vite-plugin-svelte's own documented fix.
+  // `$app/state` is SvelteKit's virtual module, and this tier runs without
+  // SvelteKit's plugin, so it resolves to a stand-in the specs mock.
   resolve: {
     conditions: ['browser'],
+    alias: {
+      '$app/state': fileURLToPath(new URL('./spec/fixtures/app-state.ts', import.meta.url)),
+    },
   },
   test: {
     environment: 'jsdom',
