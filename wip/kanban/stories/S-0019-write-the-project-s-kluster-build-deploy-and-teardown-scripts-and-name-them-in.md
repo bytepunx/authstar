@@ -3,12 +3,15 @@ id: S-0019
 type: story
 nature: feature
 title: "Write the project's kluster build, deploy, and teardown scripts and name them in the kluster: block"
-status: backlog
+status: ready
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T06:51:07Z
-updated: 2026-11-09T20:44:27Z
-transitions: []
+updated: 2026-11-09T21:56:04Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:56:01Z
+    by: bytepunx
 tags: [kluster, scripts, integration]
 topics: [kluster, deployment]
 touches: [system-flow.yaml, scripts, scripts/kluster-build.sh, scripts/lib-kluster.sh, scripts/kluster-signet.sh, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/README.md, kluster.yaml, integration/README.md, integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/tower.yaml]
@@ -34,10 +37,10 @@ usage:
           cost: 1.0304
 forecast:
   duration: 6h
-  delivery: 2026-11-10T23:50:00Z
-  basis: "Its own forecast of 6h; 11th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0007, S-0005, S-0010, S-0013, S-0012, S-0014, S-0015, S-0016, S-0017 and S-0018."
+  delivery: 2026-11-10T19:41:00Z
+  basis: "Its own forecast of 6h; 3rd in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005 and S-0010."
   by: flai
-  at: 2026-11-09T20:44:27Z
+  at: 2026-11-09T21:56:04Z
 ---
 # S-0019 Write the project's kluster build, deploy, and teardown scripts and name them in the kluster: block
 

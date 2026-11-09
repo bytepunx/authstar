@@ -3,12 +3,15 @@ id: S-0005
 type: story
 nature: remediation
 title: Keep handles every Stripe event once and records what it decides
-status: backlog
+status: ready
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-09T20:44:27Z
-transitions: []
+updated: 2026-11-09T21:56:04Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:44:51Z
+    by: bytepunx
 tags: []
 topics: [billing, keep]
 touches: [keep/src/routes/webhooks.ts, keep/src/actors/subscription_actor.ts, keep/src/actors/dispute_actor.ts, keep/src/actors/plan_mapping_actor.ts, keep/src/actors/customer_actor.ts, keep/src/actors/trial_actor.ts, keep/src/actors/refund_actor.ts, keep/src/actors/stripe_event_actor.ts, keep/src/lib/scope.ts, keep/src/lib/stripe-client.ts, keep/src/lib/stripe-config.ts, keep/src/lib/signet-stripe-config-store.ts, keep/src/lib/entitlement-publisher.ts, keep/src/routes/stripe-config.ts, keep/src/routes/plan-mappings.ts, keep/src/routes/checkout-sessions.ts, keep/src/routes/trials.ts, keep/src/routes/coupons.ts, keep/src/report-tenant-scope.ts, keep/package.json, keep/spec/lib/fake-stripe-client.ts, keep/spec/behavior/webhooks.spec.ts, keep/spec/behavior/webhook-redelivery.spec.ts, keep/spec/behavior/webhook-grace-period.spec.ts, keep/spec/behavior/webhook-disputes.spec.ts, keep/spec/behavior/stripe-config.spec.ts, keep/spec/behavior/signet-stripe-config-store.spec.ts, keep/spec/behavior/plan-mappings.spec.ts, keep/spec/behavior/checkout-sessions.spec.ts, keep/spec/behavior/trials.spec.ts, keep/spec/behavior/coupons.spec.ts, keep/spec/behavior/report-tenant-scope.spec.ts, keep/spec/integration/plan-mappings.integration.spec.ts, keep/spec/e2e/subscription-lifecycle.spec.ts, keep/spec/e2e/trial-and-dispute-lifecycle.spec.ts, keep/spec/live/stripe-live.spec.ts, keep/TESTING.md, docs/operators/index.md, docs/users/index.md]
@@ -37,10 +40,10 @@ cost_of_delay:
     at: 2026-11-06T18:22:14Z
 forecast:
   duration: 4h
-  delivery: 2026-11-10T14:32:00Z
-  basis: "Its own forecast of 4h; 2nd in the pull order with an in-progress limit of 4, behind S-0006, S-0008 and S-0007."
+  delivery: 2026-11-10T15:44:00Z
+  basis: "Its own forecast of 4h; 1st in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008 and S-0013."
   by: flai
-  at: 2026-11-09T20:44:27Z
+  at: 2026-11-09T21:56:04Z
 ---
 # S-0005 Keep handles every Stripe event once and records what it decides
 

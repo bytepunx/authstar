@@ -3,12 +3,15 @@ id: S-0010
 type: story
 nature: feature
 title: Portcullis emits authentication events to lookout
-status: backlog
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-09T20:44:27Z
-transitions: []
+updated: 2026-11-09T21:56:04Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:44:52Z
+    by: bytepunx
 tags: [portcullis]
 topics: [analytics]
 touches: [lookout/src/lib/event-types.ts, lookout/src/routes/events.ts, lookout/src/lib/build-app.ts, lookout/spec/behavior/events.spec.ts, lookout/spec/e2e/ingestion-flows.spec.ts, lookout/spec/integration/events.integration.spec.ts, lookout/TESTING.md, design/stories/lookout/001-ingestion-contract.md, portcullis/crates/authstar-config/src/bundle.rs, portcullis/crates/authstar-config/src/validate.rs, portcullis/crates/authstar-middleware/src/analytics.rs, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/state.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, portcullis/crates/authstar-proxy/tests/integration_tests.rs, portcullis/crates/authstar-proxy/tests/webhook_tests.rs, portcullis/crates/authstar-middleware/src/oauth/callback.rs, portcullis/crates/authstar-middleware/src/oauth/logout.rs, portcullis/TESTING.md, portcullis/README.md, design/stories/proxy/020-analytics-event-ingestion.md, design/stories/proxy/006-oauth2-callback.md, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/system/overview.md, docs/operators/portcullis-configuration.md, docs/operators/index.md]
@@ -34,10 +37,10 @@ cost_of_delay:
   at: 2026-11-06T18:09:53Z
 forecast:
   duration: 6h
-  delivery: 2026-11-10T15:41:00Z
-  basis: "Its own forecast of 6h; 3rd in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0007 and S-0005."
+  delivery: 2026-11-10T16:52:00Z
+  basis: "Its own forecast of 6h; 2nd in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013 and S-0005."
   by: flai
-  at: 2026-11-09T20:44:27Z
+  at: 2026-11-09T21:56:04Z
 ---
 # S-0010 Portcullis emits authentication events to lookout
 
