@@ -27,12 +27,12 @@
   "dependencies": {
     "@bytepunx/authstar-core": "^2.0.0",
     "@bytepunx/signet-client": "^0.9.0",
-    "@sveltejs/adapter-node": "^5.5.7",
+    "@sveltejs/adapter-node": "^6.0.1",
     "jose": "^6.2.8"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
-    "@sveltejs/kit": "^2.70.2",
+    "@sveltejs/kit": "^3.1.1",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
     "@tailwindcss/vite": "^4.3.3",
     "@testing-library/jest-dom": "^7.0.0",
@@ -49,5 +49,9 @@
     "typescript": "^5.9.3",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "esbuild@0.28.1": true,
+    "protobufjs@7.6.6": true
   }
 }
