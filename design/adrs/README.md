@@ -116,3 +116,4 @@ The table below is generated from the ADR files by `flai adr index`, and written
 | [0107](0107-keep-mirrors-stripe-s-subscription-status-and-degrades-plan-roles-after-a-grace.md) | Keep mirrors Stripe's subscription status and degrades plan roles after a grace period | accepted, refines 0038 and 0077 |
 | [0108](0108-plan-mappings-grant-roles-granted-roles-is-tower-s-set-in-effect.md) | Plan mappings grant roles; granted roles is tower's set in effect | accepted, refines 0018 and 0038 |
 | [0109](0109-entitlement-scopes-are-accounts-and-organizations-the-tenant-scope-is-retired.md) | Entitlement scopes are accounts and organizations; the tenant scope is retired | accepted, refines 0031, 0046 and 0100 |
+| [0111](0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md) | Portcullis forwards /_authstar/me/* to keep over its plain HTTP client until keep has an east-west mTLS listener | accepted, refines 0071 |
