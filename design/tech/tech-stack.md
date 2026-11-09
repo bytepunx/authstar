@@ -1,6 +1,6 @@
 ---
 title: Tech Stack Reference
-updated: 2026-11-06
+updated: 2026-11-09
 status: active
 topics: [all]
 ---
@@ -88,14 +88,14 @@ What `ref-proxy` doesn't have, that real portcullis needs (the genuine gap this 
 - **Templating** (herald only, ADR 0078): `mustache.js` — the reference Mustache
   implementation, logic-less by construction, the direct library-level match for "logic-less
   mustache-style substitution, no embedded logic" as designed.
-- **Testing**: `vitest` — matches `consequent`'s and `consequent-postgres`'s own choice
-  directly (both use it), not a separate convention introduced for authstar's own services.
+- **Testing**: [vitest](vitest.md), with [testcontainers](testcontainers.md) for the
+  integration tier.
 
 ## lookout (Node — stateless ingestion)
 
 - TypeScript, ESM, fastify (lightweight — no consequent, no database, per `claude.md`).
 - `amqplib`/`amqp-connection-manager` for publishing onto RabbitMQ — its only real job.
-- `vitest`.
+- [vitest](vitest.md), with [testcontainers](testcontainers.md) for the integration tier.
 
 ## chronicle (Node — analytics storage/reporting)
 
@@ -113,28 +113,18 @@ What `ref-proxy` doesn't have, that real portcullis needs (the genuine gap this 
   It replaces chronicle's former HS256 shared-secret check. Alternative considered: calling
   `verifyInternalJwt` from `@bytepunx/authstar-core` in chronicle's own preHandler; rejected
   because the plugin is that same verification already wired for Fastify, as herald uses it.
-- `vitest`.
+- [vitest](vitest.md), with [testcontainers](testcontainers.md) for the integration tier.
 
 ## web, steward (SvelteKit)
 
-- **Svelte 5** (runes) + **SvelteKit 2** — current, stable.
-- TypeScript throughout.
-- **Testing**: `vitest` for unit tests, Playwright for end-to-end — the standard modern
-  SvelteKit pairing.
-- **Styling (the admin apps themselves)**: Tailwind CSS — fast iteration for admin/operator
-  screens with no stated design-system requirement of their own. **This is unrelated to, and
-  doesn't change,** the embeddable Web Component widgets' theming mechanism (ADR 0044/0072),
-  which stays plain CSS custom properties by design — those ship into arbitrary host pages and
-  can't assume Tailwind (or any build step) is present there. Two different styling stories for
-  two genuinely different distribution targets, not an inconsistency.
-- **The Web Component widget package** (ADR 0072's six custom elements) is a separate build
-  target from the SvelteKit admin app — framework-agnostic output, most naturally Vite's
-  library mode, living in the same `web` repo but publishing/bundling independently, since
-  adopting applications need to drop in a small, dependency-free script tag, not a SvelteKit
-  runtime.
-- `steward` shares the same stack as `web` (SvelteKit 2/Svelte 5/TypeScript/vitest/Playwright)
-  but has no Web Component package of its own and, per ADR 0044/0048, no Tailwind requirement
-  beyond whatever's simplest for its deliberately small, unbranded screen set.
+SvelteKit 3 on Svelte 5 and TypeScript, tested with vitest and Playwright, styled with
+Tailwind, with the Web Component widget package as a separate build target: see
+[sveltekit.md](sveltekit.md).
+
+## Installing
+
+Every Node project installs with npm 12, which runs only the install scripts a project's
+`allowScripts` approves: see [npm.md](npm.md).
 
 ## Not decided here
 
