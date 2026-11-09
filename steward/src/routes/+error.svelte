@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import { session } from '$lib/client/session.svelte.js'
+  import { session } from '#lib/client/session.svelte.js'
 
   // A plain message per status. The error's own message is never shown:
   // it can carry a stack trace or an upstream response body.
