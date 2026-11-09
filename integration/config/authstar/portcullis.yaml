@@ -29,6 +29,14 @@ towerUpstream:
   address: https://tower.authstar.svc.cluster.local:8080
   timeout: 10
 
+# Plain http, unlike towerUpstream: keep has no SPIFFE mTLS listener yet, and
+# portcullis reaches it over its plain HTTP client both for Stripe webhooks
+# (ADR 0095) and for the /_authstar/me/* routes keep owns (ADR 0111). If this
+# is missing, both forwards answer 503.
+keepUpstream:
+  address: http://keep.authstar.svc.cluster.local:8080
+  timeout: 10
+
 tenants:
   acme:
     status: active
