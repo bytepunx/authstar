@@ -3,8 +3,8 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: open
-count: 4
-cost: 10m
+count: 5
+cost: 11m
 first_reported: 2026-11-06T18:29:23Z
 last_reported: 2026-11-13T21:55:06Z
 updated: 2026-11-13T21:55:06Z
@@ -28,6 +28,10 @@ S-0006's close-out at fbb0a1d stopped in steward's Playwright e2e (9 failed). S-
 ### 2026-11-09T20:59:43Z
 Story: S-0006.
 S-0006's close-out at 595e4bf: 4611 was free when the run started, and 5 steward e2e specs still failed with net::ERR_CONNECTION_REFUSED at 127.0.0.1:4611/connect partway through. Another worktree's run took the port first, S-0006's Playwright reused that server, and it went away when that run finished.
+
+### 2026-11-09T21:21:04Z
+Story: S-0013.
+T-0044's flai test on steward paths ran every suite for 9m12s. Then 13 of steward's 16 e2e tests hung on "Connecting...". Run by hand on the same commit, all 16 passed in 7.3s. The next two tier runs at later commits passed. Other stories' agents were running the tier at the same time, so the fixed ports and server reuse are the likely cause.
 
 ### 2026-11-13T21:55:06Z
 Story: S-0025.
