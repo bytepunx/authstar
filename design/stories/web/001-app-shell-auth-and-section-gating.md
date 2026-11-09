@@ -1,6 +1,6 @@
 ---
 title: "Story 001: Admin App Shell, Auth, and Section Gating"
-updated: 2026-08-06
+updated: 2026-11-09
 status: draft
 ---
 # Story 001 — Admin App Shell, Auth, and Section Gating
@@ -52,6 +52,12 @@ future stories) plugs into, not a section itself.
       Privacy & Compliance, not the full navigation with everything else disabled/grayed out.
       Hidden, not merely inaccessible — an account without relevant permissions shouldn't see a
       section exists at all.
+- [ ] **A section with no route yet is hidden too.** Each section in `web/src/lib/permissions.ts`
+      carries a `built` flag, true once its route exists under `web/src/routes/(admin)/`. The nav
+      and the Overview tiles show a section only when it is built and the account holds a
+      relevant grant, so no link leads to a 404. Overview, Applications, and Billing are built
+      today. The story that builds a section sets its flag to true. This is a presentation rule,
+      not a change to ADR 0049's eight-section map, which keeps all eight entries.
 - [ ] **Route-level enforcement backs the navigation-level hiding** — a direct URL visit to a
       section the account can't see redirects or shows a clear "you don't have access" state,
       never a silent 404 or a broken partial render. The actual data-fetching calls are already

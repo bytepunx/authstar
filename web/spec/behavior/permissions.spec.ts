@@ -26,11 +26,37 @@ describe('visibleSections', () => {
 	})
 
 	it('shows exactly one section for an account holding only that section\'s grant -- not disabled placeholders for the rest', () => {
-		const sections = visibleSections(['contacts:read'])
+		const sections = visibleSections(['applications:manage'])
 		const ids = sections.map((s) => s.id)
-		// contacts:read gates both identity and privacy sections (ADR 0051/
-		// Story 008) -- Overview is always present too.
-		expect(ids).toEqual(['overview', 'identity', 'privacy'])
+		// Overview is always present too.
+		expect(ids).toEqual(['overview', 'applications'])
+	})
+
+	it('shows only the built sections to an account holding every permission', () => {
+		const every = ADMIN_SECTIONS.flatMap((s) => s.permissions)
+		expect(visibleSections(every).map((s) => s.id)).toEqual(['overview', 'applications', 'billing'])
+	})
+
+	it('hides an unbuilt section even from an account holding its permission', () => {
+		// contacts:read gates identity and privacy (ADR 0051/Story 008); neither
+		// has a route yet, so neither is shown.
+		const ids = visibleSections(['contacts:read']).map((s) => s.id)
+		expect(ids).toEqual(['overview'])
+		expect(ADMIN_SECTIONS.find((s) => s.id === 'identity')?.built).toBe(false)
+		expect(ADMIN_SECTIONS.find((s) => s.id === 'privacy')?.built).toBe(false)
+	})
+
+	it('keeps all eight ADR 0049 sections in the table, built or not', () => {
+		expect(ADMIN_SECTIONS.map((s) => s.id)).toEqual([
+			'overview',
+			'applications',
+			'identity',
+			'billing',
+			'communications',
+			'analytics',
+			'privacy',
+			'settings',
+		])
 	})
 
 	it('never includes a section whose id is not in the fixed ADR 0049 table', () => {

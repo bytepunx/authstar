@@ -15,21 +15,28 @@ export interface AdminSection {
 	href: string
 	/** Visible if the account holds ANY of these permissions -- not all. */
 	permissions: string[]
+	// Hiding an unbuilt section is a presentation rule, not a change to ADR
+	// 0049's eight-section map: every section keeps its entry here, and the
+	// story that builds a section's route sets its flag to true.
+	/** True once the section has a route under src/routes/(admin); unbuilt sections are never shown. */
+	built: boolean
 }
 
 export const ADMIN_SECTIONS: readonly AdminSection[] = [
-	{ id: 'overview', label: 'Overview', href: '/', permissions: [] },
+	{ id: 'overview', label: 'Overview', href: '/', permissions: [], built: true },
 	{
 		id: 'applications',
 		label: 'Applications',
 		href: '/applications',
 		permissions: ['applications:manage'],
+		built: true,
 	},
 	{
 		id: 'identity',
 		label: 'Identity & Access',
 		href: '/identity',
 		permissions: ['identity:manage', 'contacts:read'],
+		built: false,
 	},
 	{
 		id: 'billing',
@@ -43,30 +50,35 @@ export const ADMIN_SECTIONS: readonly AdminSection[] = [
 		// manager is a customer, not tenant staff) -- the customer-facing
 		// counterpart is the embeddable (embed) org-management surface.
 		permissions: ['billing:read', 'billing:manage'],
+		built: true,
 	},
 	{
 		id: 'communications',
 		label: 'Communications',
 		href: '/communications',
 		permissions: ['communications:manage'],
+		built: false,
 	},
 	{
 		id: 'analytics',
 		label: 'Analytics',
 		href: '/analytics',
 		permissions: ['analytics:read'],
+		built: false,
 	},
 	{
 		id: 'privacy',
 		label: 'Privacy & Compliance',
 		href: '/privacy',
 		permissions: ['privacy:manage', 'contacts:read'],
+		built: false,
 	},
 	{
 		id: 'settings',
 		label: 'Settings',
 		href: '/settings',
 		permissions: ['settings:manage'],
+		built: false,
 	},
 ]
 
@@ -75,9 +87,9 @@ export function hasAnyPermission(granted: readonly string[], required: readonly 
 	return required.some((permission) => granted.includes(permission))
 }
 
-/** Sections to show in nav -- hidden, not disabled, per Story 001. */
+/** Sections to show in nav -- built ones only, hidden not disabled, per Story 001. */
 export function visibleSections(granted: readonly string[]): AdminSection[] {
-	return ADMIN_SECTIONS.filter((section) => hasAnyPermission(granted, section.permissions))
+	return ADMIN_SECTIONS.filter((section) => section.built && hasAnyPermission(granted, section.permissions))
 }
 
 /** Route-level guard backing the nav-level hiding for a given section id. */

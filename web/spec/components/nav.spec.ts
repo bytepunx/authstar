@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { render, screen } from '@testing-library/svelte'
 import Nav from '../../src/lib/components/Nav.svelte'
-import { visibleSections } from '../../src/lib/permissions'
+import { ADMIN_SECTIONS, visibleSections } from '../../src/lib/permissions'
 
 // Story 001: sections are hidden, not merely disabled, when the account
 // lacks a relevant grant. Nav.svelte is a pure presentational component
@@ -18,6 +18,18 @@ describe('Nav.svelte', () => {
 		expect(screen.getByTestId('nav-applications')).toBeInTheDocument()
 		expect(screen.queryByTestId('nav-billing')).not.toBeInTheDocument()
 		expect(screen.queryByTestId('nav-settings')).not.toBeInTheDocument()
+	})
+
+	it('renders no link for an unbuilt section, even for an account holding every permission', () => {
+		const every = ADMIN_SECTIONS.flatMap((s) => s.permissions)
+		render(Nav, { sections: visibleSections(every), currentPath: '/' })
+
+		expect(screen.getByTestId('nav-overview')).toBeInTheDocument()
+		expect(screen.getByTestId('nav-applications')).toBeInTheDocument()
+		expect(screen.getByTestId('nav-billing')).toBeInTheDocument()
+		for (const id of ['identity', 'communications', 'analytics', 'privacy', 'settings']) {
+			expect(screen.queryByTestId(`nav-${id}`)).not.toBeInTheDocument()
+		}
 	})
 
 	it('marks the current path with aria-current="page"', () => {
