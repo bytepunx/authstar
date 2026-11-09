@@ -7,7 +7,7 @@ status: backlog
 parent: E-0003
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-06T21:11:50Z
+updated: 2026-11-09T09:04:34Z
 transitions: []
 tags: [portcullis]
 topics: [analytics]
@@ -34,10 +34,10 @@ cost_of_delay:
   at: 2026-11-06T18:09:53Z
 forecast:
   duration: 6h
-  delivery: 2026-11-07T04:48:00Z
-  basis: "Its own forecast of 6h; 4th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0011, S-0007 and S-0005."
+  delivery: 2026-11-09T20:15:00Z
+  basis: "Its own forecast of 6h; 3rd in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0020, S-0007 and S-0005."
   by: flai
-  at: 2026-11-06T21:11:50Z
+  at: 2026-11-09T09:04:34Z
 ---
 # S-0010 Portcullis emits authentication events to lookout
 

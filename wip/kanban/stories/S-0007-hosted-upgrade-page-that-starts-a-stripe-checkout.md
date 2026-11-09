@@ -7,7 +7,7 @@ status: backlog
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-06T21:11:49Z
+updated: 2026-11-09T09:04:34Z
 transitions: []
 tags: [web, keep, portcullis]
 topics: [billing]
@@ -35,10 +35,10 @@ cost_of_delay:
     at: 2026-11-06T18:21:07Z
 forecast:
   duration: 8h
-  delivery: 2026-11-07T05:12:00Z
-  basis: "Its own forecast of 8h; 2nd in the pull order with an in-progress limit of 4, behind S-0006, S-0008 and S-0011."
+  delivery: 2026-11-09T23:59:00Z
+  basis: "Its own forecast of 8h; 1st in the pull order with an in-progress limit of 4, behind S-0006, S-0008 and S-0020."
   by: flai
-  at: 2026-11-06T21:11:49Z
+  at: 2026-11-09T09:04:34Z
 ---
 # S-0007 Hosted upgrade page that starts a Stripe checkout
 

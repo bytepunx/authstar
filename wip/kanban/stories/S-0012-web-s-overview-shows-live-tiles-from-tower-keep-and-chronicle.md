@@ -7,7 +7,7 @@ status: backlog
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-06T21:11:50Z
+updated: 2026-11-09T09:04:34Z
 transitions: []
 tags: [web]
 touches: [web/src/lib/server/clients/chronicle.ts, web/src/lib/server/config.ts, web/src/hooks.server.ts, web/src/app.d.ts, web/spec/fixtures/fake-chronicle-client.ts, web/spec/fixtures/fake-chronicle-server.ts, web/spec/integration/chronicle.integration.spec.ts, web/spec/behavior/config.spec.ts, integration/config/authstar/web.yaml, integration/manifests/16-web.yaml, docs/operators/index.md, web/src/lib/server/clients/keep.ts, web/src/lib/server/clients/tower.ts, web/spec/fixtures/fake-keep-client.ts, web/spec/fixtures/fake-tower-client.ts, web/spec/fixtures/fake-keep-server.ts, web/spec/fixtures/fake-tower-server.ts, web/spec/integration/overview-clients.integration.spec.ts, web/package.json, web/package-lock.json, design/tech/tech-stack.md, web/src/lib/components/ActiveUsersChart.svelte, web/src/lib/components/AuthFunnelChart.svelte, web/spec/components/active-users-chart.spec.ts, web/spec/components/auth-funnel-chart.spec.ts, web/src/routes/(admin)/+page.server.ts, web/src/routes/(admin)/+page.svelte, web/src/lib/components/ActiveUsersTile.svelte, web/src/lib/components/RevenueSummaryTile.svelte, web/src/lib/components/RecentActivityTile.svelte, web/spec/behavior/overview.spec.ts, web/spec/components/overview-tiles.spec.ts, web/src/routes/(admin)/analytics/+page.server.ts, web/src/routes/(admin)/analytics/+page.svelte, web/spec/behavior/analytics.spec.ts, web/spec/components/analytics-page.spec.ts, web/src/lib/permissions.ts, web/spec/behavior/permissions.spec.ts, integration/scripts/scenario-golden-path.sh, integration/README.md, web/TESTING.md, design/system/overview.md, design/stories/web/002-overview.md, docs/users/index.md]
@@ -33,10 +33,10 @@ cost_of_delay:
   at: 2026-11-06T18:09:26Z
 forecast:
   duration: 8h
-  delivery: 2026-11-07T12:48:00Z
-  basis: "Its own forecast of 8h; 6th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0011, S-0007, S-0005, S-0010 and S-0013."
+  delivery: 2026-11-10T11:09:00Z
+  basis: "Its own forecast of 8h; 5th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0020, S-0007, S-0005, S-0010 and S-0013."
   by: flai
-  at: 2026-11-06T21:11:50Z
+  at: 2026-11-09T09:04:34Z
 ---
 # S-0012 Web's Overview shows live tiles from tower, keep, and chronicle
 
