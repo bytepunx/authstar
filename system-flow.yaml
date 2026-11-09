@@ -65,3 +65,5 @@ agent:
     effort: high
 planning:
   hour_rate: 150
+kluster:
+  config: kluster.yaml
