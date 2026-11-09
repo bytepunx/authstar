@@ -13,8 +13,8 @@
 # until then, chronicle will crash on startup: presence of SIGNET_ADDR
 # alone doesn't help it if its own code doesn't yet dial signet with it.
 # SIGNET_ADMIN_ADDR is set per story 003's explicit bootstrap-surface list,
-# matching tower/keep/herald's own admin-port convention (8444, gated by
-# the chart's admin.clusterAccess flag) even though chronicle's own code
+# on the workload port 8443 as tower/keep/herald's is (their GitOps writes
+# go over workload mTLS since ADR 0103), even though chronicle's own code
 # doesn't yet make any admin/GitOps calls -- harmless if unused, and saves
 # a second manifest edit if it later needs one (e.g. its own
 # signetAdminToken push), same reasoning as its inclusion in every other
@@ -75,7 +75,7 @@ spec:
             - name: SIGNET_ADDR
               value: signet.signet.svc.cluster.local:8443
             - name: SIGNET_ADMIN_ADDR
-              value: signet.signet.svc.cluster.local:8444
+              value: signet.signet.svc.cluster.local:8443
             - name: SIGNET_TRUST_DOMAIN
               value: authstar.cluster.local
             - name: SPIFFE_ENDPOINT_SOCKET

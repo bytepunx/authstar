@@ -1,11 +1,9 @@
-# tower is the only service whose signet-admin.ts wiring calls signet's
-# GitOpsService (self-service tenant provisioning pushes new secrets/config)
-# — that RPC lives on signet's admin port (8444, gated by the chart's
-# admin.clusterAccess flag — see kluster-lib/addon/signet.go), NOT the
-# regular workload port (8443) tower/src/server.ts's dialWorkload/
-# getServiceBundle calls use. SIGNET_ADMIN_ADDR must be set explicitly:
-# tower's own fallback (`SIGNET_ADMIN_ADDR ?? SIGNET_ADDR`) would silently
-# point GitOps calls at the wrong port otherwise.
+# tower's signet-admin.ts wiring calls signet's GitOpsService (self-service
+# tenant provisioning pushes new secrets/config). Since ADR 0103 it dials
+# that service with dialWorkloadGitOps, over workload mTLS with tower's own
+# SVID, which signetd serves on the workload port 8443. The admin port is
+# plain gRPC under kluster and answers a TLS dial with "wrong version
+# number" (S-0575), so SIGNET_ADMIN_ADDR names 8443.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -59,7 +57,7 @@ spec:
             - name: SIGNET_ADDR
               value: signet.signet.svc.cluster.local:8443
             - name: SIGNET_ADMIN_ADDR
-              value: signet.signet.svc.cluster.local:8444
+              value: signet.signet.svc.cluster.local:8443
             - name: SIGNET_TRUST_DOMAIN
               value: authstar.cluster.local
             - name: SPIFFE_ENDPOINT_SOCKET

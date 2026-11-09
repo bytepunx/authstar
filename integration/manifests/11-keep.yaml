@@ -1,6 +1,7 @@
-# SIGNET_ADMIN_ADDR is set for the same reason as tower's (see 10-tower.yaml's
-# header comment): keep's signet-admin.ts wiring also calls signet's
-# GitOpsService on the admin port (8444), not the workload port (8443).
+# SIGNET_ADMIN_ADDR names the workload port 8443 for the same reason as
+# tower's (see 10-tower.yaml's header comment): keep's
+# signet-stripe-config-store.ts calls signet's GitOpsService through
+# dialWorkloadGitOps, over workload mTLS (ADR 0103).
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -54,7 +55,7 @@ spec:
             - name: SIGNET_ADDR
               value: signet.signet.svc.cluster.local:8443
             - name: SIGNET_ADMIN_ADDR
-              value: signet.signet.svc.cluster.local:8444
+              value: signet.signet.svc.cluster.local:8443
             - name: SIGNET_TRUST_DOMAIN
               value: authstar.cluster.local
             - name: SPIFFE_ENDPOINT_SOCKET

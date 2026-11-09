@@ -4,7 +4,9 @@
 # the "no admin wiring" claim above is stale as of that change. Same
 # fallback-to-wrong-port risk tower's own manifest comment already
 # documents (herald's own `SIGNET_ADMIN_ADDR ?? address` fallback would
-# otherwise silently point GitOps calls at the workload port).
+# otherwise silently point GitOps calls at the workload port). Since
+# ADR 0103 that write is workload mTLS (dialWorkloadGitOps), which signetd
+# serves on 8443, so SIGNET_ADMIN_ADDR names 8443, not the admin port.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -58,7 +60,7 @@ spec:
             - name: SIGNET_ADDR
               value: signet.signet.svc.cluster.local:8443
             - name: SIGNET_ADMIN_ADDR
-              value: signet.signet.svc.cluster.local:8444
+              value: signet.signet.svc.cluster.local:8443
             - name: SIGNET_TRUST_DOMAIN
               value: authstar.cluster.local
             - name: SPIFFE_ENDPOINT_SOCKET

@@ -22,4 +22,6 @@ provisioning:
     name: dex
     clientId: authstar
     discoveryUrl: http://dex.dex.svc.cluster.local:5556/.well-known/openid-configuration
-    scope: openid email
+    # A list: resolveProvisioningConfig (tower/src/lib/signet-bundle-config.ts)
+    # refuses a scope that is not an array, and tower crash-loops on it.
+    scope: [openid, email]
