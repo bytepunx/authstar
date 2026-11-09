@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { isHttpError } from '@sveltejs/kit'
 import { load as loadLayout } from '../../src/routes/(embed)/organizations/[organizationId]/+layout.server'
 import { actions, load } from '../../src/routes/(embed)/organizations/[organizationId]/+page.server'
@@ -186,5 +186,50 @@ describe('(embed)/organizations/[organizationId] actions', () => {
 			expect(isHttpError(err)).toBe(true)
 			if (isHttpError(err)) expect(err.status).toBe(403)
 		}
+	})
+})
+
+describe('(embed)/organizations/[organizationId] when tower fails -- S-0011', () => {
+	const session = fakeSession({ accountId: 'acct-1', organizationMemberships: [{ organizationId: 'org-1', roles: ['manager', 'member'] }] })
+	let log: MockInstance<typeof console.log>
+	beforeEach(() => {
+		log = vi.spyOn(console, 'log').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		log.mockRestore()
+	})
+
+	it('turns a tower 500 on the load into a 502', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		try {
+			await load({
+				locals: { session, clients: { tower } },
+				params: { organizationId: 'org-1' },
+				parent: async () => ({ session, theme: {}, isManager: true }),
+			} as Parameters<typeof load>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+	})
+
+	it('returns fail(502) from clearSuccessor, which had no handling', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		const result = await actions.clearSuccessor({
+			locals: { session, clients: { tower } },
+			params: { organizationId: 'org-1' },
+		} as Parameters<typeof actions.clearSuccessor>[0])
+		expect(result?.status).toBe(502)
+	})
+
+	it('returns fail(502) from grantRole', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		const result = await actions.grantRole({
+			request: formRequest({ accountId: 'acct-2', role: 'billingViewer' }),
+			locals: { session, clients: { tower } },
+			params: { organizationId: 'org-1' },
+		} as Parameters<typeof actions.grantRole>[0])
+		expect(result?.status).toBe(502)
 	})
 })

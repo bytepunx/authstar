@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { isHttpError } from '@sveltejs/kit'
 import { actions, load } from '../../src/routes/(embed)/organizations/[organizationId]/applications/[applicationSlug]/api-keys/+page.server'
 import { createFakeTowerClient, fakeApiKey, fakeOrganization } from '../fixtures/fake-tower-client'
@@ -137,5 +137,41 @@ describe('(embed)/organizations/[organizationId]/applications/[applicationSlug]/
 
 		expect(result?.success).toBe(true)
 		expect(tower.revokeOrganizationApiKey).toHaveBeenCalledWith('acme', 'org-1', 'widgetco', 'apikey-1')
+	})
+})
+
+describe('(embed)/organizations/[organizationId]/applications/[applicationSlug]/api-keys when tower fails -- S-0011', () => {
+	const session = fakeSession({ accountId: 'acct-1', organizationMemberships: [{ organizationId: 'org-1', roles: ['manager', 'member'] }] })
+	let log: MockInstance<typeof console.log>
+	beforeEach(() => {
+		log = vi.spyOn(console, 'log').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		log.mockRestore()
+	})
+
+	it('turns a tower 500 on the load into a 502', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		try {
+			await load({
+				locals: { session, clients: { tower } },
+				params: { organizationId: 'org-1', applicationSlug: 'widgetco' },
+				parent: async () => ({ session, theme: {}, isManager: true }),
+			} as Parameters<typeof load>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+	})
+
+	it('returns fail(502) from revoke', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		const result = await actions.revoke({
+			request: formRequest({ apiKeyId: 'key-1' }),
+			locals: { session, clients: { tower } },
+			params: { organizationId: 'org-1', applicationSlug: 'widgetco' },
+		} as Parameters<typeof actions.revoke>[0])
+		expect(result?.status).toBe(502)
 	})
 })

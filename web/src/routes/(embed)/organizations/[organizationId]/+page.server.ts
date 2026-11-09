@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types'
 import { requireSession } from '$lib/server/guard'
 import type { Session } from '$lib/server/session'
 import { TowerNotFoundError, TowerRequestError } from '$lib/server/clients/tower'
+import { failUpstream, throwUpstreamError } from '$lib/server/upstream-error'
 
 export const load: PageServerLoad = async ({ locals, params, parent }) => {
 	const { session } = await parent()
@@ -17,7 +18,7 @@ export const load: PageServerLoad = async ({ locals, params, parent }) => {
 		if (err instanceof TowerNotFoundError) {
 			error(404, 'organization not found')
 		}
-		throw err
+		throwUpstreamError(err)
 	}
 }
 
@@ -55,7 +56,7 @@ export const actions: Actions = {
 			if (err instanceof TowerRequestError) {
 				return fail(err.status >= 500 ? 502 : 409, { formError: 'that action was rejected -- only a manager can do this' })
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 
@@ -71,7 +72,7 @@ export const actions: Actions = {
 			if (err instanceof TowerRequestError) {
 				return fail(err.status >= 500 ? 502 : 409, { formError: err.body && typeof err.body === 'object' && 'error' in err.body ? String(err.body.error) : 'that action was rejected' })
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 
@@ -86,7 +87,7 @@ export const actions: Actions = {
 			if (err instanceof TowerRequestError) {
 				return fail(err.status >= 500 ? 502 : 409, { formError: 'that removal was rejected' })
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 
@@ -104,13 +105,17 @@ export const actions: Actions = {
 			if (err instanceof TowerRequestError) {
 				return fail(err.status >= 500 ? 502 : 409, { formError: 'successor must already be a member of this organization' })
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 
 	clearSuccessor: async ({ locals, params }) => {
 		const session = requireMember(locals.session, params.organizationId)
-		await locals.clients.tower.clearOrganizationSuccessor(session.tenantSlug, params.organizationId, session.accountId)
+		try {
+			await locals.clients.tower.clearOrganizationSuccessor(session.tenantSlug, params.organizationId, session.accountId)
+		} catch (err) {
+			return failUpstream(err)
+		}
 		return { success: true }
 	},
 
@@ -129,7 +134,7 @@ export const actions: Actions = {
 			if (err instanceof TowerRequestError) {
 				return fail(err.status >= 500 ? 502 : 409, { formError: 'that invite was rejected -- has this organization reached its seat limit?' })
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 }

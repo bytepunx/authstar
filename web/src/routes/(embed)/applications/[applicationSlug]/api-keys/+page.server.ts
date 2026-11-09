@@ -3,19 +3,24 @@ import type { Actions, PageServerLoad } from './$types'
 import { requireSession } from '$lib/server/guard'
 import { TowerNotFoundError, TowerRequestError } from '$lib/server/clients/tower'
 import { accountRolesForApplication } from '$lib/server/api-key-roles'
+import { failUpstream, throwUpstreamError } from '$lib/server/upstream-error'
 
 export const load: PageServerLoad = async ({ locals, params, parent }) => {
 	const { session } = await parent()
-	const account = await locals.clients.tower.getAccount(session.tenantSlug, session.accountId)
-	const availableRoles = accountRolesForApplication(account.grantedRoles, params.applicationSlug)
-	const canManage = availableRoles.includes('api-keys:manage')
-	// Tower's own `requireAppRole` would 403 this call anyway if `canManage`
-	// were somehow wrong (a route-guard bug here is a broken UI, not a
-	// security hole -- guard.ts's own framing) -- skipping the call entirely
-	// when we already know it would fail avoids a pointless round trip and a
-	// confusing "forbidden" state on first load.
-	const keys = canManage ? await locals.clients.tower.listPersonalApiKeys(session.tenantSlug, params.applicationSlug) : []
-	return { availableRoles, canManage, keys }
+	try {
+		const account = await locals.clients.tower.getAccount(session.tenantSlug, session.accountId)
+		const availableRoles = accountRolesForApplication(account.grantedRoles, params.applicationSlug)
+		const canManage = availableRoles.includes('api-keys:manage')
+		// Tower's own `requireAppRole` would 403 this call anyway if `canManage`
+		// were somehow wrong (a route-guard bug here is a broken UI, not a
+		// security hole -- guard.ts's own framing) -- skipping the call entirely
+		// when we already know it would fail avoids a pointless round trip and a
+		// confusing "forbidden" state on first load.
+		const keys = canManage ? await locals.clients.tower.listPersonalApiKeys(session.tenantSlug, params.applicationSlug) : []
+		return { availableRoles, canManage, keys }
+	} catch (err) {
+		throwUpstreamError(err)
+	}
 }
 
 export const actions: Actions = {
@@ -44,7 +49,7 @@ export const actions: Actions = {
 					formError: 'that key could not be created -- check you still hold every role you selected, and that you haven\'t reached your API key limit',
 				})
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 
@@ -63,7 +68,7 @@ export const actions: Actions = {
 			if (err instanceof TowerRequestError) {
 				return fail(err.status >= 500 ? 502 : err.status, { formError: 'that key could not be revoked' })
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 }

@@ -3,6 +3,7 @@ import type { Actions, PageServerLoad } from './$types'
 import { requireSession } from '$lib/server/guard'
 import type { Session } from '$lib/server/session'
 import { TowerNotFoundError, TowerRequestError } from '$lib/server/clients/tower'
+import { failUpstream, throwUpstreamError } from '$lib/server/upstream-error'
 import { organizationRolesForApplication } from '$lib/server/api-key-roles'
 
 // design/adrs/0101-api-keys.md. Reuses the *existing* org embed
@@ -29,7 +30,7 @@ export const load: PageServerLoad = async ({ locals, params, parent }) => {
 		if (err instanceof TowerNotFoundError) {
 			error(404, 'organization not found')
 		}
-		throw err
+		throwUpstreamError(err)
 	}
 }
 
@@ -66,7 +67,7 @@ export const actions: Actions = {
 					formError: 'that key could not be created -- only a manager of this organization can create keys, and only for roles the organization currently holds',
 				})
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 
@@ -85,7 +86,7 @@ export const actions: Actions = {
 			if (err instanceof TowerRequestError) {
 				return fail(err.status >= 500 ? 502 : err.status, { formError: 'that key could not be revoked' })
 			}
-			throw err
+			return failUpstream(err)
 		}
 	},
 }

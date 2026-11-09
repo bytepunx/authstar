@@ -1,4 +1,5 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
+import { isHttpError } from '@sveltejs/kit'
 import { load as loadLayout } from '../../src/routes/(embed)/applications/[applicationSlug]/api-keys/+layout.server'
 import { actions, load } from '../../src/routes/(embed)/applications/[applicationSlug]/api-keys/+page.server'
 import { createFakeTowerClient, fakeAccount, fakeApiKey } from '../fixtures/fake-tower-client'
@@ -146,5 +147,41 @@ describe('(embed)/applications/[applicationSlug]/api-keys actions', () => {
 
 		expect(result?.success).toBe(true)
 		expect(tower.revokePersonalApiKey).toHaveBeenCalledWith('acme', 'widgetco', 'apikey-1')
+	})
+})
+
+describe('(embed)/applications/[applicationSlug]/api-keys when tower fails -- S-0011', () => {
+	const session = fakeSession({ accountId: 'acct-1' })
+	let log: MockInstance<typeof console.log>
+	beforeEach(() => {
+		log = vi.spyOn(console, 'log').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		log.mockRestore()
+	})
+
+	it('turns a tower 500 on the load into a 502', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		try {
+			await load({
+				locals: { session, clients: { tower } },
+				params: { applicationSlug: 'widgetco' },
+				parent: async () => ({ session, theme: {} }),
+			} as Parameters<typeof load>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+	})
+
+	it('returns fail(502) from revoke', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		const result = await actions.revoke({
+			request: formRequest({ apiKeyId: 'key-1' }),
+			locals: { session, clients: { tower } },
+			params: { applicationSlug: 'widgetco' },
+		} as Parameters<typeof actions.revoke>[0])
+		expect(result?.status).toBe(502)
 	})
 })
