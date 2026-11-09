@@ -2,6 +2,7 @@ import { error, fail, redirect } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { requireSection } from '$lib/server/guard'
 import { TowerNotFoundError, TowerRequestError } from '$lib/server/clients/tower'
+import { failUpstream, throwUpstreamError } from '$lib/server/upstream-error'
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const session = requireSection(locals.session, 'applications')
@@ -15,7 +16,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		if (err instanceof TowerNotFoundError) {
 			error(404, 'application not found')
 		}
-		throw err
+		throwUpstreamError(err)
 	}
 }
 
@@ -67,13 +68,22 @@ export const actions: Actions = {
 		// component is what's responsible for being honest that this
 		// deactivates rather than destroys the record.
 		const session = requireSection(locals.session, 'applications')
-		await locals.clients.tower.deleteApplication(session.tenantSlug, params.slug)
+		try {
+			await locals.clients.tower.deleteApplication(session.tenantSlug, params.slug)
+		} catch (err) {
+			return failUpstream(err)
+		}
 		redirect(303, '/applications')
 	},
 
 	issueCredential: async ({ locals, params }) => {
 		const session = requireSection(locals.session, 'applications')
-		const credential = await locals.clients.tower.issueUsageCredential(session.tenantSlug, params.slug)
+		let credential
+		try {
+			credential = await locals.clients.tower.issueUsageCredential(session.tenantSlug, params.slug)
+		} catch (err) {
+			return failUpstream(err)
+		}
 		// Rendered once, in the page's dismissible reveal panel -- never
 		// persisted anywhere `web` itself can read it back (Story 003: "the
 		// same one-time-reveal pattern as every other secret in this design").
@@ -87,7 +97,11 @@ export const actions: Actions = {
 		if (!credentialId) {
 			return fail(400, { formError: 'missing credentialId' })
 		}
-		await locals.clients.tower.revokeUsageCredential(session.tenantSlug, params.slug, credentialId)
+		try {
+			await locals.clients.tower.revokeUsageCredential(session.tenantSlug, params.slug, credentialId)
+		} catch (err) {
+			return failUpstream(err)
+		}
 		return { revoked: credentialId }
 	},
 }

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { isHttpError, isRedirect } from '@sveltejs/kit'
 import { actions, load } from '../../src/routes/(admin)/applications/[slug]/+page.server'
 import { createFakeTowerClient, fakeApplication } from '../fixtures/fake-tower-client'
@@ -126,5 +126,49 @@ describe('applications/[slug] usage-credential actions -- ADR 0079', () => {
 		} as Parameters<typeof actions.revokeCredential>[0])
 		expect(result?.status).toBe(400)
 		expect(tower.revokeUsageCredential).not.toHaveBeenCalled()
+	})
+})
+
+describe('applications/[slug] when tower fails -- S-0011', () => {
+	let log: MockInstance<typeof console.log>
+	beforeEach(() => {
+		log = vi.spyOn(console, 'log').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		log.mockRestore()
+	})
+
+	it('turns a tower 500 on the load into a 502', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		try {
+			await load({ locals: { session: fakeSession(), clients: { tower } }, params: { slug: 'widgetco' } } as Parameters<typeof load>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+	})
+
+	it('returns fail(502) from delete rather than redirecting', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		const result = await actions.delete({ locals: { session: fakeSession(), clients: { tower } }, params: { slug: 'widgetco' } } as Parameters<typeof actions.delete>[0])
+		expect(result?.status).toBe(502)
+		expect(result?.data?.formError).toContain('tower')
+	})
+
+	it('returns fail(502) from issueCredential', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		const result = await actions.issueCredential({ locals: { session: fakeSession(), clients: { tower } }, params: { slug: 'widgetco' } } as Parameters<typeof actions.issueCredential>[0])
+		expect(result?.status).toBe(502)
+	})
+
+	it('returns fail(502) from revokeCredential', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		const result = await actions.revokeCredential({
+			request: formRequest({ credentialId: 'cred_1' }),
+			locals: { session: fakeSession(), clients: { tower } },
+			params: { slug: 'widgetco' },
+		} as Parameters<typeof actions.revokeCredential>[0])
+		expect(result?.status).toBe(502)
 	})
 })

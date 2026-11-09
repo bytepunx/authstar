@@ -2,6 +2,7 @@ import { error, fail } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { requireSection } from '$lib/server/guard'
 import { TowerNotFoundError, TowerRequestError } from '$lib/server/clients/tower'
+import { throwUpstreamError } from '$lib/server/upstream-error'
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const session = requireSection(locals.session, 'billing')
@@ -16,7 +17,7 @@ export const load: PageServerLoad = async ({ locals, params }) => {
 		if (err instanceof TowerNotFoundError) {
 			error(404, 'organization not found')
 		}
-		throw err
+		throwUpstreamError(err)
 	}
 }
 

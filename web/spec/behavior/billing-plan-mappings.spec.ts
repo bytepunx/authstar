@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { isHttpError, isRedirect } from '@sveltejs/kit'
 import { load } from '../../src/routes/(admin)/billing/plan-mappings/+page.server'
 import { actions as newActions } from '../../src/routes/(admin)/billing/plan-mappings/new/+page.server'
@@ -214,5 +214,60 @@ describe('billing/plan-mappings/new create action', () => {
 
 		expect(result?.status).toBe(400)
 		expect(result?.data?.fieldErrors).toMatchObject({ stripePriceId: expect.any(String), name: expect.any(String) })
+	})
+})
+
+describe('billing/plan-mappings when keep fails -- S-0011', () => {
+	let log: MockInstance<typeof console.log>
+	beforeEach(() => {
+		log = vi.spyOn(console, 'log').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		log.mockRestore()
+	})
+
+	it('turns a keep 500 on the list load into a 502', async () => {
+		const keep = createFakeKeepClient({ failWithStatus: 500 })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+		try {
+			await load({ locals: { session, clients: { keep } } } as Parameters<typeof load>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+	})
+
+	it('turns a keep 500 on the detail load into a 502', async () => {
+		const keep = createFakeKeepClient({ failWithStatus: 500 })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+		try {
+			await loadDetail({ locals: { session, clients: { keep } }, params: { id: 'pm_1' } } as Parameters<typeof loadDetail>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+	})
+
+	it('returns fail(502) from retire rather than redirecting', async () => {
+		const keep = createFakeKeepClient({ failWithStatus: 500 })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+		const result = await detailActions.retire({
+			locals: { session, clients: { keep } },
+			params: { id: 'pm_1' },
+		} as Parameters<typeof detailActions.retire>[0])
+		expect(result?.status).toBe(502)
+		expect(result?.data?.formError).toContain('keep')
+	})
+
+	it('still returns fail(502) from the create action', async () => {
+		const keep = createFakeKeepClient({ failWithStatus: 500 })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+		const result = await newActions.default({
+			request: formRequest({ stripePriceId: 'price_basic', name: 'Basic' }),
+			locals: { session, clients: { keep } },
+		} as Parameters<typeof newActions.default>[0])
+		expect(result?.status).toBe(502)
 	})
 })

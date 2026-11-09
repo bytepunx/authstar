@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, type Mock } from 'vitest'
 import {
 	KeepNotFoundError,
 	KeepRequestError,
@@ -18,6 +18,8 @@ export interface FakeKeepClientOptions {
 	planMappings?: PlanMapping[]
 	/** Force every mutating call to fail as keep would reject it (409). */
 	rejectMutations?: boolean
+	/** Force every call to fail with this status, as keep does when it is down (500). */
+	failWithStatus?: number
 }
 
 export function createFakeKeepClient(options: FakeKeepClientOptions = {}) {
@@ -82,6 +84,13 @@ export function createFakeKeepClient(options: FakeKeepClientOptions = {}) {
 			mappings.set(id, updated)
 			return updated
 		}),
+	}
+
+	if (options.failWithStatus !== undefined) {
+		const status = options.failWithStatus
+		for (const method of Object.values(client)) {
+			(method as unknown as Mock).mockRejectedValue(new KeepRequestError(`keep: fake -> ${status}`, status))
+		}
 	}
 
 	return client

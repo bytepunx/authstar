@@ -3,10 +3,16 @@ import type { Actions, PageServerLoad } from './$types'
 import { requireSection } from '$lib/server/guard'
 import { KeepRequestError } from '$lib/server/clients/keep'
 import { parseGrantedRoles } from '$lib/server/plan-mapping-form'
+import { failUpstream, throwUpstreamError } from '$lib/server/upstream-error'
 
 export const load: PageServerLoad = async ({ locals, params }) => {
 	const session = requireSection(locals.session, 'billing')
-	const planMapping = await locals.clients.keep.getPlanMapping(session.tenantSlug, params.id)
+	let planMapping
+	try {
+		planMapping = await locals.clients.keep.getPlanMapping(session.tenantSlug, params.id)
+	} catch (err) {
+		throwUpstreamError(err)
+	}
 	if (!planMapping) {
 		error(404, 'plan mapping not found')
 	}
@@ -65,7 +71,11 @@ export const actions: Actions = {
 
 	retire: async ({ locals, params }) => {
 		const session = requireSection(locals.session, 'billing')
-		await locals.clients.keep.retirePlanMapping(session.tenantSlug, params.id)
+		try {
+			await locals.clients.keep.retirePlanMapping(session.tenantSlug, params.id)
+		} catch (err) {
+			return failUpstream(err)
+		}
 		redirect(303, '/billing/plan-mappings')
 	},
 }

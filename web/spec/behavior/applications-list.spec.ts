@@ -1,6 +1,7 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { isHttpError } from '@sveltejs/kit'
 import { load } from '../../src/routes/(admin)/applications/+page.server'
+import { load as loadNew } from '../../src/routes/(admin)/applications/new/+page.server'
 import { createFakeTowerClient, fakeApplication } from '../fixtures/fake-tower-client'
 import { fakeSession } from '../fixtures/fake-session'
 
@@ -47,6 +48,39 @@ describe('applications list load -- Story 003', () => {
 		} catch (err) {
 			expect(isHttpError(err)).toBe(true)
 			if (isHttpError(err)) expect(err.status).toBe(401)
+		}
+	})
+})
+
+describe('applications list and new loads when tower fails -- S-0011', () => {
+	let log: MockInstance<typeof console.log>
+	beforeEach(() => {
+		log = vi.spyOn(console, 'log').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		log.mockRestore()
+	})
+
+	it('turns a tower 500 on the list into a 502, not SvelteKit\'s default 500', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		try {
+			await load({ locals: { session: fakeSession(), clients: { tower } } } as Parameters<typeof load>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+		expect(log).toHaveBeenCalledTimes(1)
+	})
+
+	it('turns a tower 500 on the new-application provider list into a 502', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		try {
+			await loadNew({ locals: { session: fakeSession(), clients: { tower } } } as Parameters<typeof loadNew>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
 		}
 	})
 })

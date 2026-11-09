@@ -2,11 +2,16 @@ import { fail, redirect } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { requireSection } from '$lib/server/guard'
 import { TowerRequestError } from '$lib/server/clients/tower'
+import { throwUpstreamError } from '$lib/server/upstream-error'
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const session = requireSection(locals.session, 'applications')
-	const providers = await locals.clients.tower.listProviders(session.tenantSlug)
-	return { providers }
+	try {
+		const providers = await locals.clients.tower.listProviders(session.tenantSlug)
+		return { providers }
+	} catch (err) {
+		throwUpstreamError(err)
+	}
 }
 
 function splitList(value: FormDataEntryValue | null): string[] {

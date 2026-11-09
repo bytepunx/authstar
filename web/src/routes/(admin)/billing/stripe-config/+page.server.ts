@@ -2,11 +2,16 @@ import { fail } from '@sveltejs/kit'
 import type { Actions, PageServerLoad } from './$types'
 import { requireSection } from '$lib/server/guard'
 import { KeepRequestError } from '$lib/server/clients/keep'
+import { throwUpstreamError } from '$lib/server/upstream-error'
 
 export const load: PageServerLoad = async ({ locals }) => {
 	const session = requireSection(locals.session, 'billing')
-	const config = await locals.clients.keep.getStripeConfig(session.tenantSlug)
-	return { configured: config?.configured ?? false }
+	try {
+		const config = await locals.clients.keep.getStripeConfig(session.tenantSlug)
+		return { configured: config?.configured ?? false }
+	} catch (err) {
+		throwUpstreamError(err)
+	}
 }
 
 export const actions: Actions = {

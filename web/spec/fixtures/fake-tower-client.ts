@@ -1,4 +1,4 @@
-import { vi } from 'vitest'
+import { vi, type Mock } from 'vitest'
 import {
 	TowerNotFoundError,
 	TowerRequestError,
@@ -34,6 +34,8 @@ export interface FakeTowerClientOptions {
 	apiKeys?: ApiKeySummary[]
 	/** Force every mutating call to fail as tower would reject it (409). */
 	rejectMutations?: boolean
+	/** Force every call to fail with this status, as tower does when it is down (500). */
+	failWithStatus?: number
 }
 
 const DEFAULT_ORGANIZATION_ROLE_CATALOG: OrganizationRoleDefinition[] = [
@@ -241,6 +243,13 @@ export function createFakeTowerClient(options: FakeTowerClientOptions = {}) {
 			if (!existing) throw new TowerNotFoundError(`no such api key: ${apiKeyId}`)
 			apiKeys.set(apiKeyId, { ...existing, status: 'revoked' })
 		}),
+	}
+
+	if (options.failWithStatus !== undefined) {
+		const status = options.failWithStatus
+		for (const method of Object.values(client)) {
+			(method as unknown as Mock).mockRejectedValue(new TowerRequestError(`tower: fake -> ${status}`, status))
+		}
 	}
 
 	return client

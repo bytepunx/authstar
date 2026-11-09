@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { isHttpError } from '@sveltejs/kit'
 import { actions, load } from '../../src/routes/(admin)/billing/stripe-config/+page.server'
 import { createFakeKeepClient } from '../fixtures/fake-keep-client'
@@ -74,5 +74,37 @@ describe('billing/stripe-config set action', () => {
 		expect(result).toEqual({ success: true })
 		expect(JSON.stringify(result)).not.toContain('sk_live_abc')
 		expect(keep.setStripeConfig).toHaveBeenCalledWith('acme', { secretKey: 'sk_live_abc', webhookSecret: 'whsec_abc' })
+	})
+})
+
+describe('billing/stripe-config when keep fails -- S-0011', () => {
+	let log: MockInstance<typeof console.log>
+	beforeEach(() => {
+		log = vi.spyOn(console, 'log').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		log.mockRestore()
+	})
+
+	it('turns a keep 500 on the load into a 502, not SvelteKit\'s default 500', async () => {
+		const keep = createFakeKeepClient({ failWithStatus: 500 })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+		try {
+			await load({ locals: { session, clients: { keep } } } as Parameters<typeof load>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+	})
+
+	it('still returns fail(502) from the set action', async () => {
+		const keep = createFakeKeepClient({ failWithStatus: 500 })
+		const session = fakeSession({ permissions: ['billing:manage'] })
+		const result = await actions.default({
+			request: formRequest({ secretKey: 'sk_test_abc', webhookSecret: 'whsec_abc' }),
+			locals: { session, clients: { keep } },
+		} as Parameters<typeof actions.default>[0])
+		expect(result?.status).toBe(502)
 	})
 })

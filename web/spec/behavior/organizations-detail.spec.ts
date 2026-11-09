@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi, type MockInstance } from 'vitest'
 import { isHttpError } from '@sveltejs/kit'
 import { actions, load } from '../../src/routes/(admin)/billing/organizations/[organizationId]/+page.server'
 import { createFakeTowerClient, fakeMembership, fakeOrganization } from '../fixtures/fake-tower-client'
@@ -178,5 +178,36 @@ describe('organizations/[organizationId] invite action', () => {
 		} as Parameters<typeof actions.invite>[0])
 		expect(result?.status).toBe(400)
 		expect(tower.createOrganizationInvite).not.toHaveBeenCalled()
+	})
+})
+
+describe('organizations/[organizationId] load when tower fails -- S-0011', () => {
+	let log: MockInstance<typeof console.log>
+	beforeEach(() => {
+		log = vi.spyOn(console, 'log').mockImplementation(() => {})
+	})
+	afterEach(() => {
+		log.mockRestore()
+	})
+
+	it('turns a tower 500 into a 502, not SvelteKit\'s default 500', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		try {
+			await load({ locals: { session: fakeSession({ permissions: ['billing:manage'] }), clients: { tower } }, params: { organizationId: 'org-1' } } as Parameters<typeof load>[0])
+			expect.unreachable('expected a 502')
+		} catch (err) {
+			expect(isHttpError(err)).toBe(true)
+			if (isHttpError(err)) expect(err.status).toBe(502)
+		}
+	})
+
+	it('still returns fail(502) from the invite action', async () => {
+		const tower = createFakeTowerClient({ failWithStatus: 500 })
+		const result = await actions.invite({
+			request: formRequest({ contactId: 'contact-1', organizationRole: 'member' }),
+			locals: { session: fakeSession({ permissions: ['billing:manage'] }), clients: { tower } },
+			params: { organizationId: 'org-1' },
+		} as Parameters<typeof actions.invite>[0])
+		expect(result?.status).toBe(502)
 	})
 })
