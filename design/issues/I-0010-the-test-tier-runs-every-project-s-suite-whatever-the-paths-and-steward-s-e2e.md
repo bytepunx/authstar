@@ -3,7 +3,7 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: open
-count: 3
+count: 4
 cost: 10m
 first_reported: 2026-11-06T18:29:23Z
 last_reported: 2026-11-13T21:55:06Z
@@ -24,6 +24,10 @@ S-0009 ran `flai test` on `chronicle/` only. scripts/test.sh still ran every npm
 ### 2026-11-09T20:54:07Z
 Story: S-0006.
 S-0006's close-out at fbb0a1d stopped in steward's Playwright e2e (9 failed). S-0006 changes nothing in steward. S-0007's test run was holding 127.0.0.1:4611 (`node build/index.js` from .flai-cache/worktrees/S-0007/steward), and because of reuseExistingServer S-0006's run used S-0007's steward server.
+
+### 2026-11-09T20:59:43Z
+Story: S-0006.
+S-0006's close-out at 595e4bf: 4611 was free when the run started, and 5 steward e2e specs still failed with net::ERR_CONNECTION_REFUSED at 127.0.0.1:4611/connect partway through. Another worktree's run took the port first, S-0006's Playwright reused that server, and it went away when that run finished.
 
 ### 2026-11-13T21:55:06Z
 Story: S-0025.
