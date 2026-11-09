@@ -1,4 +1,5 @@
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
+import { createTowerClient } from '../../src/lib/server/tower-client.js'
 import { startFakeBackend, type FakeBackend } from '../helpers/fake-backend-server.js'
 import { startStewardServer, type RunningStewardServer } from '../helpers/steward-server.js'
 
@@ -210,5 +211,107 @@ describe('steward server <-> fake tower, over real HTTP', () => {
     expect(retire.status).toBe(200)
     const retired = (await retire.json()) as { status: string }
     expect(retired.status).toBe('retired')
+  })
+})
+
+// Story 004: steward's tower client against the fake tower's activity and
+// stuck-erasure routes, over real HTTP. The client is called directly
+// rather than through steward's server, so this pins the client's half of
+// the contract (query parameters out, tower's shapes in) on its own.
+describe('tower client <-> fake tower: activity and stuck erasure requests', () => {
+  let backend: FakeBackend
+  let tower: ReturnType<typeof createTowerClient>
+  let token: string
+
+  beforeAll(async () => {
+    backend = await startFakeBackend()
+    tower = createTowerClient({ baseUrl: backend.url })
+    token = backend.state.validToken
+  })
+
+  afterAll(async () => {
+    await backend?.close()
+  })
+
+  const lastSearch = () => new URLSearchParams(backend.requests[backend.requests.length - 1]?.search ?? '')
+
+  it("reads a tenant's activity page as { data, nextCursor }, newest first, actingAs present or null", async () => {
+    const result = await tower.getActivity(token, 'acme')
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.body.nextCursor).toBeNull()
+    expect(result.body.data.map((e) => e.eventType)).toEqual(['account.role-granted', 'application.created'])
+    expect(result.body.data[0]).toEqual({
+      timestamp: expect.any(String),
+      actorType: 'account',
+      actorId: 'acc-1',
+      eventType: 'account.role-granted',
+      summary: "Role 'tenant:manage' granted (tenant-wide)",
+      actingAs: 'jane.operator',
+    })
+    expect(result.body.data[1].actingAs).toBeNull()
+    expect(lastSearch().has('limit')).toBe(false)
+    expect(lastSearch().has('cursor')).toBe(false)
+  })
+
+  it('forwards limit and cursor, and pages by the cursor tower returns', async () => {
+    const first = await tower.getActivity(token, 'acme', { limit: 1 })
+    expect(lastSearch().get('limit')).toBe('1')
+    expect(first.ok).toBe(true)
+    if (!first.ok) return
+    expect(first.body.data).toHaveLength(1)
+    expect(first.body.nextCursor).toEqual(expect.any(String))
+
+    const second = await tower.getActivity(token, 'acme', { limit: 1, cursor: first.body.nextCursor! })
+    expect(lastSearch().get('cursor')).toBe(first.body.nextCursor)
+    expect(second.ok).toBe(true)
+    if (!second.ok) return
+    expect(second.body.data.map((e) => e.eventType)).toEqual(['application.created'])
+    expect(second.body.nextCursor).toBeNull()
+  })
+
+  it('reads an empty feed for a tenant with no activity', async () => {
+    const result = await tower.getActivity(token, 'globex')
+    expect(result).toEqual({ ok: true, status: 200, body: { data: [], nextCursor: null } })
+  })
+
+  it('reports 404 for an unknown tenant as an http failure', async () => {
+    const result = await tower.getActivity(token, 'no-such-tenant')
+    expect(result.ok).toBe(false)
+    if (result.ok) return
+    expect(result.kind).toBe('http')
+    expect(result.kind === 'http' && result.status).toBe(404)
+  })
+
+  it('reads stuck erasure requests as a bare array, oldest first, with outstandingServices', async () => {
+    const result = await tower.getStuckErasureRequests(token, 24)
+    expect(lastSearch().get('olderThanHours')).toBe('24')
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(Array.isArray(result.body)).toBe(true)
+    expect(result.body.map((r) => r.contactId)).toEqual(['contact-acme-1', 'contact-globex-1'])
+    expect(result.body[0]).toEqual({
+      tenant: 'acme',
+      contactId: 'contact-acme-1',
+      requestedAt: expect.any(String),
+      outstandingServices: ['herald'],
+    })
+    expect(result.body[1].tenant).toBe('globex')
+    expect(result.body[1].outstandingServices).toEqual(['keep'])
+  })
+
+  it('narrows the stuck list as the threshold rises', async () => {
+    const result = await tower.getStuckErasureRequests(token, 72)
+    expect(lastSearch().get('olderThanHours')).toBe('72')
+    expect(result.ok).toBe(true)
+    if (!result.ok) return
+    expect(result.body.map((r) => r.contactId)).toEqual(['contact-acme-1'])
+  })
+
+  it('refuses both routes without the operator token', async () => {
+    const activity = await tower.getActivity('wrong-token', 'acme')
+    const stuck = await tower.getStuckErasureRequests('wrong-token', 72)
+    expect(activity.ok === false && activity.kind === 'http' && activity.status).toBe(401)
+    expect(stuck.ok === false && stuck.kind === 'http' && stuck.status).toBe(401)
   })
 })

@@ -199,29 +199,28 @@ export interface RotateHeraldKeysResponse {
   rotated: HeraldRotationKey[]
 }
 
+/** One entry of tower's activity feed (tower/src/lib/activity-feed.ts); `actingAs` is self-reported, null when absent. */
 export interface ActivityEntry {
   timestamp: string
   actorType: string
   actorId: string
   eventType: string
   summary: string
-  actingAs?: string | null
+  actingAs: string | null
 }
 
+/** One page of tower's activity feed, newest first; `nextCursor` is null on the last page. */
 export interface ActivityListResponse {
-  items: ActivityEntry[]
+  data: ActivityEntry[]
+  nextCursor: string | null
 }
 
+/** A pending erasure request older than the threshold, with the services that have not acknowledged it. */
 export interface StuckErasureRequest {
   tenant: string
   contactId: string
   requestedAt: string
-  expectedServices: string[]
-  missingServices: string[]
-}
-
-export interface StuckErasureRequestsResponse {
-  items: StuckErasureRequest[]
+  outstandingServices: string[]
 }
 
 export interface OidcProvider {

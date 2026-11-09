@@ -22,7 +22,7 @@ import type {
   RoleDefinitionScope,
   RotateTenantKeysRequest,
   RotateTenantKeysResponse,
-  StuckErasureRequestsResponse,
+  StuckErasureRequest,
   Tenant,
   TenantDetailResponse,
   TenantListResponse,
@@ -217,22 +217,25 @@ export function createTowerClient({ baseUrl, fetchImpl = fetch }: TowerClientOpt
       })
     },
 
-    // Story 004 -- activity feed, operator-scoped.
+    // Story 004 -- activity feed, operator-scoped. Tower's route
+    // (tower/src/routes/activity.ts) reads `limit` (1 to 200, default 50)
+    // and `cursor`, and answers 404 for an unknown tenant.
     getActivity(
       token: string,
       tenantSlug: string,
-      params: { sinceEventId?: string; until?: string } = {},
+      params: { limit?: number; cursor?: string } = {},
     ): Promise<BackendResult<ActivityListResponse>> {
       return call<ActivityListResponse>({
         path: `/operator/tenants/${encodeURIComponent(tenantSlug)}/activity`,
         token,
-        query: { sinceEventId: params.sinceEventId, until: params.until },
+        query: { limit: params.limit, cursor: params.cursor },
       })
     },
 
-    // Story 004 -- stuck erasure requests, cross-tenant.
-    getStuckErasureRequests(token: string, olderThanHours: number): Promise<BackendResult<StuckErasureRequestsResponse>> {
-      return call<StuckErasureRequestsResponse>({
+    // Story 004 -- stuck erasure requests, cross-tenant. Tower answers a
+    // bare array, oldest first (tower/src/routes/operator.ts).
+    getStuckErasureRequests(token: string, olderThanHours: number): Promise<BackendResult<StuckErasureRequest[]>> {
+      return call<StuckErasureRequest[]>({
         path: '/operator/erasure-requests/stuck',
         token,
         query: { olderThanHours },

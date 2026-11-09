@@ -43,10 +43,34 @@ export interface FakeRoleDefinition {
   createdAt: string
 }
 
+// One activity entry in tower's shape (tower/src/lib/activity-feed.ts),
+// plus the event id tower pages by (`cursor`), which tower never returns.
+export interface FakeActivityEntry {
+  id: string
+  timestamp: string
+  actorType: string
+  actorId: string
+  eventType: string
+  summary: string
+  actingAs: string | null
+}
+
+// A pending erasure request, as tower's stuck route reports it
+// (tower/src/routes/operator.ts): `outstandingServices` are the expected
+// services that have not acknowledged it.
+export interface FakeErasureRequest {
+  tenant: string
+  contactId: string
+  requestedAt: string
+  outstandingServices: string[]
+}
+
 export interface FakeBackendState {
   tenants: FakeTenant[]
   accounts: Record<string, FakeAccount[]> // keyed by tenant slug
   roleDefinitions: Record<string, FakeRoleDefinition[]> // keyed by tenant slug
+  activity: Record<string, FakeActivityEntry[]> // keyed by tenant slug, newest first
+  erasureRequests: FakeErasureRequest[] // pending requests, every tenant
   validToken: string
   rejectNextRotation?: boolean
 }
@@ -55,7 +79,54 @@ export interface FakeBackend {
   url: string
   state: FakeBackendState
   close: () => Promise<void>
-  requests: Array<{ method: string; path: string; headers: Record<string, string | undefined> }>
+  requests: Array<{ method: string; path: string; search: string; headers: Record<string, string | undefined> }>
+}
+
+const HOUR_MS = 60 * 60 * 1000
+const DEFAULT_ACTIVITY_LIMIT = 50
+const DEFAULT_STUCK_HOURS = 72
+
+function hoursAgo(hours: number): string {
+  return new Date(Date.now() - hours * HOUR_MS).toISOString()
+}
+
+// `acme` has a feed, newest first, with one operator-attributed entry and
+// one without; `globex` has none. Timestamps are relative to start-up.
+function seedActivity(): Record<string, FakeActivityEntry[]> {
+  return {
+    acme: [
+      {
+        id: 'evt-acme-2',
+        timestamp: hoursAgo(1),
+        actorType: 'account',
+        actorId: 'acc-1',
+        eventType: 'account.role-granted',
+        summary: "Role 'tenant:manage' granted (tenant-wide)",
+        actingAs: 'jane.operator',
+      },
+      {
+        id: 'evt-acme-1',
+        timestamp: hoursAgo(48),
+        actorType: 'application',
+        actorId: 'app-1',
+        eventType: 'application.created',
+        summary: "Application 'portal' created",
+        actingAs: null,
+      },
+    ],
+    globex: [],
+  }
+}
+
+// Ages chosen so the default 72-hour threshold returns only the `acme`
+// request, 24 hours returns both stuck ones, and the 2-hour-old one is
+// stuck only under a threshold below 2 hours.
+function seedErasureRequests(): FakeErasureRequest[] {
+  return [
+    { tenant: 'globex', contactId: 'contact-globex-1', requestedAt: hoursAgo(30), outstandingServices: ['keep'] },
+    { tenant: 'acme', contactId: 'contact-acme-1', requestedAt: hoursAgo(120), outstandingServices: ['herald'] },
+    { tenant: 'acme', contactId: 'contact-acme-2', requestedAt: hoursAgo(2), outstandingServices: ['herald', 'keep'] },
+  ]
 }
 
 function send(res: ServerResponse, status: number, body?: unknown) {
@@ -84,6 +155,8 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
       ],
     },
     roleDefinitions: initial?.roleDefinitions ?? { acme: [] },
+    activity: initial?.activity ?? seedActivity(),
+    erasureRequests: initial?.erasureRequests ?? seedErasureRequests(),
     validToken: initial?.validToken ?? 'valid-operator-token',
   }
 
@@ -95,6 +168,7 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
     requests.push({
       method,
       path: url.pathname,
+      search: url.search,
       headers: { authorization: req.headers.authorization, 'x-operator-actor': req.headers['x-operator-actor'] as string | undefined },
     })
 
@@ -338,6 +412,55 @@ export async function startFakeBackend(initial?: Partial<FakeBackendState>, port
         }
         def.status = 'retired'
         send(res, 200, def)
+        return
+      }
+
+      // GET /operator/tenants/:slug/activity -- operator-scoped activity feed
+      // (tower Story 010). Real tower shape (routes/activity.ts,
+      // lib/activity-feed.ts): `limit` 1 to 200, default 50; `cursor` is the
+      // id of the last event of the previous page; answers
+      // { data, nextCursor }, and 404 with no body for an unknown tenant.
+      const activityMatch = /^\/operator\/tenants\/([^/]+)\/activity$/.exec(url.pathname)
+      if (method === 'GET' && activityMatch) {
+        const slug = decodeURIComponent(activityMatch[1])
+        if (!state.tenants.some((t) => t.slug === slug)) {
+          send(res, 404)
+          return
+        }
+        const limitParam = url.searchParams.get('limit')
+        const limit = limitParam === null ? DEFAULT_ACTIVITY_LIMIT : Number(limitParam)
+        if (!Number.isInteger(limit) || limit < 1 || limit > 200) {
+          send(res, 400, { error: 'querystring/limit must be an integer from 1 to 200' })
+          return
+        }
+        const entries = state.activity[slug] ?? []
+        const cursor = url.searchParams.get('cursor')
+        const start = cursor ? entries.findIndex((e) => e.id === cursor) + 1 : 0
+        const page = entries.slice(start, start + limit)
+        const hasMore = start + limit < entries.length
+        send(res, 200, {
+          data: page.map(({ id: _id, ...entry }) => entry),
+          nextCursor: hasMore ? page[page.length - 1]?.id ?? null : null,
+        })
+        return
+      }
+
+      // GET /operator/erasure-requests/stuck -- cross-tenant (tower Story
+      // 013, ADR 0075). Real tower shape (routes/operator.ts): a bare array
+      // of pending requests older than `olderThanHours` (default 72),
+      // oldest first.
+      if (method === 'GET' && url.pathname === '/operator/erasure-requests/stuck') {
+        const hoursParam = url.searchParams.get('olderThanHours')
+        const hours = hoursParam === null ? DEFAULT_STUCK_HOURS : Number(hoursParam)
+        if (!Number.isFinite(hours) || hours < 0) {
+          send(res, 400, { error: 'querystring/olderThanHours must be >= 0' })
+          return
+        }
+        const threshold = hoursAgo(hours)
+        const stuck = state.erasureRequests
+          .filter((r) => r.requestedAt < threshold)
+          .sort((a, b) => a.requestedAt.localeCompare(b.requestedAt))
+        send(res, 200, stuck)
         return
       }
 
