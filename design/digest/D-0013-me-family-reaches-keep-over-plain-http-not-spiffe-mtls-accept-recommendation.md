@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [T-0049, TH-0020]
 ---
 
 # D-0013 me family reaches keep over plain HTTP, not SPIFFE mTLS: accept recommendation

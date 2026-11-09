@@ -21,6 +21,10 @@ transitions:
 stream: S-0006
 tags: []
 touches: [portcullis]
+usage:
+  source: log
+  seconds: 0
+  models: []
 ---
 # T-0014 Portcullis routes /_authstar/me/subscription to keep with the internal JWT
 

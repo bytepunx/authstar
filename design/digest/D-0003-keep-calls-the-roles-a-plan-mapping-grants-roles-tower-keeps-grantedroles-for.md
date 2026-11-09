@@ -6,10 +6,10 @@ sources: [S-0004]
 topics: [billing, keep, tower]
 paths: [keep/src/actors/plan_mapping_actor.ts, keep/src/routes/plan-mappings.ts, web/src/routes/(admin)/billing/plan-mappings, design/adrs/0108-plan-mappings-grant-roles-granted-roles-is-tower-s-set-in-effect.md]
 date: 2026-11-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0108-plan-mappings-grant-roles-granted-roles-is-tower-s-set-in-effect.md#decision"
 asked_again: []
-cited: []
+cited: [S-0005, T-0062]
 ---
 
 # D-0003 Keep calls the roles a plan mapping grants roles; tower keeps grantedRoles for an account's or organization's set of roles in effect

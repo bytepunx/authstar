@@ -6,10 +6,10 @@ sources: [S-0004]
 topics: [billing, keep]
 paths: [keep/src/routes/webhooks.ts, keep/src/actors/subscription_actor.ts, keep/src/routes/stripe-config.ts, design/adrs/0107-keep-mirrors-stripe-s-subscription-status-and-degrades-plan-roles-after-a-grace.md]
 date: 2026-11-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0107-keep-mirrors-stripe-s-subscription-status-and-degrades-plan-roles-after-a-grace.md#decision"
 asked_again: []
-cited: []
+cited: [S-0005, T-0064, T-0076, TH-0025]
 ---
 
 # D-0002 Keep degrades a subscription's plan roles only when its failed attempts reach the tenant's paymentFailureAttempts (default 3), or when Stripe marks it unpaid or canceled

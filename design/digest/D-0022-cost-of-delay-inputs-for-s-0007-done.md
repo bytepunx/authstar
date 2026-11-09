@@ -14,18 +14,10 @@ cited: []
 
 # D-0022 Cost of delay inputs for S-0007: done
 
-The operator, bytepunx, answered TH-0014 at 2026-11-06T18:21:13Z.
+The operator took the planner's recommended cost of delay inputs for S-0007 and set them on the story: `revenue_per_week` 0, `penalty_per_week` 0, no `time_lost_per_cycle` (set by alex at 2026-11-06T18:21:07Z). Its value is 0 USD a week.
 
-What was asked:
+The planner's reason, on TH-0014: loci already bills through its own Stripe integration and moves onto keep, so the hosted upgrade page brings no new revenue.
 
-```text
-S-0007 has no cost of delay inputs, and neither does its epic E-0002. So `flai cod S-0007` cannot work out a value. Those inputs are yours to set.
-```
-
-The answer:
-
-```text
-done
-```
+The operator answered at 2026-11-06T18:21:13Z: "done". As with S-0008 (D-0014), the inputs went on the story, not on E-0002.
 
 Source: TH-0014.

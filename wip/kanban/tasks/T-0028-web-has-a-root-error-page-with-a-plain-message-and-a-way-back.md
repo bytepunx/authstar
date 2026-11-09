@@ -3,15 +3,36 @@ id: T-0028
 type: task
 nature: remediation
 title: Web has a root error page with a plain message and a way back
-status: backlog
+status: done
 parent: S-0011
 owner: bytepunx
 created: 2026-11-06T17:48:41Z
-updated: 2026-11-06T17:48:41Z
-transitions: []
+updated: 2026-11-09T07:40:04Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:17:18Z
+    by: agent-S-0011
+  - to: in-progress
+    at: 2026-11-09T07:17:18Z
+    by: agent-S-0011
+  - to: done
+    at: 2026-11-09T07:40:04Z
+    by: agent-S-0011
 stream: S-0011
 tags: [web]
-touches: [web/src/routes/+error.svelte, web/spec/components/error-page.spec.ts]
+touches: [web/src/routes/+error.svelte, web/spec/components/error-page.spec.ts, web/spec/fixtures/app-state.ts, web/vitest.components.config.ts]
+usage:
+  source: log
+  seconds: 1366
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 4049
+      cache_read: 1230902
+      cache_write: 16935
+      cost: 0.4419
 ---
 # T-0028 Web has a root error page with a plain message and a way back
 

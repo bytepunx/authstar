@@ -14,18 +14,10 @@ cited: []
 
 # D-0018 Plan for S-0011: eight tasks in three layers: I merged in S-0002 and 0004, check to see if the test scripts address this
 
-The operator, bytepunx, answered TH-0010 at 2026-11-06T18:17:25Z.
+The operator answered S-0011's plan on TH-0010 with the merge of S-0002 and S-0004 into `main`, not with a change to the plan: its eight tasks in three layers stand as the planner wrote them.
 
-What was asked:
+The plan's assumptions the answer left in place: web's section flag is a `built` constant on each `AdminSection`, not an environment variable; steward's error page is tested with Playwright because steward has no component-test setup; signup gets a pending state but not `use:enhance`; the `(embed)` layouts' 403 stays a 403; S-0011 is tagged `web`, and the form-pending work (T-0032, T-0033) was not split off.
 
-```text
-S-0011 now has eight tasks in the backlog, 48 file touches, a 5h forecast delivering 2026-11-09T17:00Z, and the tag `web`. Its cost of delay is waiting on the inputs asked for in TH-0004.
-```
-
-The answer:
-
-```text
-I merged in S-0002 and 0004, check to see if the test scripts address this
-```
+The operator answered at 2026-11-06T18:17:25Z: "I merged in S-0002 and 0004, check to see if the test scripts address this". They do: D-0017 holds what the merge means for testing.
 
 Source: TH-0010.

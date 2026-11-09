@@ -14,18 +14,10 @@ cited: []
 
 # D-0015 Cost of delay inputs for S-0011: done
 
-The operator, bytepunx, answered TH-0004 at 2026-11-06T18:00:24Z.
+The operator set S-0011's cost of delay inputs on its epic E-0004, as the planner recommended, so that S-0012 and S-0013 share them: `revenue_per_week` 0, `penalty_per_week` 100, no `time_lost_per_cycle` (set by alex at 2026-11-06T18:00:17Z).
 
-What was asked:
+The planner's reason, on TH-0004: a remediation with no revenue of its own, but "five of web's eight nav links 404 today, every load failure shows SvelteKit's bare 500, and forms give no feedback while they post; that costs tenant admins' trust and support time each week".
 
-```text
-S-0011 needs a cost of delay before I can write it, and the inputs are yours to give. Neither S-0011 nor its epic E-0004 has any, so `flai cod S-0011` refuses.
-```
-
-The answer:
-
-```text
-done
-```
+The operator answered at 2026-11-06T18:00:24Z: "done". A later E-0004 story takes its share from the epic and needs no inputs of its own.
 
 Source: TH-0004.

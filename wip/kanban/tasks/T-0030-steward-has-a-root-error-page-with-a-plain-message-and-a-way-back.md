@@ -3,15 +3,36 @@ id: T-0030
 type: task
 nature: remediation
 title: Steward has a root error page with a plain message and a way back
-status: backlog
+status: done
 parent: S-0011
 owner: bytepunx
 created: 2026-11-06T17:49:14Z
-updated: 2026-11-06T17:49:14Z
-transitions: []
+updated: 2026-11-09T07:40:14Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:17:18Z
+    by: agent-S-0011
+  - to: in-progress
+    at: 2026-11-09T07:17:18Z
+    by: agent-S-0011
+  - to: done
+    at: 2026-11-09T07:40:14Z
+    by: agent-S-0011
 stream: S-0011
 tags: [steward]
 touches: [steward/src/routes/+error.svelte, steward/tests/e2e/error-page.spec.ts]
+usage:
+  source: log
+  seconds: 1376
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 15
+      output: 4519
+      cache_read: 1373636
+      cache_write: 18899
+      cost: 0.4932
 ---
 # T-0030 Steward has a root error page with a plain message and a way back
 

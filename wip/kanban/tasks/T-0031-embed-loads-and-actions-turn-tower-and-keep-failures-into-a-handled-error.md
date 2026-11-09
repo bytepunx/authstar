@@ -3,16 +3,37 @@ id: T-0031
 type: task
 nature: remediation
 title: Embed loads and actions turn tower and keep failures into a handled error
-status: backlog
+status: done
 parent: S-0011
 owner: bytepunx
 created: 2026-11-06T17:49:27Z
-updated: 2026-11-06T17:52:00Z
-transitions: []
+updated: 2026-11-09T07:58:05Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:40:51Z
+    by: agent-S-0011
+  - to: in-progress
+    at: 2026-11-09T07:40:51Z
+    by: agent-S-0011
+  - to: done
+    at: 2026-11-09T07:58:05Z
+    by: agent-S-0011
 stream: S-0011
 tags: [web]
 touches: ["web/src/routes/(embed)/applications/[applicationSlug]/api-keys/+page.server.ts", "web/src/routes/(embed)/organizations/[organizationId]/+page.server.ts", "web/src/routes/(embed)/organizations/[organizationId]/applications/[applicationSlug]/api-keys/+page.server.ts", web/spec/behavior/embed-application-api-keys.spec.ts, web/spec/behavior/embed-organization.spec.ts, web/spec/behavior/embed-organization-api-keys.spec.ts]
 after: [T-0029]
+usage:
+  source: log
+  seconds: 1034
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 7418
+      cache_read: 2254868
+      cache_write: 31023
+      cost: 0.8095
 ---
 # T-0031 Embed loads and actions turn tower and keep failures into a handled error
 

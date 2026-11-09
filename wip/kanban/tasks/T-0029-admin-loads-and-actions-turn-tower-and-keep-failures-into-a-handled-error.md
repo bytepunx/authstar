@@ -3,15 +3,36 @@ id: T-0029
 type: task
 nature: remediation
 title: Admin loads and actions turn tower and keep failures into a handled error
-status: backlog
+status: done
 parent: S-0011
 owner: bytepunx
 created: 2026-11-06T17:49:11Z
-updated: 2026-11-06T17:51:56Z
-transitions: []
+updated: 2026-11-09T07:40:18Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:17:18Z
+    by: agent-S-0011
+  - to: in-progress
+    at: 2026-11-09T07:17:18Z
+    by: agent-S-0011
+  - to: done
+    at: 2026-11-09T07:40:18Z
+    by: agent-S-0011
 stream: S-0011
 tags: [web]
 touches: [web/src/lib/server/upstream-error.ts, web/spec/behavior/upstream-error.spec.ts, web/src/routes/(admin)/applications/+page.server.ts, web/src/routes/(admin)/applications/new/+page.server.ts, "web/src/routes/(admin)/applications/[slug]/+page.server.ts", web/src/routes/(admin)/billing/organizations/+page.server.ts, "web/src/routes/(admin)/billing/organizations/[organizationId]/+page.server.ts", web/src/routes/(admin)/billing/plan-mappings/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, "web/src/routes/(admin)/billing/plan-mappings/[id]/+page.server.ts", web/src/routes/(admin)/billing/stripe-config/+page.server.ts, web/spec/behavior/applications-list.spec.ts, web/spec/behavior/applications-edit.spec.ts, web/spec/behavior/organizations-list.spec.ts, web/spec/behavior/organizations-detail.spec.ts, web/spec/behavior/billing-plan-mappings.spec.ts, web/spec/behavior/billing-stripe-config.spec.ts, web/spec/fixtures/fake-tower-client.ts, web/spec/fixtures/fake-keep-client.ts]
+usage:
+  source: log
+  seconds: 1380
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 55
+      output: 16750
+      cache_read: 5091999
+      cache_write: 70057
+      cost: 1.8281
 ---
 # T-0029 Admin loads and actions turn tower and keep failures into a handled error
 

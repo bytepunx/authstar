@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 3
-      output: 655
-      cache_read: 295053
-      cache_write: 3265
-      cost: 0.0966
+      output: 569
+      cache_read: 291965
+      cache_write: 4520
+      cost: 0.1048
 ---
 # T-0085 Renumber S-0008's closed duplicate issue from I-0003 to I-0008
 

@@ -3,15 +3,36 @@ id: T-0032
 type: task
 nature: remediation
 title: "Admin forms submit with use:enhance and show a pending state"
-status: backlog
+status: done
 parent: S-0011
 owner: bytepunx
 created: 2026-11-06T17:49:34Z
-updated: 2026-11-06T17:49:53Z
-transitions: []
+updated: 2026-11-09T07:40:22Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:17:19Z
+    by: agent-S-0011
+  - to: in-progress
+    at: 2026-11-09T07:17:19Z
+    by: agent-S-0011
+  - to: done
+    at: 2026-11-09T07:40:22Z
+    by: agent-S-0011
 stream: S-0011
 tags: [web]
 touches: [web/src/lib/components/SubmitButton.svelte, web/spec/components/submit-button.spec.ts, web/src/routes/(admin)/applications/new/+page.svelte, "web/src/routes/(admin)/applications/[slug]/+page.svelte", "web/src/routes/(admin)/billing/organizations/[organizationId]/+page.svelte", web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, "web/src/routes/(admin)/billing/plan-mappings/[id]/+page.svelte", web/src/routes/(admin)/billing/stripe-config/+page.svelte]
+usage:
+  source: log
+  seconds: 1383
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 33
+      output: 10133
+      cache_read: 3080472
+      cache_write: 42382
+      cost: 1.1059
 ---
 # T-0032 Admin forms submit with use:enhance and show a pending state
 

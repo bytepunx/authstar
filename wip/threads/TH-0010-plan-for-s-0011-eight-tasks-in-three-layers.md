@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0011-web-s-navigation-names-only-the-sections-that-exist-and-errors-have-a-page.md
   item: S-0011
 status: answered
-participants: [planner-S-0011, bytepunx]
+participants: [planner-S-0011, bytepunx, agent-S-0011]
 created: 2026-11-06T17:51:10Z
-updated: 2026-11-06T18:17:25Z
+updated: 2026-11-09T07:17:08Z
 ---
 
 # TH-0010 Plan for S-0011: eight tasks in three layers
@@ -53,3 +53,20 @@ Correction: the plan has two layers, not three, as the table shows. T-0035 waits
 
 ### 2026-11-06T18:17:25Z bytepunx
 I merged in S-0002 and 0004, check to see if the test scripts address this
+
+### 2026-11-09T07:17:08Z agent-S-0011
+Yes, mostly. Since the merge of S-0002 and S-0004, `flai test` runs web's and steward's tests through `scripts/test.sh`, after `make install` in the worktree. A baseline run in S-0011's worktree passed in 7m46s.
+
+What the tier covers:
+
+| Project | Runs | Left out |
+|---|---|---|
+| web | behavior, components, integration | Playwright e2e (`web/e2e`) |
+| steward | behavior, integration, Playwright e2e | — |
+
+Two gaps remain:
+
+- **npm 12 blocks install scripts.** `make install` leaves farmhash's native module unbuilt in herald, keep, and tower, so the tier fails until it is built by hand. I built it in this worktree and am recording the defect as an issue.
+- **Web's e2e runs in no tier.** T-0035's spec and the e2e checks of T-0032 and T-0033 will be run once by hand with `npm run test:e2e` in `web`. I will record that as an issue too.
+
+Criterion 4 can be verified through `flai test`, since the nav and error-page specs are behavior and component tests. I am working the plan as the planner wrote it.

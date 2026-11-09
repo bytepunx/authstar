@@ -14,18 +14,10 @@ cited: []
 
 # D-0014 Cost of delay inputs for S-0008: done
 
-The operator, bytepunx, answered TH-0003 at 2026-11-06T18:00:03Z.
+The operator took the planner's recommended cost of delay inputs for S-0008 and set them on the story, not on its epic E-0002: `revenue_per_week` 0, `penalty_per_week` 0, `time_lost_per_cycle` 15m (set by alex at 2026-11-06T17:59:54Z).
 
-What was asked:
+The planner's reason, on TH-0003: "Pasting a price ID works today, so nothing is blocked and no revenue waits on this story. The cost is an admin's time copying an ID from the Stripe Dashboard, plus a retry when keep rejects a mistyped one."
 
-```text
-S-0008 has no cost of delay inputs, and neither does its epic E-0002, so `flai cod S-0008` cannot work out a value. Those inputs are yours to set.
-```
-
-The answer:
-
-```text
-done
-```
+The operator answered at 2026-11-06T18:00:03Z: "done". E-0002 still carries no inputs, so each billing story under it gets its own (D-0022, D-0024, D-0025).
 
 Source: TH-0003.

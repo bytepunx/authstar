@@ -3,15 +3,36 @@ id: T-0027
 type: task
 nature: remediation
 title: Nav and Overview list only the sections that have a route
-status: backlog
+status: done
 parent: S-0011
 owner: bytepunx
 created: 2026-11-06T17:48:32Z
-updated: 2026-11-06T17:51:51Z
-transitions: []
+updated: 2026-11-09T07:40:10Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:17:18Z
+    by: agent-S-0011
+  - to: in-progress
+    at: 2026-11-09T07:17:18Z
+    by: agent-S-0011
+  - to: done
+    at: 2026-11-09T07:40:10Z
+    by: agent-S-0011
 stream: S-0011
 tags: [web]
 touches: [web/src/lib/permissions.ts, web/spec/behavior/permissions.spec.ts, web/spec/behavior/admin-layout.spec.ts, web/spec/components/nav.spec.ts, design/stories/web/001-app-shell-auth-and-section-gating.md]
+usage:
+  source: log
+  seconds: 1372
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 9440
+      cache_read: 2869801
+      cache_write: 39484
+      cost: 1.0303
 ---
 # T-0027 Nav and Overview list only the sections that have a route
 

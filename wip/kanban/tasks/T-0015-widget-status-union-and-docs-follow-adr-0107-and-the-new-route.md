@@ -21,6 +21,10 @@ transitions:
 stream: S-0006
 tags: []
 touches: [web/src/widgets, docs/users]
+usage:
+  source: log
+  seconds: 0
+  models: []
 ---
 # T-0015 Widget status union and docs follow ADR-0107 and the new route
 

@@ -18,4 +18,6 @@ S-0001 recorded in its narrative's Decisions: "The old per-component GitHub repo
 
 S-0002 then ported the two npm publish workflows to the monorepo's root, with `clients/typescript` paths and the same file names, "so re-registering the npm Trusted Publisher against `bytepunx/authstar` is the only step left to publish from here." No story's agent archives the old repositories or changes the npm publisher.
 
-The operator has since decided, on TH-0001, that signet's secrets source moves to the monorepo's `integration/` and the old repositories are archived together with that switch (D-0001). S-0002's workflows are on `story/S-0002`, not yet on `main` (I-0004).
+The operator has since decided, on TH-0001, that signet's secrets source moves to the monorepo's `integration/` and the old repositories are archived together with that switch (D-0001). S-0002's workflows have been on `main` since the operator merged its branch on 2026-11-06 (5263a88, D-0017).
+
+Source: S-0001, S-0002.

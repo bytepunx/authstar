@@ -3,16 +3,37 @@ id: T-0035
 type: task
 nature: remediation
 title: End-to-end check that the nav, error page, and upstream failures work together in web
-status: backlog
+status: done
 parent: S-0011
 owner: bytepunx
 created: 2026-11-06T17:50:11Z
-updated: 2026-11-06T17:50:11Z
-transitions: []
+updated: 2026-11-09T07:58:16Z
+transitions:
+  - to: ready
+    at: 2026-11-09T07:40:51Z
+    by: agent-S-0011
+  - to: in-progress
+    at: 2026-11-09T07:40:52Z
+    by: agent-S-0011
+  - to: done
+    at: 2026-11-09T07:58:16Z
+    by: agent-S-0011
 stream: S-0011
 tags: [web]
-touches: [web/e2e/admin-nav-and-errors.spec.ts, web/e2e/fixtures/auth.ts]
+touches: [web/e2e/admin-nav-and-errors.spec.ts, web/e2e/fixtures/auth.ts, web/spec/fixtures/fake-tower-server.ts]
 after: [T-0027, T-0028, T-0029]
+usage:
+  source: log
+  seconds: 1044
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 10508
+      cache_read: 3194415
+      cache_write: 43950
+      cost: 1.1468
 ---
 # T-0035 End-to-end check that the nav, error page, and upstream failures work together in web
 

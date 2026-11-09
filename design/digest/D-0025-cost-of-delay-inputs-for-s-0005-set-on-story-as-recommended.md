@@ -14,18 +14,10 @@ cited: []
 
 # D-0025 Cost of delay inputs for S-0005: set on story as recommended
 
-The operator, bytepunx, answered TH-0019 at 2026-11-06T18:22:26Z.
+The operator took the planner's recommended cost of delay inputs for S-0005 and set them on the story, not on E-0002: `revenue_per_week` 0, `penalty_per_week` 0, `time_lost_per_cycle` 30m (set by alex at 2026-11-06T18:22:14Z). At `planning.hour_rate` 150 that is 75 USD a cycle.
 
-What was asked:
+The planner's reason, on TH-0019: checkout and the happy-path subscription already work, so no revenue waits; the cost each cycle is cleaning up after the defects, such as a user locked out on the first failed payment or a redelivered event published twice.
 
-```text
-S-0005 has no cost of delay inputs, and neither does its epic E-0002, so `flai cod S-0005` cannot work out a value. Those inputs are yours to set.
-```
-
-The answer:
-
-```text
-set on story as recommended
-```
+The operator answered at 2026-11-06T18:22:26Z: "set on story as recommended". With D-0014, D-0022, and D-0024, every E-0002 story so far carries its own inputs and the epic none.
 
 Source: TH-0019.

@@ -14,18 +14,10 @@ cited: []
 
 # D-0024 Cost of delay inputs for S-0014: set as recommended
 
-The operator, bytepunx, answered TH-0018 at 2026-11-06T18:22:04Z.
+The operator took the planner's recommended cost of delay inputs for S-0014 and set them on the story, the same as S-0008's in E-0002: `revenue_per_week` 0, `penalty_per_week` 0, `time_lost_per_cycle` 15m (set by alex at 2026-11-06T18:21:56Z).
 
-What was asked:
+The planner's reason, on TH-0018: no paying tenant waits on it; until it lands, a misrouted scope-less role event costs a debugging session, not revenue.
 
-```text
-S-0014 has no cost of delay inputs, and neither does its epic E-0002, so `flai cod S-0014` cannot work out a value. The inputs are yours to set.
-```
-
-The answer:
-
-```text
-set as recommended
-```
+The operator answered at 2026-11-06T18:22:04Z: "set as recommended".
 
 Source: TH-0018.

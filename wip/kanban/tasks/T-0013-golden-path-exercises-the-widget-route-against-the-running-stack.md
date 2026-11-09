@@ -21,6 +21,10 @@ transitions:
 stream: S-0006
 tags: []
 touches: [integration]
+usage:
+  source: log
+  seconds: 0
+  models: []
 ---
 # T-0013 Golden path exercises the widget route against the running stack
 

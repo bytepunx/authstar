@@ -14,18 +14,10 @@ cited: []
 
 # D-0020 Cost of delay inputs for S-0015: recommedation
 
-The operator, bytepunx, answered TH-0013 at 2026-11-06T18:19:30Z.
+The operator chose the planner's recommended cost of delay inputs for S-0015: `penalty_per_week` 200 and no revenue. The planner's alternatives, `penalty_per_week` 500 or `time_lost_per_cycle` 1h, were not taken.
 
-What was asked:
+The planner's reason, on TH-0013: "The story makes no new revenue. Its cost is risk: herald, keep, steward, and web turn off TLS verification for the whole process, so any outbound HTTPS call they make, Stripe and signet included, would accept a forged certificate."
 
-```text
-S-0015 has no cost of delay inputs and no epic to take a share from, so `flai cod S-0015` cannot work out a value.
-```
-
-The answer:
-
-```text
-recommedation
-```
+The operator answered at 2026-11-06T18:19:30Z: "recommedation", read as the recommendation. S-0015 has no epic, so the inputs belong on the story; it carried none yet when this entry was written.
 
 Source: TH-0013.

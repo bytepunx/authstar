@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 1.5649
-accrued_seconds: 194
-tasks_completed: 1
-last_run: 2026-11-06T17:59:34Z
+accrued_cost: 3.7387
+accrued_seconds: 395
+tasks_completed: 2
+last_run: 2026-11-06T21:15:16Z
 ---
 
 # Curator activity
@@ -19,3 +19,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0001, D-0002, D-0003, D-0004, D-0005, D-0006, D-0007, D-0008, D-0009, D-0010, D-0011, D-0012, D-0013
 - Seconds: 194
 - Cost: 1.5649 USD, estimated
+
+### 2026-11-06T21:15:16Z
+
+- Summary: Wrote D-0026; merged candidates into D-0006, D-0008, D-0009, D-0010, D-0011, D-0014, D-0015, D-0016, D-0017, D-0018, D-0019, D-0020, D-0021, D-0022, D-0023, D-0024 and D-0025; absorbed D-0002 (ADR-0107), D-0003 (ADR-0108) and D-0004 (ADR-0109); `flai digest compact` compacted nothing and recorded citers on 5 entries.
+- Trigger: accepted S-0009
+- Items: D-0002, D-0003, D-0004, D-0006, D-0008, D-0009, D-0010, D-0011, D-0013, D-0014, D-0015, D-0016, D-0017, D-0018, D-0019, D-0020, D-0021, D-0022, D-0023, D-0024, D-0025, D-0026
+- Seconds: 201
+- Cost: 2.1738 USD, estimated

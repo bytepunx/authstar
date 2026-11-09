@@ -12,6 +12,21 @@ transitions:
     at: 2026-11-09T06:50:32Z
     by: bytepunx
 tags: []
+usage:
+  source: sum
+  seconds: 0
+  models: []
+  strategic:
+    - kind: orchestrator
+      seconds: 29
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 10
+          output: 75
+          cache_read: 231674
+          cache_write: 74171
+          cost: 0.3589
 ---
 # E-0005 Local end-to-end testing in kluster
 

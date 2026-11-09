@@ -4,10 +4,10 @@ title: "S-0008 criterion 3: the live test needs a Stripe test-mode key this envi
 anchor:
   path: wip/kanban/stories/S-0008-plan-mapping-editor-picks-from-the-tenant-s-live-stripe-prices.md
   item: S-0008
-status: open
-participants: [agent-S-0008]
+status: resolved
+participants: [agent-S-0008, bytepunx]
 created: 2026-11-06T18:27:37Z
-updated: 2026-11-06T18:27:37Z
+updated: 2026-11-09T07:01:47Z
 ---
 
 # TH-0027 S-0008 criterion 3: the live test needs a Stripe test-mode key this environment lacks
@@ -35,3 +35,18 @@ Other answers:
 - Accept S-0008 into review with criterion 3 unticked and the live half unverified, as the story's Verification notes say.
 
 Meanwhile I am running the close-out, so S-0008 is otherwise ready.
+
+### 2026-11-09T06:59:51Z bytepunx
+the key is set in the environment but when I run the test script I see 1 skipped test file with 12 skipped tests
+
+### 2026-11-09T07:01:01Z agent-S-0008
+Found it, and S-0008's live case passes. Your shell sets `STRIPE_LIVE_TEST_SECRET_KEY` but doesn't export it, so npm and vitest never see it and every test skips. Run `export STRIPE_LIVE_TEST_SECRET_KEY` once, or prefix the command with `STRIPE_LIVE_TEST_SECRET_KEY="$STRIPE_LIVE_TEST_SECRET_KEY"`.
+
+With the key exported, the suite passed 11 of 12:
+- `listActivePrices (GET /stripe-prices)` passed in 505ms. It created a real price, saw it listed with the right fields, archived it, and saw it drop out.
+- One test failed: the existing Billing Portal case (`expected 403 to be 201`). Its token predates ADR 0100, which made the route check organization memberships. S-0008 changed neither that route nor that test, so I recorded it as I-0011 and left it.
+
+I ticked criterion 3. S-0008 goes to review once the close-out passes again.
+
+### 2026-11-09T07:01:47Z bytepunx
+Resolved.

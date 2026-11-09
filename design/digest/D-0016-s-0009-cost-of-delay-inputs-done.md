@@ -14,18 +14,10 @@ cited: []
 
 # D-0016 S-0009 cost of delay inputs: done
 
-The operator, bytepunx, answered TH-0007 at 2026-11-06T18:00:39Z.
+The operator set S-0009's cost of delay inputs on its epic E-0003, as the planner recommended, so S-0010 inherits them: `revenue_per_week` 0, `penalty_per_week` 0, `time_lost_per_cycle` 30m (set by alex at 2026-11-06T18:00:32Z).
 
-What was asked:
+The planner's reasons, on TH-0007: no analytics revenue depends on chronicle yet; chronicle has no external reader, so its insecure HS256 default is no weekly penalty; the 30m is the upkeep of the harness's self-minted HS256 workaround.
 
-```text
-`flai cod S-0009` cannot work out a value: neither S-0009 nor its epic E-0003 has any cost-of-delay inputs, and no other open item has any either. The amounts are yours to set, so I have not guessed them.
-```
-
-The answer:
-
-```text
-done
-```
+The operator answered at 2026-11-06T18:00:39Z: "done". A later E-0003 story takes its share from the epic.
 
 Source: TH-0007.

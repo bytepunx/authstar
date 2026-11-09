@@ -6,10 +6,10 @@ sources: [S-0004]
 topics: [billing, keep, tower]
 paths: [keep/src/lib/scope.ts, tower/src/actors/tenant_actor.ts, tower/src/lib/entitlement-consumer.ts, design/adrs/0109-entitlement-scopes-are-accounts-and-organizations-the-tenant-scope-is-retired.md]
 date: 2026-11-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0109-entitlement-scopes-are-accounts-and-organizations-the-tenant-scope-is-retired.md#decision"
 asked_again: []
-cited: []
+cited: [S-0005, S-0014, T-0070, TH-0025]
 ---
 
 # D-0004 The tenant entitlement scope is retired: customers, subscriptions, plan mappings, and entitlement events are scoped to an account or an organization

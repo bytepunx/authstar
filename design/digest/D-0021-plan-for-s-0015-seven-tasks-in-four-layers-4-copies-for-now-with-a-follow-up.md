@@ -14,18 +14,10 @@ cited: []
 
 # D-0021 Plan for S-0015: seven tasks in four layers: 4 copies for now with a follow up story to remediate this later
 
-The operator, bytepunx, answered TH-0026 at 2026-11-06T18:20:52Z.
+For S-0015, each Node service that calls tower (herald, keep, steward, web) gets its own copy of the small module that builds tower's TLS agent, not a shared package; a follow-up story removes the copies later.
 
-What was asked:
+The planner's proposal on TH-0026: an `undici` `Agent` for tower's origin alone, trusting the SPIRE X.509 bundle from the Workload API and checking tower's SPIFFE ID in `checkServerIdentity`, because tower's SVID carries only a `spiffe://` URI SAN, which Node's hostname check does not read. The chart then drops `NODE_TLS_REJECT_UNAUTHORIZED`, which it sets on herald, keep, steward, and web, not on tower. It recommended four copies because no shared library for services exists and `clients/typescript/core` is the package tenants' applications use; one shared package would have shrunk the four service tasks to wiring.
 
-```text
-S-0015 now has seven tasks in four layers. Its touches (37 files, no folders) and forecast (4h) are written. The cost of delay value waits on TH-0013.
-```
-
-The answer:
-
-```text
-4 copies for now with a follow up story to remediate this later
-```
+The operator answered at 2026-11-06T18:20:52Z: "4 copies for now with a follow up story to remediate this later". A story that adds a fifth Node caller of tower, or touches one of the copies, should know the copies are meant to be merged.
 
 Source: TH-0026.

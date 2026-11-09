@@ -21,6 +21,10 @@ transitions:
 stream: S-0006
 tags: []
 touches: [keep]
+usage:
+  source: log
+  seconds: 0
+  models: []
 ---
 # T-0012 Keep serves GET /me/subscription from the forwarded internal JWT
 
