@@ -3,7 +3,7 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: open
-count: 2
+count: 3
 cost: 10m
 first_reported: 2026-11-06T18:29:23Z
 last_reported: 2026-11-13T21:55:06Z
@@ -20,6 +20,10 @@ The test tier runs every project's suite whatever the paths, and steward's e2e u
 ### 2026-11-06T18:29:23Z
 Story: S-0009.
 S-0009 ran `flai test` on `chronicle/` only. scripts/test.sh still ran every npm project and then portcullis cargo test, taking 9m11s, and it failed in steward, which S-0009 does not touch. All 12 steward Playwright e2e tests failed with "Can't reach tower. Check your port-forward". steward/playwright.config.ts pins the fake tower to port 4610 and steward to 4611 with reuseExistingServer, so a concurrent run in another story's worktree, or one left behind, serves the wrong backend. Nothing held either port afterwards. Chronicle's suite ran before steward's and passed, since test.sh stops at the first failure. Selecting projects by the changed paths, and giving each run free ports, would make the tier both fast and reliable for parallel stories.
+
+### 2026-11-09T20:54:07Z
+Story: S-0006.
+S-0006's close-out at fbb0a1d stopped in steward's Playwright e2e (9 failed). S-0006 changes nothing in steward. S-0007's test run was holding 127.0.0.1:4611 (`node build/index.js` from .flai-cache/worktrees/S-0007/steward), and because of reuseExistingServer S-0006's run used S-0007's steward server.
 
 ### 2026-11-13T21:55:06Z
 Story: S-0025.
