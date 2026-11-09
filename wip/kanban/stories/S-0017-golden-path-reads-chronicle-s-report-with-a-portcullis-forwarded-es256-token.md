@@ -7,7 +7,7 @@ status: backlog
 parent: E-0003
 owner: bytepunx
 created: 2026-11-06T18:29:54Z
-updated: 2026-11-09T21:56:04Z
+updated: 2026-11-09T22:06:44Z
 transitions: []
 tags: [integration]
 topics: [analytics, tls]
@@ -48,7 +48,6 @@ usage:
           cache_read: 1074505
           cache_write: 144539
           cost: 1.3949
-draft: true
 cost_of_delay:
   value: 30
   by: planner-S-0017
@@ -59,6 +58,9 @@ forecast:
   basis: "Its own forecast of 4h; 8th in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005, S-0010, S-0019, S-0012, S-0014, S-0015 and S-0016."
   by: flai
   at: 2026-11-09T21:56:04Z
+finalized:
+  by: bytepunx
+  at: 2026-11-09T22:06:44Z
 ---
 # S-0017 Golden path reads chronicle's report with a portcullis-forwarded ES256 token
 
