@@ -7,7 +7,7 @@ status: backlog
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-09T09:04:34Z
+updated: 2026-11-09T20:44:27Z
 transitions: []
 tags: [steward]
 touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md]
@@ -32,10 +32,10 @@ cost_of_delay:
   at: 2026-11-06T18:36:38Z
 forecast:
   duration: 4h
-  delivery: 2026-11-09T20:32:00Z
-  basis: "Its own forecast of 4h; 4th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0020, S-0007, S-0005 and S-0010."
+  delivery: 2026-11-10T09:22:00Z
+  basis: "Its own forecast of 4h; 4th in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0007, S-0005 and S-0010."
   by: flai
-  at: 2026-11-09T09:04:34Z
+  at: 2026-11-09T20:44:27Z
 ---
 # S-0013 Steward shows tenant activity and stuck erasure requests
 

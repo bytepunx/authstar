@@ -7,7 +7,7 @@ status: backlog
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-09T09:04:34Z
+updated: 2026-11-09T20:44:27Z
 transitions: []
 tags: []
 topics: [billing, keep]
@@ -37,10 +37,10 @@ cost_of_delay:
     at: 2026-11-06T18:22:14Z
 forecast:
   duration: 4h
-  delivery: 2026-11-09T16:32:00Z
-  basis: "Its own forecast of 4h; 2nd in the pull order with an in-progress limit of 4, behind S-0006, S-0008, S-0020 and S-0007."
+  delivery: 2026-11-10T14:32:00Z
+  basis: "Its own forecast of 4h; 2nd in the pull order with an in-progress limit of 4, behind S-0006, S-0008 and S-0007."
   by: flai
-  at: 2026-11-09T09:04:34Z
+  at: 2026-11-09T20:44:27Z
 ---
 # S-0005 Keep handles every Stripe event once and records what it decides
 
