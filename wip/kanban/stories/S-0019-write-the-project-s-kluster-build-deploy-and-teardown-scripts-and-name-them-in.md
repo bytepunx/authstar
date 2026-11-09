@@ -3,15 +3,18 @@ id: S-0019
 type: story
 nature: feature
 title: "Write the project's kluster build, deploy, and teardown scripts and name them in the kluster: block"
-status: ready
+status: in-progress
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T06:51:07Z
-updated: 2026-11-09T21:56:05Z
+updated: 2026-11-09T22:02:12Z
 transitions:
   - to: ready
     at: 2026-11-09T21:56:01Z
     by: bytepunx
+  - to: in-progress
+    at: 2026-11-09T21:57:38Z
+    by: agent-S-0019
 tags: [kluster, scripts, integration]
 topics: [kluster, deployment]
 touches: [system-flow.yaml, scripts, scripts/kluster-build.sh, scripts/lib-kluster.sh, scripts/kluster-signet.sh, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/README.md, kluster.yaml, integration/README.md, integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/tower.yaml]
@@ -26,15 +29,20 @@ usage:
   models: []
   strategic:
     - kind: orchestrator
-      seconds: 82
+      seconds: 124
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 187
-          cache_read: 754661
-          cache_write: 137062
-          cost: 1.0304
+          input: 48
+          output: 349
+          cache_read: 1387460
+          cache_write: 249695
+          cost: 1.8819
+cost_of_delay:
+  inputs:
+    revenue_per_week: 1200
+    by: bytepunx
+    at: 2026-11-09T22:02:12Z
 forecast:
   duration: 6h
   delivery: 2026-11-10T16:52:00Z
