@@ -1,7 +1,10 @@
 <script lang="ts">
+	import { enhance } from '$app/forms'
+	import SubmitButton, { pendingSubmit } from '$lib/components/SubmitButton.svelte'
 	import type { ActionData } from './$types'
 
 	let { form }: { form: ActionData } = $props()
+	const pending = $state<Record<string, boolean>>({})
 </script>
 
 <h1 class="text-xl font-semibold">New plan mapping</h1>
@@ -10,7 +13,7 @@
 	<p class="mt-4 rounded bg-red-50 p-3 text-sm text-red-700" role="alert">{form.formError}</p>
 {/if}
 
-<form method="POST" class="mt-4 flex max-w-xl flex-col gap-4">
+<form method="POST" use:enhance={pendingSubmit(pending, 'create')} class="mt-4 flex max-w-xl flex-col gap-4">
 	<label class="flex flex-col gap-1 text-sm">
 		Stripe price ID
 		<input
@@ -89,5 +92,7 @@
 			>{/if}
 	</div>
 
-	<button type="submit" class="w-fit rounded bg-slate-900 px-3 py-1.5 text-sm text-white">Create</button>
+	<SubmitButton pending={pending.create} pendingLabel="Creating..." class="w-fit rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
+		>Create</SubmitButton
+	>
 </form>

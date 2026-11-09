@@ -1,9 +1,12 @@
 <script lang="ts">
+	import { enhance } from '$app/forms'
+	import SubmitButton, { pendingSubmit } from '$lib/components/SubmitButton.svelte'
 	import type { ActionData, PageData } from './$types'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 	const org = $derived(data.organization)
 	const managers = $derived(new Set(data.members.filter((m) => m.roles.includes('manager')).map((m) => m.accountId)))
+	const pending = $state<Record<string, boolean>>({})
 </script>
 
 <h1 class="text-xl font-semibold">{org.name}</h1>
@@ -39,22 +42,46 @@
 					<span class="flex items-center gap-3">
 						{#each data.roleCatalog.filter((r) => r.name !== 'member') as roleDef (roleDef.name)}
 							{#if member.roles.includes(roleDef.name)}
-								<form method="POST" action="?/revokeRole">
+								<form
+									method="POST"
+									action="?/revokeRole"
+									use:enhance={pendingSubmit(pending, `revokeRole:${member.accountId}:${roleDef.name}`)}
+								>
 									<input type="hidden" name="accountId" value={member.accountId} />
 									<input type="hidden" name="role" value={roleDef.name} />
-									<button type="submit" class="text-slate-500 underline">-{roleDef.name}</button>
+									<SubmitButton
+										pending={pending[`revokeRole:${member.accountId}:${roleDef.name}`]}
+										pendingLabel="Revoking..."
+										class="text-slate-500 underline">-{roleDef.name}</SubmitButton
+									>
 								</form>
 							{:else}
-								<form method="POST" action="?/grantRole">
+								<form
+									method="POST"
+									action="?/grantRole"
+									use:enhance={pendingSubmit(pending, `grantRole:${member.accountId}:${roleDef.name}`)}
+								>
 									<input type="hidden" name="accountId" value={member.accountId} />
 									<input type="hidden" name="role" value={roleDef.name} />
-									<button type="submit" class="text-slate-500 underline">+{roleDef.name}</button>
+									<SubmitButton
+										pending={pending[`grantRole:${member.accountId}:${roleDef.name}`]}
+										pendingLabel="Granting..."
+										class="text-slate-500 underline">+{roleDef.name}</SubmitButton
+									>
 								</form>
 							{/if}
 						{/each}
-						<form method="POST" action="?/removeMember">
+						<form
+							method="POST"
+							action="?/removeMember"
+							use:enhance={pendingSubmit(pending, `removeMember:${member.accountId}`)}
+						>
 							<input type="hidden" name="accountId" value={member.accountId} />
-							<button type="submit" class="text-red-600 underline">Remove</button>
+							<SubmitButton
+								pending={pending[`removeMember:${member.accountId}`]}
+								pendingLabel="Removing..."
+								class="text-red-600 underline">Remove</SubmitButton
+							>
 						</form>
 					</span>
 				</li>
@@ -65,7 +92,7 @@
 
 <section class="mt-8 max-w-2xl">
 	<h2 class="text-lg font-semibold">Invite a new member</h2>
-	<form method="POST" action="?/invite" class="mt-2 flex flex-col gap-4">
+	<form method="POST" action="?/invite" use:enhance={pendingSubmit(pending, 'invite')} class="mt-2 flex flex-col gap-4">
 		<label class="flex flex-col gap-1 text-sm">
 			Contact id
 			<input name="contactId" placeholder="contactId" class="rounded border border-slate-300 px-2 py-1" />
@@ -79,6 +106,8 @@
 				</label>
 			{/each}
 		</fieldset>
-		<button type="submit" class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">Send invite</button>
+		<SubmitButton pending={pending.invite} pendingLabel="Sending..." class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
+			>Send invite</SubmitButton
+		>
 	</form>
 </section>

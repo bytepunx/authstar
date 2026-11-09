@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { enhance } from '$app/forms'
+	import SubmitButton, { pendingSubmit } from '$lib/components/SubmitButton.svelte'
 	import type { ActionData, PageData } from './$types'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 	const app = $derived(data.application)
+	const pending = $state<Record<string, boolean>>({})
 </script>
 
 <h1 class="text-xl font-semibold">{app.name}</h1>
@@ -15,7 +18,7 @@
 	<p class="mt-4 rounded bg-green-50 p-3 text-sm text-green-700" role="status">Saved.</p>
 {/if}
 
-<form method="POST" action="?/update" class="mt-4 flex max-w-xl flex-col gap-4">
+<form method="POST" action="?/update" use:enhance={pendingSubmit(pending, 'update')} class="mt-4 flex max-w-xl flex-col gap-4">
 	<label class="flex flex-col gap-1 text-sm">
 		Name
 		<input name="name" value={app.name} class="rounded border border-slate-300 px-2 py-1" />
@@ -88,7 +91,9 @@
 		{/each}
 	</fieldset>
 
-	<button type="submit" class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white">Save</button>
+	<SubmitButton pending={pending.update} pendingLabel="Saving..." class="rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
+		>Save</SubmitButton
+	>
 </form>
 
 <section class="mt-8 max-w-xl">
@@ -104,23 +109,39 @@
 			<li class="flex items-center justify-between py-2">
 				<span>{credential.credentialId} -- {credential.status} -- {credential.createdAt}</span>
 				{#if credential.status === 'active'}
-					<form method="POST" action="?/revokeCredential">
+					<form
+						method="POST"
+						action="?/revokeCredential"
+						use:enhance={pendingSubmit(pending, `revoke:${credential.credentialId}`)}
+					>
 						<input type="hidden" name="credentialId" value={credential.credentialId} />
-						<button type="submit" class="text-red-600 underline">Revoke</button>
+						<SubmitButton
+							pending={pending[`revoke:${credential.credentialId}`]}
+							pendingLabel="Revoking..."
+							class="text-red-600 underline">Revoke</SubmitButton
+						>
 					</form>
 				{/if}
 			</li>
 		{/each}
 	</ul>
-	<form method="POST" action="?/issueCredential" class="mt-2">
-		<button type="submit" class="rounded border border-slate-300 px-3 py-1.5 text-sm">Issue new credential</button>
+	<form method="POST" action="?/issueCredential" use:enhance={pendingSubmit(pending, 'issueCredential')} class="mt-2">
+		<SubmitButton
+			pending={pending.issueCredential}
+			pendingLabel="Issuing..."
+			class="rounded border border-slate-300 px-3 py-1.5 text-sm">Issue new credential</SubmitButton
+		>
 	</form>
 </section>
 
 <section class="mt-8 max-w-xl">
 	<h2 class="text-lg font-semibold">Deactivate</h2>
 	<p class="text-sm text-slate-600">This deactivates the application -- it is not permanently destroyed.</p>
-	<form method="POST" action="?/delete" class="mt-2">
-		<button type="submit" class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700">Delete</button>
+	<form method="POST" action="?/delete" use:enhance={pendingSubmit(pending, 'delete')} class="mt-2">
+		<SubmitButton
+			pending={pending.delete}
+			pendingLabel="Deleting..."
+			class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700">Delete</SubmitButton
+		>
 	</form>
 </section>

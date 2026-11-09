@@ -1,8 +1,11 @@
 <script lang="ts">
+	import { enhance } from '$app/forms'
+	import SubmitButton, { pendingSubmit } from '$lib/components/SubmitButton.svelte'
 	import type { ActionData, PageData } from './$types'
 
 	let { data, form }: { data: PageData; form: ActionData } = $props()
 	const mapping = $derived(data.planMapping)
+	const pending = $state<Record<string, boolean>>({})
 </script>
 
 <h1 class="text-xl font-semibold">{mapping.name}</h1>
@@ -18,7 +21,7 @@
 	<p class="mt-4 rounded bg-green-50 p-3 text-sm text-green-700" role="status">Saved.</p>
 {/if}
 
-<form method="POST" action="?/update" class="mt-4 flex max-w-xl flex-col gap-4">
+<form method="POST" action="?/update" use:enhance={pendingSubmit(pending, 'update')} class="mt-4 flex max-w-xl flex-col gap-4">
 	<label class="flex flex-col gap-1 text-sm">
 		Name
 		<input name="name" value={mapping.name} class="rounded border border-slate-300 px-2 py-1" />
@@ -81,7 +84,9 @@
 			>{/if}
 	</div>
 
-	<button type="submit" class="w-fit rounded bg-slate-900 px-3 py-1.5 text-sm text-white">Save</button>
+	<SubmitButton pending={pending.update} pendingLabel="Saving..." class="w-fit rounded bg-slate-900 px-3 py-1.5 text-sm text-white"
+		>Save</SubmitButton
+	>
 </form>
 
 <section class="mt-8 max-w-xl">
@@ -89,7 +94,11 @@
 	<p class="text-sm text-slate-600">
 		Stops this mapping from granting/revoking roles on future subscription events -- it is not permanently destroyed.
 	</p>
-	<form method="POST" action="?/retire" class="mt-2">
-		<button type="submit" class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700">Retire</button>
+	<form method="POST" action="?/retire" use:enhance={pendingSubmit(pending, 'retire')} class="mt-2">
+		<SubmitButton
+			pending={pending.retire}
+			pendingLabel="Retiring..."
+			class="rounded border border-red-300 px-3 py-1.5 text-sm text-red-700">Retire</SubmitButton
+		>
 	</form>
 </section>
