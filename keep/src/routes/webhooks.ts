@@ -6,6 +6,7 @@ import type { DisputeState } from '../actors/dispute_actor.js'
 import type { PlanMappingState, GrantedRole } from '../actors/plan_mapping_actor.js'
 import { entitlementOf, isSubscriptionStatus, type SubscriptionEntitlement, type SubscriptionState, type SubscriptionStatus } from '../actors/subscription_actor.js'
 import type { TrialState } from '../actors/trial_actor.js'
+import { stripeEventKey, type StripeEventState } from '../actors/stripe_event_actor.js'
 import generateId from '../lib/ids.js'
 import { scopesEqual, isValidScope, type Scope } from '../lib/scope.js'
 import { effectivePaymentFailureAttempts } from '../lib/stripe-config.js'
@@ -309,6 +310,12 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
     await app.consequent.handle(trial.id, 'trial.convert', {})
   }
 
+  // A subscription keep already records was activated before, by another
+  // event with its own id: `customer.subscription.created` and
+  // `checkout.session.completed` both arrive for one subscription. Its
+  // conversion and grants went out then, so this activation publishes nothing.
+  if (alreadyExists) return
+
   const sequence = await app.sequences.next(tenant, scope)
   const roles = (mapping?.roles ?? []).map((role) => ({ name: role.role, scope: role.application }))
   await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence, roles })
@@ -526,6 +533,13 @@ async function onDisputeClosed(app: FastifyInstance, tenant: string, dispute: St
   }
 }
 
+// Whether keep has already handled this tenant's Stripe event.
+async function isProcessed(app: FastifyInstance, tenant: string, stripeEventId: string): Promise<boolean> {
+  const instance = await app.consequent.fetch('stripeEvent', stripeEventKey(tenant, stripeEventId))
+  const state = instance!.state as unknown as StripeEventState
+  return state.processedAt !== ''
+}
+
 async function handleStripeEvent(app: FastifyInstance, tenant: string, event: StripeWebhookEvent, client: StripeClient): Promise<void> {
   const object = event.data.object as unknown
 
@@ -539,8 +553,8 @@ async function handleStripeEvent(app: FastifyInstance, tenant: string, event: St
       // expansion configuration. Story 002 lists
       // `customer.subscription.created` as the paired trigger for this same
       // action -- when both arrive for one subscription (the common
-      // real-world case), the second call is a safe no-op via
-      // `onSubscriptionActivated`'s own existence check.
+      // real-world case), the second call records nothing and publishes
+      // nothing, via `onSubscriptionActivated`'s own existence check.
       const sub = await client.getSubscription(session.subscription)
       await onSubscriptionActivated(app, tenant, { ...sub, metadata: (session.metadata as Record<string, string> | undefined) ?? sub.metadata })
       return
@@ -606,7 +620,24 @@ const webhookRoutes: FastifyPluginAsync = async function (app: FastifyInstance) 
       return reply.code(400).send({ error: 'invalid stripe-signature' })
     }
 
+    // Each Stripe event is handled once (S-0005). A redelivery of an event
+    // keep recorded answers 200 and runs no handler. The record is written
+    // only after the handler succeeds, so an event whose handler threw is
+    // handled again when Stripe redelivers it.
+    // Stripe gives every event an id; one without an id cannot be told
+    // from its redelivery, and is refused rather than handled unguarded.
+    if (typeof event.id !== 'string' || event.id === '') {
+      return reply.code(400).send({ error: 'stripe event has no id' })
+    }
+    if (await isProcessed(app, tenantSlug, event.id)) {
+      return reply.code(200).send({ received: true, duplicate: true })
+    }
     await handleStripeEvent(app, tenantSlug, event, client)
+    await app.consequent.handle(stripeEventKey(tenantSlug, event.id), 'stripeEvent.record', {
+      tenant: tenantSlug,
+      stripeEventId: event.id,
+      type: event.type,
+    })
     return reply.code(200).send({ received: true })
   })
 }

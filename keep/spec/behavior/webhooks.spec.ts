@@ -263,10 +263,15 @@ describe('stripe webhook handling -- API contract', () => {
         metadata: { scope: JSON.stringify({ account: 'acct_2' }) },
       })
       await post(payload)
-      await post(payload)
+      const publishedAfterFirst = t.publisher.published.length
+      expect(publishedAfterFirst).toBeGreaterThan(0)
+      const redelivery = await post(payload)
+      expect(redelivery.statusCode).toBe(200)
 
       const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions', headers: readHeaders })
       expect(list.json().filter((s: { stripeSubscriptionId: string }) => s.stripeSubscriptionId === 'sub_2')).toHaveLength(1)
+      // The redelivery publishes nothing: no second converted-to-paid or role-granted.
+      expect(t.publisher.published).toHaveLength(publishedAfterFirst)
     })
 
     it('converts an in-progress trial for the same scope', async () => {
