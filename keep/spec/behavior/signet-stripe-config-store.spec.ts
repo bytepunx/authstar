@@ -151,4 +151,68 @@ describe('createSignetStripeConfigStore', () => {
 
     await expect(setPromise).rejects.toThrow(/signet rejected stripe-config push/)
   })
+
+  describe('paymentFailureAttempts (ADR 0107)', () => {
+    it('reads undefined for a tenant that never set it', async () => {
+      const store = await createSignetStripeConfigStore({
+        address: 'signet.internal:8443',
+        trustDomain: 'authstar.example',
+        initialSecrets: {},
+      })
+
+      await expect(store.getPaymentFailureAttempts('acme')).resolves.toBeUndefined()
+    })
+
+    it('pushes the threshold to keep\'s own bundle beside the secrets, and a reloaded store reads it back', async () => {
+      const store = await createSignetStripeConfigStore({
+        address: 'signet.internal:8443',
+        trustDomain: 'authstar.example',
+        initialSecrets: {},
+      })
+
+      const setPromise = store.setPaymentFailureAttempts('acme', 1)
+      await vi.waitFor(() => expect(syncBundle).toHaveBeenCalledTimes(1))
+      resolveSyncBundleSuccess()
+      await setPromise
+
+      expect(encryptForSecret).toHaveBeenCalledWith('age1testkey', '1')
+      const dataChunk = syncBundleWrite.mock.calls[1]?.[0] as { data: Buffer }
+      const { gunzipSync } = await import('node:zlib')
+      const tar = gunzipSync(dataChunk.data)
+      expect(tar.subarray(0, 100).toString('utf8').replace(/\0+$/, '')).toBe('secrets/stripe-payment-failure-attempts-acme.yaml')
+      await expect(store.getPaymentFailureAttempts('acme')).resolves.toBe(1)
+
+      // A reload: the next process takes the same entry back off keep's bundle at startup.
+      const reloaded = await createSignetStripeConfigStore({
+        address: 'signet.internal:8443',
+        trustDomain: 'authstar.example',
+        initialSecrets: { 'stripe-payment-failure-attempts-acme': '1' },
+      })
+      await expect(reloaded.getPaymentFailureAttempts('acme')).resolves.toBe(1)
+      await expect(reloaded.getPaymentFailureAttempts('other')).resolves.toBeUndefined()
+    })
+
+    it('ignores a stored value that is not an integer of 1 or more', async () => {
+      const store = await createSignetStripeConfigStore({
+        address: 'signet.internal:8443',
+        trustDomain: 'authstar.example',
+        initialSecrets: { 'stripe-payment-failure-attempts-acme': '0', 'stripe-payment-failure-attempts-demo': 'lots' },
+      })
+
+      await expect(store.getPaymentFailureAttempts('acme')).resolves.toBeUndefined()
+      await expect(store.getPaymentFailureAttempts('demo')).resolves.toBeUndefined()
+    })
+
+    it('refuses to push 0 or a fraction', async () => {
+      const store = await createSignetStripeConfigStore({
+        address: 'signet.internal:8443',
+        trustDomain: 'authstar.example',
+        initialSecrets: {},
+      })
+
+      await expect(store.setPaymentFailureAttempts('acme', 0)).rejects.toThrow(/integer of 1 or more/)
+      await expect(store.setPaymentFailureAttempts('acme', 1.5)).rejects.toThrow(/integer of 1 or more/)
+      expect(syncBundle).not.toHaveBeenCalled()
+    })
+  })
 })

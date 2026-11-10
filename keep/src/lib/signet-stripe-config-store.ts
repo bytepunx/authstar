@@ -1,6 +1,6 @@
 import { gzipSync } from 'node:zlib'
 import { dialWorkloadGitOps, encryptForSecret } from '@bytepunx/signet-client'
-import type { StripeConfigStore, TenantStripeConfig } from './stripe-config.js'
+import { parsePaymentFailureAttempts, type StripeConfigStore, type TenantStripeConfig } from './stripe-config.js'
 
 // ADR 0052's real wiring for keep's own `stripe-config` route --
 // stripe-config.ts's own top-of-file comment calls this "out of scope for
@@ -54,6 +54,17 @@ function secretKeyName(tenantSlug: string): string {
 
 function webhookSecretKeyName(tenantSlug: string): string {
   return `stripe-webhook-secret-${tenantSlug}`
+}
+
+// ADR 0107's `paymentFailureAttempts` is not a secret, but it is stored as
+// one more entry of keep's own bundle beside the two Stripe secrets, as its
+// decimal string. That is the only store this module writes and the only
+// one `src/server.ts` hands back at startup (`initialSecrets`), so the
+// setting survives a restart with no second store and no new wiring. Being
+// SOPS-encrypted like its neighbours costs nothing; it is never returned
+// as a secret, only as a number.
+function paymentFailureAttemptsKeyName(tenantSlug: string): string {
+  return `stripe-payment-failure-attempts-${tenantSlug}`
 }
 
 // Same minimal single-file USTAR-archive-then-gzip approach as tower's
@@ -154,6 +165,17 @@ export async function createSignetStripeConfigStore(opts: SignetStripeConfigStor
       await pushSecret(webhookSecretKeyName(tenantSlug), config.webhookSecret)
       secrets.set(secretKeyName(tenantSlug), config.secretKey)
       secrets.set(webhookSecretKeyName(tenantSlug), config.webhookSecret)
+    },
+    async getPaymentFailureAttempts(tenantSlug: string): Promise<number | undefined> {
+      return parsePaymentFailureAttempts(secrets.get(paymentFailureAttemptsKeyName(tenantSlug)))
+    },
+    async setPaymentFailureAttempts(tenantSlug: string, attempts: number): Promise<void> {
+      if (!Number.isInteger(attempts) || attempts < 1) {
+        throw new Error(`paymentFailureAttempts for tenant ${tenantSlug} must be an integer of 1 or more, got ${attempts}`)
+      }
+      const key = paymentFailureAttemptsKeyName(tenantSlug)
+      await pushSecret(key, String(attempts))
+      secrets.set(key, String(attempts))
     },
   }
 }

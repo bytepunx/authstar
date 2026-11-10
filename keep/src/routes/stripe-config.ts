@@ -1,5 +1,6 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { requirePermission } from '../lib/permissions.js'
+import { effectivePaymentFailureAttempts } from '../lib/stripe-config.js'
 
 // Per design/stories/keep/001-actor-definitions.md ("stripe-config") and
 // design/stories/keep/006-self-service-config-and-activity.md.
@@ -10,6 +11,11 @@ import { requirePermission } from '../lib/permissions.js'
 // signet wiring (pushing the secrets to keep's own signet bundle, ADR 0052)
 // is out of scope for this pilot slice -- `app.stripeConfig` is the
 // in-memory stand-in seam (see src/lib/stripe-config.ts, TESTING.md).
+//
+// ADR 0107 adds one non-secret setting, `paymentFailureAttempts`: the
+// failed attempts on one invoice at which keep degrades a subscription's
+// plan roles. `GET` returns it, `3` when the tenant never set it. `PATCH`
+// takes it alone or beside the two secrets, which still come as a pair.
 
 const tenantParamsSchema = {
   type: 'object',
@@ -20,12 +26,23 @@ const tenantParamsSchema = {
 const patchBodySchema = {
   type: 'object',
   additionalProperties: false,
-  required: ['secretKey', 'webhookSecret'],
+  minProperties: 1,
+  dependencies: {
+    secretKey: ['webhookSecret'],
+    webhookSecret: ['secretKey'],
+  },
   properties: {
     secretKey: { type: 'string', minLength: 1 },
     webhookSecret: { type: 'string', minLength: 1 },
+    paymentFailureAttempts: { type: 'integer', minimum: 1 },
   },
 } as const
+
+interface PatchBody {
+  secretKey?: string
+  webhookSecret?: string
+  paymentFailureAttempts?: number
+}
 
 const stripeConfigRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.get(
@@ -34,10 +51,14 @@ const stripeConfigRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     async (request, reply) => {
       const { tenantSlug } = request.params as { tenantSlug: string }
       const config = await app.stripeConfig.get(tenantSlug)
-      if (!config) return reply.code(404).send()
+      const ownAttempts = await app.stripeConfig.getPaymentFailureAttempts(tenantSlug)
+      if (!config && ownAttempts === undefined) return reply.code(404).send()
       // Never returns stripeSecretKey/stripeWebhookSecret -- write-only,
       // same discipline as every other secret in this design.
-      return { configured: true }
+      return {
+        configured: config !== undefined,
+        paymentFailureAttempts: await effectivePaymentFailureAttempts(app.stripeConfig, tenantSlug),
+      }
     },
   )
 
@@ -46,16 +67,26 @@ const stripeConfigRoutes: FastifyPluginAsync = async function (app: FastifyInsta
     { schema: { params: tenantParamsSchema, body: patchBodySchema }, preHandler: requirePermission('billing:manage') },
     async (request, reply) => {
       const { tenantSlug } = request.params as { tenantSlug: string }
-      const body = request.body as { secretKey: string, webhookSecret: string }
+      const body = request.body as PatchBody
 
-      const client = app.stripeClients.dial(body.secretKey)
-      const valid = await client.validateApiKey(body.secretKey)
-      if (!valid) {
-        return reply.code(400).send({ error: 'stripe secret key failed validation' })
+      // The schema's `dependencies` keep the two secrets a pair.
+      if (body.secretKey !== undefined && body.webhookSecret !== undefined) {
+        const client = app.stripeClients.dial(body.secretKey)
+        const valid = await client.validateApiKey(body.secretKey)
+        if (!valid) {
+          return reply.code(400).send({ error: 'stripe secret key failed validation' })
+        }
+        await app.stripeConfig.set(tenantSlug, { secretKey: body.secretKey, webhookSecret: body.webhookSecret })
       }
 
-      await app.stripeConfig.set(tenantSlug, { secretKey: body.secretKey, webhookSecret: body.webhookSecret })
-      return { configured: true }
+      if (body.paymentFailureAttempts !== undefined) {
+        await app.stripeConfig.setPaymentFailureAttempts(tenantSlug, body.paymentFailureAttempts)
+      }
+
+      return {
+        configured: (await app.stripeConfig.get(tenantSlug)) !== undefined,
+        paymentFailureAttempts: await effectivePaymentFailureAttempts(app.stripeConfig, tenantSlug),
+      }
     },
   )
 }
