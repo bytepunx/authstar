@@ -1,6 +1,7 @@
 import Stripe from 'stripe'
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import buildLiveTestApp, { LIVE_TEST_TENANT, liveStripeSecretKey, type LiveTestApp } from '../lib/live-stripe-app.js'
+import { createStripeClientFactory } from '../../src/lib/stripe-client.js'
 
 // Live tier: exercises keep's real Stripe integration (RealStripeClient,
 // src/lib/stripe-client.ts) against Stripe's genuine test-mode API instead
@@ -216,7 +217,8 @@ describeLive('stripe integration -- live test-mode API', () => {
         stripeCustomerId: customer.id,
       })
 
-      const orgHeaders = await t.headers({ organizationId: 'org-live-portal-test', permissions: ['organization:manage'] })
+      // ADR 0100: organization access comes from the caller's membership roles.
+      const orgHeaders = await t.headers({ organizationMemberships: [{ organizationId: 'org-live-portal-test', roles: ['member', 'billingAdmin'] }] })
       const response = await t.app.inject({
         method: 'POST',
         url: `/tenants/${LIVE_TEST_TENANT}/organizations/org-live-portal-test/portal-sessions`,
@@ -226,6 +228,66 @@ describeLive('stripe integration -- live test-mode API', () => {
 
       expect(response.statusCode).toBe(201)
       expect(response.json().url).toContain('billing.stripe.com')
+    })
+  })
+
+  // ADR 0107: a Dispute carries no scope, so keep reads its charge and takes
+  // the charge's customer. This proves `retrieveCharge`'s real mapping of
+  // `charges.retrieve` (a customer id, not an expanded object), and that a
+  // real charge id resolves a dispute's scope through keep's customer record.
+  describe('retrieveCharge -- a real charge names its customer (ADR 0107)', () => {
+    async function createCharge() {
+      const customer = await stripe.customers.create({ email: `live-charge+${Math.random().toString(36).slice(2)}@example.com` })
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: 500,
+        currency: 'usd',
+        customer: customer.id,
+        payment_method: 'pm_card_visa',
+        payment_method_types: ['card'],
+        confirm: true,
+      })
+      const chargeId = typeof paymentIntent.latest_charge === 'string' ? paymentIntent.latest_charge : paymentIntent.latest_charge?.id
+      if (!chargeId) throw new Error(`payment intent ${paymentIntent.id} has no charge`)
+      return { customer, chargeId }
+    }
+
+    it('returns the charge\'s customer id', async () => {
+      const { customer, chargeId } = await createCharge()
+
+      const charge = await createStripeClientFactory().dial(liveStripeSecretKey()).retrieveCharge(chargeId)
+
+      expect(charge).toEqual({ id: chargeId, customer: customer.id })
+    })
+
+    it('resolves a dispute\'s scope from its real charge, with no dispute metadata', async () => {
+      const { customer, chargeId } = await createCharge()
+      await t.stripeConfig.set(LIVE_TEST_TENANT, { secretKey: liveStripeSecretKey(), webhookSecret })
+      await t.consequent.handle(`cust_${customer.id}`, 'customer.create', {
+        id: `cust_${customer.id}`,
+        tenant: LIVE_TEST_TENANT,
+        scope: { account: 'live-dispute-acct' },
+        stripeCustomerId: customer.id,
+      })
+
+      const disputeId = `dp_live_${Math.random().toString(36).slice(2)}`
+      const eventPayload = JSON.stringify({
+        id: `evt_live_${Math.random().toString(36).slice(2)}`,
+        type: 'charge.dispute.created',
+        data: { object: { id: disputeId, charge: chargeId, amount: 500, currency: 'usd', reason: 'fraudulent', status: 'needs_response' } },
+      })
+      const signature = stripe.webhooks.generateTestHeaderString({ payload: eventPayload, secret: webhookSecret })
+
+      const response = await t.app.inject({
+        method: 'POST',
+        url: '/_authstar/webhooks/stripe',
+        headers: { 'x-authstar-tenant-slug': LIVE_TEST_TENANT, 'stripe-signature': signature, 'content-type': 'application/json' },
+        payload: eventPayload,
+      })
+      expect(response.statusCode).toBe(200)
+
+      const disputes = await t.app.inject({ method: 'GET', url: `/tenants/${LIVE_TEST_TENANT}/disputes`, headers: readHeaders })
+      const dispute = (disputes.json() as Array<{ stripeDisputeId: string, scope: unknown }>).find((d) => d.stripeDisputeId === disputeId)
+      expect(dispute?.scope).toEqual({ account: 'live-dispute-acct' })
     })
   })
 

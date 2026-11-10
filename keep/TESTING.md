@@ -28,9 +28,10 @@ entitlement-publishing dependencies.
 
 - Same in-memory `consequent` instance as behavior tests, but exercises a realistic *sequence*
   of calls through the HTTP surface — `subscription-lifecycle.spec.ts` (stripe-config → plan
-  mappings → checkout → webhook create → upgrade → cancel) and
+  mappings → checkout → webhook create → upgrade → cancel, and a failed payment that degrades at
+  the grace threshold and recovers on `invoice.paid`) and
   `trial-and-dispute-lifecycle.spec.ts` (trial grant → extend → webhook-driven conversion →
-  dispute degrade → dispute-won restore).
+  dispute degrade, its scope resolved through the charge → dispute-won restore).
 
 ## `spec/integration/*.integration.spec.ts` — real dependencies, this service only
 
@@ -89,6 +90,10 @@ entitlement-publishing dependencies.
   `customer` actor scoped to an organization, and confirms the real portal-sessions route
   returns a genuine `billing.stripe.com` URL — not `checkout.stripe.com`, proving this hits
   `stripe.billingPortal.sessions.create`, not `checkout.sessions.create`.
+- **`retrieveCharge` (ADR 0107)** charges a real test-mode Customer $5 with `pm_card_visa` and
+  checks that `retrieveCharge` returns that customer's id, not an expanded object. It then sends
+  a signed `charge.dispute.created` naming the real charge, with no metadata, and checks that
+  keep records the dispute under the scope of its own customer record for that Stripe customer.
 - **Subscription renewal via a Stripe test clock** (`stripe.testHelpers.testClocks`) creates a
   clock-attached subscription, advances simulated time past its billing period, and confirms
   both that Stripe genuinely rolled it to a new period (proof real time passed, not something
@@ -110,6 +115,39 @@ entitlement-publishing dependencies.
     deployed.
 - Needs network access to `api.stripe.com` and a real (test-mode) Stripe account.
 
+## The Stripe webhook specs (ADR 0107, ADR 0108, ADR 0109)
+
+Beside `webhooks.spec.ts`, which covers each event type's own handling, four behavior specs pin
+down what keep decides across events:
+
+- **`webhook-redelivery.spec.ts`: each Stripe event is handled once.** It delivers every event
+  type the webhook handles twice with the same Stripe event id. It asserts that the second
+  delivery answers 200, runs no handler, and publishes nothing, and that an event whose handler
+  failed is not recorded, so its redelivery runs. It counts publishes, not only records,
+  because a handler whose records are idempotent can still send tower a second `role-granted` or
+  `role-revoked`. It also sends `customer.subscription.created` and `checkout.session.completed`
+  for one subscription, with different ids, and asserts one set of activation events. The
+  processed ids are kept by the `stripeEvent` actor, keyed `{tenant}:{stripeEventId}`.
+- **`webhook-grace-period.spec.ts`: a failed payment degrades only at the threshold.** With the
+  tenant's `paymentFailureAttempts` at 3, attempts 1 and 2 publish nothing and attempt 3
+  publishes one `role-revoked` per plan role; a later `invoice.paid` publishes one
+  `role-granted` per role. With the threshold at 1 the first failure degrades, `unpaid` degrades
+  before the threshold, and a second degrade or restore trigger publishes nothing, because the
+  subscription records its `entitlement`, `granted` or `degraded`.
+- **`webhook-disputes.spec.ts`: a dispute's scope comes from its charge.** The fake's
+  `retrieveCharge` (`spec/lib/fake-stripe-client.ts`, seeded through `charges` on its state)
+  gives the charge's customer, and keep takes the scope of its own customer record for it. A
+  dispute with empty metadata degrades that customer's subscription, `won` restores only the
+  subscription the dispute degraded, `lost` publishes nothing, and a dispute on an unknown
+  customer is recorded and publishes nothing.
+- **`report-tenant-scope.spec.ts`: the retired `{tenant}` scope is reported, not changed.** It
+  seeds a tenant-scoped and an account-scoped record and asserts that
+  `npm run report:tenant-scope`'s query lists only the first and leaves both as they were.
+
+`webhooks.spec.ts` also fails any test that publishes an event whose scope has no account or
+organization id, and `checkout-sessions.spec.ts` and `trials.spec.ts` assert that a `{tenant}`
+scope is refused with a 400 that names it.
+
 ## What's covered vs. left for a follow-up pass
 
 **Fully implemented, all 3 tiers passing (70 tests: 65 behavior, 2 e2e, 3 integration) as of the
@@ -119,10 +157,14 @@ pass added on top:**
 - All 9 Story 001 actors: `customer`, `planMapping`, `subscription`, `trial`, `coupon`,
   `usageRecord`, `usageReportingCredential`, `refund`, `dispute`.
 - Story 002 (Stripe webhook handling) — the full event table: `checkout.session.completed`,
-  `customer.subscription.created`/`.updated`/`.deleted`, `invoice.payment_failed`,
-  `charge.refunded`, `charge.dispute.created`/`.closed` (won/lost), `account.updated` (ignored).
-  Entitlement publishing (`converted-to-paid`, `role-granted`/`role-revoked` as a delta on
-  upgrade, `seat-limit-changed`, one shared sequence per tenant/scope) is real and tested.
+  `customer.subscription.created`/`.updated`/`.deleted`/`.paused`/`.resumed`,
+  `invoice.payment_failed`, `invoice.paid`, `charge.refunded`, `charge.dispute.created`/`.closed`
+  (won/lost), `account.updated` (ignored). Entitlement publishing (`converted-to-paid`,
+  `role-granted`/`role-revoked` as a delta on upgrade, `seat-limit-changed` for organizations,
+  one shared sequence per tenant/scope) is real and tested. Since S-0005, the subscription
+  mirrors every status Stripe sends, a failed payment degrades only at the tenant's
+  `paymentFailureAttempts` (ADR 0107), disputes resolve their scope through the charge, and each
+  event id is handled once; see "The Stripe webhook specs" above.
 - Story 003 (plan mappings, checkout sessions, billing reads) — full CRUD + retire-alias +
   reference-cache role validation, checkout session creation with customer reuse, all read-only
   surfaces including `revenue-summary`'s MRR computation.
@@ -268,7 +310,8 @@ tenant-scoped, mutable cache (`upsertApplication`/`upsertRoleDefinition`), kept 
   per-tenant lookups), so an eager whole-installation sweep at boot isn't buildable against
   tower's actual current API surface. What's implemented instead is **per-tenant,
   on-first-touch**: `ensureFresh(tenant)` is called from `plan-mappings.ts`/`trials.ts`/
-  `coupons.ts` right before validating `grantedRoles`, backfills that tenant only the first time
+  `coupons.ts` right before validating the roles a request names (a plan mapping's `roles`, a
+  trial's or coupon's `grantedRoles`), backfills that tenant only the first time
   in the process's lifetime, and is a no-op afterward (the live consumer above keeps it current).
   `refreshAll()` (wired into `server.ts` on a 5-minute interval) is the ADR's own "periodic
   re-run as a safety net," re-checking every tenant already known — guards against a missed
@@ -284,7 +327,8 @@ tenant-scoped, mutable cache (`upsertApplication`/`upsertRoleDefinition`), kept 
   itself (not just the cache/consumer/backfill modules in isolation): builds the app directly
   with a real, non-no-op `RoleReferenceBackfill` and asserts a role invalid before `ensureFresh`
   runs is accepted once it does, that the request's own tenant (not a hardcoded one) is passed,
-  and that PATCH only triggers it when `grantedRoles` is actually in the body.
+  and that PATCH only triggers it when roles are actually in the body (`roles`, or its
+  deprecated alias `grantedRoles`, ADR 0108).
 - **`spec/behavior/role-reference-cache.spec.ts`** — the cache's own unit-level contract
   (tenant isolation, application-inactive invalidates every role under it, `validateAll` reports
   every invalid entry not just the first), previously only exercised indirectly.
