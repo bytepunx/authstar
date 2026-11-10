@@ -165,4 +165,76 @@ describe('subscription lifecycle -- checkout, upgrade, cancel, end to end', () =
     expect(revenue.json().activeCount).toBe(0)
     expect(revenue.json().byStatus.canceled).toBe(1)
   })
+
+  // ADR 0107: Stripe's dunning runs while the user keeps access; keep
+  // degrades only at the tenant's threshold, and restores on payment.
+  it('walks a payment failure through the grace period, a degrade, and a recovery, all via HTTP', async () => {
+    // 1. Admin connects Stripe with a threshold of 2 failed attempts.
+    t.stripeState.validApiKeys.add('sk_live_acme')
+    const config = await app.inject({
+      method: 'PATCH',
+      url: '/tenants/acme/stripe-config',
+      headers: manageHeaders,
+      payload: { secretKey: 'sk_live_acme', webhookSecret: 'whsec_acme', paymentFailureAttempts: 2 },
+    })
+    expect(config.statusCode).toBe(200)
+    expect(config.json().paymentFailureAttempts).toBe(2)
+
+    t.stripeState.prices.set('price_basic', { unitAmount: 900, currency: 'usd', interval: 'month' })
+    const basic = await app.inject({
+      method: 'POST',
+      url: '/tenants/acme/plan-mappings',
+      headers: manageHeaders,
+      payload: { stripePriceId: 'price_basic', name: 'Basic', roles: [{ application: 'demo-app', role: 'member' }] },
+    })
+    expect(basic.statusCode).toBe(201)
+
+    // 2. The subscription starts.
+    await webhook(stripeEventPayload('customer.subscription.created', {
+      id: 'sub_e2e_dunning',
+      customer: 'cus_e2e_dunning',
+      status: 'active',
+      items: { data: [{ price: { id: 'price_basic' }, current_period_end: 1_700_000_000 }] },
+      metadata: { scope: JSON.stringify({ account: 'acct_dunning' }) },
+    }))
+    const roleEvents = () => t.publisher.published
+      .filter((e) => e.type === 'entitlement.role-granted' || e.type === 'entitlement.role-revoked')
+      .map((e) => e.type)
+    expect(roleEvents()).toEqual(['entitlement.role-granted'])
+
+    // 3. The first renewal fails: Stripe marks it past_due and retries.
+    await webhook(stripeEventPayload('customer.subscription.updated', {
+      id: 'sub_e2e_dunning',
+      customer: 'cus_e2e_dunning',
+      status: 'past_due',
+      items: { data: [{ price: { id: 'price_basic' }, current_period_end: 1_702_600_000 }] },
+    }))
+    await webhook(stripeEventPayload('invoice.payment_failed', {
+      subscription: 'sub_e2e_dunning', customer: 'cus_e2e_dunning', attempt_count: 1, next_payment_attempt: 1_700_300_000,
+    }))
+    const inGrace = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_dunning', headers: readHeaders })
+    expect(inGrace.json()).toMatchObject({ status: 'past_due', entitlement: 'granted', lastFailedAttempt: 1 })
+    expect(roleEvents()).toEqual(['entitlement.role-granted'])
+
+    // 4. The retry fails too: the threshold is reached and the plan's role is revoked.
+    await webhook(stripeEventPayload('invoice.payment_failed', {
+      subscription: 'sub_e2e_dunning', customer: 'cus_e2e_dunning', attempt_count: 2, next_payment_attempt: 1_700_600_000,
+    }))
+    const degraded = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_dunning', headers: readHeaders })
+    expect(degraded.json()).toMatchObject({ status: 'past_due', entitlement: 'degraded', lastFailedAttempt: 2 })
+    expect(roleEvents()).toEqual(['entitlement.role-granted', 'entitlement.role-revoked'])
+
+    // 5. The customer updates their card: Stripe marks it active and the invoice paid.
+    await webhook(stripeEventPayload('customer.subscription.updated', {
+      id: 'sub_e2e_dunning',
+      customer: 'cus_e2e_dunning',
+      status: 'active',
+      items: { data: [{ price: { id: 'price_basic' }, current_period_end: 1_702_600_000 }] },
+    }))
+    await webhook(stripeEventPayload('invoice.paid', { subscription: 'sub_e2e_dunning', customer: 'cus_e2e_dunning' }))
+
+    const recovered = await app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_e2e_dunning', headers: readHeaders })
+    expect(recovered.json()).toMatchObject({ status: 'active', entitlement: 'granted', lastFailedAttempt: null, nextPaymentAttempt: null })
+    expect(roleEvents()).toEqual(['entitlement.role-granted', 'entitlement.role-revoked', 'entitlement.role-granted'])
+  })
 })

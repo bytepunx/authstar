@@ -3,10 +3,11 @@ import { searchCriteria } from '../lib/consequent-types.js'
 import type { StripeWebhookEvent, StripeClient, StripeSubscriptionSummary } from '../lib/stripe-client.js'
 import type { CustomerState } from '../actors/customer_actor.js'
 import type { PlanMappingState, GrantedRole } from '../actors/plan_mapping_actor.js'
-import { isSubscriptionStatus, type SubscriptionState, type SubscriptionStatus } from '../actors/subscription_actor.js'
+import { entitlementOf, isSubscriptionStatus, type SubscriptionEntitlement, type SubscriptionState, type SubscriptionStatus } from '../actors/subscription_actor.js'
 import type { TrialState } from '../actors/trial_actor.js'
 import generateId from '../lib/ids.js'
 import { scopesEqual, isValidScope, type Scope } from '../lib/scope.js'
+import { effectivePaymentFailureAttempts } from '../lib/stripe-config.js'
 
 // Per design/stories/keep/002-stripe-webhook-handling.md.
 //
@@ -105,6 +106,8 @@ interface StripeInvoiceObject {
   subscription: string
   customer: string
   attempt_count?: number
+  // Unix seconds; null once Stripe has no retry left to make.
+  next_payment_attempt?: number | null
 }
 
 // ADR 0109: the scope in a Stripe object's metadata, when it is `{account}`
@@ -198,6 +201,36 @@ async function publishRoleEvents(app: FastifyInstance, tenant: string, scope: Sc
       role: { name: role.role, scope: role.application },
     })
   }
+}
+
+// ADR 0107: statuses under which a degraded subscription's plan roles may be
+// restored. A canceled subscription stays degraded.
+const RESTORABLE_STATUSES: readonly SubscriptionStatus[] = ['active', 'trialing']
+
+// Statuses Stripe mirrors onto a subscription that end its grace period
+// before the attempt threshold does, or stop its billing (ADR 0107).
+const DEGRADING_STATUSES: readonly SubscriptionStatus[] = ['unpaid', 'canceled', 'paused']
+
+// ADR 0107's degrade and restore, in one place: moves the subscription's
+// entitlement to `target`, publishing one `role-revoked` (degrade) or
+// `role-granted` (restore) per role of its plan mapping, then recording the
+// new state. A no-op when the subscription is already in `target`, unknown,
+// or, for a restore, not `active` or `trialing`. Returns whether it changed
+// the record. Publishes before it records, so a failure part-way leaves the
+// record in its old state and a redelivery publishes again; tower's grant and
+// revoke are set operations, so a repeat is harmless.
+async function setEntitlement(app: FastifyInstance, tenant: string, stripeSubscriptionId: string, target: SubscriptionEntitlement): Promise<boolean> {
+  const subscription = await findSubscription(app, stripeSubscriptionId)
+  if (!subscription || entitlementOf(subscription) === target) return false
+  if (target === 'granted' && !RESTORABLE_STATUSES.includes(subscription.status)) return false
+
+  const scope = storedScope(subscription.scope)
+  const mapping = await findPlanMappingByPriceId(app, tenant, subscription.stripePriceId)
+  if (scope && mapping) {
+    await publishRoleEvents(app, tenant, scope, mapping.roles, target === 'degraded' ? 'entitlement.role-revoked' : 'entitlement.role-granted')
+  }
+  await app.consequent.handle(stripeSubscriptionId, target === 'degraded' ? 'subscription.degrade' : 'subscription.restore', {})
+  return true
 }
 
 async function publishSeatLimitIfSet(app: FastifyInstance, tenant: string, scope: Scope, seatLimit: number | null) {
@@ -295,7 +328,11 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
 }
 
 // A status-only update, with no change of price, writes the status Stripe
-// sent and publishes nothing (ADR 0107).
+// sent and publishes nothing (ADR 0107), unless that status is `unpaid`,
+// `canceled`, or `paused`, which degrades. A price change publishes the role
+// delta between the two plans only while the plan's roles are in effect: a
+// degraded subscription's roles are revoked, and a restore grants the new
+// plan's roles in full.
 async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
   const status = mirroredStatus(app, tenant, sub)
   if (!status) return
@@ -310,7 +347,8 @@ async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: 
     currentPeriodEnd: periodEndIso(sub),
   })
 
-  if (scope && previousPriceId && previousPriceId !== newPriceId) {
+  const rolesInEffect = existing !== undefined && entitlementOf(existing) === 'granted'
+  if (scope && rolesInEffect && previousPriceId && previousPriceId !== newPriceId) {
     const [previousMapping, newMapping] = await Promise.all([
       findPlanMappingByPriceId(app, tenant, previousPriceId),
       findPlanMappingByPriceId(app, tenant, newPriceId),
@@ -324,85 +362,86 @@ async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: 
       await publishApiKeyRateLimitIfSet(app, tenant, scope, newMapping.apiKeyRateLimit)
     }
   }
+
+  if (DEGRADING_STATUSES.includes(status)) {
+    await setEntitlement(app, tenant, sub.id, 'degraded')
+  }
 }
 
 async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
   const status = mirroredStatus(app, tenant, sub)
   if (!status) return
-  const existing = await findSubscription(app, sub.id)
-  const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
-
   await app.consequent.handle(sub.id, 'subscription.update', { status, currentPeriodEnd: periodEndIso(sub) })
 
-  if (existing && scope) {
-    const mapping = await findPlanMappingByPriceId(app, tenant, existing.stripePriceId)
-    if (mapping) {
-      await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
-    }
+  // An `incomplete_expired` subscription never started, and revokes nothing (ADR 0107).
+  if (status !== 'incomplete_expired') {
+    await setEntitlement(app, tenant, sub.id, 'degraded')
   }
 }
 
 // `customer.subscription.paused`/`.resumed` -- Stripe's `pause_collection`
 // state (a subscription stays otherwise intact, billing simply stops,
-// distinct from cancellation). Unlike `onSubscriptionUpdated`, whose role
-// diffing is keyed entirely off a *price* change, pause/resume never touch
-// price -- so update-record-then-diff-by-price would silently grant/revoke
-// nothing. Deliberately unconditional revoke/grant against the plan
-// mapping's full `roles`, matching the same posture
-// `onInvoicePaymentFailed`/`onDisputeCreated`/`onDisputeClosed` already use
-// for other status-only degrade/restore transitions.
+// distinct from cancellation). Pause and resume never touch price, so they
+// degrade and restore the plan's full `roles` (ADR 0107).
 async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
   const status = mirroredStatus(app, tenant, sub)
   if (!status) return
-  const existing = await findSubscription(app, sub.id)
-  const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
-
   await app.consequent.handle(sub.id, 'subscription.update', {
     status,
     currentPeriodEnd: periodEndIso(sub),
   })
-
-  if (!scope) return
-  const stripePriceId = existing?.stripePriceId ?? sub.stripePriceId
-  const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
-  if (mapping) {
-    await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
-  }
+  await setEntitlement(app, tenant, sub.id, 'degraded')
 }
 
 async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
   const status = mirroredStatus(app, tenant, sub)
   if (!status) return
-  const existing = await findSubscription(app, sub.id)
-  const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
-
   await app.consequent.handle(sub.id, 'subscription.update', {
     status,
     currentPeriodEnd: periodEndIso(sub),
   })
+  await setEntitlement(app, tenant, sub.id, 'granted')
+}
 
-  if (!scope) return
-  const stripePriceId = existing?.stripePriceId ?? sub.stripePriceId
-  const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
-  if (mapping) {
-    await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-granted')
+// `invoice.payment_failed` -- ADR 0107's grace period. Stripe runs dunning
+// and reports the invoice's `attempt_count`; keep records it with the next
+// retry and publishes nothing until the count reaches the tenant's
+// `paymentFailureAttempts` (default 3), when it degrades. The status is left
+// alone: Stripe sends `customer.subscription.updated` with `past_due` beside it.
+async function onInvoicePaymentFailed(app: FastifyInstance, tenant: string, invoice: StripeInvoiceObject) {
+  const existing = await findSubscription(app, invoice.subscription)
+  if (!existing) return
+  const attemptCount = invoice.attempt_count ?? 1
+  const nextPaymentAttempt = typeof invoice.next_payment_attempt === 'number' ? new Date(invoice.next_payment_attempt * 1000).toISOString() : null
+  await app.consequent.handle(invoice.subscription, 'subscription.recordPaymentFailure', { attemptCount, nextPaymentAttempt })
+
+  const threshold = await effectivePaymentFailureAttempts(app.stripeConfig, tenant)
+  if (attemptCount >= threshold) {
+    await setEntitlement(app, tenant, invoice.subscription, 'degraded')
   }
 }
 
-// `invoice.payment_failed` -- Story 002 calls out "a tunable attempt-count
-// threshold, not fixed here." This pilot slice degrades immediately on the
-// first failure rather than tracking an attempt count across invoices --
-// a deliberate simplification, not the full grace-period mechanism the
-// story describes. Reuses the same plan-roles degrade
-// `charge.dispute.created` uses. Left as a documented follow-up (TESTING.md).
-async function onInvoicePaymentFailed(app: FastifyInstance, tenant: string, invoice: StripeInvoiceObject) {
+// `invoice.paid` -- ends a grace period: clears the failure record, and
+// restores a degraded subscription whose status is `active` or `trialing`
+// (ADR 0107). Stripe does not order `invoice.paid` against the
+// `customer.subscription.updated` that moves the status back to `active`, so
+// a degraded subscription whose mirrored status is not yet restorable reads
+// its status from Stripe first. Only a degraded subscription makes that read.
+async function onInvoicePaid(app: FastifyInstance, tenant: string, invoice: StripeInvoiceObject, client: StripeClient) {
   const existing = await findSubscription(app, invoice.subscription)
-  const scope = storedScope(existing?.scope)
-  if (!existing || !scope) return
-  const mapping = await findPlanMappingByPriceId(app, tenant, existing.stripePriceId)
-  if (mapping) {
-    await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
+  if (!existing) return
+  if (existing.lastFailedAttempt !== null || existing.nextPaymentAttempt !== null) {
+    await app.consequent.handle(invoice.subscription, 'subscription.recordPayment', {})
   }
+  if (entitlementOf(existing) !== 'degraded') return
+
+  if (!RESTORABLE_STATUSES.includes(existing.status)) {
+    const current = await client.getSubscription(invoice.subscription)
+    const status = mirroredStatus(app, tenant, current)
+    if (!status) return
+    await app.consequent.handle(invoice.subscription, 'subscription.update', { status, currentPeriodEnd: periodEndIso(current) })
+  }
+  await setEntitlement(app, tenant, invoice.subscription, 'granted')
 }
 
 async function onChargeRefunded(app: FastifyInstance, tenant: string, charge: StripeChargeObject) {
@@ -446,15 +485,12 @@ async function onDisputeCreated(app: FastifyInstance, tenant: string, dispute: S
     reason: dispute.reason,
   })
 
-  // Reuses the exact plan-roles degrade `invoice.payment_failed`
-  // uses (Story 002).
+  // The same degrade `invoice.payment_failed` uses (ADR 0107): a no-op on a
+  // subscription already degraded.
   if (!scope) return
   const subscription = await findSubscriptionByScope(app, tenant, scope)
   if (subscription) {
-    const mapping = await findPlanMappingByPriceId(app, tenant, subscription.stripePriceId)
-    if (mapping) {
-      await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
-    }
+    await setEntitlement(app, tenant, subscription.stripeSubscriptionId, 'degraded')
   }
 }
 
@@ -465,10 +501,7 @@ async function onDisputeClosed(app: FastifyInstance, tenant: string, dispute: St
   if (dispute.status === 'won' && scope) {
     const subscription = await findSubscriptionByScope(app, tenant, scope)
     if (subscription) {
-      const mapping = await findPlanMappingByPriceId(app, tenant, subscription.stripePriceId)
-      if (mapping) {
-        await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-granted')
-      }
+      await setEntitlement(app, tenant, subscription.stripeSubscriptionId, 'granted')
     }
   }
 }
@@ -509,6 +542,9 @@ async function handleStripeEvent(app: FastifyInstance, tenant: string, event: St
       return
     case 'invoice.payment_failed':
       await onInvoicePaymentFailed(app, tenant, object as StripeInvoiceObject)
+      return
+    case 'invoice.paid':
+      await onInvoicePaid(app, tenant, object as StripeInvoiceObject, client)
       return
     case 'charge.refunded':
       await onChargeRefunded(app, tenant, object as StripeChargeObject)
