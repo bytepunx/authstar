@@ -370,6 +370,76 @@ describe('stripe webhook handling -- API contract', () => {
       const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_cs_1', headers: readHeaders })
       expect(sub.statusCode).toBe(200)
       expect(sub.json().stripePriceId).toBe('price_basic')
+      // The normalized summary's period end is stored as it is, not re-wrapped.
+      expect(sub.json().currentPeriodEnd).toBe(new Date(1_700_000_000 * 1000).toISOString())
+    })
+  })
+
+  describe('subscription status mirrors Stripe (ADR 0107)', () => {
+    async function createActive(id: string, account: string) {
+      await post(stripeEventPayload('customer.subscription.created', {
+        id,
+        customer: `cus_${id}`,
+        status: 'active',
+        items: { data: [{ price: { id: 'price_basic' }, current_period_end: 1_700_000_000 }] },
+        metadata: { scope: JSON.stringify({ account }) },
+      }))
+      t.publisher.published.length = 0
+    }
+
+    async function sendUpdated(id: string, status: string) {
+      return post(stripeEventPayload('customer.subscription.updated', {
+        id,
+        customer: `cus_${id}`,
+        status,
+        items: { data: [{ price: { id: 'price_basic' }, current_period_end: 1_700_100_000 }] },
+      }))
+    }
+
+    async function storedStatus(id: string) {
+      const sub = await t.app.inject({ method: 'GET', url: `/tenants/acme/subscriptions/${id}`, headers: readHeaders })
+      return sub.json().status as string
+    }
+
+    const statuses = ['incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused']
+
+    for (const status of statuses) {
+      it(`stores ${status} when customer.subscription.updated sends it`, async () => {
+        await createActive(`sub_status_${status}`, `acct_status_${status}`)
+        const response = await sendUpdated(`sub_status_${status}`, status)
+        expect(response.statusCode).toBe(200)
+        expect(await storedStatus(`sub_status_${status}`)).toBe(status)
+      })
+    }
+
+    it('a status-only update to past_due stores past_due and publishes nothing', async () => {
+      await createActive('sub_past_due', 'acct_past_due')
+      const response = await sendUpdated('sub_past_due', 'past_due')
+      expect(response.statusCode).toBe(200)
+      expect(await storedStatus('sub_past_due')).toBe('past_due')
+      expect(t.publisher.published).toHaveLength(0)
+    })
+
+    it('refuses a status outside Stripe\'s set: stores nothing, publishes nothing, still answers 200', async () => {
+      await createActive('sub_unknown', 'acct_unknown')
+      const response = await sendUpdated('sub_unknown', 'not_a_stripe_status')
+      expect(response.statusCode).toBe(200)
+      expect(await storedStatus('sub_unknown')).toBe('active')
+      expect(t.publisher.published).toHaveLength(0)
+    })
+
+    it('does not record a new subscription whose status is outside Stripe\'s set', async () => {
+      const response = await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_unknown_new',
+        customer: 'cus_unknown_new',
+        status: 'not_a_stripe_status',
+        items: { data: [{ price: { id: 'price_basic' }, current_period_end: 1_700_000_000 }] },
+        metadata: { scope: JSON.stringify({ account: 'acct_unknown_new' }) },
+      }))
+      expect(response.statusCode).toBe(200)
+      const sub = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions/sub_unknown_new', headers: readHeaders })
+      expect(sub.statusCode).toBe(404)
+      expect(t.publisher.published).toHaveLength(0)
     })
   })
 

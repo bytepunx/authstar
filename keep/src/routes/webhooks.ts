@@ -1,9 +1,9 @@
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { searchCriteria } from '../lib/consequent-types.js'
-import type { StripeWebhookEvent, StripeClient } from '../lib/stripe-client.js'
+import type { StripeWebhookEvent, StripeClient, StripeSubscriptionSummary } from '../lib/stripe-client.js'
 import type { CustomerState } from '../actors/customer_actor.js'
 import type { PlanMappingState, GrantedRole } from '../actors/plan_mapping_actor.js'
-import type { SubscriptionState } from '../actors/subscription_actor.js'
+import { isSubscriptionStatus, type SubscriptionState, type SubscriptionStatus } from '../actors/subscription_actor.js'
 import type { TrialState } from '../actors/trial_actor.js'
 import generateId from '../lib/ids.js'
 import { scopesEqual, isValidScope, type Scope } from '../lib/scope.js'
@@ -47,6 +47,34 @@ interface StripeSubscriptionObject {
 // fixtures/API versions that still set it there keep working.
 function periodEnd(sub: StripeSubscriptionObject): number {
   return sub.items.data[0]?.current_period_end ?? sub.current_period_end ?? 0
+}
+
+// Every subscription handler works on the one normalized shape
+// `getSubscription` returns, so a raw `customer.subscription.*` payload is
+// normalized here and the checkout path passes its summary straight through.
+function summarize(sub: StripeSubscriptionObject): StripeSubscriptionSummary {
+  return {
+    id: sub.id,
+    customer: sub.customer,
+    status: sub.status,
+    currentPeriodEnd: periodEnd(sub),
+    stripePriceId: sub.items.data[0]?.price.id ?? '',
+    metadata: (sub.metadata ?? {}) as Record<string, string>,
+  }
+}
+
+function periodEndIso(sub: StripeSubscriptionSummary): string {
+  return new Date(sub.currentPeriodEnd * 1000).toISOString()
+}
+
+// ADR 0107: the status Stripe sent, narrowed to the statuses keep mirrors.
+// A status outside them is logged and refused: the event stores nothing and
+// publishes nothing, and Stripe still gets its 200, since a redelivery would
+// carry the same status.
+function mirroredStatus(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary): SubscriptionStatus | undefined {
+  if (isSubscriptionStatus(sub.status)) return sub.status
+  app.log.warn({ tenant, stripeSubscriptionId: sub.id, status: sub.status }, 'stripe subscription status not recognized')
+  return undefined
 }
 
 interface StripeCheckoutSessionObject {
@@ -222,7 +250,9 @@ async function publishApiKeyRateLimitIfSet(app: FastifyInstance, tenant: string,
 // and publishes the informational `converted-to-paid` event plus one
 // `role-granted` per role the matching plan mapping lists (Story 002:
 // "one per role... not one event carrying an array").
-async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
+async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
+  const status = mirroredStatus(app, tenant, sub)
+  if (!status) return
   const knownCustomer = await findCustomerByStripeId(app, tenant, sub.customer)
   const scope = readScope(sub.metadata) ?? storedScope(knownCustomer?.scope)
   if (!scope) {
@@ -232,7 +262,7 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
     return
   }
   const customer = await findOrCreateCustomer(app, tenant, scope, sub.customer)
-  const stripePriceId = sub.items.data[0]?.price.id ?? ''
+  const stripePriceId = sub.stripePriceId
   const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
 
   const alreadyExists = await findSubscription(app, sub.id)
@@ -242,8 +272,8 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
       tenant,
       scope: storedScope(customer.scope) ?? scope,
       stripePriceId,
-      status: sub.status,
-      currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
+      status,
+      currentPeriodEnd: periodEndIso(sub),
     })
   }
 
@@ -264,16 +294,20 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
   }
 }
 
-async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
+// A status-only update, with no change of price, writes the status Stripe
+// sent and publishes nothing (ADR 0107).
+async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
+  const status = mirroredStatus(app, tenant, sub)
+  if (!status) return
   const existing = await findSubscription(app, sub.id)
   const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
   const previousPriceId = existing?.stripePriceId
-  const newPriceId = sub.items.data[0]?.price.id ?? ''
+  const newPriceId = sub.stripePriceId
 
   await app.consequent.handle(sub.id, 'subscription.update', {
-    status: sub.status,
+    status,
     stripePriceId: newPriceId,
-    currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
+    currentPeriodEnd: periodEndIso(sub),
   })
 
   if (scope && previousPriceId && previousPriceId !== newPriceId) {
@@ -292,11 +326,13 @@ async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: 
   }
 }
 
-async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
+async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
+  const status = mirroredStatus(app, tenant, sub)
+  if (!status) return
   const existing = await findSubscription(app, sub.id)
   const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
 
-  await app.consequent.handle(sub.id, 'subscription.update', { status: 'canceled' })
+  await app.consequent.handle(sub.id, 'subscription.update', { status, currentPeriodEnd: periodEndIso(sub) })
 
   if (existing && scope) {
     const mapping = await findPlanMappingByPriceId(app, tenant, existing.stripePriceId)
@@ -315,34 +351,38 @@ async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: 
 // mapping's full `roles`, matching the same posture
 // `onInvoicePaymentFailed`/`onDisputeCreated`/`onDisputeClosed` already use
 // for other status-only degrade/restore transitions.
-async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
+async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
+  const status = mirroredStatus(app, tenant, sub)
+  if (!status) return
   const existing = await findSubscription(app, sub.id)
   const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
 
   await app.consequent.handle(sub.id, 'subscription.update', {
-    status: sub.status,
-    currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
+    status,
+    currentPeriodEnd: periodEndIso(sub),
   })
 
   if (!scope) return
-  const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
+  const stripePriceId = existing?.stripePriceId ?? sub.stripePriceId
   const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
   if (mapping) {
     await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
   }
 }
 
-async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
+async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: StripeSubscriptionSummary) {
+  const status = mirroredStatus(app, tenant, sub)
+  if (!status) return
   const existing = await findSubscription(app, sub.id)
   const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
 
   await app.consequent.handle(sub.id, 'subscription.update', {
-    status: sub.status,
-    currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
+    status,
+    currentPeriodEnd: periodEndIso(sub),
   })
 
   if (!scope) return
-  const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
+  const stripePriceId = existing?.stripePriceId ?? sub.stripePriceId
   const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
   if (mapping) {
     await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-granted')
@@ -449,30 +489,23 @@ async function handleStripeEvent(app: FastifyInstance, tenant: string, event: St
       // real-world case), the second call is a safe no-op via
       // `onSubscriptionActivated`'s own existence check.
       const sub = await client.getSubscription(session.subscription)
-      await onSubscriptionActivated(app, tenant, {
-        id: sub.id,
-        customer: sub.customer,
-        status: sub.status,
-        current_period_end: sub.currentPeriodEnd,
-        items: { data: [{ price: { id: sub.stripePriceId } }] },
-        metadata: (session.metadata ?? sub.metadata) as { scope?: string } | undefined,
-      })
+      await onSubscriptionActivated(app, tenant, { ...sub, metadata: (session.metadata as Record<string, string> | undefined) ?? sub.metadata })
       return
     }
     case 'customer.subscription.created':
-      await onSubscriptionActivated(app, tenant, object as StripeSubscriptionObject)
+      await onSubscriptionActivated(app, tenant, summarize(object as StripeSubscriptionObject))
       return
     case 'customer.subscription.updated':
-      await onSubscriptionUpdated(app, tenant, object as StripeSubscriptionObject)
+      await onSubscriptionUpdated(app, tenant, summarize(object as StripeSubscriptionObject))
       return
     case 'customer.subscription.deleted':
-      await onSubscriptionDeleted(app, tenant, object as StripeSubscriptionObject)
+      await onSubscriptionDeleted(app, tenant, summarize(object as StripeSubscriptionObject))
       return
     case 'customer.subscription.paused':
-      await onSubscriptionPaused(app, tenant, object as StripeSubscriptionObject)
+      await onSubscriptionPaused(app, tenant, summarize(object as StripeSubscriptionObject))
       return
     case 'customer.subscription.resumed':
-      await onSubscriptionResumed(app, tenant, object as StripeSubscriptionObject)
+      await onSubscriptionResumed(app, tenant, summarize(object as StripeSubscriptionObject))
       return
     case 'invoice.payment_failed':
       await onInvoicePaymentFailed(app, tenant, object as StripeInvoiceObject)

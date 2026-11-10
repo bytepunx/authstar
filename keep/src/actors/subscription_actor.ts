@@ -10,7 +10,16 @@ import type { Scope } from '../lib/scope.js'
 
 // ADR 0109: one scope type for every keep actor, `{account}` or `{organization}`.
 export type SubscriptionScope = Scope
-export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'trialing' | 'paused'
+
+// ADR 0107: every status Stripe can send. Keep stores the status Stripe sent
+// and never invents one.
+export const SUBSCRIPTION_STATUSES = ['incomplete', 'incomplete_expired', 'trialing', 'active', 'past_due', 'canceled', 'unpaid', 'paused'] as const
+export type SubscriptionStatus = typeof SUBSCRIPTION_STATUSES[number]
+
+// Whether a raw Stripe status is one keep mirrors.
+export function isSubscriptionStatus(value: unknown): value is SubscriptionStatus {
+  return typeof value === 'string' && (SUBSCRIPTION_STATUSES as readonly string[]).includes(value)
+}
 
 export interface SubscriptionState {
   stripeSubscriptionId: string
