@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 6.2709
-accrued_seconds: 658
-tasks_completed: 4
-last_run: 2026-11-09T20:46:19Z
+accrued_cost: 7.9860
+accrued_seconds: 798
+tasks_completed: 5
+last_run: 2026-11-10T00:05:55Z
 ---
 
 # Curator activity
@@ -43,3 +43,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0019, D-0028, D-0029, D-0031
 - Seconds: 108
 - Cost: 1.1099 USD, estimated
+
+### 2026-11-10T00:05:55Z
+
+- Summary: Wrote D-0036 (the signet CLI's `bundle push` cannot write a service's config, so bundles are pushed through `SyncBundle` with `@bytepunx/signet-client`); merged S-0019 into D-0026, D-0031 and D-0035, and TH-0031's outcome into D-0034 (the `authstar-integration` cluster's signet has no repository registered); absorbed D-0035 into `design/system/overview.md` § Cross-cutting; `flai digest compact` compacted none and recorded citers on 7 entries.
+- Trigger: accepted S-0019
+- Items: D-0011, D-0012, D-0019, D-0026, D-0030, D-0031, D-0034, D-0035, D-0036
+- Seconds: 140
+- Cost: 1.7151 USD, estimated

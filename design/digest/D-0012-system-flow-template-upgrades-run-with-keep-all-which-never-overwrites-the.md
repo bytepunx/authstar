@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0024, T-0121, TH-0037]
 ---
 
 # D-0012 System-flow template upgrades run with --keep-all, which never overwrites the project's edits and needs no terminal

@@ -2,46 +2,30 @@
 id: D-0035
 title: "Plan for S-0019: seven tasks in four layers; cost of delay inputs and kluster.yaml's shared services needed: I've reviewed the plan and am working it as drafted"
 kind: answer
-sources: [TH-0029]
+sources: [TH-0029, S-0019]
 topics: [kluster, deployment, integration, shell, code, all]
-paths: [system-flow.yaml, scripts, scripts/kluster-build.sh, scripts/lib-kluster.sh, scripts/kluster-signet.sh, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/README.md, kluster.yaml, integration/README.md, integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/tower.yaml]
+paths: [system-flow.yaml, kluster.yaml, integration/kluster.yaml, scripts/kluster-deploy.sh, scripts/README.md, integration/README.md]
 date: 2026-11-09
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/system/overview.md#cross-cutting"
 asked_again: []
 cited: []
 ---
 
 # D-0035 Plan for S-0019: seven tasks in four layers; cost of delay inputs and kluster.yaml's shared services needed: I've reviewed the plan and am working it as drafted
 
-The operator, bytepunx, answered TH-0029 at 2026-11-09T22:01:44Z.
+The project's `kluster:` block names `integration/kluster.yaml` as its `config`, and the root `kluster.yaml` is removed. The block is in `system-flow.yaml`.
 
-What was asked:
+TH-0029 was the plan thread for S-0019. Its planner recommended adding `addons: [postgres, rabbitmq, clickhouse, dex]` over profile `signet` in the root `kluster.yaml`. S-0019's agent recommended a different route on 2026-11-09T21:59:33Z: "point the block's `config` at `integration/kluster.yaml`. That file already exists, with profile `authstar` and trust domain `authstar.cluster.local`." Its reasons:
 
-```text
-Two questions first, each with my recommendation.
-```
+- That profile installs signet, RabbitMQ, Postgres, ClickHouse, and Dex.
+- S-0575 brought that config up and ran its namespaces over it.
+- kluster 1.3.1's README lists only `observability`, `tracing`, and `argocd` as addons, so the planner's addon names were not confirmed.
 
-The answer:
+The operator, bytepunx, confirmed the recommendation at 2026-11-09T22:01:44Z. T-0093 did it.
 
-```text
-I've reviewed the plan and am working it as drafted. Layers 1 to 3 do not depend on these two answers.
+This choice has a cost. Profile `authstar` deploys `latest` images into the `authstar` namespace. So in the default namespace, `scripts/kluster-deploy.sh` first deletes the Deployments and CronJobs that `kubectl apply` did not make, meaning those without the `last-applied-configuration` annotation, as S-0575's `promote.sh` did.
 
-**Question 1, cost of delay.** That decision is yours. I'm leaving it alone.
+The planner also asked for cost of delay inputs on that thread. The operator set them on the story.
 
-**Question 2, shared services.** I recommend a third option over the planner's: point the block's `config` at `integration/kluster.yaml`. That file already exists, with profile `authstar` and trust domain `authstar.cluster.local`.
-
-- That profile installs signet, RabbitMQ, Postgres, ClickHouse, and Dex. It is the config S-0575 brought up and ran its namespaces over.
-- kluster.md uses it as its example of authstar's block.
-- I could not confirm that kluster 1.3.1 accepts `postgres`, `rabbitmq`, `clickhouse`, or `dex` as addon names over profile `signet`. Its README lists only `observability`, `tracing`, and `argocd`.
-- The cost: the profile deploys `latest` images into `authstar`. In the default namespace, the deploy first deletes the Deployments and CronJobs that `kubectl apply` did not make, as S-0575's `promote.sh` did.
-- T-0093 would then delete the root `kluster.yaml`, which nothing would read anymore.
-
-The alternative is the planner's: add `addons` to the root `kluster.yaml` over profile `signet`. That only works if kluster resolves those addon names.
-
-Until you answer, I'll build on my recommendation. Only T-0093's `config` line and the root `kluster.yaml` depend on it.
-
-Source: design/digest/D-0026-agents-on-this-host-run-no-cluster-commands-its-current-kube-context-is-a.md
-```
-
-Source: TH-0029.
+Source: TH-0029, S-0019.

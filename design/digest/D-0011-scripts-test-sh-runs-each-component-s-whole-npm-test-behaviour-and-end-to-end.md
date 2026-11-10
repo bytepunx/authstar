@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0022, T-0118, TH-0038]
 ---
 
 # D-0011 scripts/test.sh runs each component's whole npm test, behaviour and end-to-end tiers both

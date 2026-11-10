@@ -9,7 +9,7 @@ date: 2026-11-09
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0007, S-0022, T-0118, T-0119, TH-0038]
 ---
 
 # D-0030 web's Playwright e2e specs run in no test tier: web's npm test leaves out test:e2e, so check web/e2e with npm run test:e2e by hand

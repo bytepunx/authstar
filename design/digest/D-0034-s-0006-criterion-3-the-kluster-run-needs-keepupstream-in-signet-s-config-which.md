@@ -3,29 +3,23 @@ id: D-0034
 title: "S-0006 criterion 3: the kluster run needs keepUpstream in signet's config, which syncs only from bytepunx/authstar-integration's main: the farmhash issue should be corrected now. let's go with your…"
 kind: answer
 sources: [TH-0031]
-topics: [integration, shell, keep, node, portcullis, rust, web, sveltekit, code, all]
-paths: [docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, keep/TESTING.md, keep/spec/behavior/me.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/me.ts, portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-proxy/tests/me_tests.rs, web/src/widgets/subscription-status.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md, design/adrs/README.md, integration/config/authstar/portcullis.yaml, design/issues/I-0014-a-story-branch-cannot-change-the-harness-s-signet-config-signet-syncs-it-from.md, design/issues/summary.md, design/issues/I-0015-flai-check-finds-roles-definition-outside-the-story-at-close-out.md]
+topics: [integration, signet, kluster, keep, portcullis, all]
+paths: [integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md]
 date: 2026-11-09
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0017, TH-0035]
 ---
 
 # D-0034 S-0006 criterion 3: the kluster run needs keepUpstream in signet's config, which syncs only from bytepunx/authstar-integration's main: the farmhash issue should be corrected now. let's go with your…
 
-The operator, bytepunx, answered TH-0031 at 2026-11-09T20:48:45Z.
+Nothing syncs config into the running `authstar-integration` cluster from `bytepunx/authstar-integration`: its signet has no repository registered. A config change pushed to that repository's `main` never reaches the cluster.
 
-What was asked:
+S-0006's agent asked on TH-0031 how to verify its criterion 3. The golden path's step 4b got 503 "billing unavailable" because the harness's `integration/config/authstar/portcullis.yaml` had no `keepUpstream`. The agent recommended pushing that one change to `bytepunx/authstar-integration` `main` and running `signet repo sync`. The operator, bytepunx, answered at 2026-11-09T20:48:45Z: "the farmhash issue should be corrected now. let's go with your recommendation."
 
-```text
-I ran the golden path on the running `authstar-integration` cluster, with keep, portcullis, and web built from story/S-0006 (tag `s-0006`, now rolled back to the `s-0901` images I found). Step 4b reached portcullis's new forward and got **503 "billing unavailable"**. The harness's `integration/config/authstar/portcullis.yaml` never had `keepUpstream`, so portcullis forwards nothing to keep there, neither this route nor the Stripe webhooks. T-0095 adds it on the branch. To reach the cluster, though, signet has to sync it, and signet reads config only from…
-```
+The agent pushed the change (9de9df2). It then reported at 20:54:19Z: "`signet repo list` on the `authstar-integration` cluster showed **no repository registered**, so nothing syncs from that repo and the push can't reach the cluster." The cluster's bundle and its `s-0901` images came by a path the project does not record. The only way to change one field is to push a whole bundle, and the checkout cannot re-encrypt the secrets for that cluster's key. The agent left that cluster alone and asked again. Its recommendation was to wait for S-0019's kluster scripts.
 
-The answer:
-
-```text
-the farmhash issue should be corrected now. let's go with your recommendation.
-```
+So check `signet repo list` before relying on a repository sync. D-0036 says how a whole bundle is pushed. D-0001 covers where signet's source moves after the monorepo move.
 
 Source: TH-0031.
