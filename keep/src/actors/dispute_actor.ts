@@ -6,7 +6,11 @@ import type { Scope } from '../lib/scope.js'
 // (route-layer concern, publishing side). `charge.dispute.closed` (won)
 // reverses the degrade; (lost) updates the record only (ADR 0077).
 // Read-only through the API -- no write routes at all, only `create`/
-// `updateStatus` commands driven by webhook handling.
+// `updateStatus`/`recordDegrade` commands driven by webhook handling.
+//
+// ADR 0107: the scope is resolved through the disputed charge's customer,
+// never from dispute metadata, and the record names the subscription the
+// dispute degraded, so that a won dispute restores that one and no other.
 
 // ADR 0109: keep's one scope type, `{account}` or `{organization}`, or `null`
 // when no customer record names the charge's customer: the record is kept
@@ -23,6 +27,9 @@ export interface DisputeState {
   amount: number
   currency: string
   reason: string
+  // The subscription this dispute degraded, or null when it degraded none:
+  // no customer record, no subscription, or one already degraded.
+  degradedSubscriptionId: string | null
   createdAt: string
 }
 
@@ -38,6 +45,10 @@ interface CreateCommand {
 
 interface UpdateStatusCommand {
   status: DisputeStatus
+}
+
+interface RecordDegradeCommand {
+  stripeSubscriptionId: string
 }
 
 function create(_dispute: DisputeState, command: CreateCommand) {
@@ -60,6 +71,13 @@ function updateStatus(_dispute: DisputeState, command: UpdateStatusCommand) {
   }
 }
 
+function recordDegrade(_dispute: DisputeState, command: RecordDegradeCommand) {
+  return {
+    type: 'dispute.degradeRecorded',
+    stripeSubscriptionId: command.stripeSubscriptionId,
+  }
+}
+
 function created(dispute: DisputeState, event: CreateCommand) {
   dispute.stripeDisputeId = event.stripeDisputeId
   dispute.tenant = event.tenant
@@ -69,11 +87,16 @@ function created(dispute: DisputeState, event: CreateCommand) {
   dispute.amount = event.amount
   dispute.currency = event.currency
   dispute.reason = event.reason
+  dispute.degradedSubscriptionId = null
   dispute.createdAt = new Date(0).toISOString() // replaced by consequent's own event timestamp on read
 }
 
 function statusUpdated(dispute: DisputeState, event: UpdateStatusCommand) {
   dispute.status = event.status
+}
+
+function degradeRecorded(dispute: DisputeState, event: RecordDegradeCommand) {
+  dispute.degradedSubscriptionId = event.stripeSubscriptionId
 }
 
 export default function disputeActor() {
@@ -93,15 +116,18 @@ export default function disputeActor() {
       amount: 0,
       currency: '',
       reason: '',
+      degradedSubscriptionId: null,
       createdAt: '',
     },
     commands: {
       create,
       updateStatus,
+      recordDegrade,
     },
     events: {
       created,
       statusUpdated,
+      degradeRecorded,
     },
   }
 }

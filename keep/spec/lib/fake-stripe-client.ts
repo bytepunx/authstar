@@ -8,6 +8,7 @@ import type {
   PortalSession,
   StripeWebhookEvent,
   StripeSubscriptionSummary,
+  StripeChargeSummary,
 } from '../../src/lib/stripe-client.js'
 
 // Fakes everything keep needs from Stripe (per this pilot's brief: no real
@@ -21,6 +22,8 @@ export interface FakeStripeState {
   prices: Map<string, StripePrice>
   subscriptions: Map<string, StripeSubscriptionSummary>
   validApiKeys: Set<string>
+  // Disputed charges, keyed by charge id: what `retrieveCharge` returns.
+  charges: Map<string, StripeChargeSummary>
   checkoutSessions: CheckoutSessionParams[]
   portalSessions: PortalSessionParams[]
 }
@@ -30,6 +33,7 @@ export function createFakeStripeState(): FakeStripeState {
     prices: new Map(),
     subscriptions: new Map(),
     validApiKeys: new Set(),
+    charges: new Map(),
     checkoutSessions: [],
     portalSessions: [],
   }
@@ -60,6 +64,12 @@ class FakeStripeClient implements StripeClient {
     const sub = this.state.subscriptions.get(stripeSubscriptionId)
     if (!sub) throw new Error(`no such subscription: ${stripeSubscriptionId}`)
     return sub
+  }
+
+  async retrieveCharge(stripeChargeId: string): Promise<StripeChargeSummary> {
+    const charge = this.state.charges.get(stripeChargeId)
+    if (!charge) throw new Error(`no such charge: ${stripeChargeId}`)
+    return charge
   }
 
   verifyWebhookEvent(payload: string | Buffer, signature: string, webhookSecret: string): StripeWebhookEvent {

@@ -623,6 +623,8 @@ describe('stripe webhook handling -- API contract', () => {
         metadata: { scope: JSON.stringify({ account: 'acct_7' }) },
       }))
       t.publisher.published.length = 0
+      // ADR 0107: the dispute reaches its scope through the charge's customer.
+      t.stripeState.charges.set('ch_2', { id: 'ch_2', customer: 'cus_7' })
 
       const created = await post(stripeEventPayload('charge.dispute.created', {
         id: 'dp_1',
@@ -631,7 +633,6 @@ describe('stripe webhook handling -- API contract', () => {
         currency: 'usd',
         reason: 'fraudulent',
         status: 'needs_response',
-        metadata: { scope: JSON.stringify({ account: 'acct_7' }) },
       }))
       expect(created.statusCode).toBe(200)
 
@@ -646,7 +647,6 @@ describe('stripe webhook handling -- API contract', () => {
         currency: 'usd',
         reason: 'fraudulent',
         status: 'won',
-        metadata: { scope: JSON.stringify({ account: 'acct_7' }) },
       }))
       expect(closed.statusCode).toBe(200)
 
@@ -656,6 +656,7 @@ describe('stripe webhook handling -- API contract', () => {
     })
 
     it('a lost dispute updates the record only -- no entitlement action', async () => {
+      t.stripeState.charges.set('ch_3', { id: 'ch_3', customer: null })
       await post(stripeEventPayload('charge.dispute.created', {
         id: 'dp_2',
         charge: 'ch_3',
@@ -663,7 +664,6 @@ describe('stripe webhook handling -- API contract', () => {
         currency: 'usd',
         reason: 'fraudulent',
         status: 'needs_response',
-        metadata: { scope: JSON.stringify({ account: 'acct_8' }) },
       }))
       t.publisher.published.length = 0
 
@@ -674,7 +674,6 @@ describe('stripe webhook handling -- API contract', () => {
         currency: 'usd',
         reason: 'fraudulent',
         status: 'lost',
-        metadata: { scope: JSON.stringify({ account: 'acct_8' }) },
       }))
 
       const dispute = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
@@ -682,8 +681,10 @@ describe('stripe webhook handling -- API contract', () => {
       expect(t.publisher.published).toHaveLength(0)
     })
 
-    // ADR 0109: a dispute with no account or organization scope is recorded, with a null scope, and degrades nothing.
-    it('records a tenant-scoped dispute with a null scope and publishes nothing', async () => {
+    // ADR 0107, ADR 0109: a dispute whose charge's customer keep has no record of
+    // is recorded, with a null scope, and degrades nothing -- whatever its metadata says.
+    it('records a dispute on an unknown customer with a null scope and publishes nothing', async () => {
+      t.stripeState.charges.set('ch_tenant', { id: 'ch_tenant', customer: 'cus_unknown' })
       const response = await post(stripeEventPayload('charge.dispute.created', {
         id: 'dp_tenant',
         charge: 'ch_tenant',
@@ -691,7 +692,7 @@ describe('stripe webhook handling -- API contract', () => {
         currency: 'usd',
         reason: 'fraudulent',
         status: 'needs_response',
-        metadata: { scope: JSON.stringify({ tenant: 'acme' }) },
+        metadata: { scope: JSON.stringify({ account: 'acct_7' }) },
       }))
       expect(response.statusCode).toBe(200)
 

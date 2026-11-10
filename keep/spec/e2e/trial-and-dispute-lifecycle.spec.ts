@@ -94,7 +94,10 @@ describe('trial conversion then dispute -- end to end', () => {
     })
     expect(rejectedExtend.statusCode).toBe(409)
 
-    // 4. A chargeback arrives -- degrade, then restore once won.
+    // 4. A chargeback arrives -- degrade, then restore once won. Stripe's
+    // Dispute carries no metadata: keep reaches the account through the
+    // disputed charge's customer (ADR 0107).
+    t.stripeState.charges.set('ch_e2e_1', { id: 'ch_e2e_1', customer: 'cus_trial_1' })
     const disputeCreated = await webhook(stripeEventPayload('charge.dispute.created', {
       id: 'dp_e2e_1',
       charge: 'ch_e2e_1',
@@ -102,7 +105,6 @@ describe('trial conversion then dispute -- end to end', () => {
       currency: 'usd',
       reason: 'fraudulent',
       status: 'needs_response',
-      metadata: { scope: JSON.stringify({ account: 'acct_trial' }) },
     }))
     expect(disputeCreated.statusCode).toBe(200)
 
@@ -118,12 +120,13 @@ describe('trial conversion then dispute -- end to end', () => {
       currency: 'usd',
       reason: 'fraudulent',
       status: 'won',
-      metadata: { scope: JSON.stringify({ account: 'acct_trial' }) },
     }))
     expect(disputeWon.statusCode).toBe(200)
 
     const disputesAfterWon = await app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
     expect(disputesAfterWon.json()[0].status).toBe('won')
+    expect(disputesAfterWon.json()[0].scope).toEqual({ account: 'acct_trial' })
+    expect(disputesAfterWon.json()[0].degradedSubscriptionId).toBe('sub_trial_1')
     expect(t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')).toHaveLength(2) // conversion grant + restore grant
 
     // 5. Activity is visible on the subscription/refund-free read surfaces

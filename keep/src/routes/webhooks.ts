@@ -2,6 +2,7 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { searchCriteria } from '../lib/consequent-types.js'
 import type { StripeWebhookEvent, StripeClient, StripeSubscriptionSummary } from '../lib/stripe-client.js'
 import type { CustomerState } from '../actors/customer_actor.js'
+import type { DisputeState } from '../actors/dispute_actor.js'
 import type { PlanMappingState, GrantedRole } from '../actors/plan_mapping_actor.js'
 import { entitlementOf, isSubscriptionStatus, type SubscriptionEntitlement, type SubscriptionState, type SubscriptionStatus } from '../actors/subscription_actor.js'
 import type { TrialState } from '../actors/trial_actor.js'
@@ -99,7 +100,6 @@ interface StripeDisputeObject {
   currency: string
   reason: string
   status: string
-  metadata?: { scope?: string }
 }
 
 interface StripeInvoiceObject {
@@ -162,12 +162,6 @@ async function findActiveTrial(app: FastifyInstance, tenant: string, scope: Scop
   const instances = await app.consequent.find('trial', searchCriteria({ tenant, status: 'active' }))
   const trials = instances.map((i) => i.state as unknown as TrialState)
   return trials.find((t) => scopesEqual(t.scope, scope))
-}
-
-async function findSubscriptionByScope(app: FastifyInstance, tenant: string, scope: Scope): Promise<SubscriptionState | undefined> {
-  const instances = await app.consequent.find('subscription', searchCriteria({ tenant }))
-  const subscriptions = instances.map((i) => i.state as unknown as SubscriptionState)
-  return subscriptions.find((s) => scopesEqual(s.scope, scope))
 }
 
 function roleKey(role: GrantedRole): string {
@@ -464,45 +458,71 @@ async function onChargeRefunded(app: FastifyInstance, tenant: string, charge: St
   })
 }
 
-// A Stripe Dispute object carries `charge`, not `customer`/`subscription`
-// directly, and this pilot's simplified Stripe object shapes don't model
-// the full charge -> customer graph. `dispute.metadata.scope` (set the same
-// way checkout-session metadata is, Story 002/003) is the resolution path
-// used here -- a real deployment might instead expand the charge to reach
-// its customer; documented as a simplification, not a full Stripe-object
-// graph walk (TESTING.md).
-async function onDisputeCreated(app: FastifyInstance, tenant: string, dispute: StripeDisputeObject) {
-  // No account or organization scope: the dispute is still recorded, with
-  // `null`, and changes no entitlement (ADR 0109).
-  const scope = readScope(dispute.metadata) ?? null
-  await app.consequent.handle(dispute.id, 'dispute.create', {
-    stripeDisputeId: dispute.id,
-    tenant,
-    scope,
-    stripeChargeId: dispute.charge,
-    amount: dispute.amount,
-    currency: dispute.currency,
-    reason: dispute.reason,
-  })
-
-  // The same degrade `invoice.payment_failed` uses (ADR 0107): a no-op on a
-  // subscription already degraded.
-  if (!scope) return
-  const subscription = await findSubscriptionByScope(app, tenant, scope)
-  if (subscription) {
-    await setEntitlement(app, tenant, subscription.stripeSubscriptionId, 'degraded')
-  }
+// The subscription a dispute degrades: of the scope's subscriptions, the
+// first whose plan roles are in effect, else the first that has not ended.
+// A canceled or never-started (`incomplete_expired`) subscription has no
+// roles to take away (ADR 0107).
+async function findDisputedSubscription(app: FastifyInstance, tenant: string, scope: Scope): Promise<SubscriptionState | undefined> {
+  const instances = await app.consequent.find('subscription', searchCriteria({ tenant }))
+  const candidates = instances
+    .map((i) => i.state as unknown as SubscriptionState)
+    .filter((s) => scopesEqual(s.scope, scope) && s.status !== 'canceled' && s.status !== 'incomplete_expired')
+  return candidates.find((s) => entitlementOf(s) === 'granted') ?? candidates[0]
 }
 
+// `charge.dispute.created` -- ADR 0107: a Dispute carries its `charge`, not
+// its customer, and Stripe does not copy a checkout's `scope` onto it. Keep retrieves the
+// charge, finds its customer record by Stripe customer id, and degrades that
+// scope's subscription through `setEntitlement`. With no customer record the
+// dispute is recorded with `null` scope and changes no entitlement. A failed
+// charge read throws, so the webhook answers 500 and Stripe redelivers.
+//
+// The dispute names the subscription before the degrade publishes, so a
+// failure between the two is finished by the redelivery, and the record
+// still knows what a won dispute restores. A subscription already degraded
+// is not named: the dispute took nothing away, and a won dispute restores
+// nothing.
+async function onDisputeCreated(app: FastifyInstance, tenant: string, dispute: StripeDisputeObject, client: StripeClient) {
+  const charge = await client.retrieveCharge(dispute.charge)
+  const customer = charge.customer ? await findCustomerByStripeId(app, tenant, charge.customer) : undefined
+  const scope = storedScope(customer?.scope) ?? null
+
+  const existing = await app.consequent.fetch('dispute', dispute.id)
+  const record = existing!.state as unknown as DisputeState
+  if (!record.createdAt) {
+    await app.consequent.handle(dispute.id, 'dispute.create', {
+      stripeDisputeId: dispute.id,
+      tenant,
+      scope,
+      stripeChargeId: dispute.charge,
+      amount: dispute.amount,
+      currency: dispute.currency,
+      reason: dispute.reason,
+    })
+  }
+
+  if (!scope) return
+  const subscription = await findDisputedSubscription(app, tenant, scope)
+  if (!subscription) return
+  const named = record.degradedSubscriptionId === subscription.stripeSubscriptionId
+  if (!named && entitlementOf(subscription) !== 'granted') return
+  if (!named) {
+    await app.consequent.handle(dispute.id, 'dispute.recordDegrade', { stripeSubscriptionId: subscription.stripeSubscriptionId })
+  }
+  await setEntitlement(app, tenant, subscription.stripeSubscriptionId, 'degraded')
+}
+
+// `charge.dispute.closed` -- `won` restores only the subscription this
+// dispute degraded (ADR 0077, ADR 0107); `lost` changes the dispute's status
+// and nothing else.
 async function onDisputeClosed(app: FastifyInstance, tenant: string, dispute: StripeDisputeObject) {
   await app.consequent.handle(dispute.id, 'dispute.updateStatus', { status: dispute.status })
+  if (dispute.status !== 'won') return
 
-  const scope = readScope(dispute.metadata)
-  if (dispute.status === 'won' && scope) {
-    const subscription = await findSubscriptionByScope(app, tenant, scope)
-    if (subscription) {
-      await setEntitlement(app, tenant, subscription.stripeSubscriptionId, 'granted')
-    }
+  const fetched = await app.consequent.fetch('dispute', dispute.id)
+  const record = fetched!.state as unknown as DisputeState
+  if (record.degradedSubscriptionId) {
+    await setEntitlement(app, tenant, record.degradedSubscriptionId, 'granted')
   }
 }
 
@@ -550,7 +570,7 @@ async function handleStripeEvent(app: FastifyInstance, tenant: string, event: St
       await onChargeRefunded(app, tenant, object as StripeChargeObject)
       return
     case 'charge.dispute.created':
-      await onDisputeCreated(app, tenant, object as StripeDisputeObject)
+      await onDisputeCreated(app, tenant, object as StripeDisputeObject, client)
       return
     case 'charge.dispute.closed':
       await onDisputeClosed(app, tenant, object as StripeDisputeObject)

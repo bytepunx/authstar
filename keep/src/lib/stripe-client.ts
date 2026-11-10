@@ -65,6 +65,14 @@ export interface StripeSubscriptionSummary {
   metadata: Record<string, string>
 }
 
+// ADR 0107: what keep reads from a disputed charge -- its customer, which is
+// how a dispute finds the scope and subscription it degrades. `customer` is
+// null for a charge made with no Stripe customer.
+export interface StripeChargeSummary {
+  id: string
+  customer: string | null
+}
+
 export interface StripeClient {
   getPrice(stripePriceId: string): Promise<StripePrice>
   createCheckoutSession(params: CheckoutSessionParams): Promise<CheckoutSession>
@@ -77,6 +85,8 @@ export interface StripeClient {
   // subscription record itself rather than depending on webhook payload
   // expansion configuration (Story 002).
   getSubscription(stripeSubscriptionId: string): Promise<StripeSubscriptionSummary>
+  /** Retrieves a charge's id and customer, for a dispute's scope (ADR 0107). */
+  retrieveCharge(stripeChargeId: string): Promise<StripeChargeSummary>
   // Throws (synchronously-caught, always via a rejected promise from the
   // route's own try/catch -- not a consequent command handler) if the
   // signature doesn't match.
@@ -150,6 +160,15 @@ class RealStripeClient implements StripeClient {
       currentPeriodEnd: sub.items.data[0]?.current_period_end ?? 0,
       stripePriceId: sub.items.data[0]?.price.id ?? '',
       metadata: sub.metadata,
+    }
+  }
+
+  async retrieveCharge(stripeChargeId: string): Promise<StripeChargeSummary> {
+    const charge = await this.stripe.charges.retrieve(stripeChargeId)
+    const customer = charge.customer
+    return {
+      id: charge.id,
+      customer: customer === null ? null : typeof customer === 'string' ? customer : customer.id,
     }
   }
 
