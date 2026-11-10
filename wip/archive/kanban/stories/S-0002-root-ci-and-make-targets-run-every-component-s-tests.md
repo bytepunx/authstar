@@ -21,7 +21,7 @@ transitions:
   - to: done
     at: 2026-11-06T17:38:38Z
     by: bytepunx
-tags: []
+tags: [tower]
 ---
 # S-0002 Root CI and Make targets run every component's tests
 

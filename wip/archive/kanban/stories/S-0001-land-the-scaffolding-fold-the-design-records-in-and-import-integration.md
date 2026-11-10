@@ -21,7 +21,7 @@ transitions:
   - to: done
     at: 2026-11-06T17:38:17Z
     by: bytepunx
-tags: []
+tags: [integration]
 usage:
   source: sum
   seconds: 0
