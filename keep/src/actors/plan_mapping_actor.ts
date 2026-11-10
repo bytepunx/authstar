@@ -1,3 +1,5 @@
+import type { Scope } from '../lib/scope.js'
+
 // Per design/stories/keep/001-actor-definitions.md ("planMapping") and
 // design/stories/keep/003-plan-mappings-checkout-and-billing-reads.md.
 //
@@ -17,7 +19,8 @@
 // roles in effect. Events persisted before the rename carry `grantedRoles`,
 // so the event handlers read either name.
 
-export type PlanMappingScope = { account: string } | { tenant: string }
+// ADR 0109: one scope type for every keep actor, `{account}` or `{organization}`.
+export type PlanMappingScope = Scope
 export type PlanMappingInterval = 'month' | 'year'
 export type PlanMappingStatus = 'active' | 'retired'
 

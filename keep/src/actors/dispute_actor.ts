@@ -1,3 +1,5 @@
+import type { Scope } from '../lib/scope.js'
+
 // Per design/stories/keep/001-actor-definitions.md ("dispute").
 //
 // `charge.dispute.created` creates the record and degrades entitlements
@@ -6,7 +8,10 @@
 // Read-only through the API -- no write routes at all, only `create`/
 // `updateStatus` commands driven by webhook handling.
 
-export type DisputeScope = { account: string } | { tenant: string }
+// ADR 0109: keep's one scope type, `{account}` or `{organization}`, or `null`
+// when no customer record names the charge's customer: the record is kept
+// for visibility, and no entitlement follows from it.
+export type DisputeScope = Scope | null
 export type DisputeStatus = 'needs_response' | 'under_review' | 'won' | 'lost'
 
 export interface DisputeState {
@@ -82,7 +87,7 @@ export default function disputeActor() {
     state: {
       stripeDisputeId: '',
       tenant: '',
-      scope: { tenant: '' },
+      scope: null,
       stripeChargeId: '',
       status: 'needs_response',
       amount: 0,

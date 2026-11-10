@@ -15,8 +15,9 @@
 // (tower's organization.grant-role/revoke-role/set-seat-limit, consumed in
 // entitlement-consumer.ts) -- no fan-out to individual accounts. This is
 // what keeps org-purchased entitlement on the organization record only,
-// never merged onto any member's own account.roles.
-export type EntitlementScope = { account: string } | { tenant: string } | { organization: string }
+// never merged onto any member's own account.roles. ADR 0109 retired
+// `{tenant}`: no entitlement event carries it.
+export type EntitlementScope = { account: string } | { organization: string }
 
 export interface RoleGrantedEvent {
   type: 'entitlement.role-granted'
@@ -47,8 +48,8 @@ export interface ConvertedToPaidEvent {
 export interface SeatLimitChangedEvent {
   type: 'entitlement.seat-limit-changed'
   tenant: string
-  // Never {account} -- an individual account has no seats to limit.
-  scope: { tenant: string } | { organization: string }
+  // Seats belong to organizations (ADR 0100, ADR 0109); an account has none.
+  scope: { organization: string }
   sequence: number
   seatLimit: number
 }
@@ -83,10 +84,10 @@ export interface UsageUpdatedEvent {
 // design/adrs/0101-api-keys.md. Kept as two separate event types
 // (not merged into one), mirroring `SeatLimitChangedEvent`'s own shape --
 // but, unlike that event, `scope` here is the full `EntitlementScope`
-// (`{account}` included), not the narrower `{tenant}|{organization}`
+// (`{account}` included), not the narrower `{organization}`
 // `SeatLimitChangedEvent` deliberately restricts itself to. An individual
 // account's own API-key allowance is meaningful (unlike seats, which only
-// make sense at organization/tenant scale) -- a real, explicit divergence
+// make sense at organization scale) -- a real, explicit divergence
 // from the `seatLimit` template, not an oversight.
 export interface ApiKeyLimitChangedEvent {
   type: 'entitlement.api-key-limit-changed'
@@ -136,8 +137,7 @@ export interface SequenceProvider {
 
 export function scopeKey(scope: EntitlementScope): string {
   if ('account' in scope) return `account:${scope.account}`
-  if ('organization' in scope) return `organization:${scope.organization}`
-  return `tenant:${scope.tenant}`
+  return `organization:${scope.organization}`
 }
 
 export function createInMemorySequenceProvider(): SequenceProvider {

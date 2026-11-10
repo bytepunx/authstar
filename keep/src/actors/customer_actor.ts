@@ -1,10 +1,12 @@
+import type { Scope } from '../lib/scope.js'
+
 // Per design/stories/keep/001-actor-definitions.md ("customer") and
 // ADR 0083 (identifiedBy/searchableBy made explicit for the first time).
 //
 // Never created by an admin call -- always webhook-driven, first
 // `checkout.session.completed`/`customer.subscription.created` (Story 002).
 // `id` is a generated node-flakes id, not derived from `scope` -- a
-// tenant-scoped and an account-scoped customer are both just "a customer
+// organization-scoped and an account-scoped customer are both just "a customer
 // record," no reason to give them different key shapes (ADR 0083).
 //
 // The `created` event handler deliberately never reads `event.id` --
@@ -21,7 +23,8 @@
 // (actors.js) already sets `state[identifiedBy]` to the id `fetch`/`handle`
 // was called with, before any event handler ever runs.
 
-export type CustomerScope = { account: string } | { tenant: string }
+// ADR 0109: one scope type for every keep actor, `{account}` or `{organization}`.
+export type CustomerScope = Scope
 
 export interface CustomerState {
   id: string
@@ -65,7 +68,7 @@ export default function customerActor() {
     state: {
       id: '',
       tenant: '',
-      scope: { tenant: '' },
+      scope: { account: '' },
       stripeCustomerId: '',
       createdAt: '',
     },

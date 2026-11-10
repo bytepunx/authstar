@@ -33,6 +33,12 @@ describe('stripe webhook handling -- API contract', () => {
   })
 
   afterEach(async () => {
+    // ADR 0109: no test publishes an event whose scope lacks an account or organization id.
+    for (const event of t.publisher.published) {
+      const scope = (event as { scope?: Record<string, unknown> }).scope ?? {}
+      const id = scope.account ?? scope.organization
+      expect(typeof id === 'string' && id !== '', `${event.type} published with scope ${JSON.stringify(scope)}`).toBe(true)
+    }
     await t.app.close()
   })
 
@@ -99,8 +105,8 @@ describe('stripe webhook handling -- API contract', () => {
       const publishedTypes = t.publisher.published.map((e) => e.type)
       expect(publishedTypes).toContain('entitlement.converted-to-paid')
       expect(publishedTypes).toContain('entitlement.role-granted')
-      // seatLimit is only meaningful for tenant scope (Story 001's own
-      // caveat on the field) -- this subscription is account-scoped, so no
+      // seatLimit is only meaningful for organization scope (ADR 0100,
+      // ADR 0109) -- this subscription is account-scoped, so no
       // seat-limit-changed event, even though the plan mapping sets one.
       expect(publishedTypes).not.toContain('entitlement.seat-limit-changed')
 
@@ -136,19 +142,64 @@ describe('stripe webhook handling -- API contract', () => {
       expect(publishedTypes).toContain('entitlement.role-granted')
     })
 
-    it('publishes seat-limit-changed for a tenant-scoped subscription (never for account scope -- an individual has no seats)', async () => {
+    it('publishes no seat-limit-changed for an account-scoped subscription -- an individual has no seats', async () => {
       await post(stripeEventPayload('customer.subscription.created', {
         id: 'sub_seat',
         customer: 'cus_seat',
         status: 'active',
         current_period_end: 1_700_000_000,
         items: { data: [{ price: { id: 'price_basic' } }] },
-        metadata: { scope: JSON.stringify({ tenant: 'acme' }) },
+        metadata: { scope: JSON.stringify({ account: 'acct_seat' }) },
       }))
 
-      const seatEvent = t.publisher.published.find((e) => e.type === 'entitlement.seat-limit-changed')
-      expect(seatEvent).toBeDefined()
-      expect((seatEvent as { seatLimit: number }).seatLimit).toBe(5)
+      expect(t.publisher.published.some((e) => e.type === 'entitlement.role-granted')).toBe(true)
+      expect(t.publisher.published.find((e) => e.type === 'entitlement.seat-limit-changed')).toBeUndefined()
+    })
+
+    // ADR 0109: the `{tenant}` scope is retired, with no fallback to it.
+    it.each([
+      ['a tenant scope', { scope: JSON.stringify({ tenant: 'acme' }) }],
+      ['no scope', undefined],
+    ])('records nothing and publishes nothing for a subscription with %s in its metadata', async (_label, metadata) => {
+      const response = await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_unscoped',
+        customer: 'cus_unscoped',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+        metadata,
+      }))
+      expect(response.statusCode).toBe(200)
+
+      expect(t.publisher.published).toHaveLength(0)
+      const subscriptions = await t.app.inject({ method: 'GET', url: '/tenants/acme/subscriptions', headers: readHeaders })
+      expect(subscriptions.json()).toHaveLength(0)
+      const customer = await t.app.inject({ method: 'GET', url: '/tenants/acme/customer', headers: readHeaders })
+      expect(customer.statusCode).toBe(404)
+    })
+
+    it('takes the scope of the customer keep already knows when the metadata has none', async () => {
+      await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_known_1',
+        customer: 'cus_known',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+        metadata: { scope: JSON.stringify({ account: 'acct_known' }) },
+      }))
+      t.publisher.published.length = 0
+
+      await post(stripeEventPayload('customer.subscription.created', {
+        id: 'sub_known_2',
+        customer: 'cus_known',
+        status: 'active',
+        current_period_end: 1_700_000_000,
+        items: { data: [{ price: { id: 'price_basic' } }] },
+      }))
+
+      const granted = t.publisher.published.filter((e) => e.type === 'entitlement.role-granted')
+      expect(granted).toHaveLength(1)
+      expect((granted[0] as unknown as { scope: { account: string } }).scope.account).toBe('acct_known')
     })
 
     // design/adrs/0101-api-keys.md.
@@ -462,7 +513,7 @@ describe('stripe webhook handling -- API contract', () => {
         id: 'ch_1',
         customer: 'cus_6',
         refunds: { data: [{ id: 're_1', amount: 500, currency: 'usd', reason: 'requested_by_customer', created: 1_700_000_000 }] },
-        metadata: { scope: JSON.stringify({ tenant: 'acme' }) },
+        metadata: { scope: JSON.stringify({ account: 'acct_6' }) },
       }))
       expect(response.statusCode).toBe(200)
 
@@ -470,7 +521,23 @@ describe('stripe webhook handling -- API contract', () => {
       expect(refunds.json()).toHaveLength(1)
       expect(refunds.json()[0].stripeRefundId).toBe('re_1')
       expect(refunds.json()[0].amount).toBe(500)
+      expect(refunds.json()[0].scope).toEqual({ account: 'acct_6' })
 
+      expect(t.publisher.published).toHaveLength(0)
+    })
+
+    // ADR 0109: no `{tenant}` fallback; the refund stays visible with no scope.
+    it('records a refund whose charge has no account or organization scope with a null scope', async () => {
+      await post(stripeEventPayload('charge.refunded', {
+        id: 'ch_tenant',
+        customer: 'cus_unknown',
+        refunds: { data: [{ id: 're_tenant', amount: 300, currency: 'usd', reason: null, created: 1_700_000_000 }] },
+        metadata: { scope: JSON.stringify({ tenant: 'acme' }) },
+      }))
+
+      const refunds = await t.app.inject({ method: 'GET', url: '/tenants/acme/refunds', headers: readHeaders })
+      expect(refunds.json()).toHaveLength(1)
+      expect(refunds.json()[0].scope).toBeNull()
       expect(t.publisher.published).toHaveLength(0)
     })
   })
@@ -526,7 +593,7 @@ describe('stripe webhook handling -- API contract', () => {
         currency: 'usd',
         reason: 'fraudulent',
         status: 'needs_response',
-        metadata: { scope: JSON.stringify({ tenant: 'acme' }) },
+        metadata: { scope: JSON.stringify({ account: 'acct_8' }) },
       }))
       t.publisher.published.length = 0
 
@@ -537,11 +604,29 @@ describe('stripe webhook handling -- API contract', () => {
         currency: 'usd',
         reason: 'fraudulent',
         status: 'lost',
-        metadata: { scope: JSON.stringify({ tenant: 'acme' }) },
+        metadata: { scope: JSON.stringify({ account: 'acct_8' }) },
       }))
 
       const dispute = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
       expect(dispute.json().find((d: { stripeDisputeId: string }) => d.stripeDisputeId === 'dp_2').status).toBe('lost')
+      expect(t.publisher.published).toHaveLength(0)
+    })
+
+    // ADR 0109: a dispute with no account or organization scope is recorded, with a null scope, and degrades nothing.
+    it('records a tenant-scoped dispute with a null scope and publishes nothing', async () => {
+      const response = await post(stripeEventPayload('charge.dispute.created', {
+        id: 'dp_tenant',
+        charge: 'ch_tenant',
+        amount: 750,
+        currency: 'usd',
+        reason: 'fraudulent',
+        status: 'needs_response',
+        metadata: { scope: JSON.stringify({ tenant: 'acme' }) },
+      }))
+      expect(response.statusCode).toBe(200)
+
+      const disputes = await t.app.inject({ method: 'GET', url: '/tenants/acme/disputes', headers: readHeaders })
+      expect(disputes.json().find((d: { stripeDisputeId: string }) => d.stripeDisputeId === 'dp_tenant').scope).toBeNull()
       expect(t.publisher.published).toHaveLength(0)
     })
   })

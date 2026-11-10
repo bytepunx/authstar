@@ -7,7 +7,6 @@ import type { SubscriptionState } from '../actors/subscription_actor.js'
 import type { TrialState } from '../actors/trial_actor.js'
 import generateId from '../lib/ids.js'
 import { scopesEqual, isValidScope, type Scope } from '../lib/scope.js'
-import type { EntitlementScope } from '../lib/entitlement-publisher.js'
 
 // Per design/stories/keep/002-stripe-webhook-handling.md.
 //
@@ -80,14 +79,23 @@ interface StripeInvoiceObject {
   attempt_count?: number
 }
 
-function readScope(metadata: { scope?: string } | undefined, fallback: Scope): Scope {
-  if (!metadata?.scope) return fallback
+// ADR 0109: the scope in a Stripe object's metadata, when it is `{account}`
+// or `{organization}`. There is no `{tenant}` fallback: an object with no
+// such scope entitles no one, and keep publishes nothing for it.
+function readScope(metadata: { scope?: string } | undefined): Scope | undefined {
+  if (!metadata?.scope) return undefined
   try {
-    const parsed = JSON.parse(metadata.scope)
-    return isValidScope(parsed) ? parsed : fallback
+    const parsed: unknown = JSON.parse(metadata.scope)
+    return isValidScope(parsed) ? parsed : undefined
   } catch {
-    return fallback
+    return undefined
   }
+}
+
+// A stored record's scope, unless it is the `{tenant}` scope a record
+// persisted before ADR 0109 may still hold.
+function storedScope(scope: unknown): Scope | undefined {
+  return isValidScope(scope) ? scope : undefined
 }
 
 async function findCustomerByStripeId(app: FastifyInstance, tenant: string, stripeCustomerId: string): Promise<CustomerState | undefined> {
@@ -144,19 +152,14 @@ function diffRoles(previous: GrantedRole[], next: GrantedRole[]): { granted: Gra
   }
 }
 
-// ADR 0100: every keep `Scope` (`{account}|{tenant}|{organization}`) is
-// now a valid entitlement target directly -- `{organization}` publishes
+// ADR 0100: every keep `Scope` (`{account}|{organization}`, ADR 0109) is a
+// valid entitlement target directly -- `{organization}` publishes
 // straight to the organization itself, no fan-out to its members. This
 // replaced ADR 0098's manager-resolution step entirely (and the
 // `organization-manager-cache.ts`/`organization-reference-consumer.ts`
 // infrastructure it needed) -- simpler, and it's also what keeps
 // org-purchased entitlement off any individual member's own `account.roles`.
-function isEntitlementScope(scope: Scope): scope is EntitlementScope {
-  return 'account' in scope || 'tenant' in scope || 'organization' in scope
-}
-
 async function publishRoleEvents(app: FastifyInstance, tenant: string, scope: Scope, roles: GrantedRole[], eventType: 'entitlement.role-granted' | 'entitlement.role-revoked') {
-  if (!isEntitlementScope(scope)) return
   for (const role of roles) {
     const sequence = await app.sequences.next(tenant, scope)
     await app.entitlements.publish({
@@ -170,7 +173,8 @@ async function publishRoleEvents(app: FastifyInstance, tenant: string, scope: Sc
 }
 
 async function publishSeatLimitIfSet(app: FastifyInstance, tenant: string, scope: Scope, seatLimit: number | null) {
-  if (seatLimit === null || !('tenant' in scope || 'organization' in scope)) return
+  // Seats belong to organizations (ADR 0100, ADR 0109); an account has none.
+  if (seatLimit === null || !('organization' in scope)) return
   const sequence = await app.sequences.next(tenant, scope)
   await app.entitlements.publish({
     type: 'entitlement.seat-limit-changed',
@@ -187,10 +191,9 @@ async function publishSeatLimitIfSet(app: FastifyInstance, tenant: string, scope
 // but -- unlike that function -- does **not** restrict `scope` to
 // `{tenant}|{organization}`. An individual account's own API-key allowance
 // is meaningful (unlike seats), so `{account}` scope publishes here too;
-// `isEntitlementScope` (already true for every `Scope` this file produces)
-// is the only gate needed.
+// a non-null limit is the only gate needed.
 async function publishApiKeyLimitIfSet(app: FastifyInstance, tenant: string, scope: Scope, apiKeyLimit: number | null) {
-  if (apiKeyLimit === null || !isEntitlementScope(scope)) return
+  if (apiKeyLimit === null) return
   const sequence = await app.sequences.next(tenant, scope)
   await app.entitlements.publish({
     type: 'entitlement.api-key-limit-changed',
@@ -202,7 +205,7 @@ async function publishApiKeyLimitIfSet(app: FastifyInstance, tenant: string, sco
 }
 
 async function publishApiKeyRateLimitIfSet(app: FastifyInstance, tenant: string, scope: Scope, apiKeyRateLimit: { requestsPerMinute: number, burst?: number } | null) {
-  if (apiKeyRateLimit === null || !isEntitlementScope(scope)) return
+  if (apiKeyRateLimit === null) return
   const sequence = await app.sequences.next(tenant, scope)
   await app.entitlements.publish({
     type: 'entitlement.api-key-rate-limit-changed',
@@ -220,7 +223,14 @@ async function publishApiKeyRateLimitIfSet(app: FastifyInstance, tenant: string,
 // `role-granted` per role the matching plan mapping lists (Story 002:
 // "one per role... not one event carrying an array").
 async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
-  const scope = readScope(sub.metadata, { tenant })
+  const knownCustomer = await findCustomerByStripeId(app, tenant, sub.customer)
+  const scope = readScope(sub.metadata) ?? storedScope(knownCustomer?.scope)
+  if (!scope) {
+    // ADR 0109: no `{tenant}` fallback. A subscription with no account or
+    // organization scope is recorded nowhere and publishes nothing.
+    app.log.warn({ tenant, stripeSubscriptionId: sub.id }, 'stripe subscription has no account or organization scope')
+    return
+  }
   const customer = await findOrCreateCustomer(app, tenant, scope, sub.customer)
   const stripePriceId = sub.items.data[0]?.price.id ?? ''
   const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
@@ -230,7 +240,7 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
     await app.consequent.handle(sub.id, 'subscription.create', {
       stripeSubscriptionId: sub.id,
       tenant,
-      scope: customer.scope,
+      scope: storedScope(customer.scope) ?? scope,
       stripePriceId,
       status: sub.status,
       currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
@@ -242,11 +252,9 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
     await app.consequent.handle(trial.id, 'trial.convert', {})
   }
 
-  if (isEntitlementScope(scope)) {
-    const sequence = await app.sequences.next(tenant, scope)
-    const roles = (mapping?.roles ?? []).map((role) => ({ name: role.role, scope: role.application }))
-    await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence, roles })
-  }
+  const sequence = await app.sequences.next(tenant, scope)
+  const roles = (mapping?.roles ?? []).map((role) => ({ name: role.role, scope: role.application }))
+  await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence, roles })
 
   if (mapping) {
     await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-granted')
@@ -258,7 +266,7 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
 
 async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
   const existing = await findSubscription(app, sub.id)
-  const scope = existing?.scope ?? readScope(sub.metadata, { tenant })
+  const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
   const previousPriceId = existing?.stripePriceId
   const newPriceId = sub.items.data[0]?.price.id ?? ''
 
@@ -268,7 +276,7 @@ async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: 
     currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
   })
 
-  if (previousPriceId && previousPriceId !== newPriceId) {
+  if (scope && previousPriceId && previousPriceId !== newPriceId) {
     const [previousMapping, newMapping] = await Promise.all([
       findPlanMappingByPriceId(app, tenant, previousPriceId),
       findPlanMappingByPriceId(app, tenant, newPriceId),
@@ -286,11 +294,11 @@ async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: 
 
 async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
   const existing = await findSubscription(app, sub.id)
-  const scope = existing?.scope ?? readScope(sub.metadata, { tenant })
+  const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
 
   await app.consequent.handle(sub.id, 'subscription.update', { status: 'canceled' })
 
-  if (existing) {
+  if (existing && scope) {
     const mapping = await findPlanMappingByPriceId(app, tenant, existing.stripePriceId)
     if (mapping) {
       await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
@@ -309,13 +317,14 @@ async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: 
 // for other status-only degrade/restore transitions.
 async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
   const existing = await findSubscription(app, sub.id)
-  const scope = existing?.scope ?? readScope(sub.metadata, { tenant })
+  const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
 
   await app.consequent.handle(sub.id, 'subscription.update', {
     status: sub.status,
     currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
   })
 
+  if (!scope) return
   const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
   const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
   if (mapping) {
@@ -325,13 +334,14 @@ async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: S
 
 async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
   const existing = await findSubscription(app, sub.id)
-  const scope = existing?.scope ?? readScope(sub.metadata, { tenant })
+  const scope = storedScope(existing?.scope) ?? readScope(sub.metadata)
 
   await app.consequent.handle(sub.id, 'subscription.update', {
     status: sub.status,
     currentPeriodEnd: new Date(periodEnd(sub) * 1000).toISOString(),
   })
 
+  if (!scope) return
   const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
   const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
   if (mapping) {
@@ -347,10 +357,11 @@ async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: 
 // `charge.dispute.created` uses. Left as a documented follow-up (TESTING.md).
 async function onInvoicePaymentFailed(app: FastifyInstance, tenant: string, invoice: StripeInvoiceObject) {
   const existing = await findSubscription(app, invoice.subscription)
-  if (!existing) return
+  const scope = storedScope(existing?.scope)
+  if (!existing || !scope) return
   const mapping = await findPlanMappingByPriceId(app, tenant, existing.stripePriceId)
   if (mapping) {
-    await publishRoleEvents(app, tenant, existing.scope, mapping.roles, 'entitlement.role-revoked')
+    await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
   }
 }
 
@@ -358,7 +369,8 @@ async function onChargeRefunded(app: FastifyInstance, tenant: string, charge: St
   const refund = charge.refunds?.data[0]
   if (!refund) return
   const customer = await findCustomerByStripeId(app, tenant, charge.customer)
-  const scope = customer?.scope ?? readScope(charge.metadata, { tenant })
+  // No account or organization scope: the refund is still recorded, with `null`.
+  const scope = storedScope(customer?.scope) ?? readScope(charge.metadata) ?? null
   const existing = await app.consequent.fetch('refund', refund.id)
   if ((existing!.state as unknown as { createdAt: string }).createdAt) return
   await app.consequent.handle(refund.id, 'refund.create', {
@@ -381,7 +393,9 @@ async function onChargeRefunded(app: FastifyInstance, tenant: string, charge: St
 // its customer; documented as a simplification, not a full Stripe-object
 // graph walk (TESTING.md).
 async function onDisputeCreated(app: FastifyInstance, tenant: string, dispute: StripeDisputeObject) {
-  const scope = readScope(dispute.metadata, { tenant })
+  // No account or organization scope: the dispute is still recorded, with
+  // `null`, and changes no entitlement (ADR 0109).
+  const scope = readScope(dispute.metadata) ?? null
   await app.consequent.handle(dispute.id, 'dispute.create', {
     stripeDisputeId: dispute.id,
     tenant,
@@ -394,6 +408,7 @@ async function onDisputeCreated(app: FastifyInstance, tenant: string, dispute: S
 
   // Reuses the exact plan-roles degrade `invoice.payment_failed`
   // uses (Story 002).
+  if (!scope) return
   const subscription = await findSubscriptionByScope(app, tenant, scope)
   if (subscription) {
     const mapping = await findPlanMappingByPriceId(app, tenant, subscription.stripePriceId)
@@ -406,8 +421,8 @@ async function onDisputeCreated(app: FastifyInstance, tenant: string, dispute: S
 async function onDisputeClosed(app: FastifyInstance, tenant: string, dispute: StripeDisputeObject) {
   await app.consequent.handle(dispute.id, 'dispute.updateStatus', { status: dispute.status })
 
-  if (dispute.status === 'won') {
-    const scope = readScope(dispute.metadata, { tenant })
+  const scope = readScope(dispute.metadata)
+  if (dispute.status === 'won' && scope) {
     const subscription = await findSubscriptionByScope(app, tenant, scope)
     if (subscription) {
       const mapping = await findPlanMappingByPriceId(app, tenant, subscription.stripePriceId)

@@ -1,3 +1,5 @@
+import type { Scope } from '../lib/scope.js'
+
 // Per design/stories/keep/001-actor-definitions.md ("refund").
 //
 // Keyed by `stripeRefundId`, not `stripeChargeId` -- a charge can have
@@ -6,7 +8,10 @@
 // Read-only through the API -- no write routes at all, this actor only
 // ever gets a `create` command from webhook handling.
 
-export type RefundScope = { account: string } | { tenant: string }
+// ADR 0109: keep's one scope type, `{account}` or `{organization}`, or `null`
+// when no customer record names the charge's customer: the record is kept
+// for visibility, and no entitlement follows from it.
+export type RefundScope = Scope | null
 
 export interface RefundState {
   stripeRefundId: string
@@ -68,7 +73,7 @@ export default function refundActor() {
     state: {
       stripeRefundId: '',
       tenant: '',
-      scope: { tenant: '' },
+      scope: null,
       stripeChargeId: '',
       amount: 0,
       currency: '',

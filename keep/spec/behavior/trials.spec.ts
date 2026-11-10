@@ -47,6 +47,38 @@ describe('trials -- API contract', () => {
       })
       expect(response.statusCode).toBe(400)
     })
+
+    // ADR 0109: the `{tenant}` scope is retired.
+    it('refuses a tenant-scoped trial with a 400 that names the scope, and publishes nothing', async () => {
+      const response = await t.app.inject({
+        method: 'POST',
+        url: '/tenants/acme/trials',
+        headers,
+        payload: { scope: { tenant: 'acme' }, grantedRoles: [{ application: 'demo-app', role: 'member' }], expiresAt: '2026-12-31T00:00:00.000Z' },
+      })
+      expect(response.statusCode).toBe(400)
+      expect(response.json().error).toContain('{tenant}')
+      expect(response.json().error).toContain('retired')
+      expect(t.publisher.published).toHaveLength(0)
+    })
+
+    it('publishes nothing when a trial persisted before ADR 0109 with a tenant scope is extended or expired', async () => {
+      await t.consequent.handle('trial_legacy', 'trial.create', {
+        id: 'trial_legacy',
+        tenant: 'acme',
+        scope: { tenant: 'acme' },
+        grantedRoles: [{ application: 'demo-app', role: 'member' }],
+        seatLimit: null,
+        expiresAt: '2026-12-31T00:00:00.000Z',
+      })
+
+      const extended = await t.app.inject({ method: 'PATCH', url: '/tenants/acme/trials/trial_legacy', headers, payload: { expiresAt: '2027-01-31T00:00:00.000Z' } })
+      expect(extended.statusCode).toBe(200)
+      const expired = await t.app.inject({ method: 'DELETE', url: '/tenants/acme/trials/trial_legacy', headers })
+      expect(expired.statusCode).toBe(200)
+
+      expect(t.publisher.published).toHaveLength(0)
+    })
   })
 
   describe('GET /tenants/:tenantSlug/trials', () => {

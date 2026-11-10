@@ -33,14 +33,14 @@ describe('durable entitlement sequence provider (entitlementSequence actor)', ()
     expect(other).toBe(1)
   })
 
-  it('keeps independent counters per tenant scope, distinct from account scope', async () => {
+  it('keeps independent counters per organization scope, distinct from account scope', async () => {
     const consequent = await buildInMemoryConsequent()
     const sequences = createConsequentSequenceProvider(consequent)
 
-    await sequences.next('acme', { tenant: 'acme' })
+    await sequences.next('acme', { organization: 'acme' })
     const accountScoped = await sequences.next('acme', { account: 'acme' })
 
-    expect(accountScoped).toBe(1) // `account: 'acme'` and `tenant: 'acme'` are different keys
+    expect(accountScoped).toBe(1) // `account: 'acme'` and `organization: 'acme'` are different keys
   })
 
   it('keeps independent counters across different tenants for the same account id', async () => {

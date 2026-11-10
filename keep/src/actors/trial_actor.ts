@@ -1,3 +1,5 @@
+import type { Scope } from '../lib/scope.js'
+
 // Per design/stories/keep/001-actor-definitions.md ("trial") and
 // design/stories/keep/004-trials-and-coupons.md.
 //
@@ -7,7 +9,8 @@
 // `PATCH { status: "expired" }` (ADR 0053). Conversion (trial -> converted)
 // is a side effect of Story 002's webhook handling, not a route of its own.
 
-export type TrialScope = { account: string } | { tenant: string }
+// ADR 0109: one scope type for every keep actor, `{account}` or `{organization}`.
+export type TrialScope = Scope
 export type TrialStatus = 'active' | 'converted' | 'expired'
 
 export interface GrantedRole {
@@ -135,7 +138,7 @@ export default function trialActor() {
     state: {
       id: '',
       tenant: '',
-      scope: { tenant: '' },
+      scope: { account: '' },
       grantedRoles: [],
       seatLimit: null,
       expiresAt: '',

@@ -19,7 +19,8 @@
     "test:live": "vitest run spec/live",
     "test:all": "npm run build && vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "report:tenant-scope": "npm run build && node dist/report-tenant-scope.js"
   },
   "dependencies": {
     "@bytepunx/authstar-fastify": "^2.0.1",

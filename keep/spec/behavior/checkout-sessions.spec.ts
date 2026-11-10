@@ -130,4 +130,42 @@ describe('checkout sessions -- API contract', () => {
     })
     expect(response.statusCode).toBe(400)
   })
+
+  // ADR 0109: the `{tenant}` scope is retired.
+  it('refuses a tenant-scoped checkout with a 400 that names the scope, and creates no session', async () => {
+    const mapping = await createMapping()
+
+    const response = await t.app.inject({
+      method: 'POST',
+      url: '/tenants/acme/checkout-sessions',
+      headers,
+      payload: {
+        planMappingId: mapping.id,
+        scope: { tenant: 'acme' },
+        successUrl: 'https://acme.example.com/success',
+        cancelUrl: 'https://acme.example.com/cancel',
+      },
+    })
+    expect(response.statusCode).toBe(400)
+    expect(response.json().error).toContain('{tenant}')
+    expect(response.json().error).toContain('retired')
+    expect(t.stripeState.checkoutSessions).toHaveLength(0)
+  })
+
+  it('still creates an organization-scoped checkout', async () => {
+    const mapping = await createMapping()
+
+    const response = await t.app.inject({
+      method: 'POST',
+      url: '/tenants/acme/checkout-sessions',
+      headers,
+      payload: {
+        planMappingId: mapping.id,
+        scope: { organization: 'org_1' },
+        successUrl: 'https://acme.example.com/success',
+        cancelUrl: 'https://acme.example.com/cancel',
+      },
+    })
+    expect(response.statusCode).toBe(201)
+  })
 })

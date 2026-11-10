@@ -3,6 +3,7 @@ import { searchCriteria } from '../lib/consequent-types.js'
 import type { TrialState, GrantedRole } from '../actors/trial_actor.js'
 import generateId from '../lib/ids.js'
 import { requirePermission } from '../lib/permissions.js'
+import { isValidScope, refuseTenantScope } from '../lib/scope.js'
 
 // Per design/stories/keep/004-trials-and-coupons.md ("Trials").
 // Conversion (trial -> converted) is a side effect of Story 002's webhook
@@ -44,7 +45,6 @@ const scopeSchema = {
   type: 'object',
   oneOf: [
     { additionalProperties: false, required: ['account'], properties: { account: { type: 'string', minLength: 1 } } },
-    { additionalProperties: false, required: ['tenant'], properties: { tenant: { type: 'string', minLength: 1 } } },
   ],
 } as const
 
@@ -92,14 +92,15 @@ function toResponse(state: TrialState) {
 }
 
 const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
-  app.post('/tenants/:tenantSlug/trials', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
+  app.post('/tenants/:tenantSlug/trials', { schema: { params: tenantParamsSchema, body: createBodySchema }, preValidation: refuseTenantScope, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
-    // Trials stay account/tenant-scoped only (this route's own schema
-    // enforces it, `scopeSchema` above) -- organization-scoped trials are
-    // a genuinely separate, undesigned question (ADR 0090 doesn't cover
-    // them), not something to silently widen alongside checkout/billing
-    // scope.
-    const body = request.body as { scope: { account: string } | { tenant: string }, grantedRoles?: GrantedRole[], seatLimit?: number | null, expiresAt: string }
+    // Trials stay account-scoped only (this route's own schema enforces
+    // it, `scopeSchema` above). `{tenant}` is retired (ADR 0109), and
+    // `refuseTenantScope` answers it with a 400 that names it.
+    // Organization-scoped trials are a genuinely separate, undesigned
+    // question (ADR 0090 doesn't cover them), not something to silently
+    // widen alongside checkout/billing scope.
+    const body = request.body as { scope: { account: string }, grantedRoles?: GrantedRole[], seatLimit?: number | null, expiresAt: string }
 
     const grantedRoles = body.grantedRoles ?? []
     await app.roleBackfill.ensureFresh(tenantSlug)
@@ -162,14 +163,18 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     const rejection = results.find((r) => r?.rejected)
     if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
 
-    const sequence = await app.sequences.next(tenantSlug, current.scope)
-    await app.entitlements.publish({
-      type: 'entitlement.trial-extended',
-      tenant: tenantSlug,
-      scope: current.scope,
-      sequence,
-      newExpiresAt: body.expiresAt,
-    })
+    // A trial persisted before ADR 0109 may still hold `{tenant}`; keep
+    // publishes no event with that scope.
+    if (isValidScope(current.scope)) {
+      const sequence = await app.sequences.next(tenantSlug, current.scope)
+      await app.entitlements.publish({
+        type: 'entitlement.trial-extended',
+        tenant: tenantSlug,
+        scope: current.scope,
+        sequence,
+        newExpiresAt: body.expiresAt,
+      })
+    }
 
     const updated = await fetchTrial(app, id)
     return toResponse(updated)
@@ -184,7 +189,8 @@ const trialRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
     const rejection = results.find((r) => r?.rejected)
     if (rejection) return reply.code(409).send({ error: rejection.reason?.message })
 
-    for (const role of current.grantedRoles) {
+    const roles = isValidScope(current.scope) ? current.grantedRoles : []
+    for (const role of roles) {
       const sequence = await app.sequences.next(tenantSlug, current.scope)
       await app.entitlements.publish({
         type: 'entitlement.role-revoked',

@@ -97,7 +97,6 @@ async function fetchMapping(app: FastifyInstance, id: string): Promise<PlanMappi
   return instance!.state as unknown as PlanMappingState
 }
 
-// The one place a plan mapping becomes a response body.
 function toResponse(state: PlanMappingState) {
   const { createdAt: _createdAt, ...rest } = state
   return rest

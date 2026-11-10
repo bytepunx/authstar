@@ -1,3 +1,5 @@
+import type { Scope } from '../lib/scope.js'
+
 // Per design/stories/keep/001-actor-definitions.md ("subscription").
 //
 // Keyed directly by `stripeSubscriptionId` -- Stripe-generated and globally
@@ -6,7 +8,8 @@
 // search (ADR 0083). Read-only through the API, no DELETE route at all --
 // state changes are exclusively webhook-driven (ADR 0053).
 
-export type SubscriptionScope = { account: string } | { tenant: string }
+// ADR 0109: one scope type for every keep actor, `{account}` or `{organization}`.
+export type SubscriptionScope = Scope
 export type SubscriptionStatus = 'active' | 'past_due' | 'canceled' | 'trialing' | 'paused'
 
 export interface SubscriptionState {
@@ -82,7 +85,7 @@ export default function subscriptionActor() {
     state: {
       stripeSubscriptionId: '',
       tenant: '',
-      scope: { tenant: '' },
+      scope: { account: '' },
       stripePriceId: '',
       status: 'active',
       currentPeriodEnd: '',

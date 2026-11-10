@@ -2,7 +2,7 @@ import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
 import { searchCriteria } from '../lib/consequent-types.js'
 import type { PlanMappingState } from '../actors/plan_mapping_actor.js'
 import type { CustomerState } from '../actors/customer_actor.js'
-import { scopesEqual, type Scope } from '../lib/scope.js'
+import { refuseTenantScope, scopesEqual, type Scope } from '../lib/scope.js'
 import { requirePermission } from '../lib/permissions.js'
 
 
@@ -26,16 +26,13 @@ const tenantParamsSchema = {
 // top-level `additionalProperties: false` alongside `oneOf` here.
 // Unlike trials.ts, this one accepts `organization` too (ADR 0090) -- a
 // checkout is exactly how an organization's shared subscription comes to
-// exist in the first place. Entitlement fan-out for an organization-scoped
-// subscription (which member accounts, if any, get the granted roles) is
-// deliberately unresolved -- webhooks.ts skips publishing rather than
-// guess; see its own comment.
+// exist in the first place. `{tenant}` is retired (ADR 0109):
+// `refuseTenantScope` answers it with a 400 that names it.
 const scopeSchema = {
   type: 'object',
   oneOf: [
     { additionalProperties: false, required: ['account'], properties: { account: { type: 'string', minLength: 1 } } },
     { additionalProperties: false, required: ['organization'], properties: { organization: { type: 'string', minLength: 1 } } },
-    { additionalProperties: false, required: ['tenant'], properties: { tenant: { type: 'string', minLength: 1 } } },
   ],
 } as const
 
@@ -64,8 +61,8 @@ async function findExistingCustomer(app: FastifyInstance, tenantSlug: string, sc
 
 const checkoutSessionRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   // ADR 0070 self-action: an account can create a checkout session scoped to
-  // itself without `billing:manage`. Org/tenant-scoped checkouts still require it.
-  app.post('/tenants/:tenantSlug/checkout-sessions', { schema: { params: tenantParamsSchema, body: createBodySchema } }, async (request, reply) => {
+  // itself without `billing:manage`. Org-scoped checkouts still require it.
+  app.post('/tenants/:tenantSlug/checkout-sessions', { schema: { params: tenantParamsSchema, body: createBodySchema }, preValidation: refuseTenantScope }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
     const body = request.body as { planMappingId: string, scope: Scope, customerEmail?: string, successUrl: string, cancelUrl: string }
 
