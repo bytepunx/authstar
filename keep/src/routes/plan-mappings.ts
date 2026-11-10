@@ -5,6 +5,10 @@ import generateId from '../lib/ids.js'
 import { requirePermission } from '../lib/permissions.js'
 
 // Per design/stories/keep/003-plan-mappings-checkout-and-billing-reads.md.
+//
+// ADR 0108: a plan mapping's roles are `roles`. `grantedRoles` is accepted
+// on input as a deprecated alias until keep's next major release; responses
+// carry `roles` only.
 
 const tenantParamsSchema = {
   type: 'object',
@@ -46,6 +50,8 @@ const createBodySchema = {
     stripePriceId: { type: 'string', minLength: 1 },
     name: { type: 'string', minLength: 1 },
     seatLimit: { type: ['integer', 'null'], minimum: 1 },
+    roles: { type: 'array', items: grantedRoleSchema },
+    // Deprecated input alias for `roles` (ADR 0108).
     grantedRoles: { type: 'array', items: grantedRoleSchema },
     meter: { type: ['string', 'null'] },
     apiKeyLimit: { type: ['integer', 'null'], minimum: 0 },
@@ -59,6 +65,8 @@ const updateBodySchema = {
   properties: {
     name: { type: 'string', minLength: 1 },
     seatLimit: { type: ['integer', 'null'], minimum: 1 },
+    roles: { type: 'array', items: grantedRoleSchema },
+    // Deprecated input alias for `roles` (ADR 0108).
     grantedRoles: { type: 'array', items: grantedRoleSchema },
     meter: { type: ['string', 'null'] },
     apiKeyLimit: { type: ['integer', 'null'], minimum: 0 },
@@ -89,29 +97,41 @@ async function fetchMapping(app: FastifyInstance, id: string): Promise<PlanMappi
   return instance!.state as unknown as PlanMappingState
 }
 
+// The one place a plan mapping becomes a response body.
 function toResponse(state: PlanMappingState) {
   const { createdAt: _createdAt, ...rest } = state
   return rest
 }
 
+interface RolesInput {
+  roles?: GrantedRole[]
+  grantedRoles?: GrantedRole[]
+}
+
+// `roles` wins over the deprecated `grantedRoles` alias when a body sends both.
+function rolesFrom(body: RolesInput): GrantedRole[] | undefined {
+  return body.roles ?? body.grantedRoles
+}
+
+const unknownRolesError = 'roles references an unknown or inactive application/role'
+
 const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstance) {
   app.post('/tenants/:tenantSlug/plan-mappings', { schema: { params: tenantParamsSchema, body: createBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug } = request.params as { tenantSlug: string }
-    const body = request.body as {
+    const body = request.body as RolesInput & {
       stripePriceId: string
       name: string
       seatLimit?: number | null
-      grantedRoles?: GrantedRole[]
       meter?: string | null
       apiKeyLimit?: number | null
       apiKeyRateLimit?: ApiKeyRateLimit | null
     }
 
-    const grantedRoles = body.grantedRoles ?? []
+    const roles = rolesFrom(body) ?? []
     await app.roleBackfill.ensureFresh(tenantSlug)
-    const validation = app.roleCache.validateAll(tenantSlug, grantedRoles)
+    const validation = app.roleCache.validateAll(tenantSlug, roles)
     if (!validation.valid) {
-      return reply.code(400).send({ error: 'grantedRoles references an unknown or inactive application/role', invalid: validation.invalid })
+      return reply.code(400).send({ error: unknownRolesError, invalid: validation.invalid })
     }
 
     const config = await app.stripeConfig.get(tenantSlug)
@@ -134,7 +154,7 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
       stripePriceId: body.stripePriceId,
       name: body.name,
       seatLimit: body.seatLimit ?? null,
-      grantedRoles,
+      roles,
       meter: body.meter ?? null,
       apiKeyLimit: body.apiKeyLimit ?? null,
       apiKeyRateLimit: body.apiKeyRateLimit ?? null,
@@ -175,10 +195,9 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
 
   app.patch('/tenants/:tenantSlug/plan-mappings/:id', { schema: { params: idParamsSchema, body: updateBodySchema }, preHandler: requirePermission('billing:manage') }, async (request, reply) => {
     const { tenantSlug, id } = request.params as { tenantSlug: string, id: string }
-    const body = request.body as {
+    const body = request.body as RolesInput & {
       name?: string
       seatLimit?: number | null
-      grantedRoles?: GrantedRole[]
       meter?: string | null
       apiKeyLimit?: number | null
       apiKeyRateLimit?: ApiKeyRateLimit | null
@@ -189,18 +208,19 @@ const planMappingRoutes: FastifyPluginAsync = async function (app: FastifyInstan
       return reply.code(404).send()
     }
 
-    if (body.grantedRoles !== undefined) {
+    const roles = rolesFrom(body)
+    if (roles !== undefined) {
       await app.roleBackfill.ensureFresh(tenantSlug)
-      const validation = app.roleCache.validateAll(tenantSlug, body.grantedRoles)
+      const validation = app.roleCache.validateAll(tenantSlug, roles)
       if (!validation.valid) {
-        return reply.code(400).send({ error: 'grantedRoles references an unknown or inactive application/role', invalid: validation.invalid })
+        return reply.code(400).send({ error: unknownRolesError, invalid: validation.invalid })
       }
     }
 
     const results = await app.consequent.handle(id, 'planMapping.update', {
       name: body.name,
       seatLimit: body.seatLimit,
-      grantedRoles: body.grantedRoles,
+      roles,
       meter: body.meter,
       apiKeyLimit: body.apiKeyLimit,
       apiKeyRateLimit: body.apiKeyRateLimit,

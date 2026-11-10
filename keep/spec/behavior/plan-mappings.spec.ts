@@ -1,10 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import buildTestApp, { type TestApp } from '../lib/test-app.js'
+import planMappingActor, { type PlanMappingState } from '../../src/actors/plan_mapping_actor.js'
 
 // Behavior tier: the public HTTP contract for
 // design/stories/keep/003-plan-mappings-checkout-and-billing-reads.md's
 // "Plan Mappings" section -- request/response shapes, status codes, and the
-// specific rules (grantedRoles validation against the reference cache,
+// specific rules (roles validation against the reference cache,
 // Stripe pricing resolved server-side and never client-supplied,
 // DELETE-is-retire, retired mappings excluded from the default list).
 
@@ -30,7 +31,7 @@ describe('plan mappings -- API contract', () => {
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
         headers,
-        payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'member' }] },
+        payload: { stripePriceId: 'price_basic', name: 'Basic', roles: [{ application: 'demo-app', role: 'member' }] },
       })
 
       expect(response.statusCode).toBe(201)
@@ -42,12 +43,12 @@ describe('plan mappings -- API contract', () => {
       expect(body.id).toBeTruthy()
     })
 
-    it('rejects a grantedRoles entry referencing an unknown application/role (400), not silently accepted', async () => {
+    it('rejects a roles entry referencing an unknown application/role (400), not silently accepted', async () => {
       const response = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
         headers,
-        payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'nonexistent-role' }] },
+        payload: { stripePriceId: 'price_basic', name: 'Basic', roles: [{ application: 'demo-app', role: 'nonexistent-role' }] },
       })
 
       expect(response.statusCode).toBe(400)
@@ -185,7 +186,7 @@ describe('plan mappings -- API contract', () => {
   })
 
   describe('PATCH /tenants/:tenantSlug/plan-mappings/:id', () => {
-    it('updates name/seatLimit/grantedRoles/meter', async () => {
+    it('updates name/seatLimit/meter', async () => {
       const created = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
@@ -231,7 +232,7 @@ describe('plan mappings -- API contract', () => {
       })
     })
 
-    it('applies the same grantedRoles validation as create', async () => {
+    it('applies the same roles validation as create', async () => {
       const created = await t.app.inject({
         method: 'POST',
         url: '/tenants/acme/plan-mappings',
@@ -244,10 +245,84 @@ describe('plan mappings -- API contract', () => {
         method: 'PATCH',
         url: `/tenants/acme/plan-mappings/${id}`,
         headers,
-        payload: { grantedRoles: [{ application: 'unknown-app', role: 'member' }] },
+        payload: { roles: [{ application: 'unknown-app', role: 'member' }] },
       })
 
       expect(response.statusCode).toBe(400)
+    })
+  })
+
+  // ADR 0108: a plan's roles are `roles`; `grantedRoles` is a deprecated
+  // input alias, and no response carries it.
+  describe('roles, with grantedRoles as a deprecated input alias', () => {
+    const member = { application: 'demo-app', role: 'member' }
+    const admin = { application: 'demo-app', role: 'admin' }
+
+    async function create(payload: Record<string, unknown>) {
+      return t.app.inject({
+        method: 'POST',
+        url: '/tenants/acme/plan-mappings',
+        headers,
+        payload: { stripePriceId: 'price_basic', name: 'Basic', ...payload },
+      })
+    }
+
+    it('stores roles sent as roles, and answers roles with no grantedRoles', async () => {
+      const response = await create({ roles: [member] })
+
+      expect(response.statusCode).toBe(201)
+      expect(response.json().roles).toEqual([member])
+      expect(response.json()).not.toHaveProperty('grantedRoles')
+    })
+
+    it('stores a create that sends grantedRoles alone as roles', async () => {
+      const response = await create({ grantedRoles: [member] })
+
+      expect(response.statusCode).toBe(201)
+      expect(response.json().roles).toEqual([member])
+      expect(response.json()).not.toHaveProperty('grantedRoles')
+    })
+
+    it('stores an update that sends grantedRoles alone as roles', async () => {
+      const { id } = (await create({ roles: [member] })).json()
+
+      const response = await t.app.inject({
+        method: 'PATCH',
+        url: `/tenants/acme/plan-mappings/${id}`,
+        headers,
+        payload: { grantedRoles: [member, admin] },
+      })
+
+      expect(response.statusCode).toBe(200)
+      expect(response.json().roles).toEqual([member, admin])
+      expect(response.json()).not.toHaveProperty('grantedRoles')
+    })
+
+    it('takes roles over grantedRoles when a body sends both', async () => {
+      const response = await create({ roles: [admin], grantedRoles: [member] })
+
+      expect(response.statusCode).toBe(201)
+      expect(response.json().roles).toEqual([admin])
+    })
+
+    it('validates the grantedRoles alias as it validates roles', async () => {
+      const response = await create({ grantedRoles: [{ application: 'demo-app', role: 'nonexistent-role' }] })
+
+      expect(response.statusCode).toBe(400)
+    })
+
+    it('answers roles and no grantedRoles on GET, list and single', async () => {
+      const { id } = (await create({ grantedRoles: [member] })).json()
+
+      const one = await t.app.inject({ method: 'GET', url: `/tenants/acme/plan-mappings/${id}`, headers })
+      expect(one.json().roles).toEqual([member])
+      expect(one.json()).not.toHaveProperty('grantedRoles')
+
+      const list = await t.app.inject({ method: 'GET', url: '/tenants/acme/plan-mappings', headers })
+      for (const mapping of list.json()) {
+        expect(mapping).toHaveProperty('roles')
+        expect(mapping).not.toHaveProperty('grantedRoles')
+      }
     })
   })
 
@@ -280,5 +355,31 @@ describe('plan mappings -- API contract', () => {
       const response = await t.app.inject({ method: 'DELETE', url: `/tenants/acme/plan-mappings/${id}`, headers })
       expect(response.statusCode).toBe(409)
     })
+  })
+})
+
+// Events persisted before ADR 0108 carry the plan's roles as `grantedRoles`;
+// replaying them must still give the mapping its roles.
+describe('plan mapping actor -- events written before the roles rename', () => {
+  const member = { application: 'demo-app', role: 'member' }
+
+  function freshState(): PlanMappingState {
+    return structuredClone(planMappingActor().state) as PlanMappingState
+  }
+
+  it('reads grantedRoles from a legacy created event as roles', () => {
+    const state = freshState()
+    const legacy = {
+      tenant: 'acme', stripePriceId: 'price_basic', name: 'Basic', seatLimit: null, grantedRoles: [member],
+      meter: null, apiKeyLimit: null, apiKeyRateLimit: null, unitAmount: 1000, currency: 'usd', interval: 'month',
+    }
+    planMappingActor().events.created(state, legacy as never)
+    expect(state.roles).toEqual([member])
+  })
+
+  it('reads grantedRoles from a legacy updated event as roles', () => {
+    const state = freshState()
+    planMappingActor().events.updated(state, { grantedRoles: [member] } as never)
+    expect(state.roles).toEqual([member])
   })
 })

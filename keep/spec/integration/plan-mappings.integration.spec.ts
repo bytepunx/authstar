@@ -91,7 +91,7 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
       method: 'POST',
       url: '/tenants/acme/plan-mappings',
       headers: manageHeaders,
-      payload: { stripePriceId: 'price_basic', name: 'Basic', grantedRoles: [{ application: 'demo-app', role: 'member' }] },
+      payload: { stripePriceId: 'price_basic', name: 'Basic', roles: [{ application: 'demo-app', role: 'member' }] },
     })
     expect(create.statusCode).toBe(201)
     const id = create.json().id
@@ -100,6 +100,8 @@ describe('plan mappings and webhook-driven actors -- real Postgres', () => {
     expect(fetched.statusCode).toBe(200)
     expect(fetched.json().name).toBe('Basic')
     expect(fetched.json().unitAmount).toBe(1200)
+    expect(fetched.json().roles).toEqual([{ application: 'demo-app', role: 'member' }])
+    expect(fetched.json()).not.toHaveProperty('grantedRoles')
   })
 
   it('retiring a plan mapping persists across a fresh fetch-by-id', async () => {

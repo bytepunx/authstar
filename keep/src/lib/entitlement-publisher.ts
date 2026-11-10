@@ -34,11 +34,14 @@ export interface RoleRevokedEvent {
   role: { name: string, scope: string }
 }
 
+// ADR 0108: `roles` are the plan mapping's roles, in the `{name, scope}`
+// shape `role-granted` uses; tower's consumer reads the field.
 export interface ConvertedToPaidEvent {
   type: 'entitlement.converted-to-paid'
   tenant: string
   scope: EntitlementScope
   sequence: number
+  roles: Array<{ name: string, scope: string }>
 }
 
 export interface SeatLimitChangedEvent {

@@ -244,11 +244,12 @@ async function onSubscriptionActivated(app: FastifyInstance, tenant: string, sub
 
   if (isEntitlementScope(scope)) {
     const sequence = await app.sequences.next(tenant, scope)
-    await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence })
+    const roles = (mapping?.roles ?? []).map((role) => ({ name: role.role, scope: role.application }))
+    await app.entitlements.publish({ type: 'entitlement.converted-to-paid', tenant, scope, sequence, roles })
   }
 
   if (mapping) {
-    await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-granted')
+    await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-granted')
     await publishSeatLimitIfSet(app, tenant, scope, mapping.seatLimit)
     await publishApiKeyLimitIfSet(app, tenant, scope, mapping.apiKeyLimit)
     await publishApiKeyRateLimitIfSet(app, tenant, scope, mapping.apiKeyRateLimit)
@@ -272,7 +273,7 @@ async function onSubscriptionUpdated(app: FastifyInstance, tenant: string, sub: 
       findPlanMappingByPriceId(app, tenant, previousPriceId),
       findPlanMappingByPriceId(app, tenant, newPriceId),
     ])
-    const diff = diffRoles(previousMapping?.grantedRoles ?? [], newMapping?.grantedRoles ?? [])
+    const diff = diffRoles(previousMapping?.roles ?? [], newMapping?.roles ?? [])
     await publishRoleEvents(app, tenant, scope, diff.granted, 'entitlement.role-granted')
     await publishRoleEvents(app, tenant, scope, diff.revoked, 'entitlement.role-revoked')
     if (newMapping) {
@@ -292,7 +293,7 @@ async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: 
   if (existing) {
     const mapping = await findPlanMappingByPriceId(app, tenant, existing.stripePriceId)
     if (mapping) {
-      await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-revoked')
+      await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
     }
   }
 }
@@ -303,7 +304,7 @@ async function onSubscriptionDeleted(app: FastifyInstance, tenant: string, sub: 
 // diffing is keyed entirely off a *price* change, pause/resume never touch
 // price -- so update-record-then-diff-by-price would silently grant/revoke
 // nothing. Deliberately unconditional revoke/grant against the plan
-// mapping's full `grantedRoles`, matching the same posture
+// mapping's full `roles`, matching the same posture
 // `onInvoicePaymentFailed`/`onDisputeCreated`/`onDisputeClosed` already use
 // for other status-only degrade/restore transitions.
 async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: StripeSubscriptionObject) {
@@ -318,7 +319,7 @@ async function onSubscriptionPaused(app: FastifyInstance, tenant: string, sub: S
   const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
   const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
   if (mapping) {
-    await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-revoked')
+    await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
   }
 }
 
@@ -334,7 +335,7 @@ async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: 
   const stripePriceId = existing?.stripePriceId ?? sub.items.data[0]?.price.id ?? ''
   const mapping = await findPlanMappingByPriceId(app, tenant, stripePriceId)
   if (mapping) {
-    await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-granted')
+    await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-granted')
   }
 }
 
@@ -342,14 +343,14 @@ async function onSubscriptionResumed(app: FastifyInstance, tenant: string, sub: 
 // threshold, not fixed here." This pilot slice degrades immediately on the
 // first failure rather than tracking an attempt count across invoices --
 // a deliberate simplification, not the full grace-period mechanism the
-// story describes. Reuses the same `grantedRoles`-only degrade
+// story describes. Reuses the same plan-roles degrade
 // `charge.dispute.created` uses. Left as a documented follow-up (TESTING.md).
 async function onInvoicePaymentFailed(app: FastifyInstance, tenant: string, invoice: StripeInvoiceObject) {
   const existing = await findSubscription(app, invoice.subscription)
   if (!existing) return
   const mapping = await findPlanMappingByPriceId(app, tenant, existing.stripePriceId)
   if (mapping) {
-    await publishRoleEvents(app, tenant, existing.scope, mapping.grantedRoles, 'entitlement.role-revoked')
+    await publishRoleEvents(app, tenant, existing.scope, mapping.roles, 'entitlement.role-revoked')
   }
 }
 
@@ -391,13 +392,13 @@ async function onDisputeCreated(app: FastifyInstance, tenant: string, dispute: S
     reason: dispute.reason,
   })
 
-  // Reuses the exact `grantedRoles`-only degrade `invoice.payment_failed`
+  // Reuses the exact plan-roles degrade `invoice.payment_failed`
   // uses (Story 002).
   const subscription = await findSubscriptionByScope(app, tenant, scope)
   if (subscription) {
     const mapping = await findPlanMappingByPriceId(app, tenant, subscription.stripePriceId)
     if (mapping) {
-      await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-revoked')
+      await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-revoked')
     }
   }
 }
@@ -411,7 +412,7 @@ async function onDisputeClosed(app: FastifyInstance, tenant: string, dispute: St
     if (subscription) {
       const mapping = await findPlanMappingByPriceId(app, tenant, subscription.stripePriceId)
       if (mapping) {
-        await publishRoleEvents(app, tenant, scope, mapping.grantedRoles, 'entitlement.role-granted')
+        await publishRoleEvents(app, tenant, scope, mapping.roles, 'entitlement.role-granted')
       }
     }
   }

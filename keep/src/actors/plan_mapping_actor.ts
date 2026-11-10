@@ -8,9 +8,14 @@
 // authoritative (ADR 0060); this actor never accepts them as untrusted
 // client input, only as values the route layer already resolved via the
 // injectable Stripe client before calling `create`/`syncPricing`.
-// `grantedRoles` validation against keep's local tower-sourced reference
+// `roles` validation against keep's local tower-sourced reference
 // cache (ADR 0047) happens at the route layer, not here -- the actor has no
 // way to reach that cache and shouldn't need to.
+//
+// ADR 0108: `roles` are the roles this plan grants. They were called
+// `grantedRoles` until ADR 0108, which keeps that name for tower's set of
+// roles in effect. Events persisted before the rename carry `grantedRoles`,
+// so the event handlers read either name.
 
 export type PlanMappingScope = { account: string } | { tenant: string }
 export type PlanMappingInterval = 'month' | 'year'
@@ -35,7 +40,7 @@ export interface PlanMappingState {
   stripePriceId: string
   name: string
   seatLimit: number | null
-  grantedRoles: GrantedRole[]
+  roles: GrantedRole[]
   meter: string | null
   // design/adrs/0101-api-keys.md, added after this actor's own
   // original ADR 0083 design -- same mechanical addition `meter` above
@@ -60,7 +65,7 @@ interface CreateCommand {
   stripePriceId: string
   name: string
   seatLimit: number | null
-  grantedRoles: GrantedRole[]
+  roles: GrantedRole[]
   meter: string | null
   apiKeyLimit: number | null
   apiKeyRateLimit: ApiKeyRateLimit | null
@@ -72,7 +77,7 @@ interface CreateCommand {
 interface UpdateCommand {
   name?: string
   seatLimit?: number | null
-  grantedRoles?: GrantedRole[]
+  roles?: GrantedRole[]
   meter?: string | null
   apiKeyLimit?: number | null
   apiKeyRateLimit?: ApiKeyRateLimit | null
@@ -110,7 +115,7 @@ function create(_mapping: PlanMappingState, command: CreateCommand) {
     stripePriceId: command.stripePriceId,
     name: command.name,
     seatLimit: command.seatLimit,
-    grantedRoles: command.grantedRoles,
+    roles: command.roles,
     meter: command.meter,
     apiKeyLimit: command.apiKeyLimit,
     apiKeyRateLimit: command.apiKeyRateLimit,
@@ -125,7 +130,7 @@ function update(_mapping: PlanMappingState, command: UpdateCommand) {
     type: 'planMapping.updated',
     name: command.name,
     seatLimit: command.seatLimit,
-    grantedRoles: command.grantedRoles,
+    roles: command.roles,
     meter: command.meter,
     apiKeyLimit: command.apiKeyLimit,
     apiKeyRateLimit: command.apiKeyRateLimit,
@@ -161,12 +166,17 @@ function rejectRetire() {
   return Promise.reject(new Error('plan mapping is already retired'))
 }
 
-function created(mapping: PlanMappingState, event: Omit<CreateCommand, 'id'>) {
+// Events written before ADR 0108 carry the plan's roles as `grantedRoles`.
+interface LegacyRolesField {
+  grantedRoles?: GrantedRole[]
+}
+
+function created(mapping: PlanMappingState, event: Omit<CreateCommand, 'id'> & LegacyRolesField) {
   mapping.tenant = event.tenant
   mapping.stripePriceId = event.stripePriceId
   mapping.name = event.name
   mapping.seatLimit = event.seatLimit
-  mapping.grantedRoles = event.grantedRoles
+  mapping.roles = event.roles ?? event.grantedRoles ?? []
   mapping.meter = event.meter
   mapping.apiKeyLimit = event.apiKeyLimit
   mapping.apiKeyRateLimit = event.apiKeyRateLimit
@@ -177,10 +187,11 @@ function created(mapping: PlanMappingState, event: Omit<CreateCommand, 'id'>) {
   mapping.createdAt = new Date(0).toISOString() // replaced by consequent's own event timestamp on read
 }
 
-function updated(mapping: PlanMappingState, event: UpdateCommand) {
+function updated(mapping: PlanMappingState, event: UpdateCommand & LegacyRolesField) {
   if (event.name !== undefined) mapping.name = event.name
   if (event.seatLimit !== undefined) mapping.seatLimit = event.seatLimit
-  if (event.grantedRoles !== undefined) mapping.grantedRoles = event.grantedRoles
+  const roles = event.roles ?? event.grantedRoles
+  if (roles !== undefined) mapping.roles = roles
   if (event.meter !== undefined) mapping.meter = event.meter
   if (event.apiKeyLimit !== undefined) mapping.apiKeyLimit = event.apiKeyLimit
   if (event.apiKeyRateLimit !== undefined) mapping.apiKeyRateLimit = event.apiKeyRateLimit
@@ -217,7 +228,7 @@ export default function planMappingActor() {
       stripePriceId: '',
       name: '',
       seatLimit: null,
-      grantedRoles: [],
+      roles: [],
       meter: null,
       apiKeyLimit: null,
       apiKeyRateLimit: null,
