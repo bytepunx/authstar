@@ -121,6 +121,14 @@ config/authstar/<service>.yaml
 
 A story's namespace is its ID in lower case, `s-0019`, with prefix `s0019_`. The default namespace `authstar` has no prefix, so main keeps the profile's names. Its deploy first removes the Deployments and CronJobs the profile made from `latest`. The deploy keeps the namespace's operator tokens, for the golden path, in `.flai-cache/kluster/state/<namespace>/tokens.env`.
 
+To run the golden path against a story's namespace, name the namespace and its tokens. The scenario then reaches that namespace's services and its prefixed databases, and sends the operator tokens its deploy made:
+
+```sh
+KUBECONFIG=.flai-cache/kluster/kubeconfig KLUSTER_NAMESPACE=s-0006 \
+  KLUSTER_TOKENS=.flai-cache/kluster/state/s-0006/tokens.env \
+  integration/scripts/scenario-golden-path.sh
+```
+
 From the operator's shell, never an agent's:
 
 ```sh
