@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 3
-      output: 569
-      cache_read: 291965
-      cache_write: 4520
-      cost: 0.1048
+      input: 2
+      output: 518
+      cache_read: 289924
+      cache_write: 6001
+      cost: 0.1154
 ---
 # T-0085 Renumber S-0008's closed duplicate issue from I-0003 to I-0008
 

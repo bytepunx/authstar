@@ -3,15 +3,36 @@ id: T-0057
 type: task
 nature: feature
 title: Web's keep client creates a checkout session, and the fake does too
-status: backlog
+status: done
 parent: S-0007
 owner: bytepunx
 created: 2026-11-06T18:09:32Z
-updated: 2026-11-06T18:09:32Z
-transitions: []
+updated: 2026-11-09T21:01:04Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:46:16Z
+    by: agent-S-0007
+  - to: in-progress
+    at: 2026-11-09T20:46:16Z
+    by: agent-S-0007
+  - to: done
+    at: 2026-11-09T21:01:04Z
+    by: agent-S-0007
 stream: S-0007
 tags: [web]
 touches: [web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts]
+usage:
+  source: log
+  seconds: 888
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 6888
+      cache_read: 2298083
+      cache_write: 71897
+      cost: 1.007
 ---
 # T-0057 Web's keep client creates a checkout session, and the fake does too
 

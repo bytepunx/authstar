@@ -3,16 +3,37 @@ id: T-0090
 type: task
 nature: feature
 title: scripts/kluster-signet.sh seeds a namespace's signet bundles and cross-service policies
-status: backlog
+status: done
 parent: S-0019
 owner: bytepunx
 created: 2026-11-09T06:54:55Z
-updated: 2026-11-09T06:54:55Z
-transitions: []
+updated: 2026-11-09T22:08:47Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:02:26Z
+    by: agent-S-0019
+  - to: in-progress
+    at: 2026-11-09T22:02:27Z
+    by: agent-S-0019
+  - to: done
+    at: 2026-11-09T22:08:47Z
+    by: agent-S-0019
 stream: S-0019
 tags: [kluster, scripts, signet]
-touches: [scripts/kluster-signet.sh]
+touches: [scripts/kluster-signet.sh, scripts/kluster-signet-push.mjs, scripts/lib-kluster.sh]
 after: [T-0089]
+usage:
+  source: log
+  seconds: 380
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 74
+      output: 23872
+      cache_read: 7000266
+      cache_write: 102699
+      cost: 2.596
 ---
 # T-0090 scripts/kluster-signet.sh seeds a namespace's signet bundles and cross-service policies
 

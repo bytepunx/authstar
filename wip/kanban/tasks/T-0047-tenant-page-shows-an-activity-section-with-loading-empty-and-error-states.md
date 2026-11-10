@@ -3,16 +3,37 @@ id: T-0047
 type: task
 nature: feature
 title: Tenant page shows an Activity section with loading, empty, and error states
-status: backlog
+status: done
 parent: S-0013
 owner: bytepunx
 created: 2026-11-06T18:08:18Z
-updated: 2026-11-06T18:08:18Z
-transitions: []
+updated: 2026-11-09T21:20:54Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:08:00Z
+    by: agent-S-0013
+  - to: in-progress
+    at: 2026-11-09T21:08:00Z
+    by: agent-S-0013
+  - to: done
+    at: 2026-11-09T21:20:54Z
+    by: agent-S-0013
 stream: S-0013
 tags: [steward]
-touches: ["steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts]
+touches: ["steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/tests/behavior/activity.spec.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts]
 after: [T-0045]
+usage:
+  source: log
+  seconds: 774
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 39
+      output: 9254
+      cache_read: 2578386
+      cache_write: 86348
+      cost: 1.2435
 ---
 # T-0047 Tenant page shows an Activity section with loading, empty, and error states
 

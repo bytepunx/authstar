@@ -3,15 +3,36 @@ id: T-0051
 type: task
 nature: feature
 title: Keep lets an account of the tenant list its active plan mappings
-status: backlog
+status: done
 parent: S-0007
 owner: bytepunx
 created: 2026-11-06T18:08:59Z
-updated: 2026-11-06T18:08:59Z
-transitions: []
+updated: 2026-11-09T21:00:57Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:46:15Z
+    by: agent-S-0007
+  - to: in-progress
+    at: 2026-11-09T20:46:15Z
+    by: agent-S-0007
+  - to: done
+    at: 2026-11-09T21:00:57Z
+    by: agent-S-0007
 stream: S-0007
 tags: [keep]
-touches: [keep/src/routes/plan-mappings.ts, keep/spec/behavior/plan-mappings.spec.ts, design/adrs/README.md]
+touches: [keep/src/routes/plan-mappings.ts, keep/spec/behavior/plan-mappings.spec.ts, design/adrs/README.md, design/adrs/0112-any-signed-in-caller-of-a-tenant-may-list-its-active-plan-mappings-every-other.md]
+usage:
+  source: log
+  seconds: 882
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 10515
+      cache_read: 3507970
+      cache_write: 109748
+      cost: 1.5371
 ---
 # T-0051 Keep lets an account of the tenant list its active plan mappings
 

@@ -3,16 +3,37 @@ id: T-0093
 type: task
 nature: feature
 title: "The kluster: block names the eight component builds, deploy, and teardown, and the scripts are documented"
-status: backlog
+status: done
 parent: S-0019
 owner: bytepunx
 created: 2026-11-09T06:55:23Z
-updated: 2026-11-09T06:55:23Z
-transitions: []
+updated: 2026-11-09T22:28:48Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:26:25Z
+    by: agent-S-0019
+  - to: in-progress
+    at: 2026-11-09T22:26:25Z
+    by: agent-S-0019
+  - to: done
+    at: 2026-11-09T22:28:48Z
+    by: agent-S-0019
 stream: S-0019
 tags: [kluster, manifest, docs]
-touches: [system-flow.yaml, kluster.yaml, scripts/README.md, integration/README.md]
+touches: [system-flow.yaml, kluster.yaml, scripts/README.md, integration/README.md, design/system/overview.md]
 after: [T-0087, T-0091, T-0092]
+usage:
+  source: log
+  seconds: 143
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 38
+      output: 12229
+      cache_read: 3585891
+      cache_write: 52608
+      cost: 1.3298
 ---
 # T-0093 The kluster: block names the eight component builds, deploy, and teardown, and the scripts are documented
 

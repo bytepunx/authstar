@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-09T07:19:49Z
+updated: 2026-11-09T21:39:50Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -23,35 +23,41 @@ transitions:
     by: bytepunx
 blocked:
   - from: 2026-11-09T07:19:49Z
+    until: 2026-11-09T20:48:46Z
+    reason: awaiting the operator on TH-0031
+  - from: 2026-11-09T21:28:42Z
+    until: 2026-11-09T21:39:39Z
+    reason: awaiting the operator on TH-0031
+  - from: 2026-11-09T21:39:50Z
     reason: awaiting the operator on TH-0031
 tags: [keep, portcullis]
-touches: [docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, keep/TESTING.md, keep/spec/behavior/me.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/me.ts, portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-proxy/tests/me_tests.rs, web/src/widgets/subscription-status.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md, design/adrs/README.md, integration/config/authstar/portcullis.yaml, design/issues/I-0014-a-story-branch-cannot-change-the-harness-s-signet-config-signet-syncs-it-from.md, design/issues/summary.md, design/issues/I-0015-flai-check-finds-roles-definition-outside-the-story-at-close-out.md]
+touches: [docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, keep/TESTING.md, keep/spec/behavior/me.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/me.ts, portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-proxy/tests/me_tests.rs, web/src/widgets/subscription-status.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md, design/adrs/README.md, integration/config/authstar/portcullis.yaml, design/issues/I-0014-a-story-branch-cannot-change-the-harness-s-signet-config-signet-syncs-it-from.md, design/issues/summary.md, design/issues/I-0015-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md]
 usage:
   source: log
-  seconds: 1023
+  seconds: 3422
   priced_by: harness
   turns:
     - day: 2026-11-09
-      ceremony: 5
-      work: 63
+      ceremony: 6
+      work: 124
   models:
     - model: claude-opus-5-5
-      input: 152
-      output: 27025
-      cache_read: 6368631
-      cache_write: 126045
-      cost: 2.8232
+      input: 280
+      output: 45647
+      cache_read: 18228770
+      cache_write: 335171
+      cost: 7.2412
   strategic:
     - kind: orchestrator
-      seconds: 47
+      seconds: 61
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 26
-          output: 201
-          cache_read: 718297
-          cache_write: 82013
-          cost: 0.9463
+          input: 38
+          output: 287
+          cache_read: 1040525
+          cache_write: 139446
+          cost: 1.3816
 ---
 # S-0006 Serve GET /_authstar/me/subscription for the subscription-status widget
 

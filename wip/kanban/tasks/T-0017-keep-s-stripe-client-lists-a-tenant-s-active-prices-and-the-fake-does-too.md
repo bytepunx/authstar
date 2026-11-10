@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 15
-      output: 3332
-      cache_read: 1708602
-      cache_write: 26451
-      cost: 0.6133
+      input: 14
+      output: 3031
+      cache_read: 1696657
+      cache_write: 35116
+      cost: 0.6751
 ---
 # T-0017 Keep's Stripe client lists a tenant's active prices, and the fake does too
 

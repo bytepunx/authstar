@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 13
-      output: 2800
-      cache_read: 1435554
-      cache_write: 22224
-      cost: 0.5153
+      input: 12
+      output: 2547
+      cache_read: 1425518
+      cache_write: 29505
+      cost: 0.5672
 ---
 # T-0019 Live tier lists a real test-mode price through keep's stripe-prices route
 

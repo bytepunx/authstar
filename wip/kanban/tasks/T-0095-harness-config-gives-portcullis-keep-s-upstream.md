@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 700
-      cache_read: 164849
-      cache_write: 3263
-      cost: 0.0731
+      input: 3
+      output: 413
+      cache_read: 165078
+      cache_write: 3035
+      cost: 0.0656
 ---
 
 # T-0095 Harness config gives portcullis keep's upstream

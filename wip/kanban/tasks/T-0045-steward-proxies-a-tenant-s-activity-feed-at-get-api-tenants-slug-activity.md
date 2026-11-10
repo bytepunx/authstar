@@ -3,16 +3,37 @@ id: T-0045
 type: task
 nature: feature
 title: "Steward proxies a tenant's activity feed at GET /api/tenants/[slug]/activity"
-status: backlog
+status: done
 parent: S-0013
 owner: bytepunx
 created: 2026-11-06T18:08:02Z
-updated: 2026-11-06T18:08:02Z
-transitions: []
+updated: 2026-11-09T21:07:56Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:59:33Z
+    by: agent-S-0013
+  - to: in-progress
+    at: 2026-11-09T20:59:33Z
+    by: agent-S-0013
+  - to: done
+    at: 2026-11-09T21:07:56Z
+    by: agent-S-0013
 stream: S-0013
 tags: [steward]
 touches: ["steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts]
 after: [T-0044]
+usage:
+  source: log
+  seconds: 503
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 4678
+      cache_read: 1303427
+      cache_write: 43651
+      cost: 0.6286
 ---
 # T-0045 Steward proxies a tenant's activity feed at GET /api/tenants/[slug]/activity
 

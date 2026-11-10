@@ -6,8 +6,8 @@ sources: [TH-0030, S-0011, I-0016]
 topics: [dependencies, testing, tooling, node, herald, keep]
 paths: [herald/package.json, keep/package.json, Makefile, design/issues/I-0016-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md]
 date: 2026-11-09
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: design/tech/npm.md
 asked_again: []
 cited: []
 ---

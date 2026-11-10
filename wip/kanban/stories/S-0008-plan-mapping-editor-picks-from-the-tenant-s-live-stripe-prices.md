@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-09T07:42:54Z
+updated: 2026-11-09T21:21:23Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -47,13 +47,31 @@ blocked:
     until: 2026-11-09T07:41:01Z
     reason: awaiting the operator on TH-0030
   - from: 2026-11-09T07:42:54Z
+    until: 2026-11-09T20:44:49Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-09T20:45:05Z
+    until: 2026-11-09T20:45:06Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-09T20:45:20Z
+    until: 2026-11-09T20:45:26Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-09T20:45:36Z
+    until: 2026-11-09T21:01:04Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-09T21:01:17Z
+    until: 2026-11-09T21:10:35Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-09T21:10:46Z
+    until: 2026-11-09T21:21:05Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-09T21:21:23Z
     reason: awaiting the operator on TH-0030
 tags: [web]
 topics: [billing]
-touches: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md, design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/I-0009-no-test-tier-type-checks-web-or-steward-scripts-test-sh-runs-vitest-only-never.md, design/issues/I-0011-keep-s-live-portal-session-test-sends-a-pre-adr-0100-token-and-gets-403.md, design/issues/I-0013-npm-12-blocks-dependency-install-scripts-so-farmhash-is-never-built-and-herald.md]
+touches: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md, design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/I-0009-no-test-tier-type-checks-web-or-steward-scripts-test-sh-runs-vitest-only-never.md, design/issues/I-0011-keep-s-live-portal-session-test-sends-a-pre-adr-0100-token-and-gets-403.md, design/issues/I-0013-npm-12-blocks-dependency-install-scripts-so-farmhash-is-never-built-and-herald.md, design/issues/I-0020-overlap-messages-fire-for-design-issues-summary-md-a-generated-file-flai.md]
 usage:
   source: log
-  seconds: 2074
+  seconds: 2129
   priced_by: harness
   turns:
     - day: 2026-11-06
@@ -63,14 +81,14 @@ usage:
     - day: 2026-11-09
       test_runs: 1
       hand_edits: 1
-      work: 35
+      work: 48
   models:
     - model: claude-opus-5-5
-      input: 436
-      output: 97176
-      cache_read: 49823237
-      cache_write: 771328
-      cost: 17.8826
+      input: 476
+      output: 102352
+      cache_read: 57293352
+      cache_write: 1185823
+      cost: 22.7963
   strategic:
     - kind: orchestrator
       seconds: 188

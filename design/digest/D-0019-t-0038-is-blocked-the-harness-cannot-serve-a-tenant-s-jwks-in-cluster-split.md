@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0034]
 ---
 
 # D-0019 T-0038 is blocked: the harness cannot serve a tenant's JWKS in-cluster. Split criterion 3's harness half: A

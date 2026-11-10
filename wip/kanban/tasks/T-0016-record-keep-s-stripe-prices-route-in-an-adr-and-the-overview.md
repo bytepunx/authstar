@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 5
-      output: 1110
-      cache_read: 569112
-      cache_write: 8811
-      cost: 0.2043
+      output: 1010
+      cache_read: 565134
+      cache_write: 11697
+      cost: 0.2249
 ---
 # T-0016 Record keep's stripe-prices route in an ADR and the overview
 

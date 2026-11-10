@@ -3,16 +3,37 @@ id: T-0091
 type: task
 nature: feature
 title: scripts/kluster-teardown.sh removes a story namespace's vhost, user, and prefixed databases
-status: backlog
+status: done
 parent: S-0019
 owner: bytepunx
 created: 2026-11-09T06:55:01Z
-updated: 2026-11-09T06:55:01Z
-transitions: []
+updated: 2026-11-09T22:08:51Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:02:27Z
+    by: agent-S-0019
+  - to: in-progress
+    at: 2026-11-09T22:02:27Z
+    by: agent-S-0019
+  - to: done
+    at: 2026-11-09T22:08:51Z
+    by: agent-S-0019
 stream: S-0019
 tags: [kluster, scripts]
 touches: [scripts/kluster-teardown.sh]
 after: [T-0089]
+usage:
+  source: log
+  seconds: 384
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 7541
+      cache_read: 2211322
+      cache_write: 32442
+      cost: 0.8201
 ---
 # T-0091 scripts/kluster-teardown.sh removes a story namespace's vhost, user, and prefixed databases
 

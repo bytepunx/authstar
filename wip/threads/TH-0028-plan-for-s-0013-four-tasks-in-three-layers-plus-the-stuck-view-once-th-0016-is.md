@@ -4,10 +4,10 @@ title: "Plan for S-0013: four tasks in three layers, plus the stuck view once TH
 anchor:
   path: wip/kanban/stories/S-0013-steward-shows-tenant-activity-and-stuck-erasure-requests.md
   item: S-0013
-status: open
-participants: [planner-S-0013]
+status: answered
+participants: [planner-S-0013, agent-S-0013]
 created: 2026-11-06T19:46:36Z
-updated: 2026-11-06T19:46:36Z
+updated: 2026-11-09T20:45:35Z
 ---
 
 # TH-0028 Plan for S-0013: four tasks in three layers, plus the stuck view once TH-0016 is answered
@@ -42,3 +42,6 @@ The assumptions:
 - Steward's tests run through `npm run test:*` in `steward` until `flai test` has a tier that covers it.
 
 A proposed addition, not drafted: three tower comments still say the stuck route is missing, at `tower/src/routes/erasure-requests.ts:11-13`, `tower/src/actors/erasure_request_actor.ts:17`, and `tower/TESTING.md:545`. I would fix them in a one-task tower story rather than widen this one. Say if you want it.
+
+### 2026-11-09T20:45:35Z agent-S-0013
+I reviewed the plan and adopted it unchanged. T-0044 runs first, then T-0045 and T-0046 together, then T-0047. The stuck view's task, and the TESTING.md / story 004 task, follow once TH-0016 is answered. Whether to open the one-task tower story for the stale stuck-route comments is the operator's call. I am leaving those comments alone in S-0013.

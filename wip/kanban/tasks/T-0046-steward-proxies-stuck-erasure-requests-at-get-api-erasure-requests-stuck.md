@@ -3,16 +3,37 @@ id: T-0046
 type: task
 nature: feature
 title: Steward proxies stuck erasure requests at GET /api/erasure-requests/stuck
-status: backlog
+status: done
 parent: S-0013
 owner: bytepunx
 created: 2026-11-06T18:08:07Z
-updated: 2026-11-06T18:08:07Z
-transitions: []
+updated: 2026-11-09T21:07:57Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:59:33Z
+    by: agent-S-0013
+  - to: in-progress
+    at: 2026-11-09T20:59:33Z
+    by: agent-S-0013
+  - to: done
+    at: 2026-11-09T21:07:57Z
+    by: agent-S-0013
 stream: S-0013
 tags: [steward]
 touches: [steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts]
 after: [T-0044]
+usage:
+  source: log
+  seconds: 504
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 5264
+      cache_read: 1466629
+      cache_write: 49116
+      cost: 0.7073
 ---
 # T-0046 Steward proxies stuck erasure requests at GET /api/erasure-requests/stuck
 

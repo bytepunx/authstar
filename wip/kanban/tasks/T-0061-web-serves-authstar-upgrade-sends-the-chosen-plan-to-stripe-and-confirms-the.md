@@ -3,16 +3,37 @@ id: T-0061
 type: task
 nature: feature
 title: Web serves /_authstar/upgrade, sends the chosen plan to Stripe, and confirms the return
-status: backlog
+status: done
 parent: S-0007
 owner: bytepunx
 created: 2026-11-06T18:09:50Z
-updated: 2026-11-06T18:09:50Z
-transitions: []
+updated: 2026-11-09T21:31:52Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:10:39Z
+    by: agent-S-0007
+  - to: in-progress
+    at: 2026-11-09T21:10:39Z
+    by: agent-S-0007
+  - to: done
+    at: 2026-11-09T21:31:52Z
+    by: agent-S-0007
 stream: S-0007
 tags: [web]
-touches: [web/src/routes/(hosted)/_authstar/upgrade/+page.server.ts, web/src/routes/(hosted)/_authstar/upgrade/+page.svelte, web/src/routes/(hosted)/_authstar/upgrade/success/+page.svelte, web/src/routes/(hosted)/_authstar/upgrade/cancelled/+page.svelte, web/spec/behavior/hosted-upgrade.spec.ts, web/e2e/hosted-upgrade.spec.ts, web/TESTING.md]
+touches: [web/src/routes/(hosted)/_authstar/upgrade/+page.server.ts, web/src/routes/(hosted)/_authstar/upgrade/+page.svelte, web/src/routes/(hosted)/_authstar/upgrade/success/+page.svelte, web/src/routes/(hosted)/_authstar/upgrade/cancelled/+page.svelte, web/spec/behavior/hosted-upgrade.spec.ts, web/e2e/hosted-upgrade.spec.ts, web/TESTING.md, web/playwright.config.ts, web/spec/fixtures/fake-tower-server.ts]
 after: [T-0057]
+usage:
+  source: log
+  seconds: 1273
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 134
+      output: 39044
+      cache_read: 13025758
+      cache_write: 407516
+      cost: 5.7076
 ---
 # T-0061 Web serves /_authstar/upgrade, sends the chosen plan to Stripe, and confirms the return
 

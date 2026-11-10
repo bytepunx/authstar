@@ -3,16 +3,37 @@ id: T-0092
 type: task
 nature: feature
 title: scripts/kluster-deploy.sh deploys a build into FLAI_KLUSTER_NAMESPACE over the shared services
-status: backlog
+status: done
 parent: S-0019
 owner: bytepunx
 created: 2026-11-09T06:55:12Z
-updated: 2026-11-09T06:55:12Z
-transitions: []
+updated: 2026-11-09T22:26:16Z
+transitions:
+  - to: ready
+    at: 2026-11-09T22:09:04Z
+    by: agent-S-0019
+  - to: in-progress
+    at: 2026-11-09T22:09:04Z
+    by: agent-S-0019
+  - to: done
+    at: 2026-11-09T22:26:16Z
+    by: agent-S-0019
 stream: S-0019
 tags: [kluster, scripts]
 touches: [scripts/kluster-deploy.sh]
 after: [T-0088, T-0089, T-0090]
+usage:
+  source: log
+  seconds: 1032
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 19
+      output: 6079
+      cache_read: 1782625
+      cache_write: 26152
+      cost: 0.6611
 ---
 # T-0092 scripts/kluster-deploy.sh deploys a build into FLAI_KLUSTER_NAMESPACE over the shared services
 

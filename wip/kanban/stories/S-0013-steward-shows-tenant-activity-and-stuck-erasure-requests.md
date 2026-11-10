@@ -3,29 +3,50 @@ id: S-0013
 type: story
 nature: feature
 title: Steward shows tenant activity and stuck erasure requests
-status: backlog
+status: in-progress
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-09T20:44:27Z
-transitions: []
+updated: 2026-11-09T21:21:36Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:44:54Z
+    by: bytepunx
+  - to: in-progress
+    at: 2026-11-09T20:44:59Z
+    by: agent-S-0013
+blocked:
+  - from: 2026-11-09T21:21:36Z
+    reason: awaiting the operator on TH-0016
 tags: [steward]
-touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md]
+touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2198
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 2
+      hand_edits: 2
+      work: 31
+  models:
+    - model: claude-opus-5-5
+      input: 202
+      output: 48516
+      cache_read: 13517421
+      cache_write: 452687
+      cost: 6.519
   strategic:
     - kind: orchestrator
-      seconds: 55
+      seconds: 64
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 36
-          output: 310
-          cache_read: 1019201
-          cache_write: 203915
-          cost: 1.4075
+          input: 43
+          output: 354
+          cache_read: 1247012
+          cache_write: 235797
+          cost: 1.7056
 cost_of_delay:
   value: 23.53
   by: planner-S-0013

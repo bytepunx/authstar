@@ -3,30 +3,52 @@ id: S-0007
 type: story
 nature: feature
 title: Hosted upgrade page that starts a Stripe checkout
-status: backlog
+status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-09T20:44:27Z
-transitions: []
+updated: 2026-11-09T21:40:14Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:44:48Z
+    by: bytepunx
+  - to: in-progress
+    at: 2026-11-09T20:45:11Z
+    by: agent-S-0007
+blocked:
+  - from: 2026-11-09T21:40:14Z
+    reason: awaiting the operator on TH-0034
 tags: [web, keep, portcullis]
 topics: [billing]
-touches: [keep/src/routes/plan-mappings.ts, keep/spec/behavior/plan-mappings.spec.ts, design/adrs/README.md, portcullis/crates/authstar-middleware/src/upgrade.rs, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, portcullis/TESTING.md, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(hosted)/_authstar/upgrade/+page.server.ts, web/src/routes/(hosted)/_authstar/upgrade/+page.svelte, web/src/routes/(hosted)/_authstar/upgrade/success/+page.svelte, web/src/routes/(hosted)/_authstar/upgrade/cancelled/+page.svelte, web/spec/behavior/hosted-upgrade.spec.ts, web/e2e/hosted-upgrade.spec.ts, web/TESTING.md, integration/scripts/scenario-golden-path.sh, integration/scripts/provision.sh, integration/README.md, docs/users/index.md, design/system/overview.md, design/stories/web/010-hosted-pages.md, design/stories/web/005-billing.md, design/stories/keep/002-stripe-webhook-handling.md]
+touches: [keep/src/routes/plan-mappings.ts, keep/spec/behavior/plan-mappings.spec.ts, design/adrs/README.md, portcullis/crates/authstar-middleware/src/upgrade.rs, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, portcullis/TESTING.md, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(hosted)/_authstar/upgrade/+page.server.ts, web/src/routes/(hosted)/_authstar/upgrade/+page.svelte, web/src/routes/(hosted)/_authstar/upgrade/success/+page.svelte, web/src/routes/(hosted)/_authstar/upgrade/cancelled/+page.svelte, web/spec/behavior/hosted-upgrade.spec.ts, web/e2e/hosted-upgrade.spec.ts, web/TESTING.md, integration/scripts/scenario-golden-path.sh, integration/scripts/provision.sh, integration/README.md, docs/users/index.md, design/system/overview.md, design/stories/web/010-hosted-pages.md, design/stories/web/005-billing.md, design/stories/keep/002-stripe-webhook-handling.md, design/adrs/0112-any-signed-in-caller-of-a-tenant-may-list-its-active-plan-mappings-every-other.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, web/playwright.config.ts, web/spec/fixtures/fake-tower-server.ts]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3305
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 2
+      test_runs: 2
+      hand_edits: 2
+      work: 47
+  models:
+    - model: claude-opus-5-5
+      input: 362
+      output: 105646
+      cache_read: 35245165
+      cache_write: 1102660
+      cost: 15.4438
   strategic:
     - kind: orchestrator
-      seconds: 44
+      seconds: 53
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 23
-          output: 151
-          cache_read: 745714
-          cache_write: 113070
-          cost: 0.9626
+          input: 30
+          output: 195
+          cache_read: 973525
+          cache_write: 144952
+          cost: 1.2607
 cost_of_delay:
   inputs:
     revenue_per_week: 0
@@ -47,11 +69,11 @@ forecast:
 A user who clicks `<authstar-upgrade-button>` lands on the hosted `/_authstar/upgrade` page, picks a plan from the tenant's plan mappings, and is sent to a Stripe Checkout session keep creates; after payment the webhook grants the mapped roles and the user returns to the application. This is the first caller of keep's checkout-sessions route.
 
 ## Acceptance criteria
-- [ ] Web serves `/_authstar/upgrade` under `(hosted)` per ADR-0065, listing the tenant's active plan mappings with their price details
-- [ ] Choosing a plan calls keep's checkout-sessions route with the caller's scope and redirects to Stripe
-- [ ] Success and cancel return URLs land back on the application with a clear state
+- [x] Web serves `/_authstar/upgrade` under `(hosted)` per ADR-0065, listing the tenant's active plan mappings with their price details
+- [x] Choosing a plan calls keep's checkout-sessions route with the caller's scope and redirects to Stripe
+- [x] Success and cancel return URLs land back on the application with a clear state
 - [ ] The integration harness's golden path exercises the page against Stripe test mode and the resulting `checkout.session.completed` webhook
-- [ ] `docs/users/` describes the upgrade flow
+- [x] `docs/users/` describes the upgrade flow
 
 ## Tasks
 - T-0051 Keep lets an account of the tenant list its active plan mappings

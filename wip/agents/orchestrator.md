@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 27.2545
-accrued_seconds: 1709
-tasks_completed: 94
-last_run: 2026-11-09T17:54:23Z
+accrued_cost: 38.3150
+accrued_seconds: 2349
+tasks_completed: 124
+last_run: 2026-11-09T23:43:21Z
 ---
 
 # Orchestrator activity
@@ -670,6 +670,216 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 18
 - Cost: 0.0884 USD, estimated
 
+### 2026-11-09T20:45:13Z
+
+- Summary: release-due S-0020: no action. system-flow.yaml has no orchestration block, so publish is off (default) and I neither evaluated nor published. The pack's release figures: policy judgement, not met by itself, 5 accepted stories unreleased (S-0001, S-0002, S-0009, S-0011, S-0020), 435.72 USD/week, S-0001 and S-0002 unvalued. Releasing stays with the operator.
+- Items: S-0020
+- Seconds: 13
+- Cost: 0.4564 USD, estimated
+
+### 2026-11-09T20:45:23Z
+
+- Summary: I took no action on the release-due reason for S-0020 because publishing is off.
+- Items: none
+- Seconds: 10
+- Cost: 0.2253 USD, estimated
+
+### 2026-11-09T20:46:24Z
+
+- Summary: Took no action on TH-0016, TH-0028, TH-0034, TH-0023. system-flow.yaml has no orchestration block, so answer_threads and plan_backlog_stories are off by default; those threads stay with the operator. TH-0016 also has a pending recommendation from agent-S-0013 (C). TH-0023 is already resolved by agent-S-0007.
+- Items: S-0013, S-0007
+- Seconds: 18
+- Cost: 0.5961 USD, estimated
+
+### 2026-11-09T20:46:35Z
+
+- Summary: I took no action on any of the four threads. They still need your answer.
+- Items: none
+- Seconds: 11
+- Cost: 0.0995 USD, estimated
+
+### 2026-11-09T20:55:07Z
+
+- Summary: Left TH-0031 (S-0006 criterion 3, re-asked after the signet repo push could not reach the cluster) for the operator: system-flow.yaml has no orchestration block, so answer_threads and every other permission is off.
+- Items: S-0006
+- Seconds: 14
+- Cost: 0.4353 USD, estimated
+
+### 2026-11-09T20:55:20Z
+
+- Summary: I didn't reply on TH-0031. It needs your answer, because I have no permission to act on it.
+- Items: none
+- Seconds: 13
+- Cost: 0.1801 USD, estimated
+
+### 2026-11-09T20:56:01Z
+
+- Summary: Took no action on draft S-0017 (edited by planner-S-0017: topics, touches, forecast 4h, cost of delay value 30 USD/week, notes): system-flow.yaml has no orchestration block, so finalize_drafts and every other permission is off. The draft stays as it is, for the operator to finalize.
+- Items: S-0017
+- Seconds: 18
+- Cost: 0.6341 USD, estimated
+
+### 2026-11-09T20:56:11Z
+
+- Summary: I left draft S-0017 unchanged, because `finalize_drafts` is off.
+- Items: none
+- Seconds: 10
+- Cost: 0.0961 USD, estimated
+
+### 2026-11-09T20:57:49Z
+
+- Summary: Took no action on S-0017's draft edit, its plan (T-0107 to T-0111), or TH-0035: system-flow.yaml has no orchestration block, so finalize_drafts, plan_backlog_stories, and answer_threads are all off by default; the draft and TH-0035 stay with the operator.
+- Items: S-0017, TH-0035
+- Seconds: 20
+- Cost: 0.7608 USD, estimated
+
+### 2026-11-09T20:58:00Z
+
+- Summary: I took no action on any of the three reasons. `system-flow.yaml` has no `orchestration` block, so every permission is off by default.
+- Items: none
+- Seconds: 11
+- Cost: 0.1107 USD, estimated
+
+### 2026-11-09T21:57:03Z
+
+- Summary: Reason ready (pull order changed, S-0019 entered ready): took no action. system-flow.yaml has no orchestration block, so order_ready, promote_to_ready, and every other permission is off; policy defaults to fifo. Ready 4/5, pull order S-0005, S-0019, S-0010, S-0012; promote_candidates lists none.
+- Items: S-0019
+- Seconds: 22
+- Cost: 0.3712 USD, estimated
+
+### 2026-11-09T21:57:23Z
+
+- Summary: I made no changes to the board. `system-flow.yaml` has no `orchestration` block, so every orchestrator permission is off, including `order_ready` and `promote_to_ready`. The policy falls back to `fifo` by default.
+- Items: none
+- Seconds: 20
+- Cost: 0.0989 USD, estimated
+
+### 2026-11-09T22:00:29Z
+
+- Summary: Left TH-0029 (S-0019 plan: cost of delay inputs and kluster.yaml shared services) to the operator: system-flow.yaml has no orchestration block, so answer_threads, plan_backlog_stories, and set_cost_of_delay are all off. The thread also has a pending recommendation from agent-S-0019. S-0019 is in progress, not backlog.
+- Items: S-0019
+- Seconds: 20
+- Cost: 0.4803 USD, estimated
+
+### 2026-11-09T22:00:46Z
+
+- Summary: I didn't act on TH-0029, so it still waits for you. `system-flow.yaml` has no `orchestration` block, which means every orchestrator permission is off. That includes `answer_threads`, `plan_backlog_stories` and `set_cost_of_delay`.
+- Items: none
+- Seconds: 17
+- Cost: 0.1054 USD, estimated
+
+### 2026-11-09T22:10:07Z
+
+- Summary: Took no action on the planners' draft edits of S-0021 and S-0022. system-flow.yaml has no orchestration block, so every permission is off, finalize_drafts included. Both drafts stay drafts for the operator to finalize.
+- Items: S-0021, S-0022
+- Seconds: 20
+- Cost: 0.5540 USD, estimated
+
+### 2026-11-09T22:10:25Z
+
+- Summary: I didn't finalize S-0021 or S-0022, because I have no permission to. `system-flow.yaml` has no `orchestration` block, so every permission is off, `finalize_drafts` included. Both stories stay drafts in the backlog until you finalize them.
+- Items: none
+- Seconds: 18
+- Cost: 0.1137 USD, estimated
+
+### 2026-11-09T22:11:41Z
+
+- Summary: Took no action on TH-0036 (S-0021's plan) or on edited drafts S-0018, S-0023, S-0024: system-flow.yaml has no orchestration block, so answer_threads, plan_backlog_stories, and finalize_drafts are all off by default. The thread and the drafts stay with the operator.
+- Items: S-0021, S-0018, S-0023, S-0024
+- Seconds: 44
+- Cost: 0.8608 USD, estimated
+
+### 2026-11-09T22:12:03Z
+
+- Summary: I took no action on any of the four reasons. `system-flow.yaml` on main has no `orchestration` block, so every permission is off by default.
+- Items: none
+- Seconds: 22
+- Cost: 0.1893 USD, estimated
+
+### 2026-11-09T22:12:40Z
+
+- Summary: Took no action on drafts S-0022 and S-0023, plans of S-0022 and S-0023, or threads TH-0037 to TH-0040: system-flow.yaml has no orchestration block, so finalize_drafts, plan_backlog_stories, set_cost_of_delay, and answer_threads are all off; drafts and planner threads are left to the operator.
+- Items: S-0022, S-0023, S-0024, S-0018, TH-0037, TH-0038, TH-0039, TH-0040
+- Seconds: 29
+- Cost: 0.7066 USD, estimated
+
+### 2026-11-09T22:13:08Z
+
+- Summary: I changed nothing for any of my eight reasons. `system-flow.yaml` has no `orchestration` block, so every orchestrator permission is off, and none of the work is mine to do.
+- Items: none
+- Seconds: 28
+- Cost: 0.2537 USD, estimated
+
+### 2026-11-09T22:30:10Z
+
+- Summary: Took no action on the planned reasons for S-0024 (TH-0037) and S-0018 (TH-0039). system-flow.yaml has no orchestration block, so every permission is off, plan_backlog_stories and answer_threads included. Both planner threads await the operator: TH-0037 asks for S-0024's first cost of delay input (recommended time_lost_per_cycle 5m), and TH-0039 asks whether T-0124 may declare tests tiers in system-flow.yaml (recommended yes).
+- Items: S-0024, S-0018, TH-0037, TH-0039
+- Seconds: 43
+- Cost: 0.7330 USD, estimated
+
+### 2026-11-09T22:30:58Z
+
+- Summary: I took no action on either planned story. `system-flow.yaml` has no `orchestration` block, so every permission is off, including `plan_backlog_stories` and `answer_threads`. Both planners' threads are left for you to answer.
+- Items: none
+- Seconds: 48
+- Cost: 0.0917 USD, estimated
+
+### 2026-11-09T22:49:20Z
+
+- Summary: Left TH-0039 (S-0018 plan; may T-0124 declare tests tiers in system-flow.yaml?) to the operator: system-flow.yaml has no orchestration block, so answer_threads and plan_backlog_stories are off and I may neither answer, recommend, approve, nor resolve it.
+- Items: S-0018
+- Seconds: 23
+- Cost: 0.4998 USD, estimated
+
+### 2026-11-09T22:49:49Z
+
+- Summary: I took no action on TH-0039, and the question is still waiting for you. All my permissions are off: `system-flow.yaml` has no `orchestration` block, so I can't answer, recommend, approve or resolve the thread.
+- Items: none
+- Seconds: 29
+- Cost: 0.1990 USD, estimated
+
+### 2026-11-09T23:41:13Z
+
+- Summary: Draft S-0025 edited (touches, notes): left as is. system-flow.yaml has no orchestration block, so finalize_drafts and every other permission is off. flai promote --drafts lists S-0025 as not complete: no forecast duration, no forecast delivery, no cost of delay value.
+- Items: S-0025
+- Seconds: 24
+- Cost: 0.5620 USD, estimated
+
+### 2026-11-09T23:41:25Z
+
+- Summary: I left draft S-0025 as it is, because finalizing it isn't allowed. `system-flow.yaml` has no `orchestration` block, so `finalize_drafts` and every other permission is off.
+- Items: none
+- Seconds: 12
+- Cost: 0.2012 USD, estimated
+
+### 2026-11-09T23:42:13Z
+
+- Summary: Left draft S-0025 as it is: system-flow.yaml sets no orchestration.permissions, so finalize_drafts is off. flai promote --drafts lists S-0025 as incomplete anyway: it lacks a cost of delay value, which waits on the operator's inputs for S-0025 or E-0005.
+- Items: S-0025
+- Seconds: 25
+- Cost: 0.4841 USD, estimated
+
+### 2026-11-09T23:42:25Z
+
+- Summary: I left draft S-0025 unchanged. `system-flow.yaml` has no `orchestration` block, so every permission is off, including `finalize_drafts`.
+- Items: none
+- Seconds: 12
+- Cost: 0.1278 USD, estimated
+
+### 2026-11-09T23:43:05Z
+
+- Summary: Took no action on draft S-0025 or thread TH-0041: system-flow.yaml has no orchestration block, so finalize_drafts, plan_backlog_stories, set_cost_of_delay and answer_threads are all off by default. Finalizing S-0025 and answering TH-0041's cost of delay question (planner recommends revenue_per_week 1200 on S-0025) are left to the operator.
+- Items: S-0025, TH-0041
+- Seconds: 30
+- Cost: 0.6196 USD, estimated
+
+### 2026-11-09T23:43:21Z
+
+- Summary: I took no action on either reason: `system-flow.yaml` has no `orchestration` block, so every permission is off by default. I logged that in the orchestrator's activity log.
+- Items: none
+- Seconds: 16
+- Cost: 0.2140 USD, estimated
+
 ## Refusals
 
 ### 2026-11-06T17:57:35Z
@@ -735,4 +945,29 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 ### 2026-11-09T17:53:56Z
 
 - Call: `flai manifest get orchestration`
+- Needs: none
+
+### 2026-11-09T20:45:09Z
+
+- Call: `flai manifest show`
+- Needs: none
+
+### 2026-11-09T20:46:20Z
+
+- Call: `flai manifest get orchestration`
+- Needs: none
+
+### 2026-11-09T20:55:57Z
+
+- Call: `flai manifest get orchestration`
+- Needs: none
+
+### 2026-11-09T22:11:36Z
+
+- Call: `flai manifest show --json`
+- Needs: none
+
+### 2026-11-09T22:29:52Z
+
+- Call: `flai config show`
 - Needs: none

@@ -1,0 +1,34 @@
+---
+id: T-0111
+type: task
+nature: remediation
+title: integration/README.md drops the in-cluster JWKS gap and documents the TLS front, and I-0007 is closed
+status: backlog
+parent: S-0017
+owner: bytepunx
+created: 2026-11-09T20:56:25Z
+updated: 2026-11-09T20:56:25Z
+transitions: []
+stream: S-0017
+tags: [integration, docs]
+touches: [integration/README.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md, design/issues/summary.md]
+after: [T-0110]
+---
+# T-0111 integration/README.md drops the in-cluster JWKS gap and documents the TLS front, and I-0007 is closed
+
+## Work
+
+Criterion 5.
+
+- In `integration/README.md` § Not yet done, remove the chronicle bullet (about lines 595-601) and the in-cluster DNS part of the web JWKS bullet (about lines 602-617). Correct the stale claims: portcullis does serve `/.well-known/jwks.json` (`authstar-middleware/src/router.rs`), and tower does patch portcullis once a domain is set (about lines 336-345).
+- Document the TLS front: what `harness-tls.sh` makes, the CoreDNS rewrite, chronicle's `NODE_EXTRA_CA_CERTS`, acme's domain, and what step 6 now checks.
+- Once criterion 4 has passed on a running harness, close I-0007 with `flai issue close I-0007 --reason` naming the TLS front, the rewrite, and step 6. Until then leave it open and say why in the task's Notes.
+
+It waits for T-0110, so that the README describes what the harness does.
+
+## Done when
+
+- `integration/README.md` lists no in-cluster JWKS gap for chronicle and no stale claim above, and the markdown lint passes on it.
+- I-0007 is closed with its reason, or the Notes say why it stays open.
+
+## Notes

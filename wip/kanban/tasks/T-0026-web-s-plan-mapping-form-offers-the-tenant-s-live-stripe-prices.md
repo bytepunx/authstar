@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 26
-      output: 5799
-      cache_read: 2973033
-      cache_write: 46026
-      cost: 1.0671
+      input: 25
+      output: 5274
+      cache_read: 2952249
+      cache_write: 61104
+      cost: 1.1747
 ---
 # T-0026 Web's plan-mapping form offers the tenant's live Stripe prices
 

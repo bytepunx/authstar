@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 5.1610
-accrued_seconds: 550
-tasks_completed: 3
-last_run: 2026-11-09T09:07:16Z
+accrued_cost: 6.2709
+accrued_seconds: 658
+tasks_completed: 4
+last_run: 2026-11-09T20:46:19Z
 ---
 
 # Curator activity
@@ -35,3 +35,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0001, D-0011, D-0018, D-0026, D-0027, D-0028, D-0029, D-0030, D-0031, D-0032, D-0033
 - Seconds: 155
 - Cost: 1.4223 USD, estimated
+
+### 2026-11-09T20:46:19Z
+
+- Summary: I wrote no new entries. I merged S-0020's candidates into D-0031 and D-0029, absorbed D-0028 into `design/tech/npm.md`, and `flai digest compact` compacted nothing.
+- Trigger: accepted S-0020
+- Items: D-0019, D-0028, D-0029, D-0031
+- Seconds: 108
+- Cost: 1.1099 USD, estimated

@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 6115
-      cache_read: 1441062
-      cache_write: 28521
-      cost: 0.6388
+      input: 22
+      output: 3614
+      cache_read: 1443062
+      cache_write: 26533
+      cost: 0.5732
 ---
 
 # T-0094 Golden path checks its port-forwards without nc and stops them on exit

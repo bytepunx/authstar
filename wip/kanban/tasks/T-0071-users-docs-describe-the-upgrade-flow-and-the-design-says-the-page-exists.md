@@ -3,16 +3,37 @@ id: T-0071
 type: task
 nature: feature
 title: Users' docs describe the upgrade flow, and the design says the page exists
-status: backlog
+status: done
 parent: S-0007
 owner: bytepunx
 created: 2026-11-06T18:10:08Z
-updated: 2026-11-06T18:10:08Z
-transitions: []
+updated: 2026-11-09T21:39:34Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:31:58Z
+    by: agent-S-0007
+  - to: in-progress
+    at: 2026-11-09T21:31:58Z
+    by: agent-S-0007
+  - to: done
+    at: 2026-11-09T21:39:34Z
+    by: agent-S-0007
 stream: S-0007
 tags: [web]
 touches: [docs/users/index.md, design/system/overview.md, design/stories/web/010-hosted-pages.md, design/stories/web/005-billing.md, design/stories/keep/002-stripe-webhook-handling.md]
 after: [T-0051, T-0061]
+usage:
+  source: log
+  seconds: 456
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 10719
+      cache_read: 3576048
+      cache_write: 111878
+      cost: 1.567
 ---
 # T-0071 Users' docs describe the upgrade flow, and the design says the page exists
 

@@ -5,9 +5,9 @@ anchor:
   path: wip/kanban/stories/S-0013-steward-shows-tenant-activity-and-stuck-erasure-requests.md
   item: S-0013
 status: open
-participants: [planner-S-0013]
+participants: [planner-S-0013, agent-S-0013]
 created: 2026-11-06T18:07:28Z
-updated: 2026-11-06T18:07:28Z
+updated: 2026-11-09T20:45:33Z
 ---
 
 # TH-0016 Where does S-0013's Stuck Erasures view live: top-level as story 004 says, or on the tenant page?
@@ -26,3 +26,12 @@ S-0013's goal points to `design/stories/steward/004-activity-and-stuck-erasure-r
 **C.** Both: the top-level view from A, plus a per-tenant section from B.
 
 I am drafting the tasks that do not depend on this answer now: the client contract, the fake tower, the activity proxy and section, and the stuck-erasure proxy. I will write the stuck view's task once you answer.
+
+### 2026-11-09T20:45:33Z agent-S-0013 (recommendation)
+S-0013 is in progress. I am building T-0044 to T-0047 now; only the stuck view's task waits on this answer.
+
+**Recommended: C.** Build the top-level `/erasure-requests/stuck` view that story 004 specifies, with the threshold input (default 72) and rows grouped by missing service. Also add a Stuck Erasures section on `/tenants/[slug]` that shows tower's list filtered to that tenant, at 72 hours. The reason: C meets criterion 1 as written, so the finalized story needs no rewording. It also delivers the cross-tenant view the design asks for. The extra section is small: it reuses T-0046's proxy and the same row markup.
+
+**A** (planner's pick) needs criterion 1 reworded before I can tick it. **B** meets the criterion but leaves story 004's top-level view unbuilt.
+
+What each answer leads to: with C, I add two tasks after T-0046, the top-level view and the tenant section. With A or B, I add one. Each task has its own e2e tests against the fake tower.

@@ -1,33 +1,15 @@
 ---
 title: Board
-updated: 2026-11-09
+updated: 2026-11-10
 status: active
 wip_limits:
   ready: 5
   in-progress: 4
   review: 3
 order:
-  - S-0007
   - S-0005
   - S-0010
-  - S-0013
   - S-0012
-placed:
-  S-0005:
-    by: claude
-    at: 2026-10-21T05:13:56Z
-  S-0007:
-    by: claude
-    at: 2026-10-21T05:29:49Z
-  S-0010:
-    by: claude
-    at: 2026-10-21T05:13:56Z
-  S-0012:
-    by: claude
-    at: 2026-10-21T05:13:56Z
-  S-0013:
-    by: claude
-    at: 2026-10-21T05:13:56Z
 ---
 
 # Board

@@ -3,15 +3,36 @@ id: T-0089
 type: task
 nature: feature
 title: scripts/lib-kluster.sh gives the kluster scripts their variables, renderer, and shared-service helpers
-status: backlog
+status: done
 parent: S-0019
 owner: bytepunx
 created: 2026-11-09T06:54:42Z
-updated: 2026-11-09T06:54:42Z
-transitions: []
+updated: 2026-11-09T22:02:11Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:59:46Z
+    by: agent-S-0019
+  - to: in-progress
+    at: 2026-11-09T21:59:46Z
+    by: agent-S-0019
+  - to: done
+    at: 2026-11-09T22:02:11Z
+    by: agent-S-0019
 stream: S-0019
 tags: [kluster, scripts]
 touches: [scripts/lib-kluster.sh]
+usage:
+  source: log
+  seconds: 145
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 4675
+      cache_read: 1371004
+      cache_write: 20114
+      cost: 0.5084
 ---
 # T-0089 scripts/lib-kluster.sh gives the kluster scripts their variables, renderer, and shared-service helpers
 

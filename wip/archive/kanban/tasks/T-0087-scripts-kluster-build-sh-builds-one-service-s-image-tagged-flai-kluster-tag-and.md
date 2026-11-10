@@ -3,15 +3,36 @@ id: T-0087
 type: task
 nature: feature
 title: scripts/kluster-build.sh builds one service's image tagged FLAI_KLUSTER_TAG and lists it
-status: backlog
+status: done
 parent: S-0019
 owner: bytepunx
 created: 2026-11-09T06:54:16Z
-updated: 2026-11-09T06:54:16Z
-transitions: []
+updated: 2026-11-09T22:02:01Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:59:45Z
+    by: agent-S-0019
+  - to: in-progress
+    at: 2026-11-09T21:59:46Z
+    by: agent-S-0019
+  - to: done
+    at: 2026-11-09T22:02:01Z
+    by: agent-S-0019
 stream: S-0019
 tags: [kluster, scripts]
 touches: [scripts/kluster-build.sh]
+usage:
+  source: log
+  seconds: 135
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 3580
+      cache_read: 1049722
+      cache_write: 15400
+      cost: 0.3893
 ---
 # T-0087 scripts/kluster-build.sh builds one service's image tagged FLAI_KLUSTER_TAG and lists it
 

@@ -3,11 +3,11 @@ id: S-0019
 type: story
 nature: feature
 title: "Write the project's kluster build, deploy, and teardown scripts and name them in the kluster: block"
-status: in-progress
+status: done
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T06:51:07Z
-updated: 2026-11-09T22:02:12Z
+updated: 2026-11-10T00:03:31Z
 transitions:
   - to: ready
     at: 2026-11-09T21:56:01Z
@@ -15,18 +15,43 @@ transitions:
   - to: in-progress
     at: 2026-11-09T21:57:38Z
     by: agent-S-0019
+  - to: review
+    at: 2026-11-09T22:46:00Z
+    by: agent-S-0019
+  - to: in-progress
+    at: 2026-11-09T22:49:35Z
+    by: bytepunx
+  - to: review
+    at: 2026-11-10T00:03:13Z
+    by: bytepunx
+  - to: done
+    at: 2026-11-10T00:03:31Z
+    by: bytepunx
 tags: [kluster, scripts, integration]
 topics: [kluster, deployment]
-touches: [system-flow.yaml, scripts, scripts/kluster-build.sh, scripts/lib-kluster.sh, scripts/kluster-signet.sh, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/README.md, kluster.yaml, integration/README.md, integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/tower.yaml]
+touches: [system-flow.yaml, scripts, scripts/kluster-build.sh, scripts/lib-kluster.sh, scripts/kluster-signet.sh, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/README.md, kluster.yaml, integration/README.md, integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/tower.yaml, design/system/overview.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2917
+  priced_by: harness
+  turns:
+    - day: 2026-11-09
+      ceremony: 2
+      test_runs: 4
+      hand_edits: 4
+      work: 65
+  models:
+    - model: claude-opus-5-5
+      input: 306
+      output: 99163
+      cache_read: 29078429
+      cache_write: 426602
+      cost: 10.7836
   strategic:
     - kind: orchestrator
       seconds: 124
@@ -58,9 +83,8 @@ Give this project's kluster: block the commands that build its images, deploy a 
 
 ## Acceptance criteria
 
-- [ ] Scripts under scripts/ build the images, deploy into FLAI_KLUSTER_NAMESPACE, and tear it down
-- [ ] The kluster: block names them as build, or one build per component in components, and deploy and teardown
-- [ ] A story in review deploys into its namespace and its teardown removes it
+- [x] Scripts under scripts/ build the images, deploy into FLAI_KLUSTER_NAMESPACE, and tear it down
+- [x] The kluster: block names them as build, or one build per component in components, and deploy and teardown
 
 ## Tasks
 
@@ -96,6 +120,13 @@ Forecast: 6h. `flai forecast` gave 1h, its default with too little history. It i
 
 Cost of delay: no value yet. Neither S-0019 nor E-0005 has inputs; TH-0029 asks the operator for them.
 
-No `after`: the story reads nothing another open story writes. S-0020, in review, fixes the builds of herald, keep, steward, and web; a deploy for criterion 3 needs their images to build, so it waits on S-0020's acceptance in fact, but no file of S-0020's is an input of these scripts.
+No `after`: the story reads nothing another open story writes. S-0020, in review, fixes the builds of herald, keep, steward, and web; a live deploy needs their images to build, so it waits on S-0020's acceptance in fact, but no file of S-0020's is an input of these scripts.
 
-Criterion 3 is verified by the operator or flai serve, never the story's agent: `flai guard` refuses an agent `flai kluster deploy`, and agents on this host run no cluster commands (D-0026).
+The live deploy and teardown, once this story's third criterion, are verified by the operator or flai serve, never the story's agent: `flai guard` refuses an agent `flai kluster deploy`, and agents on this host run no cluster commands (D-0026).
+
+### Delivery
+
+- The live deploy and teardown are not part of this story. Its third criterion, "A story in review deploys into its namespace and its teardown removes it", was moved to S-0025, a follow-on story under E-0005 that waits for this one (`after: S-0019`), at the operator's request on 2026-11-09: it cannot be tested until this change is reviewed and accepted. Every script is checked with `shellcheck`, `sh -n`, and a `KLUSTER_DRY_RUN=1` run for `s-0019` and for `authstar`, and one real `docker build` of tower was run through `kluster-build.sh`. The signet push, the RabbitMQ and database steps, and the rollouts have not run against a cluster; S-0025 proves them.
+- `kluster.config` names `integration/kluster.yaml`, as the operator confirmed on TH-0029, and the root `kluster.yaml` is removed.
+- The signet bundles are pushed by `scripts/kluster-signet-push.mjs` through `@bytepunx/signet-client`, not through the signet CLI. Signet 0.10.3's `bundle push` sends no `config_path`, so it cannot write a config (signet's `server/cmd/signet/bundle_cmd.go`). The push needs `tower/node_modules`, and the deploy runs `npm ci` in `tower` when the checkout has none.
+- 2026-11-09T22:49:35Z: moved to in-progress: Criteria can’t be tested until change is reviewed and approved

@@ -4,10 +4,10 @@ title: "Plan for S-0007: six tasks in three layers"
 anchor:
   path: wip/kanban/stories/S-0007-hosted-upgrade-page-that-starts-a-stripe-checkout.md
   item: S-0007
-status: open
-participants: [planner-S-0007]
+status: resolved
+participants: [planner-S-0007, agent-S-0007]
 created: 2026-11-06T18:10:54Z
-updated: 2026-11-06T18:11:49Z
+updated: 2026-11-09T20:46:03Z
 ---
 
 # TH-0023 Plan for S-0007: six tasks in three layers
@@ -53,3 +53,9 @@ One more risk, to criterion 4 (T-0066).
 In the integration harness, web checks portcullis's token against `https://admin.acme.authstar.app/.well-known/jwks.json` (`integration/config/authstar/web.yaml`). That file says the URL does not resolve in-cluster. This is the same gap as I-0007, which TH-0021 raises for S-0009's chronicle step.
 
 Until that gap is fixed, the golden path cannot pass through web's upgrade page. Recommended: if TH-0021 makes the harness fix its own story, S-0007 names that story in `after`, because T-0066 needs its in-cluster JWKS. Otherwise S-0007 goes to review with criterion 4 unticked. I have noted this in T-0066.
+
+### 2026-11-09T20:46:01Z agent-S-0007
+agent-S-0007 has reviewed the plan and is working it as written: six tasks in three layers, with T-0051's relaxed listing and T-0055's upgrade-only proxy. The criterion 4 risk raised here is now a question to the operator in its own thread on S-0007, together with a second gap: the harness's Stripe key is only a placeholder.
+
+### 2026-11-09T20:46:03Z agent-S-0007
+Resolved: The plan stands as written. The criterion 4 risk is carried on as a question to the operator on TH-0034.

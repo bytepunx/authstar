@@ -3,15 +3,36 @@ id: T-0044
 type: task
 nature: feature
 title: Steward's tower client and fake tower match tower's activity and stuck-erasure contracts
-status: backlog
+status: done
 parent: S-0013
 owner: bytepunx
 created: 2026-11-06T18:07:49Z
-updated: 2026-11-06T18:07:49Z
-transitions: []
+updated: 2026-11-09T20:59:28Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:45:39Z
+    by: agent-S-0013
+  - to: in-progress
+    at: 2026-11-09T20:45:39Z
+    by: agent-S-0013
+  - to: done
+    at: 2026-11-09T20:59:28Z
+    by: agent-S-0013
 stream: S-0013
 tags: [steward]
 touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts]
+usage:
+  source: log
+  seconds: 829
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 83
+      output: 19917
+      cache_read: 5549236
+      cache_write: 185839
+      cost: 2.6762
 ---
 # T-0044 Steward's tower client and fake tower match tower's activity and stuck-erasure contracts
 

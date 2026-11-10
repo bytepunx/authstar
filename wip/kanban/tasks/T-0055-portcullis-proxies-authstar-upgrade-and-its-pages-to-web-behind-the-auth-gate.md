@@ -3,15 +3,36 @@ id: T-0055
 type: task
 nature: feature
 title: Portcullis proxies /_authstar/upgrade and its pages to web behind the auth gate
-status: backlog
+status: done
 parent: S-0007
 owner: bytepunx
 created: 2026-11-06T18:09:21Z
-updated: 2026-11-06T18:09:21Z
-transitions: []
+updated: 2026-11-09T21:01:00Z
+transitions:
+  - to: ready
+    at: 2026-11-09T20:46:16Z
+    by: agent-S-0007
+  - to: in-progress
+    at: 2026-11-09T20:46:16Z
+    by: agent-S-0007
+  - to: done
+    at: 2026-11-09T21:01:00Z
+    by: agent-S-0007
 stream: S-0007
 tags: [portcullis]
 touches: [portcullis/crates/authstar-middleware/src/upgrade.rs, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, portcullis/TESTING.md]
+usage:
+  source: log
+  seconds: 884
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 73
+      output: 21368
+      cache_read: 7128819
+      cache_write: 223028
+      cost: 3.1237
 ---
 # T-0055 Portcullis proxies /_authstar/upgrade and its pages to web behind the auth gate
 

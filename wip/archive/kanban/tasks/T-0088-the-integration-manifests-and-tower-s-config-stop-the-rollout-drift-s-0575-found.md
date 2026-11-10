@@ -3,15 +3,36 @@ id: T-0088
 type: task
 nature: remediation
 title: The integration manifests and tower's config stop the rollout drift S-0575 found
-status: backlog
+status: done
 parent: S-0019
 owner: bytepunx
 created: 2026-11-09T06:54:32Z
-updated: 2026-11-09T06:54:32Z
-transitions: []
+updated: 2026-11-09T22:02:08Z
+transitions:
+  - to: ready
+    at: 2026-11-09T21:59:46Z
+    by: agent-S-0019
+  - to: in-progress
+    at: 2026-11-09T21:59:46Z
+    by: agent-S-0019
+  - to: done
+    at: 2026-11-09T22:02:08Z
+    by: agent-S-0019
 stream: S-0019
 tags: [kluster, integration]
 touches: [integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/tower.yaml]
+usage:
+  source: log
+  seconds: 142
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 28
+      output: 9054
+      cache_read: 2654884
+      cache_write: 38949
+      cost: 0.9845
 ---
 # T-0088 The integration manifests and tower's config stop the rollout drift S-0575 found
 
