@@ -1,5 +1,5 @@
 import type { ConsequentApi } from './consequent-types.js'
-import type { EntitlementScope, SequenceProvider } from './entitlement-publisher.js'
+import type { UsageScope, SequenceProvider } from './entitlement-publisher.js'
 import { scopeKey } from './entitlement-publisher.js'
 import type { EntitlementSequenceState } from '../actors/entitlement_sequence_actor.js'
 
@@ -54,7 +54,7 @@ export function createConsequentSequenceProvider(consequent: ConsequentApi): Seq
   }
 
   return {
-    next(tenant: string, scope: EntitlementScope): Promise<number> {
+    next(tenant: string, scope: UsageScope): Promise<number> {
       const key = `${tenant}:${scopeKey(scope)}`
       return runExclusive(key, async () => {
         const results = await consequent.handle(key, 'entitlementSequence.increment', {})

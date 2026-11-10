@@ -70,10 +70,17 @@ export interface TrialExtendedEvent {
   newExpiresAt: string
 }
 
+// ADR 0043's usage total is still summed per tenant, application, and meter,
+// so `routes/usage.ts` publishes it with `{tenant}`. ADR 0109 retires that
+// scope from every event; moving usage to `{account}` changes what the total
+// means and is left to its own story (design/issues). No other event may
+// carry `{tenant}`.
+export type UsageScope = EntitlementScope | { tenant: string }
+
 export interface UsageUpdatedEvent {
   type: 'entitlement.usage-updated'
   tenant: string
-  scope: EntitlementScope
+  scope: UsageScope
   application: string
   meter: string
   periodUsage: number
@@ -132,12 +139,13 @@ export interface EntitlementPublisher {
 // existing test that only needs "some SequenceProvider, no real durability
 // concern" keeps using it unchanged.
 export interface SequenceProvider {
-  next(tenant: string, scope: EntitlementScope): Promise<number>
+  next(tenant: string, scope: UsageScope): Promise<number>
 }
 
-export function scopeKey(scope: EntitlementScope): string {
+export function scopeKey(scope: UsageScope): string {
   if ('account' in scope) return `account:${scope.account}`
-  return `organization:${scope.organization}`
+  if ('organization' in scope) return `organization:${scope.organization}`
+  return `tenant:${scope.tenant}`
 }
 
 export function createInMemorySequenceProvider(): SequenceProvider {
