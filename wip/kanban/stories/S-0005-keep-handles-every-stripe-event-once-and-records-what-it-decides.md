@@ -7,7 +7,7 @@ status: ready
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-09T21:56:04Z
+updated: 2026-11-10T00:03:32Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:51Z
@@ -40,10 +40,10 @@ cost_of_delay:
     at: 2026-11-06T18:22:14Z
 forecast:
   duration: 4h
-  delivery: 2026-11-10T15:44:00Z
+  delivery: 2026-11-10T17:51:00Z
   basis: "Its own forecast of 4h; 1st in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008 and S-0013."
   by: flai
-  at: 2026-11-09T21:56:04Z
+  at: 2026-11-10T00:03:32Z
 ---
 # S-0005 Keep handles every Stripe event once and records what it decides
 

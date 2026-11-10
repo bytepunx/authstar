@@ -7,7 +7,7 @@ status: backlog
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T23:37:51Z
-updated: 2026-11-09T23:41:48Z
+updated: 2026-11-10T00:03:32Z
 transitions: []
 tags: [kluster, scripts, integration]
 topics: [kluster, deployment]
@@ -36,10 +36,10 @@ usage:
 draft: true
 forecast:
   duration: 4h
-  delivery: 2026-11-10T22:05:00Z
-  basis: "Planner's 4h for two live deploy-or-teardown fix loops over an untried deploy, against flai's 32m from too few done stories; 13th in the pull order, starting when flai's 32m run would start, about 18:03Z."
-  by: planner-S-0025
-  at: 2026-11-09T23:41:20Z
+  delivery: 2026-11-10T21:55:00Z
+  basis: "Its own forecast of 4h; 13th in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005, S-0010, S-0012, S-0014, S-0015, S-0016, S-0017, S-0018, S-0021, S-0022, S-0023 and S-0024."
+  by: flai
+  at: 2026-11-10T00:03:32Z
 ---
 # S-0025 A story in review deploys into its own kluster namespace and its teardown removes it
 

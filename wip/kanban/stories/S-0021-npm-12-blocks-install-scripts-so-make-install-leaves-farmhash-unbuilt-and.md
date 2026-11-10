@@ -6,7 +6,7 @@ title: npm 12 blocks install scripts, so make install leaves farmhash unbuilt an
 status: backlog
 owner: bytepunx
 created: 2026-11-09T09:04:33Z
-updated: 2026-11-09T22:47:32Z
+updated: 2026-11-10T00:03:32Z
 transitions: []
 tags: [hook]
 topics: [dependencies, testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-09T22:09:10Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-10T10:29:00Z
-  basis: "Planner's estimate over flai's 3m: a guard script in make install, its reproduction against a removed approval, a clean install of nine npm projects, and herald's, keep's, and tower's suites, in three tasks."
-  by: planner-S-0021
-  at: 2026-11-09T22:09:10Z
+  delivery: 2026-11-10T15:26:00Z
+  basis: "Its own forecast of 1h30m; 9th in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005, S-0010, S-0012, S-0014, S-0015, S-0016, S-0017 and S-0018."
+  by: flai
+  at: 2026-11-10T00:03:32Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:32Z

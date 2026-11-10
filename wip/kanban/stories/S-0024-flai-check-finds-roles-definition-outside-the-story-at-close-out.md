@@ -6,7 +6,7 @@ title: "flai check finds `roles.definition` outside the story at close-out"
 status: backlog
 owner: bytepunx
 created: 2026-11-09T09:04:35Z
-updated: 2026-11-09T22:47:54Z
+updated: 2026-11-10T00:03:32Z
 transitions: []
 tags: []
 topics: [tooling]
@@ -49,10 +49,10 @@ usage:
           cost: 0.7584
 forecast:
   duration: 30m
-  delivery: 2026-11-10T09:17:00Z
-  basis: "flai forecast's 3m counts 2 criteria and no touches; raised to 30m for a conflict-free template upgrade of 6 files, an unscoped flai check, the issue close, and a close-out whose system-flow.yaml change may select every test tier (I-0010); delivery kept as flai's, 12th in pull order."
-  by: planner-S-0024
-  at: 2026-11-09T22:10:36Z
+  delivery: 2026-11-10T12:22:00Z
+  basis: "Its own forecast of 30m; 12th in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005, S-0010, S-0012, S-0014, S-0015, S-0016, S-0017, S-0018, S-0021, S-0022 and S-0023."
+  by: flai
+  at: 2026-11-10T00:03:32Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:54Z
