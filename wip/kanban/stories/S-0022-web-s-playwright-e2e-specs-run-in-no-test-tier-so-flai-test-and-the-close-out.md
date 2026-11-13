@@ -6,7 +6,7 @@ title: Web's Playwright e2e specs run in no test tier, so flai test and the clos
 status: backlog
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-13T12:08:13Z
+updated: 2026-11-13T21:36:02Z
 transitions: []
 tags: [web]
 topics: [testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-09T22:10:58Z
 forecast:
   duration: 2h
-  delivery: 2026-11-14T07:12:00Z
-  basis: "Its own forecast of 2h; 8th in the pull order with an in-progress limit of 4, behind S-0007, S-0008, S-0010, S-0013, S-0025, S-0012, S-0014, S-0015, S-0016, S-0017, S-0018 and S-0021."
+  delivery: 2026-11-14T20:10:00Z
+  basis: "Its own forecast of 2h; 11th in the pull order with an in-progress limit of 4, behind S-0006, S-0013, S-0025, S-0012, S-0007, S-0008, S-0017, S-0010, S-0014, S-0015, S-0016, S-0018 and S-0021."
   by: flai
-  at: 2026-11-13T12:08:13Z
+  at: 2026-11-13T21:36:02Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:41Z

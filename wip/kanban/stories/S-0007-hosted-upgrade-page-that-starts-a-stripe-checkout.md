@@ -3,11 +3,11 @@ id: S-0007
 type: story
 nature: feature
 title: Hosted upgrade page that starts a Stripe checkout
-status: in-progress
+status: ready
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-10T05:53:16Z
+updated: 2026-11-13T21:36:02Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:48Z
@@ -15,6 +15,9 @@ transitions:
   - to: in-progress
     at: 2026-11-09T20:45:11Z
     by: agent-S-0007
+  - to: ready
+    at: 2026-11-13T19:46:48Z
+    by: bytepunx
 blocked:
   - from: 2026-11-09T21:40:14Z
     until: 2026-11-10T03:14:47Z
@@ -44,6 +47,10 @@ blocked:
     until: 2026-11-10T05:52:44Z
     reason: awaiting the operator on TH-0034
   - from: 2026-11-10T05:53:16Z
+    until: 2026-11-13T12:32:48Z
+    reason: awaiting the operator on TH-0034
+  - from: 2026-11-13T12:32:50Z
+    until: 2026-11-13T19:46:49Z
     reason: awaiting the operator on TH-0034
 tags: [web, keep, portcullis]
 topics: [billing]
@@ -88,10 +95,10 @@ cost_of_delay:
     at: 2026-11-06T18:21:07Z
 forecast:
   duration: 8h
-  delivery: 2026-11-10T21:59:00Z
-  basis: "Its own forecast of 8h; 1st in the pull order with an in-progress limit of 4, behind S-0006 and S-0008."
+  delivery: 2026-11-15T01:45:00Z
+  basis: "Its own forecast of 8h; 2nd in the pull order with an in-progress limit of 4, behind S-0006, S-0013, S-0025 and S-0012."
   by: flai
-  at: 2026-11-09T20:44:27Z
+  at: 2026-11-13T21:36:02Z
 ---
 # S-0007 Hosted upgrade page that starts a Stripe checkout
 

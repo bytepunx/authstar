@@ -3,11 +3,11 @@ id: S-0010
 type: story
 nature: feature
 title: Portcullis emits authentication events to lookout
-status: in-progress
+status: ready
 parent: E-0003
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-10T06:02:55Z
+updated: 2026-11-13T21:36:02Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:52Z
@@ -15,8 +15,15 @@ transitions:
   - to: in-progress
     at: 2026-11-10T04:54:15Z
     by: agent-S-0010
+  - to: ready
+    at: 2026-11-13T19:46:48Z
+    by: bytepunx
 blocked:
   - from: 2026-11-10T06:02:55Z
+    until: 2026-11-13T12:32:48Z
+    reason: awaiting the operator on TH-0043
+  - from: 2026-11-13T12:32:50Z
+    until: 2026-11-13T19:46:48Z
     reason: awaiting the operator on TH-0043
 tags: [portcullis]
 topics: [analytics]
@@ -55,10 +62,10 @@ cost_of_delay:
   at: 2026-11-06T18:09:53Z
 forecast:
   duration: 6h
-  delivery: 2026-11-10T15:36:00Z
-  basis: "Its own forecast of 6h; 2nd in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013 and S-0005."
+  delivery: 2026-11-14T22:43:00Z
+  basis: "Its own forecast of 6h; 5th in the pull order with an in-progress limit of 4, behind S-0006, S-0013, S-0025, S-0012, S-0007, S-0008 and S-0017."
   by: flai
-  at: 2026-11-10T00:03:32Z
+  at: 2026-11-13T21:36:02Z
 ---
 # S-0010 Portcullis emits authentication events to lookout
 
