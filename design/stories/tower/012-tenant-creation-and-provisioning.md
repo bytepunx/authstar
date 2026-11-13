@@ -1,6 +1,6 @@
 ---
 title: "Story 012: Tenant Creation and Provisioning"
-updated: 2026-08-05
+updated: 2026-11-13
 status: draft
 ---
 # Story 012 — Tenant Creation and Provisioning
@@ -70,6 +70,16 @@ provisioning:
       `slug: "_admin"` (the one caller in this whole design allowed to use that slug — every
       *other* creation path rejects it outright, Story 004), `hosts: ["admin.{slug}.{baseDomain}"]`
       (or the operator-supplied `adminHost`), `exposedProviders: [the seeded provider's key]`.
+- [ ] **4a. Register the tenant with portcullis** ([ADR 0091](../../adrs/0091-tenant-owned-domains-and-the-authstar-admin-surface.md),
+      [ADR 0093](../../adrs/0093-domain-pending-tenant-provisioning.md): once the tenant has a
+      domain) — a JSON Patch to portcullis's config through `signetAdmin.patchConfig`, then
+      `tenant.mark-portcullis-registered`. When portcullis's config (`signetAdmin.getConfig`)
+      already holds the tenant, configured some other way such as a GitOps file, the patch adds
+      only the `_admin` application at `/tenants/{slug}/applications/_admin` and leaves the
+      tenant's other applications, cookie, jwt, and providers as they are. Otherwise it adds the
+      whole tenant at `/tenants/{slug}`: cookie, jwt, providers, identity-hash key generations, and
+      `_admin`. An `add` at `/tenants/{slug}` replaces an existing entry whole, which dropped the
+      other applications before S-0017.
 - [ ] **5. Generate and push the four per-tenant secrets** (Story 001/011's key-handling
       discipline, generation 1 for each — this is the *first* rotation-shaped write, not a
       special case of it): session signing keypair, internal signing keypair, `identity-hash-key`

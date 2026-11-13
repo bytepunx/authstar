@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { jsonPatchAdd } from '@bytepunx/signet-client'
+import { jsonPatchAdd, type adminv1 } from '@bytepunx/signet-client'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
 import type { ProviderState } from '../actors/provider_actor.js'
@@ -167,16 +167,32 @@ async function completeDomainDependentProvisioning(
     }
   }
 
-  // Register this tenant's full config with portcullis -- cookie/jwt/
-  // providers/identityHashKeyGenerations/applications, in one atomic JSON
-  // Patch `add` at `/tenants/<slug>`. Uses `add` (RFC 6902 upsert-on-
-  // existing-key semantics) rather than per-field patches, since
-  // portcullis's `cookie`/`jwt`/`applications` are all required fields --
-  // any intermediate partially-populated state would fail its own
-  // validation.
+  // Register this tenant with portcullis. A tenant portcullis's config
+  // already holds (configured some other way, such as the integration
+  // harness's GitOps file) gets only the `_admin` application added at
+  // `/tenants/<slug>/applications/_admin`: an `add` at `/tenants/<slug>`
+  // replaces the whole entry (RFC 6902 upsert), which would drop its other
+  // applications, cookie, and jwt settings (S-0017). Otherwise the tenant's
+  // full config -- cookie/jwt/providers/identityHashKeyGenerations/
+  // applications -- goes in one atomic `add` at `/tenants/<slug>`, since
+  // portcullis's `cookie`/`jwt`/`applications` are all required fields and
+  // any partially-populated state would fail its validation.
   if (!tenant.portcullisRegistered) {
-    await app.signetAdmin.patchConfig('portcullis', [
-      jsonPatchAdd(`/tenants/${slug}`, {
+    const adminApplication = {
+      hosts: [adminHost],
+      server: { publicUrl: `https://${adminHost}` },
+      upstream: { base: WEB_UPSTREAM_BASE },
+      auth: { loginUrl: '/oauth2/select' },
+      providers: [config.defaultProvider.name],
+    }
+    const existing = await portcullisTenantEntry(app, slug)
+    let operation: adminv1.JsonPatchOperation
+    if (existing && isRecord(existing.applications)) {
+      operation = jsonPatchAdd(`/tenants/${slug}/applications/${RESERVED_ADMIN_APPLICATION_SLUG}`, adminApplication)
+    } else if (existing) {
+      operation = jsonPatchAdd(`/tenants/${slug}/applications`, { [RESERVED_ADMIN_APPLICATION_SLUG]: adminApplication })
+    } else {
+      operation = jsonPatchAdd(`/tenants/${slug}`, {
         status: 'active',
         cookie: {
           domain,
@@ -198,17 +214,10 @@ async function completeDomainDependentProvisioning(
             scope: config.defaultProvider.scope,
           },
         },
-        applications: {
-          [RESERVED_ADMIN_APPLICATION_SLUG]: {
-            hosts: [adminHost],
-            server: { publicUrl: `https://${adminHost}` },
-            upstream: { base: WEB_UPSTREAM_BASE },
-            auth: { loginUrl: '/oauth2/select' },
-            providers: [config.defaultProvider.name],
-          },
-        },
-      }),
-    ])
+        applications: { [RESERVED_ADMIN_APPLICATION_SLUG]: adminApplication },
+      })
+    }
+    await app.signetAdmin.patchConfig('portcullis', [operation])
     await app.consequent.handle(slug, 'tenant.mark-portcullis-registered', {})
   }
 
@@ -273,6 +282,19 @@ async function completeDomainDependentProvisioning(
     // not an error -- same "nothing to send" posture invites.ts's own
     // publishInviteSent already uses.
   }
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+}
+
+// The tenant's entry in portcullis's config document, or null when there is
+// no document yet or it does not hold the tenant.
+async function portcullisTenantEntry(app: FastifyInstance, slug: string): Promise<Record<string, unknown> | null> {
+  const config = await app.signetAdmin.getConfig('portcullis')
+  if (!config || !isRecord(config.content) || !isRecord(config.content.tenants)) return null
+  const entry = config.content.tenants[slug]
+  return isRecord(entry) ? entry : null
 }
 
 function createInviteToken(slug: string, contactId: string): string {

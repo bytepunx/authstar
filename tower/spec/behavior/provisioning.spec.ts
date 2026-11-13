@@ -442,6 +442,87 @@ describe('domain-pending provisioning (ADR 0093)', () => {
     expect(response.statusCode).toBe(409)
   })
 
+  // S-0017: a tenant portcullis's config already holds, configured some
+  // other way (the integration harness's GitOps file), keeps its own
+  // applications, cookie, and jwt when a domain is set: registration adds
+  // only `_admin`, rather than replacing the whole entry.
+  describe('when portcullis already configures the tenant', () => {
+    const configuredTenant = {
+      status: 'active',
+      cookie: { domain: 'pending-co.io', path: '/', maxAge: 604_800, httpOnly: true, secure: false },
+      jwt: { issuer: 'https://pending-co.io', audience: 'pending-co', expiresIn: '168h' },
+      providers: { dex: { clientId: 'gitops', discoveryUrl: 'https://dex.example/.well-known', scope: ['openid'] } },
+      applications: {
+        web: { hosts: ['pending-co.io'], upstream: { base: 'http://web:3000' }, providers: ['dex'] },
+        chronicle: { hosts: ['chronicle.pending-co.io'], upstream: { base: 'http://chronicle:3000' }, providers: ['dex'] },
+      },
+    }
+
+    async function seedPortcullis(): Promise<void> {
+      await signetAdmin.patchConfig('portcullis', [
+        { op: 'add', path: '/tenants/pending-co', value: JSON.parse(JSON.stringify(configuredTenant)) } as never,
+      ])
+      signetAdmin.patchCalls.length = 0
+    }
+
+    async function portcullisTenant(): Promise<Record<string, any>> {
+      const config = await signetAdmin.getConfig('portcullis')
+      return (config!.content as { tenants: Record<string, Record<string, any>> }).tenants['pending-co']
+    }
+
+    function expectOnlyAdminAdded(tenant: Record<string, any>): void {
+      expect(signetAdmin.patchCalls).toHaveLength(1)
+      const [op] = signetAdmin.patchCalls[0].operations as Array<{ op: string, path: string }>
+      expect(op.op).toBe('add')
+      expect(op.path).toBe('/tenants/pending-co/applications/_admin')
+      expect(Object.keys(tenant.applications).sort()).toEqual(['_admin', 'chronicle', 'web'])
+      expect(tenant.applications.web).toEqual(configuredTenant.applications.web)
+      expect(tenant.applications.chronicle).toEqual(configuredTenant.applications.chronicle)
+      expect(tenant.applications._admin).toMatchObject({
+        hosts: ['authstar.pending-co.io'], auth: { loginUrl: '/oauth2/select' }, providers: ['dex'],
+      })
+      expect(tenant.cookie).toEqual(configuredTenant.cookie)
+      expect(tenant.jwt).toEqual(configuredTenant.jwt)
+      expect(tenant.providers).toEqual(configuredTenant.providers)
+    }
+
+    it('adds only _admin when the domain is set via PATCH', async () => {
+      await app.inject({
+        method: 'POST',
+        url: '/tenants',
+        headers: { authorization: 'Bearer op-secret' },
+        payload: { slug: 'pending-co', name: 'Pending Co', adminEmail: 'admin@pending.test' },
+      })
+      await seedPortcullis()
+
+      const response = await app.inject({
+        method: 'PATCH',
+        url: '/tenants/pending-co/domain',
+        headers: { authorization: 'Bearer op-secret' },
+        payload: { domain: 'pending-co.io' },
+      })
+
+      expect(response.statusCode).toBe(200)
+      expectOnlyAdminAdded(await portcullisTenant())
+      const tenant = (await consequent.fetch('tenant', 'pending-co'))!.state as unknown as TenantState
+      expect(tenant.portcullisRegistered).toBe(true)
+    })
+
+    it('adds only _admin when POST /tenants carries the domain', async () => {
+      await seedPortcullis()
+
+      const response = await app.inject({
+        method: 'POST',
+        url: '/tenants',
+        headers: { authorization: 'Bearer op-secret' },
+        payload: { slug: 'pending-co', name: 'Pending Co', domain: 'pending-co.io', adminEmail: 'admin@pending.test' },
+      })
+
+      expect(response.statusCode).toBe(201)
+      expectOnlyAdminAdded(await portcullisTenant())
+    })
+  })
+
   it('retrying the same PATCH is idempotent', async () => {
     await app.inject({
       method: 'POST',
