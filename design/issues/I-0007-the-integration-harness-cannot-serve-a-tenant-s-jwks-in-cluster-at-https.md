@@ -3,10 +3,10 @@ id: I-0007
 title: "The integration harness cannot serve a tenant's JWKS in-cluster at https://authstar.<domain>"
 class: blocker
 status: closed
-count: 2
+count: 3
 cost: 30m
 first_reported: 2026-11-06T18:09:56Z
-last_reported: 2026-11-10T03:23:11Z
+last_reported: 2026-11-13T21:39:49Z
 updated: 2026-11-14T08:41:32Z
 ---
 
@@ -24,6 +24,10 @@ S-0009 T-0038: no service can verify a portcullis-forwarded internal JWT inside 
 ### 2026-11-10T03:23:11Z
 Story: S-0006.
 S-0006's golden path ran against kluster namespace s-0006 (deploy bb1c2f1). Steps 1–4 passed. Step 4b, GET /_authstar/me/subscription through portcullis with a real Dex session, reached keep, whose log shows GET /me/subscription answered 403 {"error":"forbidden"}. Keep verifies the internal JWT with perTenantJwksKeyProvider (keep/src/lib/build-app.ts, keep/src/server.ts). That fetches https://authstar.<domain>/.well-known/jwks.json with the domain resolved from tower, which the harness cannot serve, and step 1 creates acme without a domain. With no verified claims, keep's /me route answers 403. Keep is a second consumer, after chronicle, blocked by the same gap S-0017 fixes.
+
+### 2026-11-13T21:39:49Z
+Story: S-0006.
+S-0006's golden path ran against kluster namespace s-0006 at 7a4cd57 (rebased onto main with S-0005). Steps 1 to 4, 5, and 6 passed; step 4b, GET /_authstar/me/subscription through portcullis with a real Dex session, answered 403 {"error":"forbidden"} from keep again. The operator chose that S-0006 waits for S-0017.
 
 ## Remediation
 Closed 2026-11-14T08:41:32Z: S-0017. Chronicle's pod now reaches the tenant's JWKS host through an in-pod TLS front, signed by a harness CA that each deploy loads as Secret authstar-tls. Golden path step 1 gives acme its domain, and portcullis.yaml gives acme `_admin` and `chronicle` applications. Tower registers `_admin` without replacing a tenant portcullis already configures. Portcullis sends the login email, so the first-admin invite is redeemed.
