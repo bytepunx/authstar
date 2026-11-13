@@ -25,26 +25,20 @@ fi
 ns="$FLAI_KLUSTER_NAMESPACE"
 prefix="$FLAI_KLUSTER_PREFIX"
 
-# need_pod fails, naming the shared service, when its pod is absent.
-need_pod() {
-  kc -n "$1" get pod "$2" >/dev/null 2>&1 \
-    || kluster_die "$3's pod $1/$2 is not there; bring the kluster up with its profile's shared services, or set the KLUSTER_* pod variables"
-}
-
 kluster_step "rabbitmq: delete vhost and user $ns"
-need_pod "$KLUSTER_RMQ_NAMESPACE" "$KLUSTER_RMQ_POD" RabbitMQ
+kluster_need_pod "$KLUSTER_RMQ_NAMESPACE" "$KLUSTER_RMQ_POD" RabbitMQ
 rmq_exec "
   if rabbitmqctl -q list_vhosts | grep -qx '$ns'; then rabbitmqctl -q delete_vhost '$ns'; fi
   if rabbitmqctl -q list_users | cut -f1 | grep -qx '$ns'; then rabbitmqctl -q delete_user '$ns'; fi"
 
 kluster_step "postgres: drop ${prefix}tower, ${prefix}keep, ${prefix}herald"
-need_pod "$KLUSTER_PG_NAMESPACE" "$KLUSTER_PG_POD" Postgres
+kluster_need_pod "$KLUSTER_PG_NAMESPACE" "$KLUSTER_PG_POD" Postgres
 for db in tower keep herald; do
   pg_exec postgres "DROP DATABASE IF EXISTS ${prefix}${db} WITH (FORCE)"
 done
 
 kluster_step "clickhouse: drop ${prefix}chronicle"
-need_pod "$KLUSTER_CH_NAMESPACE" "$KLUSTER_CH_POD" ClickHouse
+kluster_need_pod "$KLUSTER_CH_NAMESPACE" "$KLUSTER_CH_POD" ClickHouse
 ch_exec "DROP DATABASE IF EXISTS ${prefix}chronicle"
 
 kluster_step "signet: remove the policies of spiffe://$KLUSTER_TRUST_DOMAIN/ns/$ns/sa/*"

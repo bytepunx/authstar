@@ -84,6 +84,11 @@ kluster_require() {
     || kluster_die "FLAI_KLUSTER_CONTEXT is not set; the scripts never use the host's current context"
   [ -n "${KUBECONFIG:-}" ] || kluster_die "KUBECONFIG is not set; point it at the kluster's kubeconfig"
   kluster_need kubectl
+  # A k3d cluster's API port moves when its containers restart, and a kept
+  # kubeconfig then names a port nothing listens on: fail here, saying so,
+  # rather than on the first step that reads the cluster.
+  _kr_err="$(kubectl --context "$FLAI_KLUSTER_CONTEXT" get --raw /readyz 2>&1 >/dev/null)" \
+    || kluster_die "the cluster on context $FLAI_KLUSTER_CONTEXT in $KUBECONFIG does not answer: ${_kr_err:-kubectl failed with no message}; if the kluster's containers restarted, its API port moved: write the kubeconfig again with flai kluster up"
 }
 
 # kc runs kubectl on FLAI_KLUSTER_CONTEXT; a dry run prints it, and its stdin when an argument is "-".
@@ -120,6 +125,14 @@ N
 }' \
     -e '/^[[:space:]]*-[[:space:]]*name:[[:space:]]*dockerhub-pull[[:space:]]*$/d' \
     "$1"
+}
+
+# kluster_need_pod fails when the pod $2 in namespace $1 of the shared service
+# $3 cannot be read, with kubectl's own error, so a missing pod, a missing
+# namespace, and an unreachable cluster are told apart.
+kluster_need_pod() {
+  _knp_err="$(kc -n "$1" get pod "$2" -o name 2>&1 >/dev/null)" \
+    || kluster_die "$3's pod $1/$2 could not be read on context ${FLAI_KLUSTER_CONTEXT:-}: ${_knp_err:-kubectl failed with no message}; bring the kluster up with its profile's shared services, or set the KLUSTER_* pod variables"
 }
 
 # pg_exec runs SQL as postgres on database $1 in the shared Postgres pod.

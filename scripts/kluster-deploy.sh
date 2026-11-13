@@ -26,12 +26,6 @@ rollout_timeout="${KLUSTER_ROLLOUT_TIMEOUT:-300s}"
 rendered="$FLAI_KLUSTER_STATE/rendered"
 mkdir -p "$rendered"
 
-# need_pod fails, naming the shared service, when its pod is absent.
-need_pod() {
-  kc -n "$1" get pod "$2" >/dev/null 2>&1 \
-    || kluster_die "$3's pod $1/$2 is not there; bring the kluster up with its profile's shared services, or set the KLUSTER_* pod variables"
-}
-
 # apply_rendered applies one manifest renamed into the namespace. It renders to
 # a file first, so a failed render stops the deploy rather than a pipe hiding it.
 apply_rendered() {
@@ -68,7 +62,7 @@ else
 fi
 
 kluster_step "rabbitmq: vhost and user $ns"
-need_pod "$KLUSTER_RMQ_NAMESPACE" "$KLUSTER_RMQ_POD" RabbitMQ
+kluster_need_pod "$KLUSTER_RMQ_NAMESPACE" "$KLUSTER_RMQ_POD" RabbitMQ
 amqp_password="$FLAI_KLUSTER_STATE/amqp-password"
 if [ ! -s "$amqp_password" ]; then
   (umask 077 && openssl rand -hex 24 > "$amqp_password")
@@ -91,8 +85,8 @@ kc -n "$KLUSTER_RMQ_NAMESPACE" exec -i "$KLUSTER_RMQ_POD" -c "$KLUSTER_RMQ_CONTA
   "$ns" "$(cat "$amqp_password")" "$ns" > "$FLAI_KLUSTER_STATE/amqp-url")
 
 kluster_step "databases: ${prefix}tower, ${prefix}keep, ${prefix}herald, ${prefix}chronicle"
-need_pod "$KLUSTER_PG_NAMESPACE" "$KLUSTER_PG_POD" Postgres
-need_pod "$KLUSTER_CH_NAMESPACE" "$KLUSTER_CH_POD" ClickHouse
+kluster_need_pod "$KLUSTER_PG_NAMESPACE" "$KLUSTER_PG_POD" Postgres
+kluster_need_pod "$KLUSTER_CH_NAMESPACE" "$KLUSTER_CH_POD" ClickHouse
 for db in tower keep herald; do
   query="SELECT 1 FROM pg_database WHERE datname='${prefix}${db}'"
   if kluster_dry_run; then
