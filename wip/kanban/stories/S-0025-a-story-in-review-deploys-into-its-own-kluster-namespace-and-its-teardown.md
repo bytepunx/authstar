@@ -7,7 +7,7 @@ status: backlog
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T23:37:51Z
-updated: 2026-11-10T00:03:32Z
+updated: 2026-11-13T12:07:28Z
 transitions: []
 tags: [kluster, scripts, integration]
 topics: [kluster, deployment]
@@ -23,23 +23,35 @@ usage:
   seconds: 0
   models: []
   strategic:
-    - kind: orchestrator
-      seconds: 79
+    - kind: planner
+      seconds: 8893
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 38
-          output: 263
-          cache_read: 1252671
-          cache_write: 218269
-          cost: 1.6657
-draft: true
+          input: 112
+          output: 25666
+          cache_read: 6927479
+          cache_write: 135227
+          cost: 2.9811
+    - kind: orchestrator
+      seconds: 101
+      estimated: true
+      models:
+        - model: claude-opus-5-5
+          input: 54
+          output: 405
+          cache_read: 1823797
+          cache_write: 324791
+          cost: 2.4353
 forecast:
   duration: 4h
   delivery: 2026-11-10T21:55:00Z
   basis: "Its own forecast of 4h; 13th in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005, S-0010, S-0012, S-0014, S-0015, S-0016, S-0017, S-0018, S-0021, S-0022, S-0023 and S-0024."
   by: flai
   at: 2026-11-10T00:03:32Z
+finalized:
+  by: bytepunx
+  at: 2026-11-13T12:07:28Z
 ---
 # S-0025 A story in review deploys into its own kluster namespace and its teardown removes it
 
