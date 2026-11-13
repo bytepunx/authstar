@@ -7,7 +7,7 @@ status: backlog
 parent: E-0003
 owner: bytepunx
 created: 2026-11-06T18:29:54Z
-updated: 2026-11-10T00:03:32Z
+updated: 2026-11-13T12:08:13Z
 transitions: []
 tags: [integration]
 topics: [analytics, tls]
@@ -54,10 +54,10 @@ cost_of_delay:
   at: 2026-11-09T20:55:39Z
 forecast:
   duration: 4h
-  delivery: 2026-11-11T00:51:00Z
-  basis: "Its own forecast of 4h; 7th in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005, S-0010, S-0012, S-0014, S-0015 and S-0016."
+  delivery: 2026-11-14T17:15:00Z
+  basis: "Its own forecast of 4h; 5th in the pull order with an in-progress limit of 4, behind S-0007, S-0008, S-0010, S-0013, S-0025, S-0012, S-0014, S-0015 and S-0016."
   by: flai
-  at: 2026-11-10T00:03:32Z
+  at: 2026-11-13T12:08:13Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:06:44Z

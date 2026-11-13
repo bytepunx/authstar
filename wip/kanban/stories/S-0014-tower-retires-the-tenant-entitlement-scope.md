@@ -7,7 +7,7 @@ status: backlog
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:29:21Z
-updated: 2026-11-10T00:03:32Z
+updated: 2026-11-13T12:08:13Z
 transitions: []
 tags: [tower]
 topics: [billing, tower, testing]
@@ -37,10 +37,10 @@ cost_of_delay:
     at: 2026-11-06T18:21:56Z
 forecast:
   duration: 3h
-  delivery: 2026-11-10T17:25:00Z
-  basis: "Its own forecast of 3h; 4th in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005, S-0010 and S-0012."
+  delivery: 2026-11-14T01:29:00Z
+  basis: "Its own forecast of 3h; 2nd in the pull order with an in-progress limit of 4, behind S-0007, S-0008, S-0010, S-0013, S-0025 and S-0012."
   by: flai
-  at: 2026-11-10T00:03:32Z
+  at: 2026-11-13T12:08:13Z
 ---
 # S-0014 Tower retires the tenant entitlement scope
 

@@ -6,7 +6,7 @@ title: The test tier runs every project's suite whatever the paths, and steward'
 status: backlog
 owner: bytepunx
 created: 2026-11-06T21:11:49Z
-updated: 2026-11-10T00:03:32Z
+updated: 2026-11-13T12:08:13Z
 transitions: []
 tags: [testing, scripts, steward]
 topics: [testing]
@@ -41,10 +41,10 @@ cost_of_delay:
   at: 2026-11-09T22:10:33Z
 forecast:
   duration: 3h
-  delivery: 2026-11-10T15:50:00Z
-  basis: "Its own forecast of 3h; 8th in the pull order with an in-progress limit of 4, behind S-0006, S-0007, S-0008, S-0013, S-0005, S-0010, S-0012, S-0014, S-0015, S-0016 and S-0017."
+  delivery: 2026-11-14T02:42:00Z
+  basis: "Its own forecast of 3h; 6th in the pull order with an in-progress limit of 4, behind S-0007, S-0008, S-0010, S-0013, S-0025, S-0012, S-0014, S-0015, S-0016 and S-0017."
   by: flai
-  at: 2026-11-10T00:03:32Z
+  at: 2026-11-13T12:08:13Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:20Z
