@@ -2,12 +2,13 @@
 # Remove what scripts/kluster-deploy.sh made for a story's namespace outside the
 # namespace itself, the kluster block's `teardown` (design/system/kluster.md in
 # system-flow): its RabbitMQ vhost and user, its prefixed Postgres and ClickHouse
-# databases, and its signet policies. flai deletes the Kubernetes namespace and
-# FLAI_KLUSTER_STATE afterwards.
+# databases, its signet policies, and its signet bundles, which
+# scripts/kluster-signet-remove.mjs deletes. flai deletes the Kubernetes
+# namespace and FLAI_KLUSTER_STATE afterwards.
 #   kluster-teardown.sh
 # It refuses the default namespace and an empty prefix: a teardown never drops
-# main's databases. Each step removes only what is present, so a second run passes.
-# The namespace's signet bundles stay: signet CLI 0.10.3 cannot delete a bundle.
+# main's databases or bundles. Each step removes only what is present, so a
+# second run passes.
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/lib-kluster.sh
@@ -63,4 +64,19 @@ for policy in $policies; do
   signet_cli policy remove --id "$policy"
   removed=$((removed + 1))
 done
-kluster_log "signet: removed $removed policies; the namespace's bundles under signet namespace $ns stay, since signet's CLI cannot delete a bundle"
+kluster_log "signet: removed $removed policies"
+
+kluster_step "signet: delete the bundles under signet namespace $ns"
+kluster_need node bash
+if [ ! -d tower/node_modules/@bytepunx/signet-client ]; then
+  if kluster_dry_run; then
+    kluster_log "dry run: tower has no node_modules; a real teardown runs npm ci in tower first"
+  else
+    kluster_need npm
+    kluster_log "tower has no @bytepunx/signet-client, which the bundle delete needs; running npm ci in tower"
+    (cd tower && npm ci --no-audit --no-fund) >&2
+  fi
+fi
+KLUSTER_SIGNET_SERVER="${KLUSTER_SIGNET_SERVER:-}" KLUSTER_SIGNET_TOKEN_FILE="${KLUSTER_SIGNET_TOKEN_FILE:-}" \
+  KLUSTER_DEFAULT_NAMESPACE="$KLUSTER_DEFAULT_NAMESPACE" KLUSTER_DRY_RUN="$KLUSTER_DRY_RUN" \
+  node scripts/kluster-signet-remove.mjs
