@@ -293,7 +293,8 @@ first). Run it directly: `./scripts/scenario-golden-path.sh`. Every step drives 
 API call — no mocking — and reports PASS/FAIL per step, exiting non-zero if anything
 failed. See the script's own header comment for the exact auth mechanics per step (why
 tower's operator routes rather than a JWT-verified path, why keep uses a self-computed
-Stripe webhook signature, why chronicle's report read is skipped until S-0017, and why herald's step
+Stripe webhook signature, how chronicle's report is read with a portcullis-forwarded token
+(see "The tenant's JWKS host in-cluster" below), and why herald's step
 deliberately stops short of sending a real email — see "A critical, unresolved bug"
 below).
 
@@ -357,14 +358,13 @@ databases, not asserted:
   broken until this was fixed (`config/authstar/portcullis.yaml`, one-word change).
 - **portcullis never registered `admin.acme.authstar.app` as a host** — the per-tenant
   JWKS convention (`perTenantJwksKeyProvider`) every JWT-consuming service resolves
-  against needs it, but tower's own provisioning route never patches portcullis's Bundle
-  config (confirmed: no `signetAdmin.patchConfig` call anywhere in `provisioning.ts`,
-  only `rotate-keys.ts` uses `patchConfig`, for EC key generation arrays — host routing is
-  a GitOps/deploy-time concern this repo owns, not something tower auto-provisions).
-  Fixed by adding the host to the existing `web` application's `hosts` list (confirmed
-  via reading portcullis's own `jwks_handler.rs`: it only needs the Host to resolve to
-  *some* active application for the tenant, discarding which one matched — no separate
-  `_admin` application block needed).
+  against needs it. Fixed then by adding the host to the existing `web` application's
+  `hosts` list: portcullis's `jwks_handler.rs` only needs the Host to resolve to *some*
+  active application of the tenant. Since then, the JWKS host is
+  `authstar.<tenant domain>` (ADR 0091). When step 1 sets a tenant's domain, tower
+  registers it with portcullis itself, through `signetAdmin.patchConfig`. For a tenant
+  that `config/authstar/portcullis.yaml` already configures, it adds only the `_admin`
+  application (S-0017). See "The tenant's JWKS host in-cluster" below.
 - **chronicle rejects `eventType: "auth.login"`** — the real, only-recognized value is
   `auth.login-succeeded` (confirmed directly against `chronicle/src/consumer/
   map-event.ts`'s own comment quoting ADR 0085's DDL). A wrong `eventType` isn't a loud
@@ -375,6 +375,36 @@ databases, not asserted:
   behavior tower/keep/herald all have) kills any port-forward targeting that pod; a stale
   forward doesn't error loudly, it just refuses new connections. The scenario script
   establishes its own forwards fresh on every run rather than assuming any are already up.
+
+### The tenant's JWKS host in-cluster
+
+Chronicle verifies the ES256 internal JWT portcullis forwards against
+`https://authstar.<tenant domain>/.well-known/jwks.json`. `@bytepunx/authstar-fastify` fixes the
+scheme to `https`, and portcullis listens plain HTTP on 3710. The harness bridges the gap
+inside chronicle's pod only. It needs no cluster-wide DNS, so story namespaces that share one
+kluster do not collide (S-0017).
+
+| Piece | Where | What it does |
+|-------|-------|--------------|
+| Harness CA and cert | [`scripts/harness-tls.sh`](scripts/harness-tls.sh), run by [`scripts/kluster-deploy.sh`](../scripts/kluster-deploy.sh) and [`scripts/deploy.sh`](scripts/deploy.sh) | Makes a self-signed CA and a cert for `authstar.acme.authstar.app`. Loads them as Secret `authstar-tls` (`ca.crt`, `tls.crt`, `tls.key`). The kluster deploy keeps the CA in the namespace's flai state; `deploy.sh` keeps an existing Secret. No key is written into the checkout |
+| Host resolution | `hostAliases` in [`manifests/14-chronicle.yaml`](manifests/14-chronicle.yaml) | Sends `authstar.acme.authstar.app` to `127.0.0.1` in chronicle's pod |
+| TLS front | The `tls-front` container and ConfigMap `chronicle-tls-front` in the same manifest | Runs chronicle's own image with a Node built-ins proxy on `127.0.0.1:443`. It terminates TLS with the Secret's cert and proxies to `portcullis:3710`, keeping `Host` so portcullis resolves the tenant. A pod sysctl lets the non-root `node` user bind 443 |
+| Trust | `NODE_EXTRA_CA_CERTS` on the chronicle container | Trusts the harness CA. The I-0001 `NODE_TLS_REJECT_UNAUTHORIZED=0` for tower is unchanged |
+| Tenant routing | `_admin` and `chronicle` applications of `acme` in [`config/authstar/portcullis.yaml`](config/authstar/portcullis.yaml) | `authstar.acme.authstar.app` resolves to acme. `chronicle.acme.authstar.app` fronts chronicle, so the gate mints the internal JWT for it |
+
+The golden path uses all of it:
+
+- Step 1 gives `acme` the domain `acme.authstar.app`. Tower then adds its `_admin` application to the acme that `portcullis.yaml` already configures, and leaves the rest alone.
+- Step 2 logs in with the first-admin invite, which grants `analytics:read`.
+- Step 6 checks from chronicle's own container, with `NODE_TLS_REJECT_UNAUTHORIZED` unset, that the JWKS host's cert is trusted. It then reads the auth-funnel report through portcullis on `chronicle.acme.authstar.app` with step 2's session cookie.
+
+Run it against a story's namespace once `flai kluster deploy` has passed. `flai kluster exec` gives the command that namespace's kubeconfig and `FLAI_KLUSTER_*` variables:
+
+```sh
+flai kluster exec S-0017 -- env KLUSTER_NAMESPACE=s-0017 \
+  KLUSTER_TOKENS=.flai-cache/kluster/state/s-0017/tokens.env \
+  integration/scripts/scenario-golden-path.sh
+```
 
 ### FIXED: herald's comms consumer could loop infinitely (was: "critical, unresolved bug")
 
@@ -549,8 +579,8 @@ golden path was "proven working end-to-end" — that claim did not survive a fre
   rotation followed by a real invite that herald genuinely decrypts (verified by querying
   its own `communication_event` table directly, not by trusting the invite's HTTP status
   alone — see "A second, deeper, separate bug" above), and a real lookout → RabbitMQ →
-  ClickHouse → chronicle-report chain. Since S-0009, step 6 checks only that chronicle
-  refuses the report without a token; the token read waits on S-0017 (see below).
+  ClickHouse → chronicle-report chain. Since S-0017, step 6 also reads the report through
+  portcullis with a genuine ES256 internal JWT (see "The tenant's JWKS host in-cluster").
 - The GitHub repository (`bytepunx/authstar-integration`, private) received real pushes
   throughout this pass — the deploy-key/`repo add`/`repo sync` steps work as designed.
 
@@ -614,26 +644,17 @@ the real DockerHub-backed CI/prod path) — the rewrite happens only in a scratc
   (`{}`) instead of `nil`, closing the parse error now that `manifests/13-lookout.yaml`
   actually sets bootstrap `SIGNET_*` vars (once lookout's own companion PR merges, sync
   cycles against this file will stop erroring).
-- Chronicle's report read with a genuine token (S-0017, I-0007). Since S-0009 chronicle
-  verifies only the ES256 internal JWT portcullis mints, per tenant against
-  `https://authstar.<tenant domain>/.well-known/jwks.json`; its HS256 shared secret is gone.
-  The harness cannot serve that host in-cluster: portcullis listens plain HTTP, nothing
-  terminates TLS, no in-cluster DNS maps the tenant host, and step 1 gives `acme` no
-  domain. Step 6 therefore checks that chronicle refuses an unauthenticated report (401)
-  and skips the token read until S-0017 adds the TLS front, DNS, and domain.
+- **Keep, herald, and web still cannot verify a portcullis-forwarded token in-cluster.** Only
+  chronicle's pod has the TLS front for the tenant's JWKS host (see "The tenant's JWKS host
+  in-cluster"). Each of the other three needs the same `hostAliases`, `tls-front` sidecar, and
+  `NODE_EXTRA_CA_CERTS` in its own manifest, and keep and herald's `towerBaseUrl` still say
+  `http://` (I-0006).
 - Web's own JWKS wiring — `INTERNAL_JWT_JWKS_URL` is now set, in both
   `config/authstar/web.yaml` (`internalJwtJwksUrl`, signet-sourced once web's own
   companion PR lands) and `manifests/16-web.yaml` (`INTERNAL_JWT_JWKS_URL` env var, for
   today's Env-Only Mode), to `https://admin.acme.authstar.app/.well-known/jwks.json` —
   the per-tenant JWKS host convention (`perTenantJwksKeyProvider`, ADR 0086/0091) this
-  repo's own portcullis config already registers for `acme`. **Two gaps still block this
-  from actually closing the "requests treated as unauthenticated" gap, neither fixed by
-  this value being set**: (1) portcullis has no `/.well-known/jwks.json` route
-  implemented yet (ADR 0086's decision, filed as `bytepunx/authstar-portcullis#2`,
-  *not* one of the seven companion PRs this pass wires up) — the URL 404s until that
-  lands; (2) even once it does, web running *inside* the cluster has no DNS path to fetch
-  `https://admin.acme.authstar.app/.well-known/jwks.json` (confirmed live: that hostname
-  doesn't resolve from inside any pod at all — no in-cluster DNS entry for the public
-  tenant domain exists). A real fix needs in-cluster DNS wiring for the public tenant
-  hostname (CoreDNS rewrite rules or similar), not just a web env var — a separate,
-  deeper gap than this pass's own portcullis config fix, out of scope here.
+  repo's own portcullis config already registers for `acme`. Portcullis now serves
+  `/.well-known/jwks.json` (`authstar-middleware/src/router.rs`), but web's pod has no path
+  to that host: it does not resolve there, and nothing trusts a cert for it. Web needs
+  chronicle's in-pod TLS front (see the item above), pointed at `authstar.<tenant domain>`.
