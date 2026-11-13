@@ -40,7 +40,11 @@ const provisioningConfig: ProvisioningConfig = {
 
 async function buildProvisioningApp(config: ProvisioningConfig = provisioningConfig) {
   const consequent = await buildInMemoryConsequent()
-  const signetAdmin = createSpySignetAdmin()
+  // As signet behaves for tower live: RFC 6902 adds, an existing portcullis
+  // document, and GetServiceConfig refused on the workload listener (S-0017).
+  const signetAdmin = createSpySignetAdmin({
+    strictAdd: true, refuseGetConfig: true, documents: { portcullis: { tenants: {} } },
+  })
   const publisher = createSpyPublisher()
   // A real keypair, private half retained here (never by `app` itself
   // beyond signing) -- `createEphemeralHeraldKey`'s own default discards
@@ -466,8 +470,8 @@ describe('domain-pending provisioning (ADR 0093)', () => {
     }
 
     async function portcullisTenant(): Promise<Record<string, any>> {
-      const config = await signetAdmin.getConfig('portcullis')
-      return (config!.content as { tenants: Record<string, Record<string, any>> }).tenants['pending-co']
+      const content = signetAdmin.peekConfig('portcullis')
+      return (content as { tenants: Record<string, Record<string, any>> }).tenants['pending-co']
     }
 
     function expectOnlyAdminAdded(tenant: Record<string, any>): void {
@@ -521,6 +525,29 @@ describe('domain-pending provisioning (ADR 0093)', () => {
       expect(response.statusCode).toBe(201)
       expectOnlyAdminAdded(await portcullisTenant())
     })
+  })
+
+  it('does not fall back to replacing the tenant when signet is unreachable', async () => {
+    const patchConfig = signetAdmin.patchConfig.bind(signetAdmin)
+    let attempts = 0
+    signetAdmin.patchConfig = async (targetService, operations) => {
+      attempts += 1
+      if (attempts === 1) throw Object.assign(new Error('14 UNAVAILABLE: connection refused'), { code: 14 })
+      return patchConfig(targetService, operations)
+    }
+
+    const response = await app.inject({
+      method: 'POST',
+      url: '/tenants',
+      headers: { authorization: 'Bearer op-secret' },
+      payload: { slug: 'pending-co', name: 'Pending Co', domain: 'pending-co.io', adminEmail: 'admin@pending.test' },
+    })
+
+    expect(response.statusCode).toBe(500)
+    expect(attempts).toBe(1)
+    expect(signetAdmin.patchCalls).toHaveLength(0)
+    const tenant = (await consequent.fetch('tenant', 'pending-co'))!.state as unknown as TenantState
+    expect(tenant.portcullisRegistered).toBe(false)
   })
 
   it('retrying the same PATCH is idempotent', async () => {

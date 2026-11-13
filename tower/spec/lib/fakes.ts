@@ -9,7 +9,27 @@ import type { Publisher } from '../../src/lib/publisher.js'
 
 export interface SpySignetAdmin extends SignetAdmin {
   calls: Array<{ targetService: 'tower' | 'portcullis', key: string, value: string }>
+  // The patches that applied; a rejected patch is not recorded.
   patchCalls: Array<{ targetService: 'tower' | 'portcullis', operations: adminv1.JsonPatchOperation[] }>
+  // A copy of targetService's config document as the fake holds it, for
+  // assertions that must not go through getConfig.
+  peekConfig(targetService: 'tower' | 'portcullis'): Record<string, unknown> | undefined
+}
+
+export interface SpySignetAdminOptions {
+  // RFC 6902 "add": the target's parent must exist, as signet requires; a
+  // missing one rejects the whole patch with gRPC INVALID_ARGUMENT. Off by
+  // default, where "add" creates missing parents.
+  strictAdd?: boolean
+  // getConfig rejects with gRPC PERMISSION_DENIED, as signet does on the
+  // workload listener tower dials (seen live on S-0017's namespace).
+  refuseGetConfig?: boolean
+  // Config documents to start from, e.g. { portcullis: { tenants: {} } }.
+  documents?: Partial<Record<'tower' | 'portcullis', Record<string, unknown>>>
+}
+
+function grpcError(code: number, message: string): Error {
+  return Object.assign(new Error(`${code} ${message}`), { code })
 }
 
 // Applies exactly the JSON Patch (RFC 6902) vocabulary tower's own code
@@ -51,40 +71,53 @@ function applyOp(root: Record<string, unknown>, op: adminv1.JsonPatchOperation):
   throw new Error(`fake patch: unsupported op "${op.op}" (this fake only implements add/-, test, remove)`)
 }
 
-export function createSpySignetAdmin(): SpySignetAdmin {
+export function createSpySignetAdmin(options: SpySignetAdminOptions = {}): SpySignetAdmin {
   const calls: SpySignetAdmin['calls'] = []
   const patchCalls: SpySignetAdmin['patchCalls'] = []
-  const documents: Partial<Record<'tower' | 'portcullis', Record<string, unknown>>> = {}
+  const documents: Partial<Record<'tower' | 'portcullis', Record<string, unknown>>> =
+    JSON.parse(JSON.stringify(options.documents ?? {}))
   let version = 0
 
   return {
     calls,
     patchCalls,
+    peekConfig(targetService) {
+      const content = documents[targetService]
+      return content === undefined ? undefined : JSON.parse(JSON.stringify(content))
+    },
     async pushSecret(targetService, key, value) {
       calls.push({ targetService, key, value })
     },
     async patchConfig(targetService, operations) {
-      patchCalls.push({ targetService, operations })
-      documents[targetService] ??= {}
+      // All or nothing, as signet applies a patch: work on a copy.
+      const draft: Record<string, unknown> = JSON.parse(JSON.stringify(documents[targetService] ?? {}))
       // "add" at a bare top-level path (e.g. jsonPatchAdd('/tenants/acme', {...}))
       // upserts a whole subtree -- same RFC 6902 add-is-upsert-on-existing-key
       // semantics `provisioning.ts`'s own comment documents.
       for (const op of operations) {
         const segments = op.path.split('/').filter((s) => s.length > 0)
         if (op.op === 'add' && segments[segments.length - 1] !== '-') {
-          let parent: any = documents[targetService]
+          let parent: any = draft
           for (let i = 0; i < segments.length - 1; i++) {
-            parent[segments[i]] ??= {}
+            if (parent[segments[i]] === undefined) {
+              if (options.strictAdd) throw grpcError(3, `INVALID_ARGUMENT: add at ${op.path}: parent does not exist`)
+              parent[segments[i]] = {}
+            }
             parent = parent[segments[i]]
           }
           parent[segments[segments.length - 1]] = op.value
           continue
         }
-        applyOp(documents[targetService]!, op)
+        applyOp(draft, op)
       }
+      documents[targetService] = draft
+      patchCalls.push({ targetService, operations })
       version += 1
     },
     async getConfig(targetService) {
+      if (options.refuseGetConfig) {
+        throw grpcError(7, 'PERMISSION_DENIED: /admin.v1.GitOpsService/GetServiceConfig is only reachable via the admin listener, not the workload listener')
+      }
       const content = documents[targetService]
       if (content === undefined) return null
       return { content: JSON.parse(JSON.stringify(content)), version }

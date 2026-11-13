@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import type { FastifyInstance, FastifyPluginAsync } from 'fastify'
-import { jsonPatchAdd, type adminv1 } from '@bytepunx/signet-client'
+import { jsonPatchAdd } from '@bytepunx/signet-client'
 import type { TenantState } from '../actors/tenant_actor.js'
 import type { ApplicationState } from '../actors/application_actor.js'
 import type { ProviderState } from '../actors/provider_actor.js'
@@ -172,11 +172,14 @@ async function completeDomainDependentProvisioning(
   // harness's GitOps file) gets only the `_admin` application added at
   // `/tenants/<slug>/applications/_admin`: an `add` at `/tenants/<slug>`
   // replaces the whole entry (RFC 6902 upsert), which would drop its other
-  // applications, cookie, and jwt settings (S-0017). Otherwise the tenant's
-  // full config -- cookie/jwt/providers/identityHashKeyGenerations/
-  // applications -- goes in one atomic `add` at `/tenants/<slug>`, since
-  // portcullis's `cookie`/`jwt`/`applications` are all required fields and
-  // any partially-populated state would fail its validation.
+  // applications, cookie, and jwt settings (S-0017). That narrow `add`
+  // fails when the tenant is not there, since RFC 6902 needs the parent;
+  // then the tenant's full config -- cookie/jwt/providers/
+  // identityHashKeyGenerations/applications -- goes in one atomic `add` at
+  // `/tenants/<slug>`, since portcullis's `cookie`/`jwt`/`applications` are
+  // all required fields and any partially-populated state would fail its
+  // validation. Tower cannot read the config first: signet refuses
+  // GetServiceConfig on the workload listener tower dials.
   if (!tenant.portcullisRegistered) {
     const adminApplication = {
       hosts: [adminHost],
@@ -185,14 +188,15 @@ async function completeDomainDependentProvisioning(
       auth: { loginUrl: '/oauth2/select' },
       providers: [config.defaultProvider.name],
     }
-    const existing = await portcullisTenantEntry(app, slug)
-    let operation: adminv1.JsonPatchOperation
-    if (existing && isRecord(existing.applications)) {
-      operation = jsonPatchAdd(`/tenants/${slug}/applications/${RESERVED_ADMIN_APPLICATION_SLUG}`, adminApplication)
-    } else if (existing) {
-      operation = jsonPatchAdd(`/tenants/${slug}/applications`, { [RESERVED_ADMIN_APPLICATION_SLUG]: adminApplication })
-    } else {
-      operation = jsonPatchAdd(`/tenants/${slug}`, {
+    try {
+      await app.signetAdmin.patchConfig('portcullis', [
+        jsonPatchAdd(`/tenants/${slug}/applications/${RESERVED_ADMIN_APPLICATION_SLUG}`, adminApplication),
+      ])
+    } catch (err) {
+      // Only a rejected patch means the tenant is not there; signet being
+      // unreachable or refusing tower is a failure of its own.
+      if (isTransportOrAuthError(err)) throw err
+      await app.signetAdmin.patchConfig('portcullis', [jsonPatchAdd(`/tenants/${slug}`, {
         status: 'active',
         cookie: {
           domain,
@@ -215,9 +219,8 @@ async function completeDomainDependentProvisioning(
           },
         },
         applications: { [RESERVED_ADMIN_APPLICATION_SLUG]: adminApplication },
-      })
+      })])
     }
-    await app.signetAdmin.patchConfig('portcullis', [operation])
     await app.consequent.handle(slug, 'tenant.mark-portcullis-registered', {})
   }
 
@@ -284,17 +287,15 @@ async function completeDomainDependentProvisioning(
   }
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value)
-}
+// gRPC codes for a call that never reached signet's patch or was refused:
+// CANCELLED, DEADLINE_EXCEEDED, PERMISSION_DENIED, UNAVAILABLE, UNAUTHENTICATED.
+const TRANSPORT_OR_AUTH_CODES = new Set([1, 4, 7, 14, 16])
 
-// The tenant's entry in portcullis's config document, or null when there is
-// no document yet or it does not hold the tenant.
-async function portcullisTenantEntry(app: FastifyInstance, slug: string): Promise<Record<string, unknown> | null> {
-  const config = await app.signetAdmin.getConfig('portcullis')
-  if (!config || !isRecord(config.content) || !isRecord(config.content.tenants)) return null
-  const entry = config.content.tenants[slug]
-  return isRecord(entry) ? entry : null
+// Whether err is a gRPC failure to reach signet or to be allowed by it,
+// rather than signet rejecting the patch itself.
+function isTransportOrAuthError(err: unknown): boolean {
+  const code = (err as { code?: unknown } | null)?.code
+  return typeof code === 'number' && TRANSPORT_OR_AUTH_CODES.has(code)
 }
 
 function createInviteToken(slug: string, contactId: string): string {

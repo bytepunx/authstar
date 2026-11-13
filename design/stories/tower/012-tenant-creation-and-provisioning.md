@@ -73,13 +73,16 @@ provisioning:
 - [ ] **4a. Register the tenant with portcullis** ([ADR 0091](../../adrs/0091-tenant-owned-domains-and-the-authstar-admin-surface.md),
       [ADR 0093](../../adrs/0093-domain-pending-tenant-provisioning.md): once the tenant has a
       domain) — a JSON Patch to portcullis's config through `signetAdmin.patchConfig`, then
-      `tenant.mark-portcullis-registered`. When portcullis's config (`signetAdmin.getConfig`)
-      already holds the tenant, configured some other way such as a GitOps file, the patch adds
-      only the `_admin` application at `/tenants/{slug}/applications/_admin` and leaves the
-      tenant's other applications, cookie, jwt, and providers as they are. Otherwise it adds the
-      whole tenant at `/tenants/{slug}`: cookie, jwt, providers, identity-hash key generations, and
-      `_admin`. An `add` at `/tenants/{slug}` replaces an existing entry whole, which dropped the
-      other applications before S-0017.
+      `tenant.mark-portcullis-registered`. Tower first adds only the `_admin` application at
+      `/tenants/{slug}/applications/_admin`. When portcullis's config already holds the tenant,
+      configured some other way such as a GitOps file, that is all, and the tenant's other
+      applications, cookie, jwt, and providers stay as they are. When it does not, signet rejects
+      that `add` (RFC 6902 needs the parent), and tower adds the whole tenant at `/tenants/{slug}`:
+      cookie, jwt, providers, identity-hash key generations, and `_admin`. A failure to reach
+      signet or to be allowed by it is not taken for a missing tenant. Tower does not read the
+      config first: signet refuses `GetServiceConfig` on the workload listener tower dials. An
+      `add` at `/tenants/{slug}` replaces an existing entry whole, which dropped the other
+      applications before S-0017.
 - [ ] **5. Generate and push the four per-tenant secrets** (Story 001/011's key-handling
       discipline, generation 1 for each — this is the *first* rotation-shaped write, not a
       special case of it): session signing keypair, internal signing keypair, `identity-hash-key`
