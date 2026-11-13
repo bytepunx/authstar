@@ -114,6 +114,20 @@ if [ ! -d tower/node_modules/@bytepunx/signet-client ]; then
 fi
 scripts/kluster-signet.sh
 
+kluster_step "tls: harness CA and Secret authstar-tls in $ns"
+# The in-pod TLS front (manifests/14-chronicle.yaml) serves the tenant's JWKS
+# host with this cert, and chronicle trusts its CA. The CA stays in the
+# namespace's state, so a redeploy applies the same Secret.
+integration/scripts/harness-tls.sh "$FLAI_KLUSTER_STATE/tls"
+tls_secret="$FLAI_KLUSTER_STATE/authstar-tls.yaml"
+# Rendered to a file, never a pipe, and never printed: it holds the keys.
+(umask 077 && kc -n "$ns" create secret generic authstar-tls \
+  --from-file=ca.crt="$FLAI_KLUSTER_STATE/tls/ca.crt" \
+  --from-file=tls.crt="$FLAI_KLUSTER_STATE/tls/tls.crt" \
+  --from-file=tls.key="$FLAI_KLUSTER_STATE/tls/tls.key" \
+  --dry-run=client -o yaml > "$tls_secret")
+kc apply -f "$tls_secret"
+
 kluster_step "deploy: apply the manifests and wait for eight rollouts"
 # 01-db-init-job.yaml is left out: it creates the fixed database names, and the
 # databases step above makes the namespace's prefixed ones.

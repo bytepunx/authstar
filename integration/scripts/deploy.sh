@@ -36,6 +36,28 @@ log "running db-init Job (per-service Postgres databases + chronicle's ClickHous
 kubectl apply -f "$REPO_ROOT/manifests/01-db-init-job.yaml"
 kubectl wait --for=condition=complete job/authstar-db-init -n "$AUTHSTAR_NAMESPACE" --timeout=120s
 
+# The in-pod TLS front (manifests/14-chronicle.yaml) serves the tenant's JWKS
+# host, https://authstar.acme.authstar.app, with this Secret's cert, and
+# chronicle trusts its CA. An existing Secret is kept, so a re-run changes
+# nothing; delete it and restart chronicle to make a new CA. The keys live
+# only in a temporary directory and the Secret, never in this repository.
+if kubectl get secret authstar-tls -n "$AUTHSTAR_NAMESPACE" >/dev/null 2>&1; then
+  log "authstar-tls Secret exists; kept"
+else
+  require_cmd openssl
+  log "creating authstar-tls Secret (harness CA + cert for authstar.acme.authstar.app)"
+  tls_dir="$(mktemp -d)"
+  trap 'rm -rf "$tls_dir"' EXIT
+  "$REPO_ROOT/scripts/harness-tls.sh" "$tls_dir"
+  kubectl create secret generic authstar-tls \
+    -n "$AUTHSTAR_NAMESPACE" \
+    --from-file=ca.crt="$tls_dir/ca.crt" \
+    --from-file=tls.crt="$tls_dir/tls.crt" \
+    --from-file=tls.key="$tls_dir/tls.key"
+  rm -rf "$tls_dir"
+  trap - EXIT
+fi
+
 log "applying the 8 service Deployments + Services"
 for f in "$REPO_ROOT"/manifests/1[0-7]-*.yaml; do
   kubectl apply -f "$f"
