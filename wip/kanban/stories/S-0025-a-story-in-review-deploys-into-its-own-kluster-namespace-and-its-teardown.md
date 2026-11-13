@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T23:37:51Z
-updated: 2026-11-13T12:07:49Z
+updated: 2026-11-13T12:09:37Z
 transitions:
   - to: ready
     at: 2026-11-13T12:07:34Z
@@ -49,6 +49,11 @@ usage:
           cache_read: 1823797
           cache_write: 324791
           cost: 2.4353
+cost_of_delay:
+  inputs:
+    revenue_per_week: 1200
+    by: bytepunx
+    at: 2026-11-13T12:09:37Z
 forecast:
   duration: 4h
   delivery: 2026-11-10T21:55:00Z
