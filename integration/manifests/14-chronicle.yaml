@@ -20,8 +20,78 @@
 # signetAdminToken push), same reasoning as its inclusion in every other
 # service's bootstrap set here.
 #
+# The JWKS host (S-0017, I-0007). Chronicle fetches
+# https://authstar.<domain>/.well-known/jwks.json, scheme fixed, and portcullis
+# listens plain HTTP. Inside this pod only, hostAliases send
+# authstar.acme.authstar.app to 127.0.0.1, where the tls-front sidecar
+# terminates TLS on 443 with the cert in Secret authstar-tls (made by the
+# deploy from the harness CA) and proxies to portcullis:3710, keeping Host so
+# portcullis resolves the tenant. The short Service name resolves in the pod's
+# own namespace, so a story namespace needs no rewrite and no cluster-wide DNS.
+# Chronicle trusts the harness CA through NODE_EXTRA_CA_CERTS. The pod sysctl
+# lets the image's non-root node user bind 443.
+#
 # Requires 01-db-init-job.yaml to have run first (creates the "chronicle"
-# ClickHouse database).
+# ClickHouse database), and the deploy's Secret authstar-tls (ca.crt, tls.crt,
+# tls.key).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: chronicle-tls-front
+  namespace: authstar
+data:
+  front.mjs: |
+    // TLS front for the integration harness (S-0017): terminates https for the
+    // tenant's JWKS host inside chronicle's pod and proxies to portcullis over
+    // plain HTTP, keeping method, path, headers (Host included), and body.
+    import { readFileSync } from 'node:fs'
+    import http from 'node:http'
+    import https from 'node:https'
+
+    const listenHost = process.env.TLS_FRONT_HOST ?? '127.0.0.1'
+    const listenPort = Number(process.env.TLS_FRONT_PORT ?? '443')
+    const certDir = process.env.TLS_FRONT_CERT_DIR ?? '/etc/authstar-tls'
+    const upstream = new URL(process.env.TLS_FRONT_UPSTREAM ?? 'http://portcullis:3710')
+
+    function log(level, msg, fields = {}) {
+      process.stderr.write(`${JSON.stringify({ ts: new Date().toISOString(), level, component: 'tls-front', msg, ...fields })}\n`)
+    }
+
+    const server = https.createServer({
+      cert: readFileSync(`${certDir}/tls.crt`),
+      key: readFileSync(`${certDir}/tls.key`),
+    }, (req, res) => {
+      const proxied = http.request({
+        host: upstream.hostname,
+        port: upstream.port || 80,
+        method: req.method,
+        path: req.url,
+        headers: req.headers,
+      }, (upstreamRes) => {
+        res.writeHead(upstreamRes.statusCode ?? 502, upstreamRes.headers)
+        upstreamRes.pipe(res)
+      })
+      proxied.on('error', (err) => {
+        log('error', 'upstream request failed', { upstream: upstream.origin, err: String(err) })
+        if (res.headersSent) {
+          res.destroy()
+          return
+        }
+        res.writeHead(502, { 'content-type': 'application/json' })
+        res.end('{"error":"upstream unavailable"}')
+      })
+      req.pipe(proxied)
+    })
+    server.on('error', (err) => {
+      log('fatal', 'tls front cannot listen', { host: listenHost, port: listenPort, err: String(err) })
+      process.exit(1)
+    })
+    server.listen(listenPort, listenHost, () => {
+      log('info', 'tls front listening', { host: listenHost, port: listenPort, upstream: upstream.origin })
+    })
+    // As PID 1 node gets no default signal handlers: exit on the kubelet's SIGTERM.
+    process.on('SIGTERM', () => process.exit(0))
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -42,6 +112,15 @@ spec:
       serviceAccountName: chronicle
       imagePullSecrets:
         - name: dockerhub-pull
+      # The tenant's JWKS host resolves to the tls-front sidecar below.
+      hostAliases:
+        - ip: 127.0.0.1
+          hostnames:
+            - authstar.acme.authstar.app
+      securityContext:
+        sysctls:
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
       containers:
         - name: chronicle
           image: bytepunx/authstar-chronicle:latest
@@ -84,15 +163,62 @@ spec:
             # SPIFFE-bundle CA trust wiring yet, as in the chart (I-0001).
             - name: NODE_TLS_REJECT_UNAUTHORIZED
               value: "0"
+            # The harness CA that signed tls-front's cert for the JWKS host.
+            - name: NODE_EXTRA_CA_CERTS
+              value: /etc/authstar-tls-ca/ca.crt
           volumeMounts:
             - name: spiffe
               mountPath: /run/spire/sockets
+              readOnly: true
+            - name: authstar-tls-ca
+              mountPath: /etc/authstar-tls-ca
+              readOnly: true
+        - name: tls-front
+          image: bytepunx/authstar-chronicle:latest
+          imagePullPolicy: Always
+          command: ["node", "/etc/tls-front/front.mjs"]
+          env:
+            - name: TLS_FRONT_UPSTREAM
+              value: http://portcullis:3710
+          # The front listens on the pod's loopback only, which a tcpSocket
+          # probe (sent from the node to the pod IP) cannot reach.
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('node:net').connect(443, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          volumeMounts:
+            - name: tls-front
+              mountPath: /etc/tls-front
+              readOnly: true
+            - name: authstar-tls
+              mountPath: /etc/authstar-tls
               readOnly: true
       volumes:
         - name: spiffe
           csi:
             driver: csi.spiffe.io
             readOnly: true
+        - name: tls-front
+          configMap:
+            name: chronicle-tls-front
+        - name: authstar-tls
+          secret:
+            secretName: authstar-tls
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        - name: authstar-tls-ca
+          secret:
+            secretName: authstar-tls
+            items:
+              - key: ca.crt
+                path: ca.crt
 ---
 apiVersion: v1
 kind: Service

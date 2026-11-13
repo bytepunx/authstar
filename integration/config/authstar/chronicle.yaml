@@ -26,4 +26,9 @@ rateLimitWindowMs: 60000
 # NODE_TLS_REJECT_UNAUTHORIZED=0 for this call, as the chart does (I-0001).
 # chronicle's signet-bundle-config.ts fails startup naming it when absent.
 # There is no shared verification secret any more.
+# The JWKS host resolves only inside chronicle's pod (S-0017): the manifest's
+# hostAliases send authstar.acme.authstar.app to 127.0.0.1, where the
+# tls-front sidecar terminates TLS with the harness CA's cert (Secret
+# authstar-tls) and proxies to portcullis:3710, keeping Host. Chronicle trusts
+# that CA through NODE_EXTRA_CA_CERTS, not through the I-0001 setting above.
 towerBaseUrl: https://tower.authstar.svc.cluster.local:8080
