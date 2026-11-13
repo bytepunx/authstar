@@ -117,7 +117,7 @@ config/authstar/<service>.yaml
 |------|--------|--------------|
 | Build, one per service | [`scripts/kluster-build.sh`](../scripts/kluster-build.sh) | Builds `docker.io/bytepunx/authstar-<service>:$FLAI_KLUSTER_TAG`. flai then loads it into the cluster's nodes |
 | Deploy | [`scripts/kluster-deploy.sh`](../scripts/kluster-deploy.sh) | Applies the namespace and `manifests/admin-rbac.yaml`, then makes the namespace's own settings: a RabbitMQ vhost and user named after the namespace, and Postgres databases `<prefix>tower`, `<prefix>keep`, `<prefix>herald` plus ClickHouse `<prefix>chronicle`. It seeds signet bundles under the signet namespace of the same name, with fresh keys and operator tokens, and the four ADR 0103 policies. It applies `manifests/1[0-7]-*.yaml`, renamed into the namespace and tag, and waits for the eight rollouts |
-| Teardown | [`scripts/kluster-teardown.sh`](../scripts/kluster-teardown.sh) | Removes the vhost, user, databases, and policies; flai then deletes the namespace. The signet bundles stay, since the signet CLI cannot delete one |
+| Teardown | [`scripts/kluster-teardown.sh`](../scripts/kluster-teardown.sh) | Removes the vhost, user, databases, policies, and the namespace's signet bundles, the last through [`scripts/kluster-signet-remove.mjs`](../scripts/kluster-signet-remove.mjs); flai then deletes the namespace. A second run passes |
 
 A story's namespace is its ID in lower case, `s-0019`, with prefix `s0019_`. The default namespace `authstar` has no prefix, so main keeps the profile's names. Its deploy first removes the Deployments and CronJobs the profile made from `latest`. The deploy keeps the namespace's operator tokens, for the golden path, in `.flai-cache/kluster/state/<namespace>/tokens.env`.
 
@@ -130,7 +130,7 @@ flai kluster teardown S-0019    # remove s-0019 and what it made in the shared s
 flai kluster promote            # build and deploy main's head into authstar
 ```
 
-With the `kluster` host action on, `flai serve` runs these on its own as stories enter and leave review. `KLUSTER_DRY_RUN=1` makes the deploy and teardown scripts print each cluster command instead of running it. The `FLAI_KLUSTER_*` variables must be set by hand then, as the header of `scripts/lib-kluster.sh` lists them.
+With the `kluster` host action on, `flai serve` runs these on its own as stories enter and leave review. When the cluster's containers restart, k3d gives its API a new port, and the kubeconfig flai keeps in `.flai-cache/kluster/kubeconfig` goes stale: every deploy and teardown then fails saying the cluster does not answer. Run `flai kluster up` to write the kubeconfig again (I-0023). `KLUSTER_DRY_RUN=1` makes the deploy and teardown scripts print each cluster command instead of running it. The `FLAI_KLUSTER_*` variables must be set by hand then, as the header of `scripts/lib-kluster.sh` lists them.
 
 ## Provisioning + deployment flow
 
