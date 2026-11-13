@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 19
-      output: 4678
-      cache_read: 1303427
-      cache_write: 43651
-      cost: 0.6286
+      output: 4321
+      cache_read: 1264412
+      cache_write: 74599
+      cost: 0.8701
 ---
 # T-0045 Steward proxies a tenant's activity feed at GET /api/tenants/[slug]/activity
 

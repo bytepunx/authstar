@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 36
-      output: 10515
-      cache_read: 3507970
-      cache_write: 109748
-      cost: 1.5371
+      input: 30
+      output: 8074
+      cache_read: 3473547
+      cache_write: 93603
+      cost: 1.4445
 ---
 # T-0051 Keep lets an account of the tenant list its active plan mappings
 

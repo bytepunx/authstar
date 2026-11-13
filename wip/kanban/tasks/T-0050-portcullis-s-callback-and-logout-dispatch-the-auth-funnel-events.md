@@ -3,16 +3,37 @@ id: T-0050
 type: task
 nature: feature
 title: Portcullis's callback and logout dispatch the auth-funnel events
-status: backlog
+status: done
 parent: S-0010
 owner: bytepunx
 created: 2026-11-06T18:08:55Z
-updated: 2026-11-06T18:08:55Z
-transitions: []
+updated: 2026-11-10T05:51:21Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:24:24Z
+    by: agent-S-0010
+  - to: in-progress
+    at: 2026-11-10T05:24:25Z
+    by: agent-S-0010
+  - to: done
+    at: 2026-11-10T05:51:21Z
+    by: agent-S-0010
 stream: S-0010
 tags: [portcullis, rust]
 touches: [portcullis/crates/authstar-middleware/src/oauth/callback.rs, portcullis/crates/authstar-middleware/src/oauth/logout.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, portcullis/TESTING.md, portcullis/README.md, design/stories/proxy/020-analytics-event-ingestion.md, design/stories/proxy/006-oauth2-callback.md]
 after: [T-0049]
+usage:
+  source: log
+  seconds: 1616
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 58
+      output: 21748
+      cache_read: 4336687
+      cache_write: 283770
+      cost: 2.8832
 ---
 # T-0050 Portcullis's callback and logout dispatch the auth-funnel events
 

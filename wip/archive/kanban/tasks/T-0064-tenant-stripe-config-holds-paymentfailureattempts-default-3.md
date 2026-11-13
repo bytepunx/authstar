@@ -3,15 +3,36 @@ id: T-0064
 type: task
 nature: remediation
 title: Tenant stripe-config holds paymentFailureAttempts, default 3
-status: backlog
+status: done
 parent: S-0005
 owner: bytepunx
 created: 2026-11-06T18:09:55Z
-updated: 2026-11-06T18:09:55Z
-transitions: []
+updated: 2026-11-10T03:26:40Z
+transitions:
+  - to: ready
+    at: 2026-11-10T03:12:23Z
+    by: agent-S-0005
+  - to: in-progress
+    at: 2026-11-10T03:12:23Z
+    by: agent-S-0005
+  - to: done
+    at: 2026-11-10T03:26:40Z
+    by: agent-S-0005
 stream: S-0005
 tags: [keep, billing]
 touches: [keep/src/lib/stripe-config.ts, keep/src/routes/stripe-config.ts, keep/src/lib/signet-stripe-config-store.ts, keep/spec/behavior/stripe-config.spec.ts, keep/spec/behavior/signet-stripe-config-store.spec.ts]
+usage:
+  source: log
+  seconds: 857
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 31
+      output: 12332
+      cache_read: 3841044
+      cache_write: 167643
+      cost: 1.9198
 ---
 # T-0064 Tenant stripe-config holds paymentFailureAttempts, default 3
 

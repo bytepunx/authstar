@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 5264
-      cache_read: 1466629
-      cache_write: 49116
-      cost: 0.7073
+      input: 21
+      output: 4862
+      cache_read: 1422729
+      cache_write: 83939
+      cost: 0.979
 ---
 # T-0046 Steward proxies stuck erasure requests at GET /api/erasure-requests/stuck
 

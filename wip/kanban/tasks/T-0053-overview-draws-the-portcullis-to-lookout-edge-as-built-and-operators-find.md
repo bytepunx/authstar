@@ -3,16 +3,37 @@ id: T-0053
 type: task
 nature: improvement
 title: Overview draws the portcullis-to-lookout edge as built and operators find lookoutUpstream
-status: backlog
+status: done
 parent: S-0010
 owner: bytepunx
 created: 2026-11-06T18:09:07Z
-updated: 2026-11-06T18:09:07Z
-transitions: []
+updated: 2026-11-10T05:52:37Z
+transitions:
+  - to: ready
+    at: 2026-11-10T05:51:30Z
+    by: agent-S-0010
+  - to: in-progress
+    at: 2026-11-10T05:51:30Z
+    by: agent-S-0010
+  - to: done
+    at: 2026-11-10T05:52:37Z
+    by: agent-S-0010
 stream: S-0010
 tags: [portcullis, docs]
 touches: [design/system/overview.md, docs/operators/portcullis-configuration.md, docs/operators/index.md]
 after: [T-0048, T-0050]
+usage:
+  source: log
+  seconds: 67
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 21
+      output: 7666
+      cache_read: 1528689
+      cache_write: 100030
+      cost: 1.0163
 ---
 # T-0053 Overview draws the portcullis-to-lookout edge as built and operators find lookoutUpstream
 

@@ -3,11 +3,11 @@ id: S-0006
 type: story
 nature: feature
 title: Serve GET /_authstar/me/subscription for the subscription-status widget
-status: in-progress
+status: review
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-09T21:39:50Z
+updated: 2026-11-10T03:23:11Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -21,6 +21,9 @@ transitions:
   - to: in-progress
     at: 2026-11-06T17:56:48Z
     by: bytepunx
+  - to: review
+    at: 2026-11-10T03:11:14Z
+    by: bytepunx
 blocked:
   - from: 2026-11-09T07:19:49Z
     until: 2026-11-09T20:48:46Z
@@ -29,35 +32,41 @@ blocked:
     until: 2026-11-09T21:39:39Z
     reason: awaiting the operator on TH-0031
   - from: 2026-11-09T21:39:50Z
+    until: 2026-11-10T02:37:07Z
+    reason: awaiting the operator on TH-0031
+  - from: 2026-11-10T02:53:08Z
+    until: 2026-11-10T03:11:14Z
     reason: awaiting the operator on TH-0031
 tags: [keep, portcullis]
-touches: [docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, keep/TESTING.md, keep/spec/behavior/me.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/me.ts, portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-proxy/tests/me_tests.rs, web/src/widgets/subscription-status.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md, design/adrs/README.md, integration/config/authstar/portcullis.yaml, design/issues/I-0014-a-story-branch-cannot-change-the-harness-s-signet-config-signet-syncs-it-from.md, design/issues/summary.md, design/issues/I-0015-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md]
+touches: [docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, keep/TESTING.md, keep/spec/behavior/me.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/me.ts, portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-proxy/tests/me_tests.rs, web/src/widgets/subscription-status.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md, design/adrs/README.md, integration/config/authstar/portcullis.yaml, design/issues/I-0014-a-story-branch-cannot-change-the-harness-s-signet-config-signet-syncs-it-from.md, design/issues/summary.md, design/issues/I-0015-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md]
 usage:
   source: log
-  seconds: 3422
+  seconds: 4503
   priced_by: harness
   turns:
     - day: 2026-11-09
       ceremony: 6
       work: 124
+    - day: 2026-11-10
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 280
-      output: 45647
-      cache_read: 18228770
-      cache_write: 335171
-      cost: 7.2412
+      input: 362
+      output: 65910
+      cache_read: 28376792
+      cache_write: 615138
+      cost: 11.9161
   strategic:
     - kind: orchestrator
-      seconds: 61
+      seconds: 142
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 38
-          output: 287
-          cache_read: 1040525
-          cache_write: 139446
-          cost: 1.3816
+          input: 74
+          output: 543
+          cache_read: 2116216
+          cache_write: 323354
+          cost: 2.8176
 ---
 # S-0006 Serve GET /_authstar/me/subscription for the subscription-status widget
 
@@ -78,6 +87,7 @@ The `<authstar-subscription-status>` widget web already ships gets a real answer
 - T-0015 Widget status union and docs follow ADR-0107 and the new route
 - T-0094 Golden path checks its port-forwards without nc and stops them on exit
 - T-0095 Harness config gives portcullis keep's upstream
+- T-0132 Golden path runs against a story's kluster namespace
 
 ## Notes
 

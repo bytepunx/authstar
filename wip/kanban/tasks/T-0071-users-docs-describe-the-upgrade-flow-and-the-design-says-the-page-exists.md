@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 37
-      output: 10719
-      cache_read: 3576048
-      cache_write: 111878
-      cost: 1.567
+      input: 31
+      output: 8231
+      cache_read: 3540958
+      cache_write: 95419
+      cost: 1.4726
 ---
 # T-0071 Users' docs describe the upgrade flow, and the design says the page exists
 

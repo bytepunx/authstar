@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 73
-      output: 21368
-      cache_read: 7128819
-      cache_write: 223028
-      cost: 3.1237
+      input: 62
+      output: 16408
+      cache_read: 7058866
+      cache_write: 190217
+      cost: 2.9356
 ---
 # T-0055 Portcullis proxies /_authstar/upgrade and its pages to web behind the auth gate
 

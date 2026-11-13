@@ -3,16 +3,37 @@ id: T-0084
 type: task
 nature: remediation
 title: TESTING.md, the live tier, and the operators guide describe the new webhook handling
-status: backlog
+status: done
 parent: S-0005
 owner: bytepunx
 created: 2026-11-06T18:10:55Z
-updated: 2026-11-06T18:10:55Z
-transitions: []
+updated: 2026-11-10T04:45:17Z
+transitions:
+  - to: ready
+    at: 2026-11-10T04:34:35Z
+    by: agent-S-0005
+  - to: in-progress
+    at: 2026-11-10T04:34:35Z
+    by: agent-S-0005
+  - to: done
+    at: 2026-11-10T04:45:17Z
+    by: agent-S-0005
 stream: S-0005
 tags: [keep, billing, docs]
 touches: [keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, docs/operators/index.md]
 after: [T-0083]
+usage:
+  source: log
+  seconds: 642
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 62
+      output: 24571
+      cache_read: 7653285
+      cache_write: 334029
+      cost: 3.8251
 ---
 # T-0084 TESTING.md, the live tier, and the operators guide describe the new webhook handling
 

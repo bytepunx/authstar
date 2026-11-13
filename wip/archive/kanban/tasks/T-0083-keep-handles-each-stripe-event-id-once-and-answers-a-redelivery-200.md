@@ -3,16 +3,37 @@ id: T-0083
 type: task
 nature: remediation
 title: Keep handles each Stripe event id once and answers a redelivery 200
-status: backlog
+status: done
 parent: S-0005
 owner: bytepunx
 created: 2026-11-06T18:10:48Z
-updated: 2026-11-06T18:10:48Z
-transitions: []
+updated: 2026-11-10T04:34:32Z
+transitions:
+  - to: ready
+    at: 2026-11-10T04:25:18Z
+    by: agent-S-0005
+  - to: in-progress
+    at: 2026-11-10T04:25:18Z
+    by: agent-S-0005
+  - to: done
+    at: 2026-11-10T04:34:32Z
+    by: agent-S-0005
 stream: S-0005
 tags: [keep, billing]
 touches: [keep/src/actors/stripe_event_actor.ts, keep/src/routes/webhooks.ts, keep/spec/behavior/webhooks.spec.ts, keep/spec/behavior/webhook-redelivery.spec.ts]
 after: [T-0080]
+usage:
+  source: log
+  seconds: 554
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 48
+      output: 19158
+      cache_read: 5967331
+      cache_write: 260446
+      cost: 2.9825
 ---
 # T-0083 Keep handles each Stripe event id once and answers a redelivery 200
 

@@ -3,16 +3,37 @@ id: T-0073
 type: task
 nature: remediation
 title: The subscription record mirrors every Stripe status and keeps one period-end shape
-status: backlog
+status: done
 parent: S-0005
 owner: bytepunx
 created: 2026-11-06T18:10:13Z
-updated: 2026-11-06T18:10:13Z
-transitions: []
+updated: 2026-11-10T04:01:48Z
+transitions:
+  - to: ready
+    at: 2026-11-10T03:52:40Z
+    by: agent-S-0005
+  - to: in-progress
+    at: 2026-11-10T03:52:40Z
+    by: agent-S-0005
+  - to: done
+    at: 2026-11-10T04:01:48Z
+    by: agent-S-0005
 stream: S-0005
 tags: [keep, billing]
 touches: [keep/src/actors/subscription_actor.ts, keep/src/lib/stripe-client.ts, keep/src/routes/webhooks.ts, keep/spec/behavior/webhooks.spec.ts]
 after: [T-0070]
+usage:
+  source: log
+  seconds: 548
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 35
+      output: 13707
+      cache_read: 4269439
+      cache_write: 186341
+      cost: 2.1339
 ---
 # T-0073 The subscription record mirrors every Stripe status and keeps one period-end shape
 

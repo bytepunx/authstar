@@ -3,34 +3,54 @@ id: S-0005
 type: story
 nature: remediation
 title: Keep handles every Stripe event once and records what it decides
-status: ready
+status: done
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-10T00:03:32Z
+updated: 2026-11-13T12:08:12Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:51Z
     by: bytepunx
+  - to: in-progress
+    at: 2026-11-10T03:11:27Z
+    by: agent-S-0005
+  - to: review
+    at: 2026-11-10T04:54:03Z
+    by: agent-S-0005
+  - to: done
+    at: 2026-11-13T12:08:12Z
+    by: bytepunx
 tags: []
 topics: [billing, keep]
-touches: [keep/src/routes/webhooks.ts, keep/src/actors/subscription_actor.ts, keep/src/actors/dispute_actor.ts, keep/src/actors/plan_mapping_actor.ts, keep/src/actors/customer_actor.ts, keep/src/actors/trial_actor.ts, keep/src/actors/refund_actor.ts, keep/src/actors/stripe_event_actor.ts, keep/src/lib/scope.ts, keep/src/lib/stripe-client.ts, keep/src/lib/stripe-config.ts, keep/src/lib/signet-stripe-config-store.ts, keep/src/lib/entitlement-publisher.ts, keep/src/routes/stripe-config.ts, keep/src/routes/plan-mappings.ts, keep/src/routes/checkout-sessions.ts, keep/src/routes/trials.ts, keep/src/routes/coupons.ts, keep/src/report-tenant-scope.ts, keep/package.json, keep/spec/lib/fake-stripe-client.ts, keep/spec/behavior/webhooks.spec.ts, keep/spec/behavior/webhook-redelivery.spec.ts, keep/spec/behavior/webhook-grace-period.spec.ts, keep/spec/behavior/webhook-disputes.spec.ts, keep/spec/behavior/stripe-config.spec.ts, keep/spec/behavior/signet-stripe-config-store.spec.ts, keep/spec/behavior/plan-mappings.spec.ts, keep/spec/behavior/checkout-sessions.spec.ts, keep/spec/behavior/trials.spec.ts, keep/spec/behavior/coupons.spec.ts, keep/spec/behavior/report-tenant-scope.spec.ts, keep/spec/integration/plan-mappings.integration.spec.ts, keep/spec/e2e/subscription-lifecycle.spec.ts, keep/spec/e2e/trial-and-dispute-lifecycle.spec.ts, keep/spec/live/stripe-live.spec.ts, keep/TESTING.md, docs/operators/index.md, docs/users/index.md]
+touches: [keep/src/routes/webhooks.ts, keep/src/actors/subscription_actor.ts, keep/src/actors/dispute_actor.ts, keep/src/actors/plan_mapping_actor.ts, keep/src/actors/customer_actor.ts, keep/src/actors/trial_actor.ts, keep/src/actors/refund_actor.ts, keep/src/actors/stripe_event_actor.ts, keep/src/lib/scope.ts, keep/src/lib/stripe-client.ts, keep/src/lib/stripe-config.ts, keep/src/lib/signet-stripe-config-store.ts, keep/src/lib/entitlement-publisher.ts, keep/src/routes/stripe-config.ts, keep/src/routes/plan-mappings.ts, keep/src/routes/checkout-sessions.ts, keep/src/routes/trials.ts, keep/src/routes/coupons.ts, keep/src/report-tenant-scope.ts, keep/package.json, keep/spec/lib/fake-stripe-client.ts, keep/spec/behavior/webhooks.spec.ts, keep/spec/behavior/webhook-redelivery.spec.ts, keep/spec/behavior/webhook-grace-period.spec.ts, keep/spec/behavior/webhook-disputes.spec.ts, keep/spec/behavior/stripe-config.spec.ts, keep/spec/behavior/signet-stripe-config-store.spec.ts, keep/spec/behavior/plan-mappings.spec.ts, keep/spec/behavior/checkout-sessions.spec.ts, keep/spec/behavior/trials.spec.ts, keep/spec/behavior/coupons.spec.ts, keep/spec/behavior/report-tenant-scope.spec.ts, keep/spec/integration/plan-mappings.integration.spec.ts, keep/spec/e2e/subscription-lifecycle.spec.ts, keep/spec/e2e/trial-and-dispute-lifecycle.spec.ts, keep/spec/live/stripe-live.spec.ts, keep/TESTING.md, docs/operators/index.md, docs/users/index.md, keep/spec/behavior/consequent-sequence-provider.spec.ts, design/issues/I-0021-keep-s-usage-updated-event-still-carries-the-retired-tenant-scope.md, design/issues/summary.md, keep/src/lib/consequent-sequence-provider.ts, design/stories/keep/002-stripe-webhook-handling.md]
 after: [S-0004]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 6174
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      hand_edits: 6
+      work: 79
+  models:
+    - model: claude-opus-5-5
+      input: 536
+      output: 212272
+      cache_read: 66117766
+      cache_write: 2885725
+      cost: 33.0459
   strategic:
     - kind: orchestrator
-      seconds: 25
+      seconds: 78
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 134
-          cache_read: 593461
-          cache_write: 114386
-          cost: 0.7913
+          input: 42
+          output: 286
+          cache_read: 1254360
+          cache_write: 253595
+          cost: 1.7031
 cost_of_delay:
   inputs:
     revenue_per_week: 0
@@ -52,11 +72,11 @@ forecast:
 A redelivered or duplicated Stripe event changes nothing and publishes nothing a second time, payment failure and dispute handling follow the ADRs from S-0004, and keep's subscription record always says what tower has been told.
 
 ## Acceptance criteria
-- [ ] Keep records processed Stripe `event.id`s and a redelivered event returns 200 without re-running handlers or publishing; a behavior test asserts the publish count
-- [ ] `invoice.payment_failed` and dispute events apply the grace period and status transitions the ADR decides, and the subscription actor's status reflects them
-- [ ] Dispute handling resolves scope from the charge or subscription, not from dispute metadata
-- [ ] `SubscriptionStatus` covers every status Stripe can send
-- [ ] Behavior, e2e, and the opt-in live tier pass; `keep/TESTING.md` describes the idempotency test
+- [x] Keep records processed Stripe `event.id`s and a redelivered event returns 200 without re-running handlers or publishing; a behavior test asserts the publish count
+- [x] `invoice.payment_failed` and dispute events apply the grace period and status transitions the ADR decides, and the subscription actor's status reflects them
+- [x] Dispute handling resolves scope from the charge or subscription, not from dispute metadata
+- [x] `SubscriptionStatus` covers every status Stripe can send
+- [x] Behavior, e2e, and the opt-in live tier pass; `keep/TESTING.md` describes the idempotency test
 
 ## Tasks
 - T-0062 Plan mappings call their roles roles and accept grantedRoles as an alias
@@ -67,6 +87,7 @@ A redelivered or duplicated Stripe event changes nothing and publishes nothing a
 - T-0080 Disputes resolve their scope through the charge, not dispute metadata
 - T-0083 Keep handles each Stripe event id once and answers a redelivery 200
 - T-0084 TESTING.md, the live tier, and the operators guide describe the new webhook handling
+- T-0135 Story 002's event table describes ADR-0107's webhook rules and idempotency
 
 ## Notes
 

@@ -4,10 +4,10 @@ title: "S-0008 holds S-0005 on overlap alone: may S-0005 start beside it?"
 from: S-0005
 to: S-0008
 about: [keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/spec/live/stripe-live.spec.ts, keep/TESTING.md, docs/users/index.md]
-status: open
-participants: [flai, agent-S-0008]
+status: closed
+participants: [flai, agent-S-0008, agent-S-0005, bytepunx]
 created: 2026-11-09T20:44:51Z
-updated: 2026-11-09T20:45:17Z
+updated: 2026-11-13T12:08:12Z
 shares:
   - holder: S-0008
     held: S-0005
@@ -49,3 +49,9 @@ S-0008 shares `keep/src/lib/stripe-client.ts`, `keep/spec/lib/fake-stripe-client
 > - `docs/users/index.md`: S-0008 adds the "Plan mappings" section.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-10T03:11:35Z agent-S-0005 S-0005 (settled)
+Agreed. S-0005 keeps to the split: it leaves S-0008's `StripePriceListing`, `listActivePrices()`, `FakePriceListing`, `priceListings`, the `listActivePrices (GET /stripe-prices)` live block, the `stripe-prices` TESTING.md lines, and the "Plan mappings" docs section as they are, and adds or changes only beside them. Whichever story lands second keeps both sides.
+
+### 2026-11-13T12:08:12Z bytepunx
+Closed: S-0005 was accepted

@@ -3,16 +3,37 @@ id: T-0080
 type: task
 nature: remediation
 title: Disputes resolve their scope through the charge, not dispute metadata
-status: backlog
+status: done
 parent: S-0005
 owner: bytepunx
 created: 2026-11-06T18:10:33Z
-updated: 2026-11-06T18:10:33Z
-transitions: []
+updated: 2026-11-10T04:25:10Z
+transitions:
+  - to: ready
+    at: 2026-11-10T04:14:21Z
+    by: agent-S-0005
+  - to: in-progress
+    at: 2026-11-10T04:14:21Z
+    by: agent-S-0005
+  - to: done
+    at: 2026-11-10T04:25:10Z
+    by: agent-S-0005
 stream: S-0005
 tags: [keep, billing]
 touches: [keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/actors/dispute_actor.ts, keep/src/routes/webhooks.ts, keep/spec/behavior/webhooks.spec.ts, keep/spec/behavior/webhook-disputes.spec.ts, keep/spec/e2e/trial-and-dispute-lifecycle.spec.ts]
 after: [T-0076]
+usage:
+  source: log
+  seconds: 649
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 64
+      output: 25297
+      cache_read: 7879453
+      cache_write: 343901
+      cost: 3.9382
 ---
 # T-0080 Disputes resolve their scope through the charge, not dispute metadata
 

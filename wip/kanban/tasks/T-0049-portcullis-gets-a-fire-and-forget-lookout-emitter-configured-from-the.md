@@ -3,15 +3,36 @@ id: T-0049
 type: task
 nature: feature
 title: Portcullis gets a fire-and-forget lookout emitter configured from the lookoutUpstream bundle key
-status: backlog
+status: done
 parent: S-0010
 owner: bytepunx
 created: 2026-11-06T18:08:43Z
-updated: 2026-11-06T18:08:43Z
-transitions: []
+updated: 2026-11-10T05:14:44Z
+transitions:
+  - to: ready
+    at: 2026-11-10T04:57:32Z
+    by: agent-S-0010
+  - to: in-progress
+    at: 2026-11-10T04:57:32Z
+    by: agent-S-0010
+  - to: done
+    at: 2026-11-10T05:14:44Z
+    by: agent-S-0010
 stream: S-0010
 tags: [portcullis, rust]
 touches: [portcullis/crates/authstar-config/src/bundle.rs, portcullis/crates/authstar-config/src/validate.rs, portcullis/crates/authstar-middleware/src/analytics.rs, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/state.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, portcullis/crates/authstar-proxy/tests/integration_tests.rs, portcullis/crates/authstar-proxy/tests/webhook_tests.rs]
+usage:
+  source: log
+  seconds: 1032
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 49
+      output: 18268
+      cache_read: 3642686
+      cache_write: 238359
+      cost: 2.4218
 ---
 # T-0049 Portcullis gets a fire-and-forget lookout emitter configured from the lookoutUpstream bundle key
 

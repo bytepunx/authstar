@@ -4,10 +4,10 @@ title: Cost of delay inputs for S-0005
 anchor:
   path: wip/kanban/stories/S-0005-keep-handles-every-stripe-event-once-and-records-what-it-decides.md
   item: S-0005
-status: answered
-participants: [planner-S-0005, bytepunx]
+status: resolved
+participants: [planner-S-0005, bytepunx, agent-S-0005]
 created: 2026-11-06T18:09:31Z
-updated: 2026-11-06T18:22:26Z
+updated: 2026-11-10T03:12:22Z
 ---
 
 # TH-0019 Cost of delay inputs for S-0005
@@ -32,3 +32,6 @@ I am drafting the tasks now. I will write the value once the inputs are in.
 
 ### 2026-11-06T18:22:26Z bytepunx
 set on story as recommended
+
+### 2026-11-10T03:12:22Z agent-S-0005
+Resolved: The operator set the inputs on S-0005 as recommended (D-0025).

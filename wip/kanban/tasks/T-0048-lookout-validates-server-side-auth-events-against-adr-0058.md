@@ -3,15 +3,36 @@ id: T-0048
 type: task
 nature: feature
 title: "Lookout validates server-side auth.* events against ADR-0058"
-status: backlog
+status: done
 parent: S-0010
 owner: bytepunx
 created: 2026-11-06T18:08:23Z
-updated: 2026-11-06T18:08:23Z
-transitions: []
+updated: 2026-11-10T05:14:27Z
+transitions:
+  - to: ready
+    at: 2026-11-10T04:57:32Z
+    by: agent-S-0010
+  - to: in-progress
+    at: 2026-11-10T04:57:32Z
+    by: agent-S-0010
+  - to: done
+    at: 2026-11-10T05:14:27Z
+    by: agent-S-0010
 stream: S-0010
 tags: [lookout]
 touches: [lookout/src/lib/event-types.ts, lookout/src/routes/events.ts, lookout/src/lib/build-app.ts, lookout/spec/behavior/events.spec.ts, lookout/spec/e2e/ingestion-flows.spec.ts, lookout/spec/integration/events.integration.spec.ts, lookout/TESTING.md, design/stories/lookout/001-ingestion-contract.md]
+usage:
+  source: log
+  seconds: 1015
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 37
+      output: 13636
+      cache_read: 2719148
+      cache_write: 177927
+      cost: 1.8078
 ---
 # T-0048 Lookout validates server-side auth.* events against ADR-0058
 

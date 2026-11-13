@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 6888
-      cache_read: 2298083
-      cache_write: 71897
-      cost: 1.007
+      input: 20
+      output: 5289
+      cache_read: 2275533
+      cache_write: 61319
+      cost: 0.9463
 ---
 # T-0057 Web's keep client creates a checkout session, and the fake does too
 

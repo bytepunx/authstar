@@ -3,34 +3,52 @@ id: S-0010
 type: story
 nature: feature
 title: Portcullis emits authentication events to lookout
-status: ready
+status: in-progress
 parent: E-0003
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-10T00:03:32Z
+updated: 2026-11-10T06:02:55Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:52Z
     by: bytepunx
+  - to: in-progress
+    at: 2026-11-10T04:54:15Z
+    by: agent-S-0010
+blocked:
+  - from: 2026-11-10T06:02:55Z
+    reason: awaiting the operator on TH-0043
 tags: [portcullis]
 topics: [analytics]
-touches: [lookout/src/lib/event-types.ts, lookout/src/routes/events.ts, lookout/src/lib/build-app.ts, lookout/spec/behavior/events.spec.ts, lookout/spec/e2e/ingestion-flows.spec.ts, lookout/spec/integration/events.integration.spec.ts, lookout/TESTING.md, design/stories/lookout/001-ingestion-contract.md, portcullis/crates/authstar-config/src/bundle.rs, portcullis/crates/authstar-config/src/validate.rs, portcullis/crates/authstar-middleware/src/analytics.rs, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/state.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, portcullis/crates/authstar-proxy/tests/integration_tests.rs, portcullis/crates/authstar-proxy/tests/webhook_tests.rs, portcullis/crates/authstar-middleware/src/oauth/callback.rs, portcullis/crates/authstar-middleware/src/oauth/logout.rs, portcullis/TESTING.md, portcullis/README.md, design/stories/proxy/020-analytics-event-ingestion.md, design/stories/proxy/006-oauth2-callback.md, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/system/overview.md, docs/operators/portcullis-configuration.md, docs/operators/index.md]
+touches: [lookout/src/lib/event-types.ts, lookout/src/routes/events.ts, lookout/src/lib/build-app.ts, lookout/spec/behavior/events.spec.ts, lookout/spec/e2e/ingestion-flows.spec.ts, lookout/spec/integration/events.integration.spec.ts, lookout/TESTING.md, design/stories/lookout/001-ingestion-contract.md, portcullis/crates/authstar-config/src/bundle.rs, portcullis/crates/authstar-config/src/validate.rs, portcullis/crates/authstar-middleware/src/analytics.rs, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/state.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, portcullis/crates/authstar-proxy/tests/integration_tests.rs, portcullis/crates/authstar-proxy/tests/webhook_tests.rs, portcullis/crates/authstar-middleware/src/oauth/callback.rs, portcullis/crates/authstar-middleware/src/oauth/logout.rs, portcullis/TESTING.md, portcullis/README.md, design/stories/proxy/020-analytics-event-ingestion.md, design/stories/proxy/006-oauth2-callback.md, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/system/overview.md, docs/operators/portcullis-configuration.md, docs/operators/index.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
 after: [S-0009]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4121
+  priced_by: harness
+  turns:
+    - day: 2026-11-10
+      ceremony: 3
+      hand_edits: 2
+      work: 41
+  models:
+    - model: claude-opus-5-5
+      input: 224
+      output: 83381
+      cache_read: 16626710
+      cache_write: 1087966
+      cost: 11.054
   strategic:
     - kind: orchestrator
-      seconds: 16
+      seconds: 38
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 53
-          cache_read: 281996
-          cache_write: 43754
-          cost: 0.3704
+          input: 20
+          output: 141
+          cache_read: 599945
+          cache_write: 90546
+          cost: 0.7876
 cost_of_delay:
   value: 37.5
   by: planner-S-0010
@@ -49,10 +67,10 @@ forecast:
 Every login attempt, success, failure, and logout at portcullis is posted to lookout as an analytics event in the shape ADR-0058 defines, so chronicle's auth-funnel report has data.
 
 ## Acceptance criteria
-- [ ] Portcullis has a lookout client configured from signet, posting events asynchronously so a slow or down lookout never delays a request
-- [ ] Lookout accepts the server-side `auth.*` event types alongside `client.*`, validated against ADR-0058
+- [x] Portcullis has a lookout client configured from signet, posting events asynchronously so a slow or down lookout never delays a request
+- [x] Lookout accepts the server-side `auth.*` event types alongside `client.*`, validated against ADR-0058
 - [ ] Chronicle's auth-funnel report returns non-zero counts for a login driven through the integration harness
-- [ ] Rust and Node tests cover the emitter and the new event types; `design/system/overview.md` loses the dotted edge
+- [x] Rust and Node tests cover the emitter and the new event types; `design/system/overview.md` loses the dotted edge
 
 ## Tasks
 - T-0048 Lookout validates server-side auth.* events against ADR-0058

@@ -17,7 +17,7 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 8856
+  seconds: 17406
   priced_by: harness
   turns:
     - day: 2026-11-06
@@ -29,24 +29,28 @@ usage:
       test_runs: 3
       hand_edits: 3
       work: 219
+    - day: 2026-11-10
+      ceremony: 10
+      hand_edits: 10
+      work: 190
   models:
     - model: claude-opus-5-5
-      input: 1118
-      output: 253645
-      cache_read: 110767287
-      cache_write: 2623654
-      cost: 45.4813
+      input: 1958
+      output: 536098
+      cache_read: 230034050
+      cache_write: 6687225
+      cost: 99.9397
   strategic:
     - kind: orchestrator
-      seconds: 348
+      seconds: 482
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 214
-          output: 1558
-          cache_read: 5960082
-          cache_write: 905907
-          cost: 8.1007
+          input: 274
+          output: 1966
+          cache_read: 7696672
+          cache_write: 1229024
+          cost: 10.4485
 ---
 # E-0002 Billing end to end, with loci as the first paying tenant
 

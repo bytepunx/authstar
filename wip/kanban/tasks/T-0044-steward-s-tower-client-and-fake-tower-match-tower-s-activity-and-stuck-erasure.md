@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 83
-      output: 19917
-      cache_read: 5549236
-      cache_write: 185839
-      cost: 2.6762
+      input: 80
+      output: 18396
+      cache_read: 5383133
+      cache_write: 317598
+      cost: 3.7042
 ---
 # T-0044 Steward's tower client and fake tower match tower's activity and stuck-erasure contracts
 

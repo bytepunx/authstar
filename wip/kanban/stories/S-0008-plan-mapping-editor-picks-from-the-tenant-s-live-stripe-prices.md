@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-09T21:21:23Z
+updated: 2026-11-10T05:24:53Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -65,13 +65,31 @@ blocked:
     until: 2026-11-09T21:21:05Z
     reason: awaiting the operator on TH-0030
   - from: 2026-11-09T21:21:23Z
+    until: 2026-11-10T03:13:21Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-10T03:21:20Z
+    until: 2026-11-10T03:26:41Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-10T03:27:17Z
+    until: 2026-11-10T03:45:55Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-10T03:46:19Z
+    until: 2026-11-10T04:25:16Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-10T04:25:56Z
+    until: 2026-11-10T04:45:50Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-10T04:46:21Z
+    until: 2026-11-10T05:24:13Z
+    reason: awaiting the operator on TH-0030
+  - from: 2026-11-10T05:24:53Z
     reason: awaiting the operator on TH-0030
 tags: [web]
 topics: [billing]
 touches: [design/adrs/0110-keep-lists-a-tenant-s-active-stripe-prices-at-get-tenants-tenantslug-stripe.md, design/adrs/README.md, design/system/overview.md, keep/src/lib/stripe-client.ts, keep/spec/lib/fake-stripe-client.ts, keep/src/routes/stripe-prices.ts, keep/src/lib/build-app.ts, keep/spec/behavior/stripe-prices.spec.ts, keep/TESTING.md, keep/spec/live/stripe-live.spec.ts, web/src/lib/server/clients/keep.ts, web/spec/fixtures/fake-keep-client.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.server.ts, web/src/routes/(admin)/billing/plan-mappings/new/+page.svelte, web/spec/behavior/billing-plan-mappings.spec.ts, docs/users/index.md, design/issues/I-0003-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/summary.md, design/issues/I-0005-keep-s-permission-check-does-not-compare-the-token-s-tenant-with-the-route-s.md, design/issues/I-0004-accepted-stories-code-does-not-reach-main-s-0002-and-s-0004-were-archived-but.md, design/issues/I-0008-s-0002-was-accepted-and-archived-but-its-ci-and-test-tier-commits-never-reached.md, design/issues/I-0009-no-test-tier-type-checks-web-or-steward-scripts-test-sh-runs-vitest-only-never.md, design/issues/I-0011-keep-s-live-portal-session-test-sends-a-pre-adr-0100-token-and-gets-403.md, design/issues/I-0013-npm-12-blocks-dependency-install-scripts-so-farmhash-is-never-built-and-herald.md, design/issues/I-0020-overlap-messages-fire-for-design-issues-summary-md-a-generated-file-flai.md]
 usage:
   source: log
-  seconds: 2129
+  seconds: 2711
   priced_by: harness
   turns:
     - day: 2026-11-06
@@ -82,13 +100,16 @@ usage:
       test_runs: 1
       hand_edits: 1
       work: 48
+    - day: 2026-11-10
+      hand_edits: 1
+      work: 36
   models:
     - model: claude-opus-5-5
-      input: 476
-      output: 102352
-      cache_read: 57293352
-      cache_write: 1185823
-      cost: 22.7963
+      input: 580
+      output: 130164
+      cache_read: 80578244
+      cache_write: 1705308
+      cost: 32.121
   strategic:
     - kind: orchestrator
       seconds: 188
@@ -134,6 +155,7 @@ Creating a plan mapping in web lists the tenant's active Stripe prices and produ
 - T-0022 Plan-mapping form offers the listed prices and keeps a pasted ID as a fallback
 - T-0026 Web's plan-mapping form offers the tenant's live Stripe prices
 - T-0085 Renumber S-0008's closed duplicate issue from I-0003 to I-0008
+- T-0133 Web reads a plan mapping's roles as keep's roles field (ADR-0108)
 
 ## Notes
 

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 5003
-      cache_read: 2800502
-      cache_write: 57963
-      cost: 1.1143
+      input: 20
+      output: 4532
+      cache_read: 2805320
+      cache_write: 59370
+      cost: 1.1183
 ---
 # T-0018 Keep serves GET /tenants/{tenantSlug}/stripe-prices from the tenant's own key
 

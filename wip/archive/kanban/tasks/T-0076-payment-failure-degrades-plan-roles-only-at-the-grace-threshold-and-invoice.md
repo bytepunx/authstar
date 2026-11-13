@@ -3,16 +3,37 @@ id: T-0076
 type: task
 nature: remediation
 title: Payment failure degrades plan roles only at the grace threshold, and invoice.paid restores them
-status: backlog
+status: done
 parent: S-0005
 owner: bytepunx
 created: 2026-11-06T18:10:24Z
-updated: 2026-11-06T18:10:41Z
-transitions: []
+updated: 2026-11-10T04:14:04Z
+transitions:
+  - to: ready
+    at: 2026-11-10T04:01:54Z
+    by: agent-S-0005
+  - to: in-progress
+    at: 2026-11-10T04:01:54Z
+    by: agent-S-0005
+  - to: done
+    at: 2026-11-10T04:14:04Z
+    by: agent-S-0005
 stream: S-0005
 tags: [keep, billing]
 touches: [keep/src/actors/subscription_actor.ts, keep/src/routes/webhooks.ts, keep/spec/behavior/webhooks.spec.ts, keep/spec/behavior/webhook-grace-period.spec.ts, keep/spec/e2e/subscription-lifecycle.spec.ts]
 after: [T-0064, T-0073]
+usage:
+  source: log
+  seconds: 730
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 52
+      output: 20782
+      cache_read: 6473173
+      cache_write: 282523
+      cost: 3.2353
 ---
 # T-0076 Payment failure degrades plan roles only at the grace threshold, and invoice.paid restores them
 

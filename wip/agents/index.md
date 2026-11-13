@@ -1,18 +1,18 @@
 ---
 title: Active streams
-updated: 2026-11-13T12:07:28Z
+updated: 2026-11-13T12:08:12Z
 ---
 
 # Active streams
 
 | Stream | Title | Status | Last agent | Updated |
 |--------|-------|--------|------------|---------|
-| [S-0005](S-0005.md) | Keep handles every Stripe event once and records what it decides | review | agent-S-0005 | 2026-11-10T04:54:02Z |
 | [S-0006](S-0006.md) | Serve GET /_authstar/me/subscription for the subscription-status widget | review | agent-S-0006 | 2026-11-10T03:23:32Z |
 | [S-0007](S-0007.md) | Hosted upgrade page that starts a Stripe checkout | in-progress | agent-S-0007 | 2026-11-10T05:53:08Z |
 | [S-0008](S-0008.md) | Plan-mapping editor picks from the tenant's live Stripe prices | in-progress | agent-S-0008 | 2026-11-10T04:46:16Z |
 | [S-0010](S-0010.md) | Portcullis emits authentication events to lookout | in-progress | agent-S-0010 | 2026-11-10T06:02:40Z |
 | [S-0013](S-0013.md) | Steward shows tenant activity and stuck erasure requests | in-progress | agent-S-0013 | 2026-11-10T05:24:24Z |
+| [S-0025](S-0025.md) | A story in review deploys into its own kluster namespace and its teardown removes it | in-progress | agent-S-0025 | 2026-11-13T12:07:49Z |
 
 ## Strategic agents
 

@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-09T21:21:36Z
+updated: 2026-11-10T05:24:34Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:54Z
@@ -17,25 +17,33 @@ transitions:
     by: agent-S-0013
 blocked:
   - from: 2026-11-09T21:21:36Z
+    until: 2026-11-10T03:45:55Z
+    reason: awaiting the operator on TH-0016
+  - from: 2026-11-10T03:46:24Z
+    until: 2026-11-10T05:24:13Z
+    reason: awaiting the operator on TH-0016
+  - from: 2026-11-10T05:24:34Z
     reason: awaiting the operator on TH-0016
 tags: [steward]
 touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
 usage:
   source: log
-  seconds: 2198
+  seconds: 2230
   priced_by: harness
   turns:
     - day: 2026-11-09
       ceremony: 2
       hand_edits: 2
       work: 31
+    - day: 2026-11-10
+      work: 6
   models:
     - model: claude-opus-5-5
-      input: 202
-      output: 48516
-      cache_read: 13517421
-      cache_write: 452687
-      cost: 6.519
+      input: 222
+      output: 50793
+      cache_read: 14863253
+      cache_write: 876912
+      cost: 10.2276
   strategic:
     - kind: orchestrator
       seconds: 64

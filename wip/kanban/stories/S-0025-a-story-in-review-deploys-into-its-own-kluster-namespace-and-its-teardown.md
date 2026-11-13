@@ -3,12 +3,18 @@ id: S-0025
 type: story
 nature: feature
 title: A story in review deploys into its own kluster namespace and its teardown removes it
-status: backlog
+status: in-progress
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T23:37:51Z
-updated: 2026-11-13T12:07:28Z
-transitions: []
+updated: 2026-11-13T12:07:49Z
+transitions:
+  - to: ready
+    at: 2026-11-13T12:07:34Z
+    by: bytepunx
+  - to: in-progress
+    at: 2026-11-13T12:07:49Z
+    by: agent-S-0025
 tags: [kluster, scripts, integration]
 topics: [kluster, deployment]
 touches: [scripts/kluster-build.sh, scripts/lib-kluster.sh, scripts/kluster-signet.sh, scripts/kluster-signet-push.mjs, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/README.md, integration/README.md, scripts/kluster-signet-remove.mjs, integration/scripts/lib-secrets.sh, integration/manifests/00-namespace.yaml, integration/manifests/admin-rbac.yaml, integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/12-herald-retention-purge-cronjob.yaml, integration/manifests/13-lookout.yaml, integration/manifests/14-chronicle.yaml, integration/manifests/15-steward.yaml, integration/manifests/16-web.yaml, integration/manifests/17-portcullis.yaml, integration/config/authstar/tower.yaml, integration/config/authstar/keep.yaml, integration/config/authstar/herald.yaml, integration/config/authstar/lookout.yaml, integration/config/authstar/chronicle.yaml, integration/config/authstar/steward.yaml, integration/config/authstar/web.yaml, integration/config/authstar/portcullis.yaml]

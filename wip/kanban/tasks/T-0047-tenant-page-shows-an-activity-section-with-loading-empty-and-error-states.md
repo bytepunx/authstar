@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 39
-      output: 9254
-      cache_read: 2578386
-      cache_write: 86348
-      cost: 1.2435
+      input: 37
+      output: 8548
+      cache_read: 2501208
+      cache_write: 147568
+      cost: 1.7211
 ---
 # T-0047 Tenant page shows an Activity section with loading, empty, and error states
 

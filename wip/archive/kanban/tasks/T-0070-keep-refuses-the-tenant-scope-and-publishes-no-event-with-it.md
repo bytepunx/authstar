@@ -3,16 +3,37 @@ id: T-0070
 type: task
 nature: remediation
 title: Keep refuses the tenant scope and publishes no event with it
-status: backlog
+status: done
 parent: S-0005
 owner: bytepunx
 created: 2026-11-06T18:10:05Z
-updated: 2026-11-06T18:10:05Z
-transitions: []
+updated: 2026-11-10T03:45:57Z
+transitions:
+  - to: ready
+    at: 2026-11-10T03:27:15Z
+    by: agent-S-0005
+  - to: in-progress
+    at: 2026-11-10T03:27:15Z
+    by: agent-S-0005
+  - to: done
+    at: 2026-11-10T03:44:13Z
+    by: agent-S-0005
 stream: S-0005
 tags: [keep, billing]
-touches: [keep/src/lib/scope.ts, keep/src/actors/customer_actor.ts, keep/src/actors/subscription_actor.ts, keep/src/actors/dispute_actor.ts, keep/src/actors/plan_mapping_actor.ts, keep/src/actors/trial_actor.ts, keep/src/actors/refund_actor.ts, keep/src/routes/checkout-sessions.ts, keep/src/routes/trials.ts, keep/src/routes/coupons.ts, keep/src/routes/plan-mappings.ts, keep/src/routes/webhooks.ts, keep/src/report-tenant-scope.ts, keep/package.json, keep/spec/behavior/checkout-sessions.spec.ts, keep/spec/behavior/trials.spec.ts, keep/spec/behavior/coupons.spec.ts, keep/spec/behavior/webhooks.spec.ts, keep/spec/behavior/report-tenant-scope.spec.ts]
+touches: [keep/src/lib/scope.ts, keep/src/actors/customer_actor.ts, keep/src/actors/subscription_actor.ts, keep/src/actors/dispute_actor.ts, keep/src/actors/plan_mapping_actor.ts, keep/src/actors/trial_actor.ts, keep/src/actors/refund_actor.ts, keep/src/routes/checkout-sessions.ts, keep/src/routes/trials.ts, keep/src/routes/coupons.ts, keep/src/routes/plan-mappings.ts, keep/src/routes/webhooks.ts, keep/src/report-tenant-scope.ts, keep/package.json, keep/spec/behavior/checkout-sessions.spec.ts, keep/spec/behavior/trials.spec.ts, keep/spec/behavior/coupons.spec.ts, keep/spec/behavior/webhooks.spec.ts, keep/spec/behavior/report-tenant-scope.spec.ts, keep/src/lib/entitlement-publisher.ts, keep/spec/behavior/consequent-sequence-provider.spec.ts, keep/src/lib/consequent-sequence-provider.ts]
 after: [T-0062]
+usage:
+  source: log
+  seconds: 1018
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 110
+      output: 43493
+      cache_read: 13547122
+      cache_write: 591267
+      cost: 6.7709
 ---
 # T-0070 Keep refuses the tenant scope and publishes no event with it
 

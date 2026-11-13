@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 134
-      output: 39044
-      cache_read: 13025758
-      cache_write: 407516
-      cost: 5.7076
+      input: 113
+      output: 29980
+      cache_read: 12897941
+      cache_write: 347564
+      cost: 5.3639
 ---
 # T-0061 Web serves /_authstar/upgrade, sends the chosen plan to Stripe, and confirms the return
 
