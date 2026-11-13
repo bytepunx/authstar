@@ -13,10 +13,14 @@
 # unblocked -- no mocking, no fake services.
 #
 # Auth mechanics per step (see README.md's own writeup for the "why"):
-#   - tenant provisioning: tower's operator bearer token
+#   - tenant provisioning: tower's operator bearer token; step 1 gives the
+#     tenant its domain (TENANT_DOMAIN, ADR 0093), which makes tower issue
+#     the first-admin invite
 #   - portcullis login: the real Dex authorization-code + PKCE flow, driven
 #     with plain curl (no headless browser -- Dex's staticPasswords
-#     connector serves a plain HTML form)
+#     connector serves a plain HTML form), started with that invite
+#     (?invite=, ADR 0092) so the account gets the tenant's permissions,
+#     analytics:read among them
 #   - tower verification: tower's operator routes (bypass JWT/JWKS --
 #     see the "Known gap" note below for why the JWT-verified path isn't
 #     used here)
@@ -25,9 +29,12 @@
 #   - chronicle: lookout's genuinely unauthenticated /events ingestion route,
 #     then chronicle's report route without a token, which must answer 401.
 #     Chronicle verifies only the ES256 internal JWT portcullis mints, per
-#     tenant against https://authstar.<domain>/.well-known/jwks.json (S-0009);
-#     the harness cannot serve that host in-cluster yet (I-0007), so reading
-#     the report with a portcullis-forwarded token is skipped until S-0017
+#     tenant against https://authstar.<domain>/.well-known/jwks.json (S-0009).
+#     Inside chronicle's pod that host is its TLS front, with the harness CA
+#     chronicle trusts (manifests/14-chronicle.yaml, S-0017): the step proves
+#     the trust from inside the pod, then reads the auth-funnel report
+#     through portcullis's chronicle application with step 2's session
+#     cookie, so chronicle verifies a genuine portcullis-forwarded token
 #   - herald: a real key rotation followed by a real invite, verified by
 #     querying herald's own Postgres communication_event table directly
 #     (kubectl exec + psql -- no HTTP status alone can distinguish "sent"
@@ -58,7 +65,28 @@ require_cmd openssl
 require_cmd python3
 require_cmd kubectl
 
+# A story's namespace from flai's kluster: block (README.md, "Story namespaces
+# through flai's kluster: block"): KLUSTER_NAMESPACE=s-0006 runs the scenario
+# against s-0006 instead of authstar. Its Postgres databases carry the
+# namespace's prefix, s0006_, which KLUSTER_PREFIX overrides. KLUSTER_TOKENS
+# names the tokens.env its deploy kept, read for the operator tokens below.
+AUTHSTAR_NAMESPACE="${KLUSTER_NAMESPACE:-$AUTHSTAR_NAMESPACE}"
+if [[ "$AUTHSTAR_NAMESPACE" == "authstar" ]]; then
+  DB_PREFIX="${KLUSTER_PREFIX:-}"
+else
+  DB_PREFIX="${KLUSTER_PREFIX:-${AUTHSTAR_NAMESPACE//-/}_}"
+fi
+if [[ -n "${KLUSTER_TOKENS:-}" ]]; then
+  [[ -r "$KLUSTER_TOKENS" ]] || die "KLUSTER_TOKENS names $KLUSTER_TOKENS, which cannot be read"
+  # shellcheck source=/dev/null
+  source "$KLUSTER_TOKENS"
+fi
+log "namespace $AUTHSTAR_NAMESPACE, database prefix '${DB_PREFIX}'"
+
 TENANT_SLUG="${TENANT_SLUG:-acme}"
+# The tenant's domain: portcullis.yaml's hosts for acme sit under it, and its
+# JWKS host is authstar.<domain> (ADR 0091).
+TENANT_DOMAIN="${TENANT_DOMAIN:-${TENANT_SLUG}.authstar.app}"
 DEX_LOGIN="${DEX_LOGIN:-admin@example.com}"
 DEX_PASSWORD="${DEX_PASSWORD:-password}"
 
@@ -71,7 +99,10 @@ CHRONICLE_LOCAL_PORT="${CHRONICLE_LOCAL_PORT:-19093}"
 HERALD_LOCAL_PORT="${HERALD_LOCAL_PORT:-19090}"
 
 WORKDIR="$(mktemp -d)"
-trap 'kill $(jobs -p) 2>/dev/null || true; rm -rf "$WORKDIR"' EXIT
+# port_forward disowns each kubectl, so `jobs -p` no longer lists them: keep
+# their PIDs here so the EXIT trap stops them, on a die as well as at the end.
+PF_PIDS=()
+trap 'kill "${PF_PIDS[@]}" 2>/dev/null || true; rm -rf "$WORKDIR"' EXIT
 
 PASS=0
 FAIL=0
@@ -84,9 +115,11 @@ port_forward() {
   local svc="$1" local_port="$2" remote_port="$3" namespace="${4:-$AUTHSTAR_NAMESPACE}"
   kubectl port-forward -n "$namespace" "svc/$svc" "${local_port}:${remote_port}" \
     >"$WORKDIR/pf-${svc}.log" 2>&1 &
+  PF_PIDS+=("$!")
   disown
+  # bash's own /dev/tcp, not nc, which not every host has.
   for _ in $(seq 1 20); do
-    nc -z localhost "$local_port" 2>/dev/null && return 0
+    (exec 3<>"/dev/tcp/127.0.0.1/${local_port}") 2>/dev/null && return 0
     sleep 0.5
   done
   die "port-forward to $svc:$remote_port never became ready"
@@ -115,7 +148,7 @@ log "step 1/6: tenant provisioning (tower, real, idempotent)"
 provision_response="$(curl -sk -X POST "${TOWER_URL}/tenants" \
   -H "Authorization: Bearer ${TOWER_OPERATOR_TOKEN}" \
   -H "Content-Type: application/json" \
-  -d "{\"slug\":\"${TENANT_SLUG}\",\"name\":\"Acme Corp\",\"adminEmail\":\"${DEX_LOGIN}\"}" \
+  -d "{\"slug\":\"${TENANT_SLUG}\",\"name\":\"Acme Corp\",\"domain\":\"${TENANT_DOMAIN}\",\"adminEmail\":\"${DEX_LOGIN}\"}" \
   -w '\n%{http_code}')"
 provision_status="$(echo "$provision_response" | tail -1)"
 if [[ "$provision_status" == "201" || "$provision_status" == "200" ]]; then
@@ -124,17 +157,65 @@ else
   fail "tenant provisioning (HTTP $provision_status): $(echo "$provision_response" | head -1)"
 fi
 
+# tenant_domain prints the domain tower answers for the tenant, empty when it
+# has none. GET /tenants/:tenantSlug has no permission gate (tower's
+# routes/tenants.ts); the operator bearer is sent all the same.
+tenant_domain() {
+  curl -sk "${TOWER_URL}/tenants/${TENANT_SLUG}" \
+    -H "Authorization: Bearer ${TOWER_OPERATOR_TOKEN}" \
+    | python3 -c 'import json,sys; d=json.load(sys.stdin); print(d.get("domain") or "")' 2>/dev/null || true
+}
+
+# A tenant made before by a run without a domain keeps none through a second
+# POST, so give it the domain through ADR 0093's own route.
+answered_domain="$(tenant_domain)"
+if [[ -z "$answered_domain" ]]; then
+  domain_response="$(curl -sk -X PATCH "${TOWER_URL}/tenants/${TENANT_SLUG}/domain" \
+    -H "Authorization: Bearer ${TOWER_OPERATOR_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -d "{\"domain\":\"${TENANT_DOMAIN}\"}" \
+    -w '\n%{http_code}')"
+  log "PATCH /tenants/${TENANT_SLUG}/domain answered HTTP $(echo "$domain_response" | tail -1)"
+  answered_domain="$(tenant_domain)"
+fi
+if [[ "$answered_domain" == "$TENANT_DOMAIN" ]]; then
+  pass "tower answers ${TENANT_SLUG}'s domain ${TENANT_DOMAIN}"
+else
+  fail "tower answers ${TENANT_SLUG}'s domain as '${answered_domain}', expected ${TENANT_DOMAIN}"
+fi
+
 ##############################################################################
 log "step 2/6: portcullis + Dex login (real OAuth2/PKCE, no browser)"
 ##############################################################################
+# The first-admin invite tower issued when step 1 set the domain carries the
+# tenant's permissions (analytics:read among them, which step 6 needs).
+# Redeeming it at login is how an account gets them (ADR 0092): portcullis
+# keeps ?invite= in the authstar-pending-invite cookie and hands it to tower
+# from the callback. Its token is tower's createInviteToken
+# (routes/provisioning.ts): the first 40 hex characters of
+# sha256("<slug>:<contactId>:admin-invite"). A run after the first finds it
+# redeemed already, and the account keeps what it granted.
+invite_contact_id="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d "${DB_PREFIX}tower" -tA -c \
+  "select id from contacts where tenant = '${TENANT_SLUG}' and email = '${DEX_LOGIN}' limit 1;" 2>/dev/null || echo "")"
+invite_query=""
+if [[ -n "$invite_contact_id" ]]; then
+  invite_token="$(printf '%s' "${TENANT_SLUG}:${invite_contact_id}:admin-invite" | openssl dgst -sha256 | sed 's/^.* //' | cut -c1-40)"
+  invite_query="?invite=${invite_token}"
+else
+  log "no bootstrap contact for ${DEX_LOGIN} in ${DB_PREFIX}tower; logging in without the first-admin invite"
+fi
+
 login_headers="$WORKDIR/login-headers.txt"
 curl -s -D "$login_headers" -o /dev/null \
-  "${PORTCULLIS_URL}/oauth2/dex/login" -H "Host: ${TENANT_SLUG}.authstar.app"
+  "${PORTCULLIS_URL}/oauth2/dex/login${invite_query}" -H "Host: ${TENANT_SLUG}.authstar.app"
 
 location="$(grep -i '^location:' "$login_headers" | sed 's/^[Ll]ocation: //' | tr -d '\r')"
 query="$(echo "$location" | sed 's|.*/auth?||')"
 oauth_state="$(grep -i 'oauth2-state=' "$login_headers" | sed -E 's/.*oauth2-state=([^;]+);.*/\1/')"
 pkce_verifier="$(grep -i 'oauth2-pkce-verifier=' "$login_headers" | sed -E 's/.*oauth2-pkce-verifier=([^;]+);.*/\1/')"
+pending_invite="$(grep -i 'authstar-pending-invite=' "$login_headers" | sed -E 's/.*authstar-pending-invite=([^;]+);.*/\1/' | tr -d '\r' || true)"
+invite_cookie=""
+[[ -z "$pending_invite" ]] || invite_cookie="; authstar-pending-invite=${pending_invite}"
 
 if [[ -z "$oauth_state" || -z "$pkce_verifier" ]]; then
   fail "login step 1 (portcullis /oauth2/dex/login) -- no state/PKCE cookies returned"
@@ -164,10 +245,11 @@ else
     curl -s -D "$callback_headers" -o /dev/null \
       "${PORTCULLIS_URL}/oauth2/dex/callback?code=${code}&state=${callback_state}" \
       -H "Host: ${TENANT_SLUG}.authstar.app" \
-      -H "Cookie: oauth2-state=${oauth_state}; oauth2-pkce-verifier=${pkce_verifier}"
+      -H "Cookie: oauth2-state=${oauth_state}; oauth2-pkce-verifier=${pkce_verifier}${invite_cookie}"
 
     if grep -qi '^set-cookie: jwt=' "$callback_headers"; then
       pass "portcullis + Dex login -- real jwt session cookie issued"
+      session_jwt="$(grep -i '^set-cookie: jwt=' "$callback_headers" | sed -E 's/^[Ss]et-[Cc]ookie: jwt=([^;]+);.*/\1/' | tr -d '\r')"
     else
       callback_status="$(grep -i '^HTTP/' "$callback_headers" | tail -1)"
       fail "login step 6 (portcullis callback, $callback_status) -- no jwt cookie in response"
@@ -238,7 +320,7 @@ fi
 # adminEmail) (provisioning.ts) into tower's own `contacts` table -- query
 # it directly instead, same technique step 5's own herald verification uses
 # below.
-contact_id="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d tower -tA -c \
+contact_id="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d "${DB_PREFIX}tower" -tA -c \
   "select id from contacts where tenant = '${TENANT_SLUG}' and email = '${DEX_LOGIN}' limit 1;" 2>/dev/null || echo "")"
 
 if [[ -z "$contact_id" ]]; then
@@ -267,7 +349,7 @@ else
     outcome_type=""
     outcome_error=""
     for _ in $(seq 1 10); do
-      row="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d herald -tA -F'|' -c "$sql" 2>/dev/null || echo "")"
+      row="$(kubectl exec -n postgres statefulset/postgresql -- env PGPASSWORD=postgres psql -U postgres -d "${DB_PREFIX}herald" -tA -F'|' -c "$sql" 2>/dev/null || echo "")"
       if [[ -n "$row" ]]; then
         outcome_type="${row%%|*}"
         outcome_error="${row#*|}"
@@ -313,10 +395,51 @@ else
     fail "chronicle auth-funnel report without an internal JWT answered $unauth_status, expected 401"
   fi
 
-  # Reading the report needs a portcullis-forwarded ES256 token that
-  # chronicle can verify against the tenant's JWKS in-cluster, which the
-  # harness cannot serve yet (I-0007). S-0017 adds it and this read.
-  skip "chronicle report read with a portcullis-forwarded ES256 token (waits on S-0017, I-0007)"
+  # Chronicle fetches the tenant's JWKS from https://authstar.<domain>, which
+  # inside its pod is the TLS front (manifests/14-chronicle.yaml). Fetch it
+  # from chronicle's own container with NODE_TLS_REJECT_UNAUTHORIZED unset,
+  # so only the harness CA in NODE_EXTRA_CA_CERTS can make the cert trusted.
+  jwks_url="https://authstar.${TENANT_DOMAIN}/.well-known/jwks.json"
+  # shellcheck disable=SC2016 # JavaScript for node, not shell
+  trust_check='fetch(process.argv[1]).then(async (r) => {
+  const body = await r.json().catch(() => ({}))
+  if (r.ok && Array.isArray(body.keys) && body.keys.length > 0) {
+    console.log(`HTTP ${r.status} with ${body.keys.length} key(s)`)
+    process.exit(0)
+  }
+  console.log(`HTTP ${r.status}: ${JSON.stringify(body)}`)
+  process.exit(1)
+}, (err) => {
+  console.log(String(err.cause ?? err))
+  process.exit(1)
+})'
+  if trust_output="$(kubectl exec -n "$AUTHSTAR_NAMESPACE" deploy/chronicle -c chronicle -- \
+    env -u NODE_TLS_REJECT_UNAUTHORIZED node -e "$trust_check" "$jwks_url" 2>&1)"; then
+    pass "chronicle trusts the TLS front's cert for ${jwks_url} through the harness CA alone (${trust_output})"
+  else
+    fail "chronicle cannot fetch ${jwks_url} with the harness CA alone: ${trust_output}"
+  fi
+
+  # The report through portcullis's chronicle application with step 2's
+  # session cookie: the gate mints the ES256 internal JWT, chronicle verifies
+  # it against that JWKS, and the invite step 2 redeemed grants analytics:read.
+  if [[ -z "${session_jwt:-}" ]]; then
+    fail "chronicle report read through portcullis -- no session cookie from the login step to read it with"
+  else
+    report_response="$(curl -s \
+      "${PORTCULLIS_URL}/tenants/${TENANT_SLUG}/analytics/reports/auth-funnel?from=${report_from}&to=${report_to}" \
+      -H "Host: chronicle.${TENANT_DOMAIN}" \
+      -H "Cookie: jwt=${session_jwt}" \
+      -w '\n%{http_code}')"
+    report_status="$(echo "$report_response" | tail -1)"
+    report_body="$(echo "$report_response" | sed '$d')"
+    # chronicle's AuthFunnelResult (chronicle/src/lib/types.ts).
+    if [[ "$report_status" == "200" ]] && echo "$report_body" | python3 -c 'import json,sys; d=json.load(sys.stdin); sys.exit(0 if isinstance(d.get("byProvider"), list) and isinstance(d.get("failureReasons"), list) and isinstance(d.get("signupConversion"), dict) and isinstance(d.get("inviteRedemptions"), dict) else 1)' 2>/dev/null; then
+      pass "chronicle auth-funnel report read through portcullis with a portcullis-forwarded ES256 token"
+    else
+      fail "chronicle auth-funnel report through portcullis (HTTP $report_status): $report_body"
+    fi
+  fi
 fi
 
 ##############################################################################
