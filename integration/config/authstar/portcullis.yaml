@@ -60,21 +60,11 @@ tenants:
       web:
         hosts:
           - acme.authstar.app
-          # tower's own tenant provisioning (POST /tenants) creates an
-          # `_admin` application host at admin.<slug>.<baseDomain> for the
-          # per-tenant JWKS convention (perTenantJwksKeyProvider) every
-          # JWT-consuming service resolves against -- but that route only
-          # writes tower's own actor state + pushes secrets, it never
-          # patches portcullis's Bundle config with a matching host (no
-          # `signetAdmin.patchConfig` call anywhere in provisioning.ts,
-          # confirmed by grep -- only rotate-keys.ts uses patchConfig, for
-          # EC key generation arrays). Host routing is a GitOps/deploy-time
-          # concern this repo owns, not something tower auto-provisions.
-          # JWKS resolution only needs the Host to resolve to *some* active
-          # application for the right tenant (jwks_handler discards the
-          # matched application, only reads tenant.internal_keys -- see
-          # portcullis's endpoints/jwks.rs) -- no separate `_admin`
-          # application block is needed, just this second host entry.
+          # web's own INTERNAL_JWT_JWKS_URL (config/authstar/web.yaml,
+          # manifests/16-web.yaml) still names this host. Portcullis serves
+          # /.well-known/jwks.json on any host of an active application of
+          # the tenant (endpoints/jwks.rs reads only the tenant's internal
+          # keys), so this host serves acme's JWKS too.
           - admin.acme.authstar.app
         server:
           publicUrl: https://acme.authstar.app
@@ -88,5 +78,45 @@ tenants:
           - /healthz
         auth:
           loginUrl: /login
+        providers:
+          - dex
+      # The JWKS host every JWT-consuming service resolves for a tenant with
+      # a domain: https://authstar.<domain>/.well-known/jwks.json
+      # (perTenantJwksKeyProvider, ADR 0086/0091). The golden path's step 1
+      # gives acme the domain acme.authstar.app (S-0017), and chronicle's
+      # pod reaches this host through its TLS front (manifests/14-chronicle.yaml).
+      # Shaped as tower's registration writes `_admin`
+      # (completeDomainDependentProvisioning in tower/src/routes/provisioning.ts),
+      # but with web's upstream in this namespace. Setting the domain makes
+      # tower patch portcullis's config itself: today that patch replaces
+      # acme's whole entry, this file's applications included (TH-0047).
+      _admin:
+        hosts:
+          - authstar.acme.authstar.app
+        server:
+          publicUrl: https://authstar.acme.authstar.app
+        upstream:
+          base: http://web.authstar.svc.cluster.local:3000
+        auth:
+          loginUrl: /oauth2/select
+        providers:
+          - dex
+      # chronicle behind portcullis, so a request with acme's session cookie
+      # reaches chronicle with the ES256 internal JWT the gate mints, as
+      # Authorization: Bearer (S-0017). The session cookie is verified
+      # against the tenant's keys, issuer, and audience, not the application,
+      # so step 2's cookie from acme.authstar.app is accepted here. With no
+      # routes, the request path goes to chronicle unchanged.
+      chronicle:
+        hosts:
+          - chronicle.acme.authstar.app
+        server:
+          publicUrl: https://chronicle.acme.authstar.app
+        upstream:
+          base: http://chronicle.authstar.svc.cluster.local:3000
+          routes: {}
+          timeout: 30
+        auth:
+          loginUrl: /oauth2/select
         providers:
           - dex
