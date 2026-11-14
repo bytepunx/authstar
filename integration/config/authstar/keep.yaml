@@ -19,9 +19,8 @@
 # In-cluster Service DNS name + port, no trailing slash (the client appends
 # a leading-slash path directly). Keep also asks tower here for a tenant's
 # registered domain, to find the JWKS that verifies a portcullis-forwarded
-# token (ADR 0089). Tower answers TLS only, so this is https, and keep's
-# manifest sets NODE_TLS_REJECT_UNAUTHORIZED=0 for the call, as chronicle's
-# does (I-0001, I-0006).
+# token (ADR 0089). Tower answers TLS only, so this is https, and keep
+# verifies tower's SVID against the SPIRE trust bundle (ADR 0113, I-0006).
 towerBaseUrl: https://tower.authstar.svc.cluster.local:8080
 
 # Per-tenant Stripe key material is secret-only (see secrets/authstar/keep/),
