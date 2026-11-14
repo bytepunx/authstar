@@ -6,7 +6,7 @@ title: The test tier runs every project's suite whatever the paths, and steward'
 status: ready
 owner: bytepunx
 created: 2026-11-06T21:11:49Z
-updated: 2026-11-14T10:09:19Z
+updated: 2026-11-14T17:29:38Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:19Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-09T22:10:33Z
 forecast:
   duration: 3h
-  delivery: 2026-11-17T13:33:00Z
-  basis: "Its own forecast of 3h; 8th in the pull order with an in-progress limit of 4, behind S-0013, S-0012, S-0007, S-0008, S-0010, S-0014, S-0015 and S-0016."
+  delivery: 2026-11-30T11:11:00Z
+  basis: "Its own forecast of 3h; 6th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010 and S-0023."
   by: flai
-  at: 2026-11-14T09:55:08Z
+  at: 2026-11-14T17:29:38Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:20Z

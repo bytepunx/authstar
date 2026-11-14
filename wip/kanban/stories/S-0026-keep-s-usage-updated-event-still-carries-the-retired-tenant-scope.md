@@ -6,7 +6,7 @@ title: keep's usage-updated event still carries the retired tenant scope
 status: backlog
 owner: bytepunx
 created: 2026-11-13T12:08:12Z
-updated: 2026-11-14T10:15:18Z
+updated: 2026-11-14T17:29:38Z
 transitions: []
 tags: [keep]
 touches: [design/adrs/0113-keep-s-usage-updated-event-is-scoped-to-the-reporting-account.md, design/adrs/README.md, keep/src/routes/usage.ts, keep/src/actors/usage_record_actor.ts, keep/src/lib/entitlement-publisher.ts, keep/src/lib/consequent-sequence-provider.ts, keep/spec/behavior/usage.spec.ts, keep/spec/behavior/consequent-sequence-provider.spec.ts, keep/src/routes/billing-reads.ts, keep/spec/behavior/billing-reads.spec.ts, keep/TESTING.md, design/stories/keep/001-actor-definitions.md, design/stories/keep/005-usage-records-and-credentials.md, design/issues/I-0021-keep-s-usage-updated-event-still-carries-the-retired-tenant-scope.md, design/issues/summary.md]
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-11-14T10:10:00Z
 forecast:
   duration: 1h
-  delivery: 2026-11-16T23:30:00Z
-  basis: "flai forecast's 23m (79 s per unit over size 17) raised to 1h for an ADR, two keep code tasks, and a close-out with keep's tests and a kluster deploy; delivery moved by the same 37m from flai's 22:50."
-  by: planner-S-0026
-  at: 2026-11-14T10:10:00Z
+  delivery: 2026-11-30T01:59:00Z
+  basis: "Its own forecast of 1h; 8th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010, S-0023, S-0018 and S-0024."
+  by: flai
+  at: 2026-11-14T17:29:38Z
 finalized:
   by: bytepunx
   at: 2026-11-14T10:15:18Z

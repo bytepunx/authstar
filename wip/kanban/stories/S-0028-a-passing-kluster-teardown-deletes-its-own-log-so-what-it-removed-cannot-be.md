@@ -6,7 +6,7 @@ title: A passing kluster teardown deletes its own log, so what it removed cannot
 status: backlog
 owner: bytepunx
 created: 2026-11-14T08:26:33Z
-updated: 2026-11-14T10:15:29Z
+updated: 2026-11-14T17:29:38Z
 transitions: []
 tags: [kluster, scripts]
 topics: [kluster, integration, testing]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-14T10:09:28Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-17T00:20:00Z
-  basis: "flai's 21m (126 s per unit of size times 10) raised to 1h30m, as S-0025, the last kluster story with a live deploy and teardown, took 1h4m of agent work, and this one adds a new script test; delivery is flai's 2026-11-16T23:11Z, 12th in the pull order, moved later by the 1h9m added."
-  by: planner-S-0028
-  at: 2026-11-14T10:09:28Z
+  delivery: 2026-11-30T08:21:00Z
+  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010, S-0023, S-0018, S-0024, S-0026 and S-0027."
+  by: flai
+  at: 2026-11-14T17:29:38Z
 finalized:
   by: bytepunx
   at: 2026-11-14T10:15:29Z

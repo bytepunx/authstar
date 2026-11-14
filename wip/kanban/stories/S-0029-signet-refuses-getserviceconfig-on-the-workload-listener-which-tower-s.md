@@ -6,7 +6,7 @@ title: Signet refuses GetServiceConfig on the workload listener, which tower's s
 status: backlog
 owner: bytepunx
 created: 2026-11-14T09:30:30Z
-updated: 2026-11-14T10:15:33Z
+updated: 2026-11-14T17:29:38Z
 transitions: []
 tags: [tower, signet]
 topics: [signet, key-rotation]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-14T10:11:22Z
 forecast:
   duration: 3h
-  delivery: 2026-11-17T02:46:00Z
-  basis: flai's 24m (79 s per unit of size over 5 done remediation stories, size 18) raised to 3h for five tasks, a new tenant-actor event, an ADR, and a kluster deploy and checks run for the live step, with delivery moved later by the same 2h36m.
-  by: planner-S-0029
-  at: 2026-11-14T10:11:22Z
+  delivery: 2026-11-30T20:25:00Z
+  basis: "Its own forecast of 3h; 11th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010, S-0023, S-0018, S-0024, S-0026, S-0027 and S-0028."
+  by: flai
+  at: 2026-11-14T17:29:38Z
 finalized:
   by: bytepunx
   at: 2026-11-14T10:15:33Z

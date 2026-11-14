@@ -6,7 +6,7 @@ title: "flai check finds `roles.definition` outside the story at close-out"
 status: ready
 owner: bytepunx
 created: 2026-11-09T09:04:35Z
-updated: 2026-11-14T10:09:21Z
+updated: 2026-11-14T17:29:38Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:21Z
@@ -52,10 +52,10 @@ usage:
           cost: 0.8955
 forecast:
   duration: 30m
-  delivery: 2026-11-17T00:24:00Z
-  basis: "flai forecast's 26m (126 s per unit over 9 done stories, size 12) raised to 30m for an unscoped flai check and a close-out whose system-flow.yaml change may select every tier (I-0010); delivery as flai gives it, 10th in the pull order."
-  by: planner-S-0024
-  at: 2026-11-14T10:08:33Z
+  delivery: 2026-11-29T21:58:00Z
+  basis: "Its own forecast of 30m; 7th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010, S-0023 and S-0018."
+  by: flai
+  at: 2026-11-14T17:29:38Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:54Z

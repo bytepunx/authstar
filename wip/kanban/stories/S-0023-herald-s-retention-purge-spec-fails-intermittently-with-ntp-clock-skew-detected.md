@@ -6,7 +6,7 @@ title: "Herald's retention-purge spec fails intermittently with \"NTP clock skew
 status: ready
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-14T10:09:04Z
+updated: 2026-11-14T17:29:38Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:04Z
@@ -44,10 +44,10 @@ cost_of_delay:
   at: 2026-11-09T22:11:11Z
 forecast:
   duration: 1h30m
-  delivery: 2026-11-17T06:43:00Z
-  basis: "Its own forecast of 1h30m; 11th in the pull order with an in-progress limit of 4, behind S-0013, S-0012, S-0007, S-0008, S-0010, S-0014, S-0015, S-0016, S-0018, S-0021 and S-0022."
+  delivery: 2026-11-29T21:31:00Z
+  basis: "Its own forecast of 1h30m; 5th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008 and S-0010."
   by: flai
-  at: 2026-11-14T09:55:08Z
+  at: 2026-11-14T17:29:38Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:48Z
