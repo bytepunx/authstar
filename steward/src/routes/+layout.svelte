@@ -16,6 +16,7 @@
     {#if session.connected}
       <nav>
         <a href="/tenants">Tenants</a>
+        <a href="/erasure-requests/stuck">Stuck erasures</a>
       </nav>
       <span class="acting-as">acting as: {session.actorLabel}</span>
       <button type="button" onclick={disconnect}>Disconnect</button>
