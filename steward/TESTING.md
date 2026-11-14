@@ -43,7 +43,19 @@ as" → lands on Tenant Search) → search/reactivate a suspended tenant inline 
 recovery, not a new slug") → enter a tenant's operator context → grant a permission found by
 email search → rotate tenant keys behind the heavy, typed confirmation Story 005 requires.
 
-10 tests, `tests/e2e/operator-console.spec.ts`.
+`tests/e2e/operator-console.spec.ts` covers that slice. Story 004 has three more e2e files, each
+written against the fake tower's seeded activity and stuck erasure requests. Each injects the
+error and loading states with `page.route`:
+
+- `tests/e2e/tenant-activity.spec.ts` covers the tenant page's Activity section.
+- `tests/e2e/tenant-stuck-erasures.spec.ts` covers the tenant page's Stuck Erasures section,
+  filtered to the tenant at 72 hours.
+- `tests/e2e/stuck-erasure-requests.spec.ts` covers the top-level `/erasure-requests/stuck`
+  view: the header link, the threshold input (default 72), the grouping by outstanding service,
+  and the refusal of a threshold that is not a positive whole number.
+
+The behavior tier covers the two proxies that feed these screens, in
+`tests/behavior/activity.spec.ts` and `tests/behavior/stuck-erasure-requests.spec.ts`.
 
 ### `tests/integration/*.integration.spec.ts` — the "what's steward's own real dependency" judgment call
 
@@ -106,14 +118,16 @@ slice end to end rather than shallow-covering all five Stories:
 - Story 005 — **Rotate Tenant Keys section only** (independent checkboxes, heavy typed
   confirmation, session/identity-hash-specific caveats). Herald Keys (the story's other,
   installation-wide section) is not implemented.
+- Story 004, added by S-0013, has three screens:
+  - The tenant page's Activity section, proxied at `GET /api/tenants/[slug]/activity`.
+  - The tenant page's Stuck Erasures section.
+  - The top-level Stuck Erasure Requests view at `/erasure-requests/stuck`.
+
+  Both stuck screens read `GET /api/erasure-requests/stuck` and render the shared
+  `src/lib/components/StuckErasureRows.svelte`.
 
 **Deliberately deferred, not implemented** (no routes, no screens, no tests):
 - Story 003's OIDC Providers section (list/add/edit/rotate-secret/remove providers).
-- Story 004 in full — Activity view and Stuck Erasure Requests. Cross-tenant, read-only, and
-  structurally the same "thin proxy over an already-fully-specified tower route" shape as
-  everything above — mechanical to add later following the exact same `tower-client.ts` +
-  `+server.ts` pattern, but adding it now would have meant five shallow slices instead of one
-  deep one.
 - Story 005's Herald Keys section (installation-wide, non-tenant-scoped, targets herald directly
   rather than tower) — `herald-client.ts` exists with `rotateKeys()` already wired and unit-testable
   in isolation, but no route/screen/test consumes it yet.
