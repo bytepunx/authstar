@@ -8,6 +8,9 @@ wip_limits:
   review: 3
 order:
   - S-0012
+  - S-0007
+  - S-0008
+  - S-0010
 ---
 
 # Board

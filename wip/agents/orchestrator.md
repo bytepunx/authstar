@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 44.0403
-accrued_seconds: 2666
-tasks_completed: 142
-last_run: 2026-11-10T04:58:27Z
+accrued_cost: 49.7009
+accrued_seconds: 2988
+tasks_completed: 164
+last_run: 2026-11-14T05:43:16Z
 ---
 
 # Orchestrator activity
@@ -1005,6 +1005,160 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 14
 - Cost: 0.1424 USD, estimated
+
+### 2026-11-13T12:09:01Z
+
+- Summary: Took no action on release-due S-0005 or TH-0044. system-flow.yaml has no orchestration section, so publish and answer_threads are off: neither evaluated nor published the pending S-0005 (judgement policy, 1 story, 0 USD/week, per the pack's figures), and left TH-0044, a flai serve notice about the failed kluster teardown of namespace s-0005, to the operator.
+- Items: S-0005, TH-0044
+- Seconds: 15
+- Cost: 0.3945 USD, estimated
+
+### 2026-11-13T12:09:12Z
+
+- Summary: I took no action on either reason, because `system-flow.yaml` has no `orchestration` section and so every permission is off. I logged that decision in `wip/agents/orchestrator.md`.
+- Items: none
+- Seconds: 11
+- Cost: 0.1035 USD, estimated
+
+### 2026-11-13T12:24:20Z
+
+- Summary: Left TH-0042 (flai serve's failed promotion of main into kluster namespace authstar, deploy step exit 1) to the operator: system-flow.yaml has no orchestration block, so answer_threads is off, and the thread's last entry is flai serve's notice, which the orchestrator never answers.
+- Items: none
+- Seconds: 13
+- Cost: 0.4937 USD, estimated
+
+### 2026-11-13T12:24:29Z
+
+- Summary: I didn't act on TH-0042. It's still open and waiting for you.
+- Items: none
+- Seconds: 9
+- Cost: 0.0923 USD, estimated
+
+### 2026-11-13T12:33:42Z
+
+- Summary: Left TH-0042, TH-0044 and TH-0045 to the operator. system-flow.yaml has no orchestration block, so answer_threads and every other permission are off. TH-0042 and TH-0044 also carry agent-S-0025's pending recommendation (run flai kluster up, then the promote and the teardown). All three wait on the operator's kluster runs, which flai guard refuses to agents (D-0026).
+- Items: S-0025, S-0005
+- Seconds: 17
+- Cost: 0.4150 USD, estimated
+
+### 2026-11-13T12:33:55Z
+
+- Summary: I left all three threads unanswered. `system-flow.yaml` has no `orchestration` block, so every permission is off, `answer_threads` included.
+- Items: none
+- Seconds: 13
+- Cost: 0.1418 USD, estimated
+
+### 2026-11-13T13:00:13Z
+
+- Summary: TH-0046 (S-0025 kluster teardown failed) left to the operator: its last entry is a flai serve notice, which the orchestrator does not answer, and system-flow.yaml has no orchestration block, so every permission, answer_threads included, is off. Nothing done.
+- Items: S-0025
+- Seconds: 10
+- Cost: 0.3770 USD, estimated
+
+### 2026-11-13T13:00:24Z
+
+- Summary: I took no action on TH-0046 and left it for you.
+- Items: none
+- Seconds: 11
+- Cost: 0.1126 USD, estimated
+
+### 2026-11-13T19:48:23Z
+
+- Summary: Left TH-0045 and TH-0046 (S-0025) to the operator: system-flow.yaml has no orchestration block, so answer_threads and every other permission are off; TH-0046 also carries a pending recommendation, and both ask the operator to run flai kluster up on the host, which only the operator can do.
+- Items: S-0025
+- Seconds: 19
+- Cost: 0.3613 USD, estimated
+
+### 2026-11-13T19:48:33Z
+
+- Summary: I didn't act on TH-0045 or TH-0046: both are yours, and `system-flow.yaml` has no `orchestration` block, so all my permissions are off, including `answer_threads`.
+- Items: none
+- Seconds: 10
+- Cost: 0.0927 USD, estimated
+
+### 2026-11-13T21:36:52Z
+
+- Summary: Reason reordered (ready): took no action. system-flow.yaml has no orchestration block, so order_ready and promote_to_ready are off (policy defaults to fifo). Ready 4/5, pull order S-0012, S-0007, S-0008, S-0010, all held; in-progress 4/4; review empty. promote_candidates lists S-0018, S-0021, S-0022, S-0023 (fifo ranks 1-4), not promoted while promote_to_ready is off.
+- Items: S-0012, S-0007, S-0008, S-0010
+- Seconds: 17
+- Cost: 0.3574 USD, estimated
+
+### 2026-11-13T21:37:04Z
+
+- Summary: I took no action on the reorder, because my permissions don't allow any.
+- Items: none
+- Seconds: 12
+- Cost: 0.1256 USD, estimated
+
+### 2026-11-13T21:42:12Z
+
+- Summary: Left TH-0047 (S-0017: tower's domain provisioning replaces acme's portcullis config; fix tower or work around it in the harness) to the operator, unanswered: system-flow.yaml has no orchestration block, so answer_threads is off by default.
+- Items: S-0017
+- Seconds: 19
+- Cost: 0.3519 USD, estimated
+
+### 2026-11-13T21:42:28Z
+
+- Summary: I didn't answer TH-0047. It still needs your decision.
+- Items: none
+- Seconds: 16
+- Cost: 0.0573 USD, estimated
+
+### 2026-11-13T21:42:56Z
+
+- Summary: TH-0035 (S-0017 plan thread) left alone: system-flow.yaml has no orchestration block, so plan_backlog_stories and answer_threads are off by default and a story planner's thread is the operator's. Operator already wrote "Resolved."; the last entry is agent-S-0017's design update, which asks nothing.
+- Items: S-0017
+- Seconds: 20
+- Cost: 0.5698 USD, estimated
+
+### 2026-11-13T21:43:07Z
+
+- Summary: I didn't act on TH-0035 because I have no permission to. `system-flow.yaml` has no `orchestration` block, so every permission is off by default. That includes `plan_backlog_stories` and `answer_threads`, which leaves a story planner's thread for you to handle.
+- Items: none
+- Seconds: 11
+- Cost: 0.1027 USD, estimated
+
+### 2026-11-13T22:03:48Z
+
+- Summary: S-0025 moved to review: left it in review for the operator. system-flow.yaml has no orchestration block, so accept_reviews (and every other permission) is off; no verify, acceptance, or thread. Note: its last verify passed at 6bd5e38 but the branch head is 103fe7f (verify_stale), and its namespace s-0025 has no deploy recorded at the head.
+- Items: S-0025
+- Seconds: 20
+- Cost: 0.4837 USD, estimated
+
+### 2026-11-13T22:04:02Z
+
+- Summary: I didn't accept S-0025. It is still in review and needs your decision.
+- Items: none
+- Seconds: 14
+- Cost: 0.0959 USD, estimated
+
+### 2026-11-13T22:33:15Z
+
+- Summary: Left TH-0048 (S-0017 criterion 4: portcullis never sends tower the login's email) to the operator: system-flow.yaml has no orchestration block, so answer_threads is off and every other permission is off; no reply, no recommendation, nothing moved.
+- Items: S-0017
+- Seconds: 18
+- Cost: 0.3558 USD, estimated
+
+### 2026-11-13T22:33:27Z
+
+- Summary: I didn't answer TH-0048, so it still waits for you. `system-flow.yaml` has no `orchestration` block, which means `answer_threads` and every other permission of mine are off.
+- Items: none
+- Seconds: 12
+- Cost: 0.0579 USD, estimated
+
+### 2026-11-14T05:42:58Z
+
+- Summary: Left TH-0049 (S-0025's worktree not a git worktree; asks whether to commit other items' state on main and what to do with scripts/deploy-story.sh) to the operator: system-flow.yaml has no orchestration block, so answer_threads and every other permission are off. S-0025 stays in review; the queue lists it ineligible (verify_stale at d56231a, thread_open TH-0049).
+- Items: S-0025
+- Seconds: 17
+- Cost: 0.4116 USD, estimated
+
+### 2026-11-14T05:43:16Z
+
+- Summary: I didn't answer or recommend on TH-0049, because `answer_threads` is off. The thread is still open and waiting for you.
+- Items: none
+- Seconds: 18
+- Cost: 0.1066 USD, estimated
 
 ## Refusals
 

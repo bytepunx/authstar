@@ -42,15 +42,15 @@ usage:
       cost: 99.9397
   strategic:
     - kind: orchestrator
-      seconds: 482
+      seconds: 513
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 274
-          output: 1966
-          cache_read: 7696672
-          cache_write: 1229024
-          cost: 10.4485
+          input: 297
+          output: 2116
+          cache_read: 8254443
+          cache_write: 1353284
+          cost: 11.2291
 ---
 # E-0002 Billing end to end, with loci as the first paying tenant
 

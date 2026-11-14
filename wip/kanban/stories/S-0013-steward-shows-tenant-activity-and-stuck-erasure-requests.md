@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-10T05:24:34Z
+updated: 2026-11-13T21:55:11Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:54Z
@@ -23,6 +23,12 @@ blocked:
     until: 2026-11-10T05:24:13Z
     reason: awaiting the operator on TH-0016
   - from: 2026-11-10T05:24:34Z
+    until: 2026-11-13T12:32:48Z
+    reason: awaiting the operator on TH-0016
+  - from: 2026-11-13T12:32:50Z
+    until: 2026-11-13T21:55:07Z
+    reason: awaiting the operator on TH-0016
+  - from: 2026-11-13T21:55:11Z
     reason: awaiting the operator on TH-0016
 tags: [steward]
 touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
