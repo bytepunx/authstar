@@ -66,6 +66,11 @@ Story: S-0015.
 flai check found outside the story:
 `design/workflows/roles/orchestrator.md`: definition.tools lists mcp__flai__verify, which the role's rules refuse: verify is neither a read every agent has nor in tools or a permission's tools; remove it, or grant it
 
+### 2026-11-14T17:59:45Z
+Story: S-0023.
+flai check found outside the story:
+`design/workflows/roles/orchestrator.md`: definition.tools lists mcp__flai__verify, which the role's rules refuse: verify is neither a read every agent has nor in tools or a permission's tools; remove it, or grant it
+
 ### 2026-11-15T06:18:13Z
 Story: S-0018.
 flai check found outside the story:
