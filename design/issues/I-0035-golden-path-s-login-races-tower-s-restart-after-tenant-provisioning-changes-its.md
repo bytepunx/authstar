@@ -3,11 +3,11 @@ id: I-0035
 title: Golden path's login races tower's restart after tenant provisioning changes its signet bundle, so portcullis's callback returns 500
 class: defect
 status: open
-count: 1
-cost: 20m
+count: 2
+cost: 18m
 first_reported: 2026-11-14T18:03:10Z
-last_reported: 2026-11-14T18:03:10Z
-updated: 2026-11-14T18:03:10Z
+last_reported: 2026-11-14T18:10:42Z
+updated: 2026-11-14T18:10:42Z
 ---
 
 # I-0035 Golden path's login races tower's restart after tenant provisioning changes its signet bundle, so portcullis's callback returns 500
@@ -29,5 +29,17 @@ Tower's log in namespace s-0021 shows the sequence:
 `integration/scripts/scenario-golden-path.sh` does not wait for tower to come back after step 1 before the login in step 2.
 
 The same login step 6 failure is in S-0022's checks at 11:41Z and 11:51Z, and in S-0014's at 11:12Z (`~/.flai/serve/checks/`), and neither story changes portcullis or tower. A likely fix: after step 1, the golden path waits for tower's rollout or `/_ready` before step 2.
+
+### 2026-11-14T18:10:42Z
+Story: S-0021.
+This is the same race S-0014 recorded as I-0030 on story/S-0014, with tower's 27-second restart window recorded there as I-0031. Neither issue was on main when I-0035 was opened. If S-0014 lands, merge the two.
+
+S-0021's second deploy, at b98d7fb, failed login step 6 the same way at 18:06:00Z. Tower then crash-looped on `connect ECONNREFUSED 10.43.181.152:5432` to the cluster's shared Postgres (in `ensureContactsSchema`) until about 18:08Z.
+
+A checks rerun with no redeploy, at 18:09:49Z, passed login, the account, keep, and me/subscription. It failed two steps:
+- herald send-and-verify: `payload decryption failed: error:02000079:rsa routines::oaep decoding error`. Tower booted with its ephemeral herald key, as in S-0014's second run.
+- chronicle auth-funnel report through portcullis: 403 `missing required permission: analytics:read`.
+
+S-0021 changes none of these services.
 
 ## Remediation
