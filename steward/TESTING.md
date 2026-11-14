@@ -31,6 +31,15 @@ operator route tree, tower Story 012 — a distinction encoded as a test, not ju
 
 24 tests, `tests/behavior/{connect,tenants,admin-access,rotate-keys}.spec.ts`.
 
+`tests/behavior/tower-tls.spec.ts` is the one behavior spec that opens real sockets (I-0001,
+ADR 0113). It runs TLS handshakes against local https servers holding certificates shaped like
+tower's SPIRE SVID (a `spiffe://` URI SAN only), generated per run by
+`tests/helpers/spiffe-test-certs.ts`. It shows plain `fetch` refuses tower, which is what
+`NODE_TLS_REJECT_UNAUTHORIZED=0` used to hide, and that `src/lib/server/tower-tls.ts` accepts
+tower through the trust bundle while refusing a wrong CA, a wrong trust domain, and a certificate
+with no SPIFFE ID. The Workload API is a fake stream. `hooks.server.ts`'s `handleFetch` sends
+`event.fetch` calls to an https tower through that module.
+
 ### `tests/e2e/*.spec.ts` — full flows through a real browser, backend still faked
 
 Playwright drives a real Chromium browser against the real, built steward server
