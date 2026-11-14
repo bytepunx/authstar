@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 98
-      output: 35091
-      cache_read: 12993390
-      cache_write: 255231
-      cost: 4.8352
+      input: 80
+      output: 25200
+      cache_read: 12940999
+      cache_write: 218541
+      cost: 4.5398
 ---
 # T-0111 integration/README.md drops the in-cluster JWKS gap and documents the TLS front
 

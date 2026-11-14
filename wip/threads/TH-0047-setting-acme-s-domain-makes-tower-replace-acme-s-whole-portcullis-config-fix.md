@@ -4,10 +4,10 @@ title: "Setting acme's domain makes tower replace acme's whole portcullis config
 anchor:
   path: wip/kanban/stories/S-0017-golden-path-reads-chronicle-s-report-with-a-portcullis-forwarded-es256-token.md
   item: S-0017
-status: answered
+status: resolved
 participants: [agent-S-0017, bytepunx]
 created: 2026-11-13T21:41:20Z
-updated: 2026-11-13T21:42:06Z
+updated: 2026-11-14T09:30:30Z
 ---
 
 # TH-0047 Setting acme's domain makes tower replace acme's whole portcullis config: fix tower, or work around it in the harness?
@@ -31,3 +31,6 @@ The rest of S-0017 does not wait on this answer. That covers the TLS front, the 
 
 ### 2026-11-13T21:42:06Z bytepunx
 1
+
+### 2026-11-14T09:30:30Z bytepunx
+Resolved: S-0017 was accepted

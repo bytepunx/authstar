@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 63
-      output: 22385
-      cache_read: 8288456
-      cache_write: 162811
-      cost: 3.0843
+      input: 51
+      output: 16075
+      cache_read: 8255037
+      cache_write: 139407
+      cost: 2.8959
 ---
 # T-0137 Tower's portcullis registration adds only _admin to a tenant portcullis already configures
 

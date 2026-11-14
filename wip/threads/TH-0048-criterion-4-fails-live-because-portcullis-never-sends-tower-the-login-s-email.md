@@ -4,10 +4,10 @@ title: "Criterion 4 fails live because portcullis never sends tower the login's 
 anchor:
   path: wip/kanban/stories/S-0017-golden-path-reads-chronicle-s-report-with-a-portcullis-forwarded-es256-token.md
   item: S-0017
-status: answered
+status: resolved
 participants: [agent-S-0017, bytepunx]
 created: 2026-11-13T22:32:23Z
-updated: 2026-11-14T05:01:49Z
+updated: 2026-11-14T09:30:30Z
 ---
 
 # TH-0048 Criterion 4 fails live because portcullis never sends tower the login's email, so no invite can be redeemed: fix portcullis in S-0017?
@@ -35,3 +35,6 @@ Everything else is done. The close-out passed at e0f5521. I am waiting on this a
 
 ### 2026-11-14T05:01:49Z bytepunx
 1
+
+### 2026-11-14T09:30:30Z bytepunx
+Resolved: S-0017 was accepted

@@ -3,11 +3,11 @@ id: S-0017
 type: story
 nature: remediation
 title: Golden path reads chronicle's report with a portcullis-forwarded ES256 token
-status: in-progress
+status: done
 parent: E-0003
 owner: bytepunx
 created: 2026-11-06T18:29:54Z
-updated: 2026-11-14T05:03:09Z
+updated: 2026-11-14T09:30:30Z
 transitions:
   - to: ready
     at: 2026-11-13T21:35:57Z
@@ -15,13 +15,31 @@ transitions:
   - to: in-progress
     at: 2026-11-13T21:36:03Z
     by: agent-S-0017
+  - to: review
+    at: 2026-11-14T08:48:12Z
+    by: agent-S-0017
+  - to: in-progress
+    at: 2026-11-14T09:01:15Z
+    by: flai
+  - to: review
+    at: 2026-11-14T09:10:38Z
+    by: agent-S-0017
+  - to: in-progress
+    at: 2026-11-14T09:11:31Z
+    by: flai
+  - to: review
+    at: 2026-11-14T09:29:59Z
+    by: agent-S-0017
+  - to: done
+    at: 2026-11-14T09:30:30Z
+    by: bytepunx
 blocked:
   - from: 2026-11-13T22:32:42Z
     until: 2026-11-14T05:03:09Z
     reason: awaiting the operator on TH-0035
 tags: [integration]
 topics: [analytics, tls]
-touches: [integration/scripts/harness-tls.sh, integration/scripts/deploy.sh, integration/manifests/14-chronicle.yaml, integration/config/authstar/chronicle.yaml, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md, design/issues/summary.md, scripts/kluster-deploy.sh, design/stories/tower/012-tenant-creation-and-provisioning.md, tower/spec/behavior/provisioning.spec.ts, tower/src/routes/provisioning.ts, design/issues/I-0025-signet-refuses-getserviceconfig-on-the-workload-listener-which-tower-s.md, tower/spec/lib/fakes.ts]
+touches: [integration/scripts/harness-tls.sh, integration/scripts/deploy.sh, integration/manifests/14-chronicle.yaml, integration/config/authstar/chronicle.yaml, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md, design/issues/summary.md, scripts/kluster-deploy.sh, design/stories/tower/012-tenant-creation-and-provisioning.md, tower/spec/behavior/provisioning.spec.ts, tower/src/routes/provisioning.ts, design/issues/I-0025-signet-refuses-getserviceconfig-on-the-workload-listener-which-tower-s.md, tower/spec/lib/fakes.ts, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/stories/proxy/006-oauth2-callback.md, portcullis/crates/authstar-middleware/src/identities.rs, portcullis/crates/authstar-middleware/src/oauth/callback.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, design/issues/I-0026-a-kluster-deploy-s-image-build-fails-when-docker-hub-s-token-endpoint-drops-the.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -29,20 +47,24 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3401
+  seconds: 6263
   priced_by: harness
   turns:
     - day: 2026-11-13
       ceremony: 4
       test_runs: 1
       work: 111
+    - day: 2026-11-14
+      ceremony: 1
+      hand_edits: 2
+      work: 75
   models:
     - model: claude-opus-5-5
-      input: 466
-      output: 166803
-      cache_read: 61763015
-      cache_write: 1213220
-      cost: 22.9835
+      input: 648
+      output: 203480
+      cache_read: 104492242
+      cache_write: 1764613
+      cost: 36.6568
   strategic:
     - kind: planner
       seconds: 450
@@ -61,15 +83,15 @@ usage:
           cache_write: 143434
           cost: 2.2549
     - kind: orchestrator
-      seconds: 95
+      seconds: 356
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 68
-          output: 507
-          cache_read: 2052784
-          cache_write: 272804
-          cost: 2.6724
+          input: 138
+          output: 989
+          cache_read: 4278331
+          cache_write: 632959
+          cost: 5.6657
 cost_of_delay:
   value: 30
   by: planner-S-0017
@@ -94,7 +116,7 @@ The integration harness's golden path reads a chronicle report through portculli
 - [x] Inside the cluster, `https://authstar.<acme's domain>/.well-known/jwks.json` resolves to portcullis and serves over TLS. The cert is one chronicle trusts.
 - [x] The golden path's step 1 gives `acme` a domain, so tower answers it to `GET /tenants/acme`.
 - [x] Chronicle's harness config reaches tower and the JWKS host, and `NODE_TLS_REJECT_UNAUTHORIZED=0` is not added beyond what I-0001 already records.
-- [ ] Step 6 of `integration/scripts/scenario-golden-path.sh` reads chronicle's auth-funnel report through a portcullis application with step 2's session cookie, and passes on a running harness.
+- [x] Step 6 of `integration/scripts/scenario-golden-path.sh` reads chronicle's auth-funnel report through a portcullis application with step 2's session cookie, and passes on a running harness.
 - [x] `integration/README.md` no longer lists the in-cluster JWKS gap.
 
 ## Tasks
@@ -106,6 +128,9 @@ The integration harness's golden path reads a chronicle report through portculli
 - T-0137 Tower's portcullis registration adds only _admin to a tenant portcullis already configures
 - T-0138 Tower's portcullis registration does not read portcullis's config, which signet refuses on the workload listener
 - T-0139 I-0007 is closed once the golden path passes on a running harness
+- T-0140 Portcullis sends the login's email to tower's /identities/resolve, so a new account's contact is the invite's
+- T-0141 The golden path takes its namespace, prefix, and tokens from flai's FLAI_KLUSTER_* variables, so flai serve's checks run it against the story's namespace
+- T-0142 Golden path step 5 reads only its own invite's herald outcome, not the first-admin invite's retries
 
 ## Notes
 
@@ -156,3 +181,7 @@ Forecast: 4h. `flai forecast` gave 6m, then 18m with the touches: 66 s per unit 
 Cost of delay: 30.00 USD a week, as `flai cod S-0017` worked it out. S-0017 has no inputs of its own. E-0003's inputs (30m of time lost a cycle) give 75.00 USD a week, and S-0017's 4h of the 10h forecast over E-0003's two open stories without inputs is its share. It stands.
 
 Criterion 4 needs a running harness. The story's agent runs no cluster commands on this host (D-0026), and config reaches the cluster only through signet's sync from `bytepunx/authstar-integration` (TH-0031, D-0034). So the operator runs step 6, or allows the agent to as on TH-0031.
+
+### Criterion 4
+
+Verified by flai serve's `golden-path` check on s-0017. At 8b27d11, steps 1, 2, 3, 4, and 6 passed, including the chronicle trust proof and the auth-funnel report read through portcullis with step 2's session cookie. Step 5 then failed on the first-admin invite's herald retry. T-0142 fixed that at bab5ba6, and the deploy and checks passed there.

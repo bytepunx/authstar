@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 20
-      output: 6994
-      cache_read: 2589713
-      cache_write: 50870
-      cost: 0.9637
+      input: 16
+      output: 5023
+      cache_read: 2579271
+      cache_write: 43557
+      cost: 0.9048
 ---
 # T-0107 Each deploy loads a harness CA and a cert for authstar.acme.authstar.app into the namespace as Secret authstar-tls
 

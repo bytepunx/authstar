@@ -2,9 +2,9 @@
 id: D-0041
 title: "Setting acme's domain makes tower replace acme's whole portcullis config: fix tower, or work around it in the harness: 1"
 kind: answer
-sources: [TH-0047]
-topics: [analytics, tls, integration, shell, code, all]
-paths: [integration/scripts/harness-tls.sh, integration/scripts/deploy.sh, integration/manifests/14-chronicle.yaml, integration/config/authstar/chronicle.yaml, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md, design/issues/summary.md, scripts/kluster-deploy.sh]
+sources: [TH-0047, S-0017, T-0137, T-0138]
+topics: [tower, node, integration, code, all]
+paths: [tower/src/routes/provisioning.ts, tower/spec/behavior/provisioning.spec.ts, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, design/stories/tower/012-tenant-creation-and-provisioning.md]
 date: 2026-11-13
 status: active
 absorbed_by: ""
@@ -14,18 +14,12 @@ cited: []
 
 # D-0041 Setting acme's domain makes tower replace acme's whole portcullis config: fix tower, or work around it in the harness: 1
 
-The operator, bytepunx, answered TH-0047 at 2026-11-13T21:42:06Z.
+Setting a tenant's domain is fixed in tower, not worked around in the harness: tower's portcullis registration must not replace a tenant entry portcullis already configures.
 
-What was asked:
+S-0017's agent asked on TH-0047: when a domain is set, tower's `completeDomainDependentProvisioning` (`tower/src/routes/provisioning.ts`) patches portcullis's config with a JSON Patch `add` at `/tenants/<slug>`, which "replaces acme's whole entry": its other applications and its cookie go, leaving one `_admin` application. "This is a tower defect beyond the harness. Setting a domain wipes any tenant's applications that were configured another way." It offered three options: (1) fix tower in S-0017, so that tower adds only `/tenants/<slug>/applications/_admin` when the tenant already has an entry, and the whole tenant otherwise; (2) a two-pass harness workaround with no tower change; (3) a separate remediation story.
 
-```text
-Criterion 2 needs step 1 to give `acme` a domain. When a domain is set, tower's `completeDomainDependentProvisioning` (`tower/src/routes/provisioning.ts`) patches portcullis's config with a JSON Patch `add` at `/tenants/acme`. That replaces acme's whole entry: the harness's `web` application on `acme.authstar.app`, the new `chronicle` application, and the cookie (`secure: true`) all go. What is left is one `_admin` application whose upstream is web in namespace `authstar-platform`. The deploy grants tower `put` on portcullis's bundle (`scripts/kluster-signet.sh`), so the patch will succeed.…
-```
+The operator, bytepunx, answered at 2026-11-13T21:42:06Z: "1", the recommended fix in S-0017.
 
-The answer:
+S-0017 did it in T-0137, and T-0138 changed how tower decides: tower cannot read portcullis's config, since signet refuses `GetServiceConfig` on the workload listener (I-0025). So registration "tries the narrow `_admin` add first and falls back to the whole tenant only when signet rejects the patch itself". A wrong fallback fails rather than wiping a configured tenant.
 
-```text
-1
-```
-
-Source: TH-0047.
+Source: TH-0047, S-0017, T-0137, T-0138.

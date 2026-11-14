@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 21
-      output: 7345
-      cache_read: 2719585
-      cache_write: 53421
-      cost: 1.012
+      input: 17
+      output: 5275
+      cache_read: 2708620
+      cache_write: 45742
+      cost: 0.9502
 ---
 # T-0109 Chronicle's pod resolves authstar.acme.authstar.app to a TLS front that proxies to portcullis, and trusts the harness CA
 

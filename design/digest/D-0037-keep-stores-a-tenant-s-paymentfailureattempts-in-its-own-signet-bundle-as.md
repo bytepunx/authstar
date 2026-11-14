@@ -9,7 +9,7 @@ date: 2026-11-13
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0049]
 ---
 
 # D-0037 Keep stores a tenant's paymentFailureAttempts in its own signet bundle as stripe-payment-failure-attempts-<slug>, beside the Stripe secrets; an unreadable value reads as unset, so 3

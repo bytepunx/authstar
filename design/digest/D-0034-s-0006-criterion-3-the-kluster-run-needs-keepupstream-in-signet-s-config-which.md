@@ -9,7 +9,7 @@ date: 2026-11-09
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0017, TH-0035]
+cited: [S-0017, TH-0035, TH-0049]
 ---
 
 # D-0034 S-0006 criterion 3: the kluster run needs keepUpstream in signet's config, which syncs only from bytepunx/authstar-integration's main: the farmhash issue should be corrected now. let's go with your…

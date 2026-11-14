@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 50.2180
-accrued_seconds: 3029
-tasks_completed: 166
-last_run: 2026-11-14T07:44:36Z
+accrued_cost: 54.5530
+accrued_seconds: 3416
+tasks_completed: 180
+last_run: 2026-11-14T09:16:56Z
 ---
 
 # Orchestrator activity
@@ -1173,6 +1173,104 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 11
 - Cost: 0.1067 USD, estimated
+
+### 2026-11-14T08:27:24Z
+
+- Summary: Release-due on S-0025 (S-0005, S-0025 accepted, unreleased; judgement policy, 0 USD/week, not met): took no action, because system-flow.yaml has no orchestration block, so publish is off and I neither evaluate nor publish.
+- Items: S-0025, S-0005
+- Seconds: 18
+- Cost: 0.4862 USD, estimated
+
+### 2026-11-14T08:27:35Z
+
+- Summary: I didn't publish anything: publishing is off for this project. `system-flow.yaml` has no `orchestration` block, so every orchestrator permission, `publish` included, is off by default.
+- Items: none
+- Seconds: 11
+- Cost: 0.1125 USD, estimated
+
+### 2026-11-14T08:49:14Z
+
+- Summary: review:S-0017: took no action. system-flow.yaml has no orchestration block, so accept_reviews and every other permission is off. S-0017 stays in review for the operator. Its close-out passed at head 771a8f5, but criterion 4 is unticked and TH-0047 and TH-0048 are answered but not resolved, so the queue lists it ineligible.
+- Items: S-0017
+- Seconds: 23
+- Cost: 0.6621 USD, estimated
+
+### 2026-11-14T08:49:26Z
+
+- Summary: I didn't accept S-0017. `system-flow.yaml` has no `orchestration` block, so `accept_reviews` and all my other permissions are off. S-0017 stays in review for you.
+- Items: none
+- Seconds: 12
+- Cost: 0.1294 USD, estimated
+
+### 2026-11-14T09:02:25Z
+
+- Summary: TH-0051 (S-0017's kluster checks failed at golden-path): no action. The thread's only entry is flai serve's notice, which the orchestrator leaves alone, and system-flow.yaml sets no orchestration.permissions, so answer_threads and every other permission is off. flai serve has already sent S-0017 back to in-progress and restarted agent-S-0017 to fix it or say on TH-0051 that the cause is outside the story.
+- Items: S-0017, TH-0051
+- Seconds: 21
+- Cost: 0.3943 USD, estimated
+
+### 2026-11-14T09:02:48Z
+
+- Summary: I took no action on TH-0051, and this run is over.
+- Items: none
+- Seconds: 23
+- Cost: 0.2051 USD, estimated
+
+### 2026-11-14T09:05:20Z
+
+- Summary: TH-0051 (S-0017 kluster checks failed): left for the operator. system-flow.yaml sets no orchestration.permissions, so answer_threads is off. S-0017's agent reports the fix at c92154e and is returning the story to review, after which flai serve redeploys and reruns the checks.
+- Items: TH-0051, S-0017
+- Seconds: 27
+- Cost: 0.3978 USD, estimated
+
+### 2026-11-14T09:05:39Z
+
+- Summary: I didn't reply to TH-0051 (S-0017's failed kluster checks), and it is still waiting on you. `system-flow.yaml` has no `orchestration` block, so every permission is off by default, including `answer_threads`.
+- Items: none
+- Seconds: 19
+- Cost: 0.1035 USD, estimated
+
+### 2026-11-14T09:13:29Z
+
+- Summary: review:S-0017: took no action. flai serve sent S-0017 back to in-progress at 09:11:31Z (kluster deploy failed at build-tower, TH-0052), so it is not in review; system-flow.yaml has no orchestration block, so accept_reviews and answer_threads are off by default.
+- Items: S-0017
+- Seconds: 56
+- Cost: 0.5410 USD, estimated
+
+### 2026-11-14T09:13:47Z
+
+- Summary: I did not accept S-0017. It is no longer in review, and accepting it isn't allowed in this project yet.
+- Items: none
+- Seconds: 18
+- Cost: 0.1263 USD, estimated
+
+### 2026-11-14T09:14:49Z
+
+- Summary: Left TH-0052 (S-0017's kluster deploy failed at build-tower: Docker Hub's token endpoint dropped the connection) to the operator: system-flow.yaml has no orchestration block, so answer_threads and every other permission is off.
+- Items: TH-0052, S-0017
+- Seconds: 44
+- Cost: 0.5012 USD, estimated
+
+### 2026-11-14T09:15:00Z
+
+- Summary: I left TH-0052 for you and took no action on it. `system-flow.yaml` has no `orchestration` block, so `answer_threads` and all my other permissions are off.
+- Items: none
+- Seconds: 11
+- Cost: 0.1081 USD, estimated
+
+### 2026-11-14T09:16:42Z
+
+- Summary: Left TH-0052 (S-0017's kluster deploy failed on Docker Hub's token endpoint) unanswered: system-flow.yaml sets no orchestration block, so answer_threads and every other permission are off. S-0017's agent says it will return S-0017 to review at c92154e for flai serve to redeploy. If Docker Hub keeps refusing, restoring registry access is the operator's job.
+- Items: S-0017, TH-0052
+- Seconds: 90
+- Cost: 0.4969 USD, estimated
+
+### 2026-11-14T09:16:56Z
+
+- Summary: I did not reply to TH-0052, because `system-flow.yaml` doesn't give me permission to. The file has no `orchestration` block, so `answer_threads` and every other orchestrator permission are off.
+- Items: none
+- Seconds: 14
+- Cost: 0.0706 USD, estimated
 
 ## Refusals
 

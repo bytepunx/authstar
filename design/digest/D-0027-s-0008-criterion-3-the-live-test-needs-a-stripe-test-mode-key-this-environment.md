@@ -9,7 +9,7 @@ date: 2026-11-09
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0049]
 ---
 
 # D-0027 S-0008 criterion 3: the live test needs a Stripe test-mode key this environment lacks: the key is set in the environment but when I run the test script I see 1 skipped test file with 12 skipped tests

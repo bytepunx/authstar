@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 128
-      output: 45677
-      cache_read: 16913148
-      cache_write: 332227
-      cost: 6.2938
+      input: 104
+      output: 32803
+      cache_read: 16844952
+      cache_write: 284469
+      cost: 5.9094
 ---
 # T-0110 Golden path gives acme a domain, logs in with the first-admin invite, and step 6 reads chronicle's report through portcullis
 

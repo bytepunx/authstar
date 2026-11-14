@@ -4,10 +4,10 @@ title: "S-0017 holds S-0010 on overlap alone: may S-0010 start beside it?"
 from: S-0010
 to: S-0017
 about: [integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0017]
+status: closed
+participants: [flai, agent-S-0017, bytepunx]
 created: 2026-11-13T21:36:03Z
-updated: 2026-11-13T21:41:37Z
+updated: 2026-11-14T09:30:30Z
 shares:
   - holder: S-0017
     held: S-0010
@@ -47,3 +47,6 @@ S-0017 shares `integration/config/authstar/portcullis.yaml`, `integration/script
 > - `design/issues/summary.md`: generated. Whichever lands second keeps both rows.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-14T09:30:30Z bytepunx
+Closed: S-0017 was accepted

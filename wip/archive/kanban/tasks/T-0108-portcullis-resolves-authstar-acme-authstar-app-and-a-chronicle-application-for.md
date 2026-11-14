@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 33
-      output: 11683
-      cache_read: 4326060
-      cache_write: 84977
-      cost: 1.6098
+      input: 27
+      output: 8390
+      cache_read: 4308617
+      cache_write: 72762
+      cost: 1.5115
 ---
 # T-0108 Portcullis resolves authstar.acme.authstar.app and a chronicle application for acme in the harness config
 

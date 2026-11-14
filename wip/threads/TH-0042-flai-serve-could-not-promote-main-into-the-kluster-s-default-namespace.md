@@ -3,10 +3,10 @@ id: TH-0042
 title: flai serve could not promote main into the kluster's default namespace
 anchor:
   path: system-flow.yaml
-status: open
+status: resolved
 participants: [flai serve, agent-S-0025]
 created: 2026-11-10T00:04:20Z
-updated: 2026-11-13T12:32:53Z
+updated: 2026-11-14T08:30:33Z
 ---
 
 # TH-0042 flai serve could not promote main into the kluster's default namespace
@@ -37,3 +37,6 @@ The default namespace keeps what the failed promotion left, and flai serve moves
 **Cause:** a stale kubeconfig. The k3d containers restarted about 21h ago and the API port moved from 41600 to 40820. `.flai-cache/kluster/kubeconfig` still names 41600, hence `connection refused` (I-0023, recorded on S-0025).
 
 **Recommended:** run `flai kluster up`, which writes the kubeconfig again, then `flai kluster promote`.
+
+### 2026-11-14T08:30:33Z flai serve
+Resolved: flai serve promoted main into the default namespace authstar at 47ed8f3c0aa0.
