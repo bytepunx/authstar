@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 54.5530
-accrued_seconds: 3416
-tasks_completed: 180
-last_run: 2026-11-14T09:16:56Z
+accrued_cost: 55.5427
+accrued_seconds: 3471
+tasks_completed: 184
+last_run: 2026-11-14T09:31:37Z
 ---
 
 # Orchestrator activity
@@ -1271,6 +1271,34 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 14
 - Cost: 0.0706 USD, estimated
+
+### 2026-11-14T09:30:52Z
+
+- Summary: review:S-0017 needed nothing: the operator (bytepunx) accepted and archived S-0017 at 2026-11-14T09:30:30Z (commit eea52c5); system-flow.yaml sets no orchestration permissions, so no acceptance, release evaluation, or publish was mine to do.
+- Items: S-0017
+- Seconds: 18
+- Cost: 0.3391 USD, estimated
+
+### 2026-11-14T09:31:04Z
+
+- Summary: I took no action on S-0017: you had already accepted it. The move to `done` and archive happened at 2026-11-14T09:30:30Z, in commit `eea52c5`.
+- Items: none
+- Seconds: 12
+- Cost: 0.0625 USD, estimated
+
+### 2026-11-14T09:31:27Z
+
+- Summary: Release-due after S-0017's acceptance: took no action, because system-flow.yaml has no orchestration block, so publish (like every permission) is off. Did not evaluate or publish. The prime pack's evaluation: judgement policy, not met, 3 pending (S-0005, S-0017, S-0025), 30 USD/week, S-0005 and S-0025 unvalued. Releasing stays with the operator.
+- Items: S-0017
+- Seconds: 15
+- Cost: 0.4973 USD, estimated
+
+### 2026-11-14T09:31:37Z
+
+- Summary: I didn't publish a release after S-0017 was accepted, because I don't have permission to. `system-flow.yaml` has no `orchestration` block, so every permission is off, `publish` included.
+- Items: none
+- Seconds: 10
+- Cost: 0.0908 USD, estimated
 
 ## Refusals
 
