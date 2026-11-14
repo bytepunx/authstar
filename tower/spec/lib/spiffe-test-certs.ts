@@ -53,10 +53,23 @@ export async function generateTestCa(): Promise<GeneratedCa> {
   return { cert, certPem: cert.toString('pem'), keys }
 }
 
+// The window a leaf certificate is valid in.
+export interface Validity {
+  notBefore: Date
+  notAfter: Date
+}
+
 // `spiffeId` set to `undefined` produces a cert with no SPIFFE URI SAN at
 // all -- useful for proving `requireSpiffePeer` rejects a validly-CA-signed
 // cert that simply isn't a SPIFFE identity, not just an absent cert.
-export async function generateLeafCert(ca: GeneratedCa, commonName: string, spiffeId: string | undefined): Promise<GeneratedCert> {
+// `validity` defaults to a minute ago until an hour from now; a window in
+// the past mints an already-expired SVID (`spiffe-svid-rotation.spec.ts`).
+export async function generateLeafCert(
+  ca: GeneratedCa,
+  commonName: string,
+  spiffeId: string | undefined,
+  validity: Validity = { notBefore: new Date(Date.now() - 60_000), notAfter: new Date(Date.now() + 3600_000) },
+): Promise<GeneratedCert> {
   const keys = await generateKeyPair()
   const extensions: x509.Extension[] = [
     new x509.BasicConstraintsExtension(false),
@@ -72,8 +85,8 @@ export async function generateLeafCert(ca: GeneratedCa, commonName: string, spif
     issuer: ca.cert.subject,
     publicKey: keys.publicKey,
     signingKey: ca.keys.privateKey,
-    notBefore: new Date(Date.now() - 60_000),
-    notAfter: new Date(Date.now() + 3600_000),
+    notBefore: validity.notBefore,
+    notAfter: validity.notAfter,
     extensions,
   }, crypto)
 
