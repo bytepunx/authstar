@@ -10,6 +10,7 @@ import { createSignetStripeConfigStore } from './lib/signet-stripe-config-store.
 import { createRoleReferenceCache } from './lib/role-reference-cache.js'
 import { startRoleReferenceConsumer } from './lib/role-reference-consumer.js'
 import { createTowerReferenceClient, createRoleReferenceBackfill } from './lib/role-reference-backfill.js'
+import { towerFetchFor } from './lib/tower-tls.js'
 import { createAmqpEntitlementPublisher, ENTITLEMENT_EXCHANGE } from './lib/amqp-entitlement-publisher.js'
 import { createConsequentSequenceProvider } from './lib/consequent-sequence-provider.js'
 import { createSecretHasher } from './lib/hash.js'
@@ -150,8 +151,12 @@ async function main(): Promise<void> {
   // sweep -- tower has no endpoint to enumerate every tenant).
   const towerBaseUrl = (bundle.towerBaseUrl as string | undefined) ?? secrets.towerBaseUrl
   if (!towerBaseUrl) throw new Error('signet bundle missing towerBaseUrl')
+  // Every call to tower goes through this fetch: for an https:// base URL it
+  // verifies tower's SVID against the SPIRE trust bundle and trust domain,
+  // so keep needs no NODE_TLS_REJECT_UNAUTHORIZED=0 (ADR 0113, I-0001).
+  const towerFetch = await towerFetchFor(towerBaseUrl)
   const roleCache = createRoleReferenceCache()
-  const roleBackfill = createRoleReferenceBackfill(roleCache, createTowerReferenceClient(towerBaseUrl))
+  const roleBackfill = createRoleReferenceBackfill(roleCache, createTowerReferenceClient(towerBaseUrl, towerFetch))
 
   const roleReferenceQueue = await amqpChannel.assertQueue('keep.role-reference', { durable: true })
   await amqpChannel.bindQueue(roleReferenceQueue.queue, ENTITLEMENT_EXCHANGE, 'application.#')
@@ -176,7 +181,7 @@ async function main(): Promise<void> {
   // caches the result for the life of the process, so this is at most one
   // HTTP round trip per tenant, not per request.
   const resolveTenantDomain = async (tenantSlug: string): Promise<string | undefined> => {
-    const response = await fetch(`${towerBaseUrl}/tenants/${tenantSlug}`)
+    const response = await towerFetch(`${towerBaseUrl}/tenants/${tenantSlug}`)
     if (!response.ok) return undefined
     const state = (await response.json()) as { domain?: string }
     return state.domain

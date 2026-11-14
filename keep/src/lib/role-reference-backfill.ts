@@ -64,9 +64,12 @@ export interface TowerReferenceClient {
 // matching every other GET route in tower's own current route table), so
 // no auth header is sent; see tower's own TESTING.md for the tracked
 // mTLS/SPIFFE-at-the-fastify-layer gap this inherits until that's closed.
-export function createTowerReferenceClient(baseUrl: string): TowerReferenceClient {
+// `towerFetch` is `towerFetchFor(baseUrl)` from `tower-tls.ts` in the server,
+// which verifies tower's certificate against the SPIRE trust bundle for an
+// https:// base URL (ADR 0113); it defaults to global fetch.
+export function createTowerReferenceClient(baseUrl: string, towerFetch: typeof fetch = fetch): TowerReferenceClient {
   async function getJson<T>(path: string): Promise<T> {
-    const response = await fetch(`${baseUrl}${path}`)
+    const response = await towerFetch(`${baseUrl}${path}`)
     if (!response.ok) {
       throw new Error(`tower returned ${response.status} for ${path}`)
     }
