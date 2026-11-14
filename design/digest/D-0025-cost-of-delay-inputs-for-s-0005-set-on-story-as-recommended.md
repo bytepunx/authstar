@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0019, TH-0025]
 ---
 
 # D-0025 Cost of delay inputs for S-0005: set on story as recommended

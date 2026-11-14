@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 7.9860
-accrued_seconds: 798
-tasks_completed: 5
-last_run: 2026-11-10T00:05:55Z
+accrued_cost: 10.0476
+accrued_seconds: 983
+tasks_completed: 6
+last_run: 2026-11-13T12:11:21Z
 ---
 
 # Curator activity
@@ -51,3 +51,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0011, D-0012, D-0019, D-0026, D-0030, D-0031, D-0034, D-0035, D-0036
 - Seconds: 140
 - Cost: 1.7151 USD, estimated
+
+### 2026-11-13T12:11:21Z
+
+- Summary: Wrote D-0037, D-0038, D-0039 and D-0040 from S-0005's decisions. Merged TH-0031's two later answers into D-0034, moving them out of D-0036, and S-0005's live-test fix into D-0027. No entry absorbed, because no design document, convention or ADR on main states one yet. `flai digest compact` compacted nothing and recorded citers on 4 entries.
+- Trigger: accepted S-0005
+- Items: D-0019, D-0025, D-0026, D-0027, D-0034, D-0036, D-0037, D-0038, D-0039, D-0040
+- Seconds: 185
+- Cost: 2.0616 USD, estimated
