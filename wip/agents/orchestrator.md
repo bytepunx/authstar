@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 49.7009
-accrued_seconds: 2988
-tasks_completed: 164
-last_run: 2026-11-14T05:43:16Z
+accrued_cost: 50.2180
+accrued_seconds: 3029
+tasks_completed: 166
+last_run: 2026-11-14T07:44:36Z
 ---
 
 # Orchestrator activity
@@ -1159,6 +1159,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 18
 - Cost: 0.1066 USD, estimated
+
+### 2026-11-14T07:44:25Z
+
+- Summary: Left TH-0050 (S-0025: commit or keep out scripts/deploy-story.sh) for the operator: system-flow.yaml has no orchestration block, so answer_threads is off; no reply posted. S-0025 stays in review, held by TH-0049/TH-0050 open and a stale verify.
+- Items: S-0025
+- Seconds: 30
+- Cost: 0.4104 USD, estimated
+
+### 2026-11-14T07:44:36Z
+
+- Summary: I didn't reply on TH-0050: my permissions don't allow it, so the thread stays with you.
+- Items: none
+- Seconds: 11
+- Cost: 0.1067 USD, estimated
 
 ## Refusals
 

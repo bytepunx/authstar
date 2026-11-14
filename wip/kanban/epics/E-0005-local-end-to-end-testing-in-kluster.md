@@ -26,7 +26,7 @@ transitions:
 tags: []
 usage:
   source: sum
-  seconds: 6408
+  seconds: 6600
   priced_by: harness
   turns:
     - day: 2026-11-09
@@ -38,16 +38,16 @@ usage:
       ceremony: 3
       work: 103
     - day: 2026-11-14
-      ceremony: 3
-      test_runs: 2
-      work: 17
+      ceremony: 5
+      test_runs: 5
+      work: 30
   models:
     - model: claude-opus-5-5
-      input: 622
-      output: 170142
-      cache_read: 55560274
-      cache_write: 1286873
-      cost: 24.2921
+      input: 662
+      output: 182251
+      cache_read: 56713168
+      cache_write: 1358161
+      cost: 25.3353
   strategic:
     - kind: planner
       seconds: 8893
@@ -60,15 +60,15 @@ usage:
           cache_write: 135227
           cost: 2.9811
     - kind: orchestrator
-      seconds: 312
+      seconds: 342
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 164
-          output: 1168
-          cache_read: 4837785
-          cache_write: 896485
-          cost: 6.5505
+          input: 176
+          output: 1264
+          cache_read: 5124348
+          cache_write: 964768
+          cost: 6.9609
 ---
 # E-0005 Local end-to-end testing in kluster
 
