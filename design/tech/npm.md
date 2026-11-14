@@ -15,6 +15,15 @@ npm 12 runs no dependency's install script unless the project's `package.json` a
 
 Approve or deny with `npm install-scripts approve <pkg>` or `npm install-scripts deny <pkg>` in the project's folder. The command refuses the whole call with `ENOMATCH` when the project does not install a package it names. It reads what is installed in `node_modules`, so run `npm ci` first. It writes `package.json` even with `--dry-run`.
 
+## The guard
+
+`make install` runs `scripts/check-install-scripts.sh` after each project's `npm ci`, and fails, naming the project and the package, in two cases:
+
+- npm blocked an install script that the project's `allowScripts` neither approves nor denies. `npm install-scripts ls --json` lists each such script as a change `pending`, keyed by `<pkg>@<version>`, and exits 0 either way; `npm install-scripts ls` prints the same for a reader.
+- In herald, keep, or tower, a farmhash copy under `node_modules` does not load. Every copy is loaded, not only the hoisted one, since herald and keep install two versions.
+
+The approvals name exact versions, so a lockfile bump that moves farmhash blocks its build again; the guard makes that fail at `make install` instead of at the test tier. When it fails, run `npm install-scripts approve <pkg>` or `npm install-scripts deny <pkg>` in the project it names, add the decision to the table below, and run `make install` again.
+
 ## What each project approves
 
 | Project | Approved | Denied |

@@ -8,7 +8,8 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | `test.sh` | Behavior and e2e tiers: every npm project's `npm test`, then `cargo test` and clippy for portcullis (`make test`). Given project names, each an npm project's path from `lib-projects.sh` or `portcullis`, it runs only those, as the manifest's per-project test tiers do; an unknown name exits 2 and lists the known ones |
 | `integration.sh` | Integration tier: `npm run test:integration` in every service that has one; needs Docker (`make integration`) |
 | `smoke.sh` | The golden-path scenario in `integration/` against a running k3d cluster (`make smoke`) |
-| `install.sh` | `npm ci` in every npm project and `cargo fetch` for portcullis (`make install`) |
+| `install.sh` | `npm ci` in every npm project, each followed by `check-install-scripts.sh`, and `cargo fetch` for portcullis (`make install`) |
+| `check-install-scripts.sh` | `check-install-scripts.sh <project-dir>...`: after `npm ci`, fails naming the project and the package when npm blocked an install script that the project's `allowScripts` neither approves nor denies, or, in herald, keep, and tower, when an installed farmhash copy does not load ([design/tech/npm.md](../design/tech/npm.md)) |
 | `fetch.sh` | `git fetch --tags`: the remote's branch and tags into this checkout, since flai never fetches. The publish formula's first step, which runs it from the main checkout before `flai release --evaluate --require-met` and `flai release --pending` (ADR-0240) |
 | `lib-projects.sh` | Sourced by the above: the project lists and the `run_in` helper |
 | `lint-md.sh` | markdownlint-cli2 over every markdown file with `.markdownlint.yaml` (`make lint-md`); the `markdown` tier |
