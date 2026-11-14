@@ -3,11 +3,11 @@ id: S-0006
 type: story
 nature: feature
 title: Serve GET /_authstar/me/subscription for the subscription-status widget
-status: review
+status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-10T03:23:11Z
+updated: 2026-11-14T05:38:34Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -24,6 +24,9 @@ transitions:
   - to: review
     at: 2026-11-10T03:11:14Z
     by: bytepunx
+  - to: in-progress
+    at: 2026-11-13T20:06:47Z
+    by: bytepunx
 blocked:
   - from: 2026-11-09T07:19:49Z
     until: 2026-11-09T20:48:46Z
@@ -37,8 +40,12 @@ blocked:
   - from: 2026-11-10T02:53:08Z
     until: 2026-11-10T03:11:14Z
     reason: awaiting the operator on TH-0031
+  - from: 2026-11-13T21:39:49Z
+    until: 2026-11-14T05:38:34Z
+    reason: "criterion 3 waits on S-0017: step 4b answers 403 until the harness serves the tenant's JWKS (I-0007)"
 tags: [keep, portcullis]
 touches: [docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, keep/TESTING.md, keep/spec/behavior/me.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/me.ts, portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-proxy/tests/me_tests.rs, web/src/widgets/subscription-status.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md, design/adrs/README.md, integration/config/authstar/portcullis.yaml, design/issues/I-0014-a-story-branch-cannot-change-the-harness-s-signet-config-signet-syncs-it-from.md, design/issues/summary.md, design/issues/I-0015-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md]
+after: [S-0017]
 usage:
   source: log
   seconds: 4503
@@ -95,3 +102,5 @@ The `<authstar-subscription-status>` widget web already ships gets a real answer
 
 Criterion 3 is unticked: the golden-path step 4b is written and documented, but this session had no k3d cluster to run it on. Whoever next runs `integration/scripts/scenario-golden-path.sh` ticks it. Verified on 2026-10-21: keep `npm test` 156+2, portcullis `cargo test --workspace` and clippy clean, web `npm test` green.
 - 2026-11-06T17:56:48Z: moved to in-progress: Final criterion requires a test against kluster
+- 2026-11-13T20:06:47Z: moved to in-progress: Missing criteria
+- 2026-11-13: waits for S-0017 (`after`), the operator's choice: the golden path against namespace `s-0006` at 7a4cd57 passed steps 1 to 4, 5, and 6, and step 4b answered 403 from keep, which cannot fetch the tenant's JWKS in-cluster (I-0007). S-0017 writes the harness's TLS front and DNS that serve it; S-0006 re-runs step 4b on it and ticks criterion 3.

@@ -7,7 +7,7 @@ about: [design/system/overview.md, keep/spec/lib/fake-stripe-client.ts, keep/src
 status: open
 participants: [agent-S-0008, flai, agent-S-0006]
 created: 2026-11-06T17:48:36Z
-updated: 2026-11-10T03:17:10Z
+updated: 2026-11-13T21:40:14Z
 ---
 
 # MS-0002 T-0016 of S-0008 changed paths S-0006's claim covers
@@ -92,3 +92,21 @@ A write grew the claim of S-0006 to cover `design/issues/summary.md`, which the 
 T-0133 of S-0008 changed paths S-0006's claim covers.
 
 T-0133, Web reads a plan mapping's roles as keep's roles field (ADR-0108), committed 7b82bc3 on story/S-0008, `feat: [S-0008] web reads a plan mapping's roles as keep's roles field (ADR-0108)`, changing `docs/users/index.md`. It reaches the main branch when S-0008 is accepted; `git show 7b82bc3` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-13T20:06:47Z flai S-0008
+S-0006 holds S-0008 on overlap alone: may S-0008 start beside it?
+
+S-0008, "Plan-mapping editor picks from the tenant's live Stripe prices", is ready, and its claim overlaps S-0006's on `design/adrs/README.md`, `keep/src/lib/build-app.ts`, `keep/TESTING.md`, `docs/users/index.md`, `design/issues/summary.md`. It has no agent until it starts, so flai asks for it (ADR-0134).
+
+Its goal:
+
+> Creating a plan mapping in web lists the tenant's active Stripe prices and products instead of asking for a pasted price ID, as ADR-0046 requires.
+
+Answer in one of three ways:
+
+1. Narrow your touches with `flai touches S-0006 --remove <path>`, or on the task that names the path, if S-0006 will not change it: the hold clears when the claims no longer overlap.
+2. Share the paths with `flai message share MS-0002 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0008 can start.
+3. Reply with `message_reply` saying why the hold stands: S-0008 waits until S-0006 moves to review, is cancelled, or is sent back.
+
+### 2026-11-13T21:40:14Z agent-S-0006 S-0006 (settled)
+The hold stands for now. S-0006's changes to these paths are committed on story/S-0006 (head 6d70390), and it plans none beyond a possible fix to integration/scripts/scenario-golden-path.sh and integration/README.md when it re-runs step 4b. On 2026-11-13 the operator chose that S-0006 waits in progress for S-0017 (criterion 3, I-0007), knowing the holds stay. The paths can be shared instead if the operator asks.

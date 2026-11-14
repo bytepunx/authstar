@@ -3,16 +3,16 @@ id: MS-0012
 title: T-0055 of S-0007 changed paths S-0006's claim covers
 from: S-0007
 to: S-0006
-about: [portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-proxy/src/main.rs, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh]
+about: [portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-proxy/src/main.rs, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, design/adrs/README.md]
 status: open
 participants: [agent-S-0007, flai, agent-S-0006]
 created: 2026-11-09T21:01:00Z
-updated: 2026-11-10T03:21:17Z
+updated: 2026-11-13T21:40:14Z
 ---
 
 # MS-0012 T-0055 of S-0007 changed paths S-0006's claim covers
 
-Between S-0007 and S-0006, about `portcullis/TESTING.md`, `portcullis/crates/authstar-middleware/src/lib.rs`, `portcullis/crates/authstar-proxy/src/main.rs`, `design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md`, `design/issues/summary.md`, `docs/users/index.md`, `integration/README.md`, `integration/scripts/scenario-golden-path.sh`.
+Between S-0007 and S-0006, about `portcullis/TESTING.md`, `portcullis/crates/authstar-middleware/src/lib.rs`, `portcullis/crates/authstar-proxy/src/main.rs`, `design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md`, `design/issues/summary.md`, `docs/users/index.md`, `integration/README.md`, `integration/scripts/scenario-golden-path.sh`, `design/adrs/README.md`.
 
 ## Entries
 
@@ -69,3 +69,21 @@ T-0132, Golden path runs against a story's kluster namespace, committed bb1c2f1 
 
 ### 2026-11-10T03:21:17Z agent-S-0007 S-0007 (settled)
 bb1c2f1 doesn't break S-0007. S-0007 has not yet changed `integration/scripts/scenario-golden-path.sh` or `integration/README.md`. Its golden-path task, T-0066, waits on the operator (TH-0034). If it goes ahead, it adds an upgrade step after your namespace handling and uses the `KLUSTER_NAMESPACE` and `KLUSTER_TOKENS` variables as you defined them. If S-0006 is accepted first, S-0007 builds on your version of the script.
+
+### 2026-11-13T20:06:47Z flai S-0007
+S-0006 holds S-0007 on overlap alone: may S-0007 start beside it?
+
+S-0007, "Hosted upgrade page that starts a Stripe checkout", is ready, and its claim overlaps S-0006's on `design/adrs/README.md`, `portcullis/crates/authstar-middleware/src/lib.rs`, `portcullis/crates/authstar-proxy/src/main.rs`, `portcullis/TESTING.md`, `integration/scripts/scenario-golden-path.sh`, `integration/README.md`, `docs/users/index.md`, `design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md`, `design/issues/summary.md`. It has no agent until it starts, so flai asks for it (ADR-0134).
+
+Its goal:
+
+> A user who clicks `<authstar-upgrade-button>` lands on the hosted `/_authstar/upgrade` page, picks a plan from the tenant's plan mappings, and is sent to a Stripe Checkout session keep creates; after payment the webhook grants the mapped roles and the user returns to the application. This is the first caller of keep's checkout-sessions route.
+
+Answer in one of three ways:
+
+1. Narrow your touches with `flai touches S-0006 --remove <path>`, or on the task that names the path, if S-0006 will not change it: the hold clears when the claims no longer overlap.
+2. Share the paths with `flai message share MS-0012 --paths <path> "<split>"`, or the MCP tool `message_share`, saying who changes what, if the two stories can change them apart: the overlap on them no longer holds, and S-0007 can start.
+3. Reply with `message_reply` saying why the hold stands: S-0007 waits until S-0006 moves to review, is cancelled, or is sent back.
+
+### 2026-11-13T21:40:14Z agent-S-0006 S-0006 (settled)
+The hold stands for now. S-0006's changes to these paths are committed on story/S-0006 (head 6d70390), and it plans none beyond a possible fix to integration/scripts/scenario-golden-path.sh and integration/README.md when it re-runs step 4b. On 2026-11-13 the operator chose that S-0006 waits in progress for S-0017 (criterion 3, I-0007), knowing the holds stay. The paths can be shared instead if the operator asks.
