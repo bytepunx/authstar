@@ -3,15 +3,36 @@ id: T-0115
 type: task
 nature: remediation
 title: Give web's Playwright e2e free ports per run and never reuse a running server
-status: backlog
+status: done
 parent: S-0022
 owner: bytepunx
 created: 2026-11-09T22:09:59Z
-updated: 2026-11-09T22:09:59Z
-transitions: []
+updated: 2026-11-14T11:14:19Z
+transitions:
+  - to: ready
+    at: 2026-11-14T11:12:03Z
+    by: agent-S-0022
+  - to: in-progress
+    at: 2026-11-14T11:12:03Z
+    by: agent-S-0022
+  - to: done
+    at: 2026-11-14T11:14:19Z
+    by: agent-S-0022
 stream: S-0022
 tags: [web]
 touches: [web/playwright.config.ts, web/e2e/fixtures/urls.ts]
+usage:
+  source: log
+  seconds: 136
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 2333
+      cache_read: 1356586
+      cache_write: 14746
+      cost: 0.4319
 ---
 # T-0115 Give web's Playwright e2e free ports per run and never reuse a running server
 

@@ -2,12 +2,12 @@
 id: D-0013
 title: "me family reaches keep over plain HTTP, not SPIFFE mTLS: accept recommendation"
 kind: answer
-sources: [TH-0002]
-topics: []
-paths: []
+sources: [TH-0002, S-0006]
+topics: [keep, portcullis, rust, tls]
+paths: [portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, keep/src/routes/me.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md]
 date: 2026-11-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md#decision"
 asked_again: []
 cited: [T-0049, TH-0020]
 ---
@@ -28,4 +28,6 @@ The answer:
 accept recommendation
 ```
 
-Source: TH-0002.
+S-0006, accepted 2026-11-14, shipped it so, and recorded it as ADR-0111, which refines ADR-0071. Its narrative's Decisions: "Portcullis reaches keep over the plain HTTP client, as ADR-0095 chose for webhooks, not SPIFFE mTLS as ADR-0071 says, because the mTLS client is tower-only today."
+
+Source: TH-0002, S-0006.

@@ -3,16 +3,37 @@ id: T-0072
 type: task
 nature: remediation
 title: Steward verifies tower's certificate against the SPIRE trust bundle
-status: backlog
+status: done
 parent: S-0015
 owner: bytepunx
 created: 2026-11-06T18:10:11Z
-updated: 2026-11-06T18:10:11Z
-transitions: []
+updated: 2026-11-14T10:39:08Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:26:33Z
+    by: agent-S-0015
+  - to: in-progress
+    at: 2026-11-14T10:26:33Z
+    by: agent-S-0015
+  - to: done
+    at: 2026-11-14T10:39:08Z
+    by: agent-S-0015
 stream: S-0015
 tags: [steward, spiffe, mtls]
 touches: [steward/src/lib/server/tower-tls.ts, steward/src/hooks.server.ts, steward/tests/behavior/tower-tls.spec.ts, steward/tests/helpers/spiffe-test-certs.ts, steward/package.json, steward/package-lock.json, steward/TESTING.md]
 after: [T-0054]
+usage:
+  source: log
+  seconds: 755
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 5570
+      cache_read: 3508757
+      cache_write: 26519
+      cost: 1.0156
 ---
 # T-0072 Steward verifies tower's certificate against the SPIRE trust bundle
 

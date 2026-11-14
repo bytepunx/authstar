@@ -3,11 +3,11 @@ id: S-0013
 type: story
 nature: feature
 title: Steward shows tenant activity and stuck erasure requests
-status: in-progress
+status: done
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-14T09:34:03Z
+updated: 2026-11-14T17:29:38Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:54Z
@@ -15,6 +15,18 @@ transitions:
   - to: in-progress
     at: 2026-11-09T20:44:59Z
     by: agent-S-0013
+  - to: review
+    at: 2026-11-14T10:21:44Z
+    by: agent-S-0013
+  - to: in-progress
+    at: 2026-11-14T10:25:00Z
+    by: flai
+  - to: review
+    at: 2026-11-14T10:55:00Z
+    by: agent-S-0013
+  - to: done
+    at: 2026-11-14T17:29:38Z
+    by: bytepunx
 blocked:
   - from: 2026-11-09T21:21:36Z
     until: 2026-11-10T03:45:55Z
@@ -32,12 +44,16 @@ blocked:
     until: 2026-11-14T09:34:02Z
     reason: awaiting the operator on TH-0016
   - from: 2026-11-14T09:34:03Z
+    until: 2026-11-14T09:55:31Z
     reason: awaiting the operator on TH-0016
+  - from: 2026-11-14T09:55:32Z
+    until: 2026-11-14T09:55:40Z
+    reason: awaiting the operator on TH-0028
 tags: [steward]
-touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
+touches: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, steward/src/lib/components/StuckErasureRows.svelte, steward/src/routes/+layout.svelte, steward/src/routes/erasure-requests/stuck/+page.svelte, steward/tests/e2e/stuck-erasure-requests.spec.ts, steward/tests/e2e/tenant-stuck-erasures.spec.ts, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0027-golden-path-step-5-herald-cannot-decrypt-its-own-invite-after-the-key-rotation.md]
 usage:
   source: log
-  seconds: 2230
+  seconds: 5603
   priced_by: harness
   turns:
     - day: 2026-11-09
@@ -46,24 +62,27 @@ usage:
       work: 31
     - day: 2026-11-10
       work: 6
+    - day: 2026-11-14
+      ceremony: 6
+      work: 168
   models:
     - model: claude-opus-5-5
-      input: 222
-      output: 50793
-      cache_read: 14863253
-      cache_write: 876912
-      cost: 10.2276
+      input: 632
+      output: 107252
+      cache_read: 47172898
+      cache_write: 1146566
+      cost: 19.8494
   strategic:
     - kind: orchestrator
-      seconds: 64
+      seconds: 154
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 43
-          output: 354
-          cache_read: 1247012
-          cache_write: 235797
-          cost: 1.7056
+          input: 97
+          output: 737
+          cache_read: 2864199
+          cache_write: 429176
+          cost: 3.7632
 cost_of_delay:
   value: 23.53
   by: planner-S-0013
@@ -82,15 +101,18 @@ forecast:
 Operators see what story steward/004 specifies: a tenant's cross-service activity feed and the erasure requests that have stalled, using the client methods steward already has.
 
 ## Acceptance criteria
-- [ ] `/tenants/[slug]` gains an Activity section backed by `getActivity` and a Stuck Erasures section backed by `getStuckErasureRequests`
-- [ ] Both sections have loading, empty, and error states consistent with the page's existing sections
-- [ ] Behavior and e2e tests cover both against the fake tower
+- [x] `/tenants/[slug]` gains an Activity section backed by `getActivity` and a Stuck Erasures section backed by `getStuckErasureRequests`
+- [x] Both sections have loading, empty, and error states consistent with the page's existing sections
+- [x] Behavior and e2e tests cover both against the fake tower
 
 ## Tasks
 - T-0044 Steward's tower client and fake tower match tower's activity and stuck-erasure contracts
 - T-0045 Steward proxies a tenant's activity feed at GET /api/tenants/[slug]/activity
 - T-0046 Steward proxies stuck erasure requests at GET /api/erasure-requests/stuck
 - T-0047 Tenant page shows an Activity section with loading, empty, and error states
+- T-0143 Top-level Stuck Erasures view at /erasure-requests/stuck with threshold input and rows grouped by outstanding service
+- T-0144 Tenant page shows a Stuck Erasures section filtered to the tenant at 72 hours
+- T-0145 Steward's TESTING.md and design story 004 describe the activity and stuck-erasure views as built
 
 ## Notes
 
@@ -122,3 +144,4 @@ Figures:
 
 - Forecast 4h, not flai's 1h. flai has 1 done story of history where it needs 3, so it fell back to `planning.default_duration`. The plan is five tasks over about 12 files, with e2e tests, which is more than an hour of agent time. The delivery is flai's play-out moved out by the 3h added.
 - Cost of delay 23.53 USD a week, as `flai cod` gives it. It is S-0013's 4h share of the 17h forecast across E-0004's three open stories without inputs, applied to E-0004's 100 USD a week. That epic figure is the operator's penalty input. It moves when a sibling's forecast changes.
+- 2026-11-14T10:25:00Z: moved to in-progress: flai serve's checks of S-0013 against its kluster namespace ended failed, at the check golden-path, at commit b980be40d705

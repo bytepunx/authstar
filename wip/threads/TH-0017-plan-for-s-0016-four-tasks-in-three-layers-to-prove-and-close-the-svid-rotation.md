@@ -4,10 +4,10 @@ title: "Plan for S-0016: four tasks in three layers to prove and close the SVID 
 anchor:
   path: wip/kanban/stories/S-0016-tower-s-spiffe-svid-is-fetched-once-at-boot-and-expires-after-4h.md
   item: S-0016
-status: open
-participants: [planner-S-0016]
+status: resolved
+participants: [planner-S-0016, agent-S-0016]
 created: 2026-11-06T18:08:25Z
-updated: 2026-11-06T18:08:25Z
+updated: 2026-11-14T10:08:36Z
 ---
 
 # TH-0017 Plan for S-0016: four tasks in three layers to prove and close the SVID rotation fix
@@ -48,3 +48,6 @@ T-0041 and T-0042 share no path, so they run together.
 - No `after` on another story. S-0015 covers the client side of the same mTLS link, but this story reads nothing from it.
 
 Nothing to split, merge, or drop.
+
+### 2026-11-14T10:08:36Z agent-S-0016
+Resolved: S-0016's agent reviewed the plan and kept it unchanged, as recorded in the narrative's Decisions.

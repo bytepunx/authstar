@@ -71,15 +71,15 @@ usage:
       cost: 11.9161
   strategic:
     - kind: orchestrator
-      seconds: 164
+      seconds: 183
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 88
-          output: 623
-          cache_read: 2655621
-          cache_write: 401375
-          cost: 3.5296
+          input: 100
+          output: 714
+          cache_read: 2998475
+          cache_write: 455528
+          cost: 3.9872
 ---
 # S-0006 Serve GET /_authstar/me/subscription for the subscription-status widget
 

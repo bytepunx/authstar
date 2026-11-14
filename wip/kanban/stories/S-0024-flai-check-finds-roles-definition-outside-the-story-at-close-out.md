@@ -3,11 +3,14 @@ id: S-0024
 type: story
 nature: improvement
 title: "flai check finds `roles.definition` outside the story at close-out"
-status: backlog
+status: ready
 owner: bytepunx
 created: 2026-11-09T09:04:35Z
-updated: 2026-11-14T09:55:08Z
-transitions: []
+updated: 2026-11-14T10:09:21Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:09:21Z
+    by: bytepunx
 tags: []
 topics: [tooling]
 touches: [design/workflows/roles/orchestrator.md, design/workflows/roles/README.md, design/conventions/delegation.md, design/conventions/git.md, design/conventions/safety.md, design/conventions/work-management.md, system-flow.yaml, system-flow.lock.yaml, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/summary.md]
@@ -22,7 +25,7 @@ usage:
   models: []
   strategic:
     - kind: planner
-      seconds: 1168
+      seconds: 1174
       estimated: true
       models:
         - model: claude-haiku-5-5
@@ -32,27 +35,27 @@ usage:
           cache_write: 78118
           cost: 0.0429
         - model: claude-opus-5-5
-          input: 340
-          output: 45167
-          cache_read: 16953339
-          cache_write: 527731
-          cost: 7.8333
+          input: 342
+          output: 45495
+          cache_read: 17064924
+          cache_write: 530360
+          cost: 7.8832
     - kind: orchestrator
-      seconds: 40
+      seconds: 48
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 15
-          output: 119
-          cache_read: 589608
-          cache_write: 75853
-          cost: 0.7584
+          input: 18
+          output: 147
+          cache_read: 694191
+          cache_write: 90332
+          cost: 0.8955
 forecast:
   duration: 30m
-  delivery: 2026-11-17T00:09:00Z
-  basis: "Its own forecast of 30m; 12th in the pull order with an in-progress limit of 4, behind S-0013, S-0012, S-0007, S-0008, S-0010, S-0014, S-0015, S-0016, S-0018, S-0021, S-0022 and S-0023."
-  by: flai
-  at: 2026-11-14T09:55:08Z
+  delivery: 2026-11-17T00:24:00Z
+  basis: "flai forecast's 26m (126 s per unit over 9 done stories, size 12) raised to 30m for an unscoped flai check and a close-out whose system-flow.yaml change may select every tier (I-0010); delivery as flai gives it, 10th in the pull order."
+  by: planner-S-0024
+  at: 2026-11-14T10:08:33Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:54Z
@@ -75,30 +78,30 @@ This story remediates [I-0019](../../../design/issues/I-0019-flai-check-finds-ro
 
 ### Planning
 
-Cause, from both instances (S-0011, S-0020) and the template's changelog: flai 1.86.5 refuses `mcp__flai__verify` in `design/workflows/roles/orchestrator.md`'s `definition.tools`, because no entry of the file's own `tools` or a permission's `tools` grants `verify`. The project is on system-flow template 1.1.22. Template 1.1.24 (its S-0556) adds `verify` to the role file's `tools`, and its changelog says a project whose `orchestrator.md` predates it "takes its baseline from `flai upgrade`: until then `flai check` reports `roles.definition`".
+Cause, from its instances (seven by 2026-11-13: S-0006, S-0011, S-0020, S-0019, S-0005, S-0025, S-0017) and the template's changelog: flai refuses `mcp__flai__verify` in `design/workflows/roles/orchestrator.md`'s `definition.tools`, because no entry of the file's own `tools` or a permission's `tools` grants `verify`. The project is still on system-flow template 1.1.22 (`system-flow.yaml`, `system-flow.lock.yaml`, checked 2026-11-14). Template 1.1.24 (its S-0556) adds `verify` to the role file's `tools`, and its changelog says a project whose `orchestrator.md` predates it "takes its baseline from `flai upgrade`: until then `flai check` reports `roles.definition`".
 
-Proposed fix: `flai upgrade --ref 1.1.24 --keep-all` (D-0012: upgrades run with `--keep-all`). The six files it changes from 1.1.22 are byte-identical to the 1.1.22 template in this project, so the upgrade replaces them with no conflict. The alternative, adding `verify` to the role file's `tools` by hand, edits a baseline file above its marker and would leave the next upgrade a conflict, so it is not planned. Upgrading past 1.1.24 (1.1.25 onward adds formulas, OpenCode files, and a manifest change) is out of this story's scope.
+Proposed fix: `flai upgrade --ref 1.1.24 --keep-all` (D-0012: upgrades run with `--keep-all`). The six files it changes from 1.1.22 have had no commit since the 1.1.22 upgrade (db4eff1), so the upgrade should replace them with no conflict. The alternative, adding `verify` to the role file's `tools` by hand, edits a baseline file above its marker and would leave the next upgrade a conflict, so it is not planned. Upgrading past 1.1.24 (1.1.25 onward adds formulas, OpenCode files, and a manifest change) is out of this story's scope.
 
 Test: no project code is involved, so the reproduction is `flai check --strict` unscoped on the upgraded branch, which reports `roles.definition` on main today and must report none after.
 
-Touches, and where each came from (`flai touches suggest` had nothing to start from: the story declared none):
+Touches, and where each came from. The story's ten declared touches are kept; `flai touches suggest` on them lists only co-changes of past template upgrades and issue bumps (I-0010, other conventions, `CLAUDE.md`), none of which 1.1.23 or 1.1.24 changes, so none is added.
 
 | Path | Source | Why |
 |------|--------|-----|
-| `design/workflows/roles/orchestrator.md` | design | The file I-0019 names; the upgrade adds `verify` to its `tools` |
-| `design/workflows/roles/README.md` | layout | Changed by template 1.1.24 |
-| `design/conventions/delegation.md` | layout | Changed by template 1.1.23 to 1.1.24 (S-0556's guard rule among them) |
-| `design/conventions/git.md` | layout | Changed by template 1.1.24 |
-| `design/conventions/safety.md` | layout | Changed by template 1.1.24 |
-| `design/conventions/work-management.md` | layout | Changed by template 1.1.23 and 1.1.24 |
-| `system-flow.yaml` | layout | The upgrade records `template.ref` and `version` |
-| `system-flow.lock.yaml` | layout | The upgrade records the applied version and file hashes |
-| `design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md` | design | Criterion 2 closes it |
-| `design/issues/summary.md` | co-change | `flai issue close` rewrites the summary with the issue |
+| `design/workflows/roles/orchestrator.md` | declared, design | The file I-0019 names; the upgrade adds `verify` to its `tools` |
+| `design/workflows/roles/README.md` | declared, layout | Changed by template 1.1.24 |
+| `design/conventions/delegation.md` | declared, layout | Changed by template 1.1.23 to 1.1.24 (S-0556's guard rule among them) |
+| `design/conventions/git.md` | declared, layout | Changed by template 1.1.24 |
+| `design/conventions/safety.md` | declared, layout | Changed by template 1.1.24 |
+| `design/conventions/work-management.md` | declared, layout | Changed by template 1.1.23 and 1.1.24 |
+| `system-flow.yaml` | declared, layout | The upgrade records `template.ref` and `version` |
+| `system-flow.lock.yaml` | declared, layout | The upgrade records the applied version and file hashes |
+| `design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md` | declared, design | Criterion 2 closes it |
+| `design/issues/summary.md` | declared, co-change | `flai issue close` rewrites the summary with the issue |
 
-No folder touch is kept. No `after`: the story reads no other story's output. S-0019 (in progress) also touches `system-flow.yaml`, and S-0006's branch edits I-0019's file as it folds I-0015 into it; the trial merge judges both.
+No folder touch is kept. No `after`: the story reads no other story's output. No story in progress or review touches `system-flow.yaml` or I-0019's file today; ready stories S-0007 and S-0008 touch `design/issues/summary.md`, which flai regenerates, and the trial merge judges that.
 
 Figures:
 
-- Forecast: `flai forecast` gave 3m, from 2 criteria and no touches. Raised to 30m: a conflict-free upgrade of 6 files, an unscoped `flai check`, the issue close, and a close-out whose `system-flow.yaml` change may select every test tier (I-0010). Delivery is flai's, 2026-11-10T09:17:00Z, as 12th in the pull order.
-- Cost of delay: `flai cod` cannot work one out, since the story has no inputs and no epic, and I-0019 records no cost. The inputs are the operator's; they are asked for on the plan's thread.
+- Forecast: `flai forecast` now gives 26m (126 s per unit of size over 9 done stories, size 12 from 2 criteria and 10 touches). Raised to 30m: the unscoped `flai check` and a close-out whose `system-flow.yaml` change may select every test tier (I-0010). Delivery is flai's, 2026-11-17T00:24:00Z, as 10th in the pull order.
+- Cost of delay: `flai cod` cannot work one out, since the story has no inputs and no epic, and I-0019 records no cost. The inputs are the operator's; they are asked for on TH-0037, still unanswered.

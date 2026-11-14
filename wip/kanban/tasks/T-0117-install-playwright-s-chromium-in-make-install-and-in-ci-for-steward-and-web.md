@@ -3,15 +3,36 @@ id: T-0117
 type: task
 nature: remediation
 title: Install Playwright's chromium in make install and in CI for steward and web
-status: backlog
+status: done
 parent: S-0022
 owner: bytepunx
 created: 2026-11-09T22:10:10Z
-updated: 2026-11-09T22:10:10Z
-transitions: []
+updated: 2026-11-14T11:14:31Z
+transitions:
+  - to: ready
+    at: 2026-11-14T11:12:03Z
+    by: agent-S-0022
+  - to: in-progress
+    at: 2026-11-14T11:12:03Z
+    by: agent-S-0022
+  - to: done
+    at: 2026-11-14T11:14:31Z
+    by: agent-S-0022
 stream: S-0022
 tags: [web]
-touches: [scripts/lib-projects.sh, scripts/install.sh, ".github/workflows/ci.yml"]
+touches: [scripts/lib-projects.sh, scripts/install.sh, ".github/workflows/ci.yml", docs/contributors/index.md, steward/TESTING.md]
+usage:
+  source: log
+  seconds: 148
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2140
+      cache_read: 1244080
+      cache_write: 13523
+      cost: 0.3961
 ---
 # T-0117 Install Playwright's chromium in make install and in CI for steward and web
 

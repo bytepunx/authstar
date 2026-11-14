@@ -3,11 +3,14 @@ id: S-0023
 type: story
 nature: remediation
 title: "Herald's retention-purge spec fails intermittently with \"NTP clock skew detected\" from node-flakes"
-status: backlog
+status: ready
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-14T09:55:08Z
-transitions: []
+updated: 2026-11-14T10:09:04Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:09:04Z
+    by: bytepunx
 tags: [herald, testing]
 topics: [testing]
 touches: [herald/spec/lib/monotonic-clock.ts, herald/spec/behavior/clock-skew.spec.ts, herald/vitest.config.ts, herald/TESTING.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md, design/issues/summary.md]

@@ -3,16 +3,37 @@ id: T-0069
 type: task
 nature: remediation
 title: Keep verifies tower's certificate against the SPIRE trust bundle
-status: backlog
+status: done
 parent: S-0015
 owner: bytepunx
 created: 2026-11-06T18:10:04Z
-updated: 2026-11-06T18:10:04Z
-transitions: []
+updated: 2026-11-14T10:38:58Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:26:33Z
+    by: agent-S-0015
+  - to: in-progress
+    at: 2026-11-14T10:26:33Z
+    by: agent-S-0015
+  - to: done
+    at: 2026-11-14T10:38:58Z
+    by: agent-S-0015
 stream: S-0015
 tags: [keep, spiffe, mtls]
 touches: [keep/src/lib/tower-tls.ts, keep/src/server.ts, keep/src/lib/role-reference-backfill.ts, keep/spec/behavior/tower-tls.spec.ts, keep/spec/lib/spiffe-test-certs.ts, keep/package.json, keep/package-lock.json, keep/TESTING.md]
 after: [T-0054]
+usage:
+  source: log
+  seconds: 745
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 13
+      output: 3054
+      cache_read: 1924031
+      cache_write: 14542
+      cost: 0.5569
 ---
 # T-0069 Keep verifies tower's certificate against the SPIRE trust bundle
 

@@ -3,16 +3,37 @@ id: T-0077
 type: task
 nature: remediation
 title: Chart drops NODE_TLS_REJECT_UNAUTHORIZED from every service
-status: backlog
+status: done
 parent: S-0015
 owner: bytepunx
 created: 2026-11-06T18:10:25Z
-updated: 2026-11-06T18:10:25Z
-transitions: []
+updated: 2026-11-14T10:40:37Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:39:23Z
+    by: agent-S-0015
+  - to: in-progress
+    at: 2026-11-14T10:39:23Z
+    by: agent-S-0015
+  - to: done
+    at: 2026-11-14T10:40:37Z
+    by: agent-S-0015
 stream: S-0015
 tags: [chart, spiffe, mtls]
-touches: [chart/values.yaml, chart/README.md, design/stories/chart/001-chart-layout-and-provisioning-hook.md]
-after: [T-0056, T-0069, T-0072, T-0075]
+touches: [chart/values.yaml, chart/README.md, design/stories/chart/001-chart-layout-and-provisioning-hook.md, docs/operators/chronicle-configuration.md, docs/operators/index.md]
+after: [T-0056, T-0069, T-0072, T-0075, T-0171]
+usage:
+  source: log
+  seconds: 74
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 11
+      output: 2456
+      cache_read: 1546991
+      cache_write: 11692
+      cost: 0.4478
 ---
 # T-0077 Chart drops NODE_TLS_REJECT_UNAUTHORIZED from every service
 

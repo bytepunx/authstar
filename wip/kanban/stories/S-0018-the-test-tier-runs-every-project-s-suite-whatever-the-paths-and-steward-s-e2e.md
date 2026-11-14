@@ -3,11 +3,14 @@ id: S-0018
 type: story
 nature: improvement
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
-status: backlog
+status: ready
 owner: bytepunx
 created: 2026-11-06T21:11:49Z
-updated: 2026-11-14T09:55:08Z
-transitions: []
+updated: 2026-11-14T10:09:19Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:09:19Z
+    by: bytepunx
 tags: [testing, scripts, steward]
 topics: [testing]
 touches: [scripts/test.sh, scripts/lib-projects.sh, scripts/README.md, system-flow.yaml, steward/playwright.config.ts, steward/tests/e2e/run-fake-backend.ts, steward/tests/helpers/steward-server.ts, steward/TESTING.md, docs/contributors/index.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]

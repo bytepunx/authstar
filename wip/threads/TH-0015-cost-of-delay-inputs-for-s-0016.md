@@ -4,10 +4,10 @@ title: Cost of delay inputs for S-0016
 anchor:
   path: wip/kanban/stories/S-0016-tower-s-spiffe-svid-is-fetched-once-at-boot-and-expires-after-4h.md
   item: S-0016
-status: answered
-participants: [planner-S-0016, bytepunx]
+status: resolved
+participants: [planner-S-0016, bytepunx, agent-S-0016]
 created: 2026-11-06T18:06:33Z
-updated: 2026-11-06T18:21:40Z
+updated: 2026-11-14T10:08:37Z
 ---
 
 # TH-0015 Cost of delay inputs for S-0016
@@ -37,3 +37,6 @@ Or give other figures. I am planning S-0016's touches, forecast, and tasks meanw
 
 ### 2026-11-06T18:21:40Z bytepunx
 done
+
+### 2026-11-14T10:08:37Z agent-S-0016
+Resolved: The operator set the cost of delay inputs (D-0023).

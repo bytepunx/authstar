@@ -3,28 +3,54 @@ id: S-0015
 type: story
 nature: remediation
 title: "Node services ship with NODE_TLS_REJECT_UNAUTHORIZED=0 to reach tower over mTLS"
-status: backlog
+status: review
 owner: bytepunx
 created: 2026-11-06T17:38:17Z
-updated: 2026-11-14T09:55:08Z
-transitions: []
+updated: 2026-11-14T11:14:56Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:07:02Z
+    by: bytepunx
+  - to: in-progress
+    at: 2026-11-14T10:07:30Z
+    by: agent-S-0015
+  - to: review
+    at: 2026-11-14T11:14:56Z
+    by: agent-S-0015
 tags: [herald, keep, steward, web, chart, spiffe, mtls]
-touches: [design/adrs/0111-node-services-verify-tower-against-the-spire-trust-bundle.md, design/adrs/README.md, design/tech/tech-stack.md, herald/src/lib/tower-tls.ts, herald/src/server.ts, herald/spec/behavior/tower-tls.spec.ts, herald/spec/lib/spiffe-test-certs.ts, herald/package.json, herald/package-lock.json, herald/TESTING.md, keep/src/lib/tower-tls.ts, keep/src/server.ts, keep/src/lib/role-reference-backfill.ts, keep/spec/behavior/tower-tls.spec.ts, keep/spec/lib/spiffe-test-certs.ts, keep/package.json, keep/package-lock.json, keep/TESTING.md, steward/src/lib/server/tower-tls.ts, steward/src/hooks.server.ts, steward/tests/behavior/tower-tls.spec.ts, steward/tests/helpers/spiffe-test-certs.ts, steward/package.json, steward/package-lock.json, steward/TESTING.md, web/src/lib/server/tower-tls.ts, web/src/hooks.server.ts, web/spec/behavior/tower-tls.spec.ts, web/spec/fixtures/spiffe-test-certs.ts, web/package.json, web/package-lock.json, web/TESTING.md, chart/values.yaml, chart/README.md, design/stories/chart/001-chart-layout-and-provisioning-hook.md, design/issues/I-0001-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md, design/issues/summary.md]
+touches: [design/adrs/README.md, design/tech/tech-stack.md, herald/src/lib/tower-tls.ts, herald/src/server.ts, herald/spec/behavior/tower-tls.spec.ts, herald/spec/lib/spiffe-test-certs.ts, herald/package.json, herald/package-lock.json, herald/TESTING.md, keep/src/lib/tower-tls.ts, keep/src/server.ts, keep/src/lib/role-reference-backfill.ts, keep/spec/behavior/tower-tls.spec.ts, keep/spec/lib/spiffe-test-certs.ts, keep/package.json, keep/package-lock.json, keep/TESTING.md, steward/src/lib/server/tower-tls.ts, steward/src/hooks.server.ts, steward/tests/behavior/tower-tls.spec.ts, steward/tests/helpers/spiffe-test-certs.ts, steward/package.json, steward/package-lock.json, steward/TESTING.md, web/src/lib/server/tower-tls.ts, web/src/hooks.server.ts, web/spec/behavior/tower-tls.spec.ts, web/spec/fixtures/spiffe-test-certs.ts, web/package.json, web/package-lock.json, web/TESTING.md, chart/values.yaml, chart/README.md, design/stories/chart/001-chart-layout-and-provisioning-hook.md, design/issues/I-0001-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md, design/issues/summary.md, design/adrs/0113-node-services-verify-tower-s-certificate-against-the-spire-trust-bundle-and-its.md, design/system/overview.md, docs/operators/chronicle-configuration.md, docs/operators/index.md, chronicle/src/lib/tower-tls.ts, chronicle/src/server.ts, chronicle/spec/behavior/tower-tls.spec.ts, chronicle/spec/lib/spiffe-test-certs.ts, chronicle/package.json, chronicle/package-lock.json, chronicle/TESTING.md, integration/manifests/11-keep.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/keep.yaml, integration/config/authstar/chronicle.yaml, integration/README.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0028-golden-path-s-herald-send-and-verify-fails-intermittently-with-an-rsa-oaep.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4061
+  priced_by: harness
+  turns:
+    - day: 2026-11-14
+      ceremony: 6
+      test_runs: 1
+      work: 164
+  models:
+    - model: claude-opus-5-5
+      input: 480
+      output: 110252
+      cache_read: 69452551
+      cache_write: 524920
+      cost: 20.1023
   strategic:
     - kind: orchestrator
-      seconds: 47
+      seconds: 62
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 22
-          output: 152
-          cache_read: 760521
-          cache_write: 116720
-          cost: 0.9832
+          input: 29
+          output: 186
+          cache_read: 1003617
+          cache_write: 155254
+          cost: 1.2997
+cost_of_delay:
+  inputs:
+    penalty_per_week: 200
+    by: agent-S-0015
+    at: 2026-11-14T10:08:23Z
 forecast:
   duration: 4h
   delivery: 2026-11-17T04:48:00Z
@@ -42,8 +68,8 @@ finalized:
 This story remediates [I-0001](../../../design/issues/I-0001-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md), "Node services ship with NODE_TLS_REJECT_UNAUTHORIZED=0 to reach tower over mTLS". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0001 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0001 is closed with `flai issue close I-0001 --reason` saying what fixed it
+- [x] The cause I-0001 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0001 is closed with `flai issue close I-0001 --reason` saying what fixed it
 
 ## Tasks
 - T-0054 Record in an ADR how Node services verify tower against the SPIRE trust bundle
@@ -53,6 +79,8 @@ This story remediates [I-0001](../../../design/issues/I-0001-node-services-ship-
 - T-0075 Web verifies tower's certificate against the SPIRE trust bundle
 - T-0077 Chart drops NODE_TLS_REJECT_UNAUTHORIZED from every service
 - T-0079 Close I-0001 naming the trust-bundle agents and their specs
+- T-0171 Chronicle verifies tower's certificate against the SPIRE trust bundle
+- T-0172 Harness drops NODE_TLS_REJECT_UNAUTHORIZED from keep's and chronicle's pods
 
 ## Notes
 

@@ -3,15 +3,36 @@ id: T-0058
 type: task
 nature: remediation
 title: Entitlement consumer logs scope-less events as malformed and drops the tenant seat branch
-status: backlog
+status: done
 parent: S-0014
 owner: bytepunx
 created: 2026-11-06T18:09:36Z
-updated: 2026-11-06T18:09:36Z
-transitions: []
+updated: 2026-11-14T10:30:15Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:08:38Z
+    by: agent-S-0014
+  - to: in-progress
+    at: 2026-11-14T10:08:38Z
+    by: agent-S-0014
+  - to: done
+    at: 2026-11-14T10:30:15Z
+    by: agent-S-0014
 stream: S-0014
 tags: [tower]
 touches: [tower/src/lib/entitlement-consumer.ts, tower/src/server.ts, tower/spec/behavior/entitlement-consumer.spec.ts]
+usage:
+  source: log
+  seconds: 1297
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 36
+      output: 8893
+      cache_read: 3708505
+      cache_write: 41100
+      cost: 1.2289
 ---
 # T-0058 Entitlement consumer logs scope-less events as malformed and drops the tenant seat branch
 

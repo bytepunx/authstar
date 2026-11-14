@@ -3,16 +3,37 @@ id: T-0043
 type: task
 nature: remediation
 title: Close I-0002 naming the rotation fix and its test
-status: backlog
+status: done
 parent: S-0016
 owner: bytepunx
 created: 2026-11-06T18:07:24Z
-updated: 2026-11-06T18:07:24Z
-transitions: []
+updated: 2026-11-14T10:37:36Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:37:17Z
+    by: agent-S-0016
+  - to: in-progress
+    at: 2026-11-14T10:37:17Z
+    by: agent-S-0016
+  - to: done
+    at: 2026-11-14T10:37:36Z
+    by: agent-S-0016
 stream: S-0016
 tags: [tower, issues]
 touches: [design/issues/I-0002-tower-s-spiffe-svid-is-fetched-once-at-boot-and-expires-after-4h.md, design/issues/summary.md]
 after: [T-0041, T-0042]
+usage:
+  source: log
+  seconds: 19
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 5
+      output: 866
+      cache_read: 617606
+      cache_write: 11446
+      cost: 0.211
 ---
 # T-0043 Close I-0002 naming the rotation fix and its test
 

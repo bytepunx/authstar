@@ -3,31 +3,76 @@ id: S-0014
 type: story
 nature: remediation
 title: Tower retires the tenant entitlement scope
-status: backlog
+status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:29:21Z
-updated: 2026-11-14T09:55:08Z
-transitions: []
+updated: 2026-11-14T11:39:10Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:07:01Z
+    by: bytepunx
+  - to: in-progress
+    at: 2026-11-14T10:07:14Z
+    by: agent-S-0014
+  - to: review
+    at: 2026-11-14T11:10:05Z
+    by: agent-S-0014
+  - to: in-progress
+    at: 2026-11-14T11:12:56Z
+    by: flai
+  - to: review
+    at: 2026-11-14T11:14:43Z
+    by: agent-S-0014
+  - to: in-progress
+    at: 2026-11-14T11:18:24Z
+    by: flai
+  - to: review
+    at: 2026-11-14T11:20:02Z
+    by: agent-S-0014
+  - to: in-progress
+    at: 2026-11-14T11:22:56Z
+    by: flai
+blocked:
+  - from: 2026-11-14T11:28:27Z
+    until: 2026-11-14T11:31:30Z
+    reason: awaiting the operator on TH-0061
+  - from: 2026-11-14T11:32:05Z
+    until: 2026-11-14T11:38:53Z
+    reason: awaiting the operator on TH-0061
+  - from: 2026-11-14T11:39:10Z
+    reason: awaiting the operator on TH-0061
 tags: [tower]
 topics: [billing, tower, testing]
-touches: [tower/src/lib/entitlement-consumer.ts, tower/src/server.ts, tower/spec/behavior/entitlement-consumer.spec.ts, tower/src/actors/tenant_actor.ts, tower/spec/behavior/tenants.spec.ts, steward/src/lib/types.ts, tower/spec/e2e/tenant-provisioning-and-login.e2e.spec.ts, tower/TESTING.md, keep/TESTING.md, design/stories/tower/001-actor-definitions.md, design/stories/tower/011-tenant-management-and-key-rotation.md]
+touches: [tower/src/lib/entitlement-consumer.ts, tower/src/server.ts, tower/spec/behavior/entitlement-consumer.spec.ts, tower/src/actors/tenant_actor.ts, tower/spec/behavior/tenants.spec.ts, steward/src/lib/types.ts, tower/spec/e2e/tenant-provisioning-and-login.e2e.spec.ts, tower/TESTING.md, design/stories/tower/001-actor-definitions.md, design/stories/tower/011-tenant-management-and-key-rotation.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0030-the-golden-path-logs-in-while-tower-s-signet-coordinated-restart-after.md, design/issues/I-0031-tower-stays-down-for-about-27-seconds-after-taking-its-signet-restart-lock-app.md]
 after: [S-0004]
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 4363
+  priced_by: harness
+  turns:
+    - day: 2026-11-14
+      ceremony: 3
+      hand_edits: 3
+      work: 120
+  models:
+    - model: claude-opus-5-5
+      input: 354
+      output: 87117
+      cache_read: 36327062
+      cache_write: 402604
+      cost: 12.0381
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 202
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 13
-          output: 82
-          cache_read: 376296
-          cache_write: 64363
-          cost: 0.4891
+          input: 102
+          output: 622
+          cache_read: 3072641
+          cache_write: 413118
+          cost: 3.9123
 cost_of_delay:
   inputs:
     revenue_per_week: 0
@@ -49,10 +94,10 @@ forecast:
 Tower implements ADR-0109: the tenant actor loses `seatLimit` and its command, the entitlement consumer logs a role event with neither account nor organization scope as malformed instead of dropping it silently, and the tenant branch of `seat-limit-changed` is gone.
 
 ## Acceptance criteria
-- [ ] `tower/src/actors/tenant_actor.ts` has no `seatLimit`, `set-seat-limit`, or `seat-limit-set`, and no route or SDK type references them
-- [ ] `tower/src/lib/entitlement-consumer.ts` logs a warning naming the event and scope for a role event with no account or organization id
-- [ ] Behavior and e2e tests pass and cover the malformed-scope log
-- [ ] `clients/typescript` types and `keep/TESTING.md` no longer mention tenant seat limits
+- [x] `tower/src/actors/tenant_actor.ts` has no `seatLimit`, `set-seat-limit`, or `seat-limit-set`, and no route or SDK type references them
+- [x] `tower/src/lib/entitlement-consumer.ts` logs a warning naming the event and scope for a role event with no account or organization id
+- [x] Behavior and e2e tests pass and cover the malformed-scope log
+- [x] `clients/typescript` types and `keep/TESTING.md` no longer mention tenant seat limits
 
 ## Tasks
 - T-0058 Entitlement consumer logs scope-less events as malformed and drops the tenant seat branch
@@ -91,3 +136,10 @@ Plan: T-0058 first; T-0060 and T-0063 together after it; T-0068 last. The tenant
 Forecast: `flai forecast` gave 1h, the `planning.default_duration`, because only one done story has usage. Adjusted to 3h: four tasks in three layers across tower, steward, and documents, with logger wiring in tower's entrypoint. S-0011, with eight tasks, is forecast at 5h. Delivery 2026-11-07T02:54:00Z is flai's play of the pull order (7th, behind nine stories), started at the same point with 3h in place of 1h.
 
 Cost of delay: no value yet. Neither S-0014 nor E-0002 has inputs, so `flai cod` cannot work one out. Asked on TH-0018.
+
+### Verification
+
+S-0014's agent verified every criterion from the code, a grep, and the close-out's test tier, which passed at c40f204. On 2026-11-14 the request to deploy into a kluster namespace was refused: S-0015 and S-0016 held the two namespaces `kluster.agent_namespaces` allows. No criterion needs a running cluster. Tower's consumer and actor are covered by its behavior and e2e suites, and the review's deploy checks the rest. `keep/TESTING.md` needed no edit: it names `seat-limit-changed` only for organizations, and "per tenant/scope" there is the sequence key, not the retired scope.
+- 2026-11-14T11:12:56Z: moved to in-progress: flai serve's checks of S-0014 against its kluster namespace ended failed, at the check golden-path, at commit 731afd4d3456
+- 2026-11-14T11:18:24Z: moved to in-progress: flai serve's checks of S-0014 against its kluster namespace ended failed, at the check golden-path, at commit ff7bb98675f2
+- 2026-11-14T11:22:56Z: moved to in-progress: flai serve's checks of S-0014 against its kluster namespace ended failed, at the check golden-path, at commit 68d18872fe05

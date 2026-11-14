@@ -3,15 +3,36 @@ id: T-0040
 type: task
 nature: remediation
 title: Make tower's SVID rotation watch injectable and stoppable
-status: backlog
+status: done
 parent: S-0016
 owner: bytepunx
 created: 2026-11-06T18:07:03Z
-updated: 2026-11-06T18:07:03Z
-transitions: []
+updated: 2026-11-14T10:20:11Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:08:32Z
+    by: agent-S-0016
+  - to: in-progress
+    at: 2026-11-14T10:08:32Z
+    by: agent-S-0016
+  - to: done
+    at: 2026-11-14T10:20:11Z
+    by: agent-S-0016
 stream: S-0016
 tags: [tower, spiffe, mtls]
 touches: [tower/src/lib/spiffe-mtls.ts, tower/src/server.ts]
+usage:
+  source: log
+  seconds: 699
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 25
+      output: 3900
+      cache_read: 2780361
+      cache_write: 51526
+      cost: 0.9497
 ---
 # T-0040 Make tower's SVID rotation watch injectable and stoppable
 

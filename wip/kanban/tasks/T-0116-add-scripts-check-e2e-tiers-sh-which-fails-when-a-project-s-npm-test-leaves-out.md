@@ -3,15 +3,36 @@ id: T-0116
 type: task
 nature: remediation
 title: "Add scripts/check-e2e-tiers.sh, which fails when a project's npm test leaves out its test:e2e, and run it from scripts/test.sh"
-status: backlog
+status: done
 parent: S-0022
 owner: bytepunx
 created: 2026-11-09T22:10:05Z
-updated: 2026-11-09T22:10:29Z
-transitions: []
+updated: 2026-11-14T11:14:25Z
+transitions:
+  - to: ready
+    at: 2026-11-14T11:12:03Z
+    by: agent-S-0022
+  - to: in-progress
+    at: 2026-11-14T11:12:03Z
+    by: agent-S-0022
+  - to: done
+    at: 2026-11-14T11:14:25Z
+    by: agent-S-0022
 stream: S-0022
 tags: [web]
 touches: [scripts/check-e2e-tiers.sh, scripts/test.sh, scripts/README.md]
+usage:
+  source: log
+  seconds: 142
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 2365
+      cache_read: 1374833
+      cache_write: 14944
+      cost: 0.4378
 ---
 # T-0116 Add scripts/check-e2e-tiers.sh, which fails when a project's npm test leaves out its test:e2e, and run it from scripts/test.sh
 

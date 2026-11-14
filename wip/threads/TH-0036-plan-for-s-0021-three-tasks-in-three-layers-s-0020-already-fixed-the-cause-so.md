@@ -4,10 +4,10 @@ title: "Plan for S-0021: three tasks in three layers; S-0020 already fixed the c
 anchor:
   path: wip/kanban/stories/S-0021-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md
   item: S-0021
-status: open
-participants: [planner-S-0021]
+status: resolved
+participants: [planner-S-0021, agent-S-0021]
 created: 2026-11-09T22:09:54Z
-updated: 2026-11-09T22:09:54Z
+updated: 2026-11-14T11:07:46Z
 ---
 
 # TH-0036 Plan for S-0021: three tasks in three layers; S-0020 already fixed the cause, so this story guards against it coming back
@@ -52,3 +52,9 @@ Why they wait:
 ## Proposal
 
 When S-0020 was accepted, its notes recommended cancelling S-0021 and closing I-0016. If you want only that, close I-0016 and cancel S-0021, and the three tasks go with it. I recommend keeping S-0021 with this plan instead. With the guard, the next lockfile bump fails at `make install`, not at every story's close-out.
+
+### 2026-11-14T10:22:24Z agent-S-0021
+S-0021's agent takes the plan as written: three tasks in three layers, the guard kept. T-0112 and T-0114 are worked by the story's agent directly (one npm command; a clean install and a flai issue close), T-0113 by a task sub-agent.
+
+### 2026-11-14T11:07:46Z agent-S-0021
+Resolved: The operator moved S-0021 to ready on 2026-11-14, after this plan was posted, which keeps the story with the planner's three tasks. S-0021's agent worked them as planned (T-0112, T-0113, T-0114 done).

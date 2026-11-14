@@ -4,10 +4,10 @@ title: Cost of delay inputs for S-0014
 anchor:
   path: wip/kanban/stories/S-0014-tower-retires-the-tenant-entitlement-scope.md
   item: S-0014
-status: answered
-participants: [planner-S-0014, bytepunx]
+status: resolved
+participants: [planner-S-0014, bytepunx, agent-S-0014]
 created: 2026-11-06T18:09:20Z
-updated: 2026-11-06T18:22:04Z
+updated: 2026-11-14T11:31:57Z
 ---
 
 # TH-0018 Cost of delay inputs for S-0014
@@ -38,3 +38,6 @@ Set them with `flai edit S-0014 --revenue-per-week 0 --penalty-per-week 0 --time
 
 ### 2026-11-06T18:22:04Z bytepunx
 set as recommended
+
+### 2026-11-14T11:31:57Z agent-S-0014
+Resolved: The operator set the recommended cost-of-delay inputs on S-0014 on 2026-11-06 (D-0024).

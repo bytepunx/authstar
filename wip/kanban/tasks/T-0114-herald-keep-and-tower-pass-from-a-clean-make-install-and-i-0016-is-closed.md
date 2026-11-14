@@ -3,16 +3,37 @@ id: T-0114
 type: task
 nature: remediation
 title: herald, keep, and tower pass from a clean make install, and I-0016 is closed
-status: backlog
+status: done
 parent: S-0021
 owner: bytepunx
 created: 2026-11-09T22:09:38Z
-updated: 2026-11-09T22:09:38Z
-transitions: []
+updated: 2026-11-14T10:47:50Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:38:50Z
+    by: agent-S-0021
+  - to: in-progress
+    at: 2026-11-14T10:38:50Z
+    by: agent-S-0021
+  - to: done
+    at: 2026-11-14T10:47:50Z
+    by: agent-S-0021
 stream: S-0021
 tags: [hook]
 touches: [design/issues/I-0016-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md, design/issues/summary.md]
 after: [T-0113]
+usage:
+  source: log
+  seconds: 540
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 1291
+      cache_read: 913018
+      cache_write: 11286
+      cost: 0.2861
 ---
 # T-0114 herald, keep, and tower pass from a clean make install, and I-0016 is closed
 

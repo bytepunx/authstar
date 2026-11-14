@@ -3,16 +3,37 @@ id: T-0075
 type: task
 nature: remediation
 title: Web verifies tower's certificate against the SPIRE trust bundle
-status: backlog
+status: done
 parent: S-0015
 owner: bytepunx
 created: 2026-11-06T18:10:18Z
-updated: 2026-11-06T18:10:18Z
-transitions: []
+updated: 2026-11-14T10:39:14Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:26:33Z
+    by: agent-S-0015
+  - to: in-progress
+    at: 2026-11-14T10:26:33Z
+    by: agent-S-0015
+  - to: done
+    at: 2026-11-14T10:39:14Z
+    by: agent-S-0015
 stream: S-0015
 tags: [web, spiffe, mtls]
 touches: [web/src/lib/server/tower-tls.ts, web/src/hooks.server.ts, web/spec/behavior/tower-tls.spec.ts, web/spec/fixtures/spiffe-test-certs.ts, web/package.json, web/package-lock.json, web/TESTING.md]
 after: [T-0054]
+usage:
+  source: log
+  seconds: 761
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 34
+      output: 7725
+      cache_read: 4866003
+      cache_write: 36777
+      cost: 1.4084
 ---
 # T-0075 Web verifies tower's certificate against the SPIRE trust bundle
 

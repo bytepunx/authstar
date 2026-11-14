@@ -3,16 +3,37 @@ id: T-0056
 type: task
 nature: remediation
 title: Herald verifies tower's certificate against the SPIRE trust bundle
-status: backlog
+status: done
 parent: S-0015
 owner: bytepunx
 created: 2026-11-06T18:09:23Z
-updated: 2026-11-06T18:09:30Z
-transitions: []
+updated: 2026-11-14T10:38:52Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:16:18Z
+    by: agent-S-0015
+  - to: in-progress
+    at: 2026-11-14T10:16:18Z
+    by: agent-S-0015
+  - to: done
+    at: 2026-11-14T10:38:52Z
+    by: agent-S-0015
 stream: S-0015
 tags: [herald, spiffe, mtls]
 touches: [herald/src/lib/tower-tls.ts, herald/src/server.ts, herald/spec/behavior/tower-tls.spec.ts, herald/spec/lib/spiffe-test-certs.ts, herald/package.json, herald/package-lock.json, herald/TESTING.md]
 after: [T-0054]
+usage:
+  source: log
+  seconds: 1354
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 20
+      output: 4704
+      cache_read: 2963264
+      cache_write: 22396
+      cost: 0.8577
 ---
 # T-0056 Herald verifies tower's certificate against the SPIRE trust bundle
 

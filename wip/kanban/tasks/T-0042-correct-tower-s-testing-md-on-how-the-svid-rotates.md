@@ -3,16 +3,37 @@ id: T-0042
 type: task
 nature: remediation
 title: Correct tower's TESTING.md on how the SVID rotates
-status: backlog
+status: done
 parent: S-0016
 owner: bytepunx
 created: 2026-11-06T18:07:17Z
-updated: 2026-11-06T18:07:17Z
-transitions: []
+updated: 2026-11-14T10:37:11Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:20:21Z
+    by: agent-S-0016
+  - to: in-progress
+    at: 2026-11-14T10:20:22Z
+    by: agent-S-0016
+  - to: done
+    at: 2026-11-14T10:37:11Z
+    by: agent-S-0016
 stream: S-0016
 tags: [tower, spiffe, docs]
 touches: [tower/TESTING.md]
 after: [T-0040]
+usage:
+  source: log
+  seconds: 1009
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 1298
+      cache_read: 925413
+      cache_write: 17150
+      cost: 0.3161
 ---
 # T-0042 Correct tower's TESTING.md on how the SVID rotates
 

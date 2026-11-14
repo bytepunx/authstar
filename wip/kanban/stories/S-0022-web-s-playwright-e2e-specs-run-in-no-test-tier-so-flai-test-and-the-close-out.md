@@ -3,34 +3,66 @@ id: S-0022
 type: story
 nature: remediation
 title: Web's Playwright e2e specs run in no test tier, so flai test and the close-out never run web/e2e
-status: backlog
+status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-14T09:55:08Z
-transitions: []
+updated: 2026-11-14T11:53:36Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:09:03Z
+    by: bytepunx
+  - to: in-progress
+    at: 2026-11-14T11:10:24Z
+    by: agent-S-0022
+  - to: review
+    at: 2026-11-14T11:39:06Z
+    by: agent-S-0022
+  - to: in-progress
+    at: 2026-11-14T11:42:29Z
+    by: flai
+  - to: review
+    at: 2026-11-14T11:45:51Z
+    by: agent-S-0022
+  - to: in-progress
+    at: 2026-11-14T11:47:54Z
+    by: flai
+blocked:
+  - from: 2026-11-14T11:53:36Z
+    reason: awaiting the operator on TH-0038
 tags: [web]
 topics: [testing]
-touches: [web/package.json, web/playwright.config.ts, web/e2e/fixtures/urls.ts, web/TESTING.md, scripts/check-e2e-tiers.sh, scripts/test.sh, scripts/README.md, scripts/lib-projects.sh, scripts/install.sh, ".github/workflows/ci.yml", design/issues/I-0017-web-s-playwright-e2e-specs-run-in-no-test-tier-so-flai-test-and-the-close-out.md, design/issues/summary.md]
+touches: [web/package.json, web/playwright.config.ts, web/e2e/fixtures/urls.ts, web/TESTING.md, scripts/check-e2e-tiers.sh, scripts/test.sh, scripts/README.md, scripts/lib-projects.sh, scripts/install.sh, ".github/workflows/ci.yml", design/issues/I-0017-web-s-playwright-e2e-specs-run-in-no-test-tier-so-flai-test-and-the-close-out.md, design/issues/summary.md, docs/contributors/index.md, steward/TESTING.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0032-the-golden-path-exits-without-a-fail-line-when-a-curl-to-tower-cannot-connect.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 2288
+  priced_by: harness
+  turns:
+    - day: 2026-11-14
+      ceremony: 7
+      work: 112
+  models:
+    - model: claude-opus-5-5
+      input: 298
+      output: 57283
+      cache_read: 33302027
+      cache_write: 361992
+      cost: 10.6035
   strategic:
     - kind: orchestrator
-      seconds: 18
+      seconds: 247
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 10
-          output: 75
-          cache_read: 340125
-          cache_write: 57070
-          cost: 0.4537
+          input: 106
+          output: 832
+          cache_read: 3207431
+          cache_write: 404210
+          cost: 4.0387
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -56,8 +88,8 @@ finalized:
 This story remediates [I-0017](../../../design/issues/I-0017-web-s-playwright-e2e-specs-run-in-no-test-tier-so-flai-test-and-the-close-out.md), "Web's Playwright e2e specs run in no test tier, so flai test and the close-out never run web/e2e". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0017 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0017 is closed with `flai issue close I-0017 --reason` saying what fixed it
+- [x] The cause I-0017 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0017 is closed with `flai issue close I-0017 --reason` saying what fixed it
 
 ## Tasks
 - T-0115 Give web's Playwright e2e free ports per run and never reuse a running server
@@ -97,3 +129,5 @@ From `flai touches suggest`, `web/package-lock.json`, `web/spec/fixtures/fake-to
 Forecast: `flai forecast` gave 16m (66s median × size 14). Raised to 2h, because the close-out alone runs the whole test tier, about 8 to 10 minutes (D-0031), and web's e2e adds a cold `build` and `build:widgets` on each run. T-0115 also needs two concurrent e2e runs. The delivery moves with the duration, 10th in the pull order.
 
 Cost of delay: `flai cod` gives 25 USD a week from the operator's input, 10m lost per 168h cycle at 150 USD an hour. Kept as given.
+- 2026-11-14T11:42:29Z: moved to in-progress: flai serve's checks of S-0022 against its kluster namespace ended failed, at the check golden-path, at commit 49c2822a9c2d
+- 2026-11-14T11:47:54Z: moved to in-progress: flai serve's checks of S-0022 against its kluster namespace ended failed, at the check golden-path, at commit 49c2822a9c2d

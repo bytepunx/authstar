@@ -3,16 +3,37 @@ id: T-0060
 type: task
 nature: remediation
 title: Tenant actor and steward's Tenant type lose seatLimit
-status: backlog
+status: done
 parent: S-0014
 owner: bytepunx
 created: 2026-11-06T18:09:46Z
-updated: 2026-11-06T18:09:46Z
-transitions: []
+updated: 2026-11-14T10:48:18Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:30:32Z
+    by: agent-S-0014
+  - to: in-progress
+    at: 2026-11-14T10:30:32Z
+    by: agent-S-0014
+  - to: done
+    at: 2026-11-14T10:48:18Z
+    by: agent-S-0014
 stream: S-0014
 tags: [tower, steward]
 touches: [tower/src/actors/tenant_actor.ts, tower/spec/behavior/tenants.spec.ts, steward/src/lib/types.ts]
 after: [T-0058]
+usage:
+  source: log
+  seconds: 1066
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 17
+      output: 4105
+      cache_read: 1711877
+      cache_write: 18972
+      cost: 0.5673
 ---
 # T-0060 Tenant actor and steward's Tenant type lose seatLimit
 

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 13.5102
-accrued_seconds: 1288
-tasks_completed: 8
-last_run: 2026-11-14T09:33:26Z
+accrued_cost: 15.2141
+accrued_seconds: 1496
+tasks_completed: 9
+last_run: 2026-11-14T09:58:41Z
 ---
 
 # Curator activity
@@ -75,3 +75,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0019, D-0026, D-0041, D-0042, D-0045
 - Seconds: 171
 - Cost: 1.9627 USD, estimated
+
+### 2026-11-14T09:58:41Z
+
+- Summary: Curator run: wrote D-0047, D-0048 and D-0049 from S-0006; merged S-0006 into D-0019 and D-0013, and fixed D-0046's body to state the answer the operator confirmed on TH-0016; absorbed D-0013 into ADR-0111 § Decision; `flai digest compact` compacted none; the S-0006 candidates on its branch merge, its `docs/users/index.md` conflict and its 2026-11-13 wait were left out as progress.
+- Trigger: accepted S-0006
+- Items: D-0013, D-0019, D-0046, D-0047, D-0048, D-0049
+- Seconds: 208
+- Cost: 1.7039 USD, estimated

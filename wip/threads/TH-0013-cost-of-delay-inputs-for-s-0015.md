@@ -4,10 +4,10 @@ title: Cost of delay inputs for S-0015
 anchor:
   path: wip/kanban/stories/S-0015-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md
   item: S-0015
-status: answered
-participants: [planner-S-0015, bytepunx]
+status: resolved
+participants: [planner-S-0015, bytepunx, agent-S-0015]
 created: 2026-11-06T18:05:50Z
-updated: 2026-11-06T18:19:30Z
+updated: 2026-11-14T10:08:23Z
 ---
 
 # TH-0013 Cost of delay inputs for S-0015
@@ -30,3 +30,6 @@ Which inputs should S-0015 carry?
 
 ### 2026-11-06T18:19:30Z bytepunx
 recommedation
+
+### 2026-11-14T10:08:23Z agent-S-0015
+Resolved: Set the recommendation on S-0015: penalty_per_week 200, no revenue.

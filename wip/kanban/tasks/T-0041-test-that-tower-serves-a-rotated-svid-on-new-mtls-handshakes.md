@@ -3,16 +3,37 @@ id: T-0041
 type: task
 nature: remediation
 title: Test that tower serves a rotated SVID on new mTLS handshakes
-status: backlog
+status: done
 parent: S-0016
 owner: bytepunx
 created: 2026-11-06T18:07:11Z
-updated: 2026-11-06T18:07:11Z
-transitions: []
+updated: 2026-11-14T10:37:07Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:20:21Z
+    by: agent-S-0016
+  - to: in-progress
+    at: 2026-11-14T10:20:21Z
+    by: agent-S-0016
+  - to: done
+    at: 2026-11-14T10:37:07Z
+    by: agent-S-0016
 stream: S-0016
 tags: [tower, spiffe, mtls, testing]
 touches: [tower/spec/behavior/spiffe-svid-rotation.spec.ts, tower/spec/lib/spiffe-test-certs.ts]
 after: [T-0040]
+usage:
+  source: log
+  seconds: 1006
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 23
+      output: 3613
+      cache_read: 2575601
+      cache_write: 47731
+      cost: 0.8798
 ---
 # T-0041 Test that tower serves a rotated SVID on new mTLS handshakes
 

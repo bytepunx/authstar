@@ -3,15 +3,36 @@ id: T-0112
 type: task
 nature: remediation
 title: chart/hook denies the esbuild and protobufjs install scripts it installs
-status: backlog
+status: done
 parent: S-0021
 owner: bytepunx
 created: 2026-11-09T22:09:23Z
-updated: 2026-11-09T22:09:23Z
-transitions: []
+updated: 2026-11-14T10:28:30Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:22:30Z
+    by: agent-S-0021
+  - to: in-progress
+    at: 2026-11-14T10:22:30Z
+    by: agent-S-0021
+  - to: done
+    at: 2026-11-14T10:28:30Z
+    by: agent-S-0021
 stream: S-0021
 tags: [hook]
 touches: [chart/hook/package.json, design/tech/npm.md]
+usage:
+  source: log
+  seconds: 360
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 1240
+      cache_read: 876460
+      cache_write: 10834
+      cost: 0.2747
 ---
 # T-0112 chart/hook denies the esbuild and protobufjs install scripts it installs
 

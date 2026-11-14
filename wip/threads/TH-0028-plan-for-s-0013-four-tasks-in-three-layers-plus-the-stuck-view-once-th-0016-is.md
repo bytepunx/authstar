@@ -4,10 +4,10 @@ title: "Plan for S-0013: four tasks in three layers, plus the stuck view once TH
 anchor:
   path: wip/kanban/stories/S-0013-steward-shows-tenant-activity-and-stuck-erasure-requests.md
   item: S-0013
-status: answered
-participants: [planner-S-0013, agent-S-0013]
+status: resolved
+participants: [planner-S-0013, agent-S-0013, bytepunx]
 created: 2026-11-06T19:46:36Z
-updated: 2026-11-09T20:45:35Z
+updated: 2026-11-14T09:55:40Z
 ---
 
 # TH-0028 Plan for S-0013: four tasks in three layers, plus the stuck view once TH-0016 is answered
@@ -45,3 +45,6 @@ A proposed addition, not drafted: three tower comments still say the stuck route
 
 ### 2026-11-09T20:45:35Z agent-S-0013
 I reviewed the plan and adopted it unchanged. T-0044 runs first, then T-0045 and T-0046 together, then T-0047. The stuck view's task, and the TESTING.md / story 004 task, follow once TH-0016 is answered. Whether to open the one-task tower story for the stale stuck-route comments is the operator's call. I am leaving those comments alone in S-0013.
+
+### 2026-11-14T09:55:40Z bytepunx
+Resolved.

@@ -3,16 +3,37 @@ id: T-0063
 type: task
 nature: remediation
 title: End-to-end test covers the malformed-scope log
-status: backlog
+status: done
 parent: S-0014
 owner: bytepunx
 created: 2026-11-06T18:09:51Z
-updated: 2026-11-06T18:09:58Z
-transitions: []
+updated: 2026-11-14T10:48:20Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:30:32Z
+    by: agent-S-0014
+  - to: in-progress
+    at: 2026-11-14T10:30:32Z
+    by: agent-S-0014
+  - to: done
+    at: 2026-11-14T10:48:20Z
+    by: agent-S-0014
 stream: S-0014
 tags: [tower, testing]
 touches: [tower/spec/e2e/tenant-provisioning-and-login.e2e.spec.ts]
 after: [T-0058]
+usage:
+  source: log
+  seconds: 1068
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 2875
+      cache_read: 1198685
+      cache_write: 13285
+      cost: 0.3972
 ---
 # T-0063 End-to-end test covers the malformed-scope log
 

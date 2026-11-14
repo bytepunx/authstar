@@ -3,34 +3,54 @@ id: S-0021
 type: story
 nature: remediation
 title: npm 12 blocks install scripts, so make install leaves farmhash unbuilt and herald, keep, and tower's tests fail
-status: backlog
+status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:33Z
-updated: 2026-11-14T09:55:08Z
-transitions: []
+updated: 2026-11-14T11:45:30Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:09:01Z
+    by: bytepunx
+  - to: in-progress
+    at: 2026-11-14T10:21:56Z
+    by: agent-S-0021
+blocked:
+  - from: 2026-11-14T11:45:30Z
+    reason: awaiting the operator on TH-0062
 tags: [hook]
 topics: [dependencies, testing]
-touches: [chart/hook/package.json, scripts/install.sh, scripts/check-install-scripts.sh, scripts/README.md, design/tech/npm.md, design/issues/I-0016-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md, design/issues/summary.md]
+touches: [chart/hook/package.json, scripts/install.sh, scripts/check-install-scripts.sh, scripts/README.md, design/tech/npm.md, design/issues/I-0016-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md, design/issues/summary.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 5016
+  priced_by: harness
+  turns:
+    - day: 2026-11-14
+      hand_edits: 1
+      work: 146
+  models:
+    - model: claude-opus-5-5
+      input: 354
+      output: 50243
+      cache_read: 35519674
+      cache_write: 439051
+      cost: 11.1321
   strategic:
     - kind: orchestrator
-      seconds: 21
+      seconds: 65
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 11
-          output: 81
-          cache_read: 375865
-          cache_write: 53929
-          cost: 0.4922
+          input: 35
+          output: 232
+          cache_read: 1050868
+          cache_write: 151094
+          cost: 1.3625
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -56,9 +76,9 @@ finalized:
 This story remediates [I-0016](../../../design/issues/I-0016-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md), "npm 12 blocks install scripts, so make install leaves farmhash unbuilt and herald, keep, and tower's tests fail". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0016 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0016 is closed with `flai issue close I-0016 --reason` saying what fixed it
-- [ ] `make install` fails, naming the project and the package, when npm blocks an install script that the project's `allowScripts` neither approves nor denies, or when farmhash's native module is missing after the install in herald, keep, or tower
+- [x] The cause I-0016 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0016 is closed with `flai issue close I-0016 --reason` saying what fixed it
+- [x] `make install` fails, naming the project and the package, when npm blocks an install script that the project's `allowScripts` neither approves nor denies, or when farmhash's native module is missing after the install in herald, keep, or tower
 
 ## Tasks
 - T-0112 chart/hook denies the esbuild and protobufjs install scripts it installs

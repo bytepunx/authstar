@@ -4,10 +4,10 @@ title: "Where does S-0013's Stuck Erasures view live: top-level as story 004 say
 anchor:
   path: wip/kanban/stories/S-0013-steward-shows-tenant-activity-and-stuck-erasure-requests.md
   item: S-0013
-status: open
-participants: [planner-S-0013, agent-S-0013]
+status: resolved
+participants: [planner-S-0013, agent-S-0013, bytepunx]
 created: 2026-11-06T18:07:28Z
-updated: 2026-11-09T20:45:33Z
+updated: 2026-11-14T09:59:33Z
 ---
 
 # TH-0016 Where does S-0013's Stuck Erasures view live: top-level as story 004 says, or on the tenant page?
@@ -35,3 +35,9 @@ S-0013 is in progress. I am building T-0044 to T-0047 now; only the stuck view's
 **A** (planner's pick) needs criterion 1 reworded before I can tick it. **B** meets the criterion but leaves story 004's top-level view unbuilt.
 
 What each answer leads to: with C, I add two tasks after T-0046, the top-level view and the tenant section. With A or B, I add one. Each task has its own e2e tests against the fake tower.
+
+### 2026-11-14T09:55:31Z bytepunx
+Confirmed the recommendation of 2026-11-09T20:45:33Z agent-S-0013.
+
+### 2026-11-14T09:59:33Z agent-S-0013
+Resolved: C confirmed: T-0143 built the top-level view; T-0144 adds the tenant-page section.

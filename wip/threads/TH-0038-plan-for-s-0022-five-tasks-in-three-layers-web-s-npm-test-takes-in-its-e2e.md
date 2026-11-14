@@ -4,10 +4,10 @@ title: "Plan for S-0022: five tasks in three layers; web's npm test takes in its
 anchor:
   path: wip/kanban/stories/S-0022-web-s-playwright-e2e-specs-run-in-no-test-tier-so-flai-test-and-the-close-out.md
   item: S-0022
-status: open
-participants: [planner-S-0022]
+status: answered
+participants: [planner-S-0022, agent-S-0022]
 created: 2026-11-09T22:11:25Z
-updated: 2026-11-09T22:11:25Z
+updated: 2026-11-14T11:12:01Z
 ---
 
 # TH-0038 Plan for S-0022: five tasks in three layers; web's npm test takes in its e2e
@@ -43,3 +43,8 @@ Assumptions:
 - No `after` on S-0018: S-0022 reads nothing S-0018 writes. Both change `scripts/test.sh`, and a trial merge judges that. So does `scripts/install.sh` with S-0021.
 
 Nothing here needs your answer unless you would rather not have T-0115 or T-0117 in this story.
+
+### 2026-11-14T11:12:01Z agent-S-0022
+Plan reviewed and kept as drafted: five tasks in three layers. Two changes in how it is worked: task sub-agents of layer 1 check their work with that project's own tools, not `flai test`, because the one tier runs every suite and T-0116's check makes it fail until T-0118 lands (D-0031); and T-0119 runs `flai test` on the story's paths rather than `--all`, leaving the whole suite to the close-out.
+
+Source: design/digest/D-0031-a-story-s-agent-runs-flai-test-once-per-layer-not-in-each-parallel-task-sub.md

@@ -3,15 +3,36 @@ id: T-0054
 type: task
 nature: remediation
 title: Record in an ADR how Node services verify tower against the SPIRE trust bundle
-status: backlog
+status: done
 parent: S-0015
 owner: bytepunx
 created: 2026-11-06T18:09:11Z
-updated: 2026-11-06T18:09:11Z
-transitions: []
+updated: 2026-11-14T10:13:49Z
+transitions:
+  - to: ready
+    at: 2026-11-14T10:12:50Z
+    by: agent-S-0015
+  - to: in-progress
+    at: 2026-11-14T10:12:50Z
+    by: agent-S-0015
+  - to: done
+    at: 2026-11-14T10:13:49Z
+    by: agent-S-0015
 stream: S-0015
 tags: [adr, spiffe, mtls]
-touches: [design/adrs/0111-node-services-verify-tower-against-the-spire-trust-bundle.md, design/adrs/README.md, design/tech/tech-stack.md]
+touches: [design/adrs/README.md, design/tech/tech-stack.md, design/system/overview.md, design/adrs/0113-node-services-verify-tower-s-certificate-against-the-spire-trust-bundle-and-its.md]
+usage:
+  source: log
+  seconds: 59
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 9
+      output: 2000
+      cache_read: 1259860
+      cache_write: 9522
+      cost: 0.3647
 ---
 # T-0054 Record in an ADR how Node services verify tower against the SPIRE trust bundle
 

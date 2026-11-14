@@ -3,16 +3,37 @@ id: T-0118
 type: task
 nature: remediation
 title: Make web's npm test run its Playwright e2e, as steward's does
-status: backlog
+status: done
 parent: S-0022
 owner: bytepunx
 created: 2026-11-09T22:10:18Z
-updated: 2026-11-09T22:10:18Z
-transitions: []
+updated: 2026-11-14T11:24:57Z
+transitions:
+  - to: ready
+    at: 2026-11-14T11:14:45Z
+    by: agent-S-0022
+  - to: in-progress
+    at: 2026-11-14T11:14:45Z
+    by: agent-S-0022
+  - to: done
+    at: 2026-11-14T11:24:57Z
+    by: agent-S-0022
 stream: S-0022
 tags: [web]
 touches: [web/package.json, web/TESTING.md]
 after: [T-0115, T-0116]
+usage:
+  source: log
+  seconds: 612
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 24
+      output: 4689
+      cache_read: 2726120
+      cache_write: 29633
+      cost: 0.868
 ---
 # T-0118 Make web's npm test run its Playwright e2e, as steward's does
 

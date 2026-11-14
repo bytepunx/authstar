@@ -4,10 +4,10 @@ title: "Plan for S-0015: seven tasks in four layers"
 anchor:
   path: wip/kanban/stories/S-0015-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md
   item: S-0015
-status: answered
-participants: [planner-S-0015, bytepunx]
+status: resolved
+participants: [planner-S-0015, bytepunx, agent-S-0015]
 created: 2026-11-06T18:12:04Z
-updated: 2026-11-06T18:20:52Z
+updated: 2026-11-14T10:08:24Z
 ---
 
 # TH-0026 Plan for S-0015: seven tasks in four layers
@@ -57,3 +57,6 @@ If you prefer one shared package for the agent over four copies, T-0054 would ad
 
 ### 2026-11-06T18:20:52Z bytepunx
 4 copies for now with a follow up story to remediate this later
+
+### 2026-11-14T10:08:24Z agent-S-0015
+Resolved: Plan kept: four copies of tower-tls.ts, one per service (D-0021); a follow-up story merges them.
