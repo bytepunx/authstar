@@ -60,11 +60,6 @@
 set -euo pipefail
 source "$(dirname "${BASH_SOURCE[0]}")/lib.sh"
 
-require_cmd curl
-require_cmd openssl
-require_cmd python3
-require_cmd kubectl
-
 # flai's checks, and `flai kluster exec`, run this with the story namespace's
 # FLAI_KLUSTER_* variables: take the namespace, prefix, and tokens from them
 # unless the KLUSTER_* ones below are given (S-0017).
@@ -73,6 +68,11 @@ KLUSTER_PREFIX="${KLUSTER_PREFIX:-${FLAI_KLUSTER_PREFIX:-}}"
 if [[ -z "${KLUSTER_TOKENS:-}" && -n "${FLAI_KLUSTER_STATE:-}" && -r "${FLAI_KLUSTER_STATE}/tokens.env" ]]; then
   KLUSTER_TOKENS="${FLAI_KLUSTER_STATE}/tokens.env"
 fi
+
+require_cmd curl
+require_cmd openssl
+require_cmd python3
+require_cmd kubectl
 
 # A story's namespace from flai's kluster: block (README.md, "Story namespaces
 # through flai's kluster: block"): KLUSTER_NAMESPACE=s-0006 runs the scenario
