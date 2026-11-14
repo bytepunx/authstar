@@ -76,6 +76,12 @@ left uncovered" for why that path itself has no test coverage.
   below for why this isn't simply consequent's own defaults.
 - One file per route group (or, for the send worker, per module) asserting exactly what's in
   that Story's acceptance criteria.
+- `tower-tls.spec.ts` is the exception that opens real sockets: it runs real TLS handshakes
+  against an `https` server holding a tower-shaped SVID (a `spiffe://` URI SAN only, from a
+  CA `spec/lib/spiffe-test-certs.ts` generates). It proves plain `fetch` refuses tower, the
+  failure `NODE_TLS_REJECT_UNAUTHORIZED=0` hid (I-0001), and that `src/lib/tower-tls.ts`
+  reaches it through the SPIRE trust bundle and trust domain while refusing a wrong CA, a
+  wrong trust domain, and a certificate with no SPIFFE ID (ADR 0113).
 
 ## `spec/e2e/*.spec.ts` — full flows, still no external dependencies
 

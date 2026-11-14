@@ -13,6 +13,7 @@ import { UnsubscribeKeyring, type PersistedUnsubscribeKeyGeneration } from './li
 import { createSignetAdmin } from './lib/signet-admin.js'
 import { requireBundleSecret } from './lib/bundle-secrets.js'
 import { seedBuiltInTemplates } from './lib/seed-templates.js'
+import { towerFetchFor } from './lib/tower-tls.js'
 
 // Production entrypoint. Follows the exact fetch-once/watch/restart-lock
 // pattern tower's own `src/server.ts` established for this stack (signet
@@ -138,6 +139,10 @@ async function main(): Promise<void> {
   // domain).
   const towerBaseUrl = (bundle.towerBaseUrl as string | undefined) ?? secrets.towerBaseUrl
   if (!towerBaseUrl) throw new Error('signet bundle missing towerBaseUrl')
+  // Tower serves its SPIRE SVID over https: towerFetch verifies it against
+  // the SPIRE trust bundle and trust domain (ADR 0113), and is plain fetch
+  // for an http:// towerBaseUrl.
+  const towerFetch = await towerFetchFor(towerBaseUrl)
   // ADR 0021/0045's shared operator-token value -- same delivery pattern
   // tower's own tokens use. Per ADR 0102, herald is always
   // Signet-Configured Mode (its bootstrap vars above are `requireEnv`,
@@ -202,7 +207,7 @@ async function main(): Promise<void> {
   // process, so this is at most one HTTP round trip per tenant, not per
   // request.
   const resolveTenantDomain = async (tenantSlug: string): Promise<string | undefined> => {
-    const response = await fetch(`${towerBaseUrl}/tenants/${tenantSlug}`)
+    const response = await towerFetch(`${towerBaseUrl}/tenants/${tenantSlug}`)
     if (!response.ok) return undefined
     const state = (await response.json()) as { domain?: string }
     return state.domain

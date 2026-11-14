@@ -33,9 +33,11 @@
     "jose": "^5.9.0",
     "mustache": "^4.2.0",
     "node-flakes": "^2.1.0",
-    "pino": "^9.0.0"
+    "pino": "^9.0.0",
+    "spiffe": "0.5.1"
   },
   "devDependencies": {
+    "@peculiar/x509": "1.14.3",
     "@testcontainers/postgresql": "^12.2.1",
     "@testcontainers/rabbitmq": "^12.2.1",
     "@types/amqplib": "^0.10.5",
