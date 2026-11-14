@@ -7,7 +7,7 @@ count: 2
 cost: 38m
 first_reported: 2026-11-09T07:16:18Z
 last_reported: 2026-11-09T20:54:10Z
-updated: 2026-11-09T20:54:10Z
+updated: 2026-11-14T09:55:08Z
 ---
 
 # I-0014 A story branch cannot change the harness's signet config: signet syncs it from bytepunx/authstar-integration's main, not the monorepo
@@ -26,3 +26,5 @@ Story: S-0006.
 With the operator's approval on TH-0031, S-0006 pushed keepUpstream to bytepunx/authstar-integration main (9de9df2). The kluster cluster `authstar-integration` turned out to have no signet repository registered (`signet repo list`: none), so that push does not reach it. Its bundle came in some other way, most likely `signet bundle push`, and that path is not recorded anywhere in this project. Changing one config field there means pushing a whole bundle, whose secrets this checkout cannot re-encrypt for the cluster's key.
 
 ## Remediation
+
+Story S-0031 remediates this issue, created from it at 2026-11-14T09:55:08Z.
