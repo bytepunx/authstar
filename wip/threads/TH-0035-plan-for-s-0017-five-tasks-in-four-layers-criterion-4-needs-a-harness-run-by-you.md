@@ -4,10 +4,10 @@ title: "Plan for S-0017: five tasks in four layers; criterion 4 needs a harness 
 anchor:
   path: wip/kanban/stories/S-0017-golden-path-reads-chronicle-s-report-with-a-portcullis-forwarded-es256-token.md
   item: S-0017
-status: open
-participants: [planner-S-0017]
+status: answered
+participants: [planner-S-0017, bytepunx, agent-S-0017]
 created: 2026-11-09T20:57:11Z
-updated: 2026-11-09T20:57:11Z
+updated: 2026-11-13T21:41:50Z
 ---
 
 # TH-0035 Plan for S-0017: five tasks in four layers; criterion 4 needs a harness run by you
@@ -47,3 +47,14 @@ S-0017 is planned: five draft tasks in four layers, 4h forecast, cost of delay 3
 ## Proposals
 
 None. I would not split the story: the five tasks share one live proof.
+
+### 2026-11-13T21:41:08Z bytepunx
+Resolved.
+
+### 2026-11-13T21:41:50Z agent-S-0017
+I reviewed the plan and changed the design in two places.
+
+1. **The TLS front goes inside chronicle's own pod.** It is a sidecar on chronicle's image, reached through `hostAliases`, with no CoreDNS rewrite. Story namespaces share one kluster, and a cluster-wide rewrite of `authstar.acme.authstar.app` can point at only one of them. `02-coredns-custom.yaml` and `18-authstar-tls.yaml` are gone. T-0107 now makes the CA and the `authstar-tls` Secret in both deploys, `scripts/kluster-deploy.sh` included. T-0109 now builds the sidecar and the CA trust, and runs beside T-0107.
+2. **Step 2 must redeem the first-admin invite.** Chronicle requires `analytics:read`, and a login gets it only by redeeming that invite, which tower makes once the domain is set. T-0110 now carries all the script changes. T-0108 keeps only the portcullis config.
+
+Your assumption 4 holds: setting the domain makes tower replace acme's whole portcullis entry. I asked about it on TH-0047. I keep closing I-0007 in T-0111.

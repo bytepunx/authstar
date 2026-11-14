@@ -3,27 +3,46 @@ id: S-0017
 type: story
 nature: remediation
 title: Golden path reads chronicle's report with a portcullis-forwarded ES256 token
-status: ready
+status: in-progress
 parent: E-0003
 owner: bytepunx
 created: 2026-11-06T18:29:54Z
-updated: 2026-11-13T21:36:02Z
+updated: 2026-11-14T05:03:09Z
 transitions:
   - to: ready
     at: 2026-11-13T21:35:57Z
     by: bytepunx
+  - to: in-progress
+    at: 2026-11-13T21:36:03Z
+    by: agent-S-0017
+blocked:
+  - from: 2026-11-13T22:32:42Z
+    until: 2026-11-14T05:03:09Z
+    reason: awaiting the operator on TH-0035
 tags: [integration]
 topics: [analytics, tls]
-touches: [integration/scripts/harness-tls.sh, integration/manifests/02-coredns-custom.yaml, integration/manifests/18-authstar-tls.yaml, integration/scripts/deploy.sh, integration/manifests/14-chronicle.yaml, integration/config/authstar/chronicle.yaml, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md, design/issues/summary.md]
+touches: [integration/scripts/harness-tls.sh, integration/scripts/deploy.sh, integration/manifests/14-chronicle.yaml, integration/config/authstar/chronicle.yaml, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, integration/README.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md, design/issues/summary.md, scripts/kluster-deploy.sh, design/stories/tower/012-tenant-creation-and-provisioning.md, tower/spec/behavior/provisioning.spec.ts, tower/src/routes/provisioning.ts, design/issues/I-0025-signet-refuses-getserviceconfig-on-the-workload-listener-which-tower-s.md, tower/spec/lib/fakes.ts]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3401
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 4
+      test_runs: 1
+      work: 111
+  models:
+    - model: claude-opus-5-5
+      input: 466
+      output: 166803
+      cache_read: 61763015
+      cache_write: 1213220
+      cost: 22.9835
   strategic:
     - kind: planner
       seconds: 450
@@ -42,15 +61,15 @@ usage:
           cache_write: 143434
           cost: 2.2549
     - kind: orchestrator
-      seconds: 38
+      seconds: 95
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 30
-          output: 217
-          cache_read: 1074505
-          cache_write: 144539
-          cost: 1.3949
+          input: 68
+          output: 507
+          cache_read: 2052784
+          cache_write: 272804
+          cost: 2.6724
 cost_of_delay:
   value: 30
   by: planner-S-0017
@@ -72,18 +91,21 @@ finalized:
 The integration harness's golden path reads a chronicle report through portcullis with the ES256 internal JWT portcullis mints, and chronicle verifies it against the tenant's JWKS inside the cluster. This is the harness half of S-0009's criterion 3, split out on TH-0021.
 
 ## Acceptance criteria
-- [ ] Inside the cluster, `https://authstar.<acme's domain>/.well-known/jwks.json` resolves to portcullis and serves over TLS. The cert is one chronicle trusts.
-- [ ] The golden path's step 1 gives `acme` a domain, so tower answers it to `GET /tenants/acme`.
-- [ ] Chronicle's harness config reaches tower and the JWKS host, and `NODE_TLS_REJECT_UNAUTHORIZED=0` is not added beyond what I-0001 already records.
+- [x] Inside the cluster, `https://authstar.<acme's domain>/.well-known/jwks.json` resolves to portcullis and serves over TLS. The cert is one chronicle trusts.
+- [x] The golden path's step 1 gives `acme` a domain, so tower answers it to `GET /tenants/acme`.
+- [x] Chronicle's harness config reaches tower and the JWKS host, and `NODE_TLS_REJECT_UNAUTHORIZED=0` is not added beyond what I-0001 already records.
 - [ ] Step 6 of `integration/scripts/scenario-golden-path.sh` reads chronicle's auth-funnel report through a portcullis application with step 2's session cookie, and passes on a running harness.
-- [ ] `integration/README.md` no longer lists the in-cluster JWKS gap.
+- [x] `integration/README.md` no longer lists the in-cluster JWKS gap.
 
 ## Tasks
-- T-0107 A TLS front serves authstar.<acme's domain> in-cluster from portcullis with a harness CA
-- T-0108 Step 1 gives acme a domain, and portcullis resolves authstar.<domain> and a chronicle application for acme
-- T-0109 Chronicle trusts the harness CA for the JWKS host without new NODE_TLS_REJECT_UNAUTHORIZED
-- T-0110 Step 6 reads chronicle's auth-funnel report through portcullis with step 2's session cookie
-- T-0111 integration/README.md drops the in-cluster JWKS gap and documents the TLS front, and I-0007 is closed
+- T-0107 Each deploy loads a harness CA and a cert for authstar.acme.authstar.app into the namespace as Secret authstar-tls
+- T-0108 Portcullis resolves authstar.acme.authstar.app and a chronicle application for acme in the harness config
+- T-0109 Chronicle's pod resolves authstar.acme.authstar.app to a TLS front that proxies to portcullis, and trusts the harness CA
+- T-0110 Golden path gives acme a domain, logs in with the first-admin invite, and step 6 reads chronicle's report through portcullis
+- T-0111 integration/README.md drops the in-cluster JWKS gap and documents the TLS front
+- T-0137 Tower's portcullis registration adds only _admin to a tenant portcullis already configures
+- T-0138 Tower's portcullis registration does not read portcullis's config, which signet refuses on the workload listener
+- T-0139 I-0007 is closed once the golden path passes on a running harness
 
 ## Notes
 

@@ -2,19 +2,40 @@
 id: T-0111
 type: task
 nature: remediation
-title: integration/README.md drops the in-cluster JWKS gap and documents the TLS front, and I-0007 is closed
-status: backlog
+title: integration/README.md drops the in-cluster JWKS gap and documents the TLS front
+status: done
 parent: S-0017
 owner: bytepunx
 created: 2026-11-09T20:56:25Z
-updated: 2026-11-09T20:56:25Z
-transitions: []
+updated: 2026-11-13T22:23:44Z
+transitions:
+  - to: ready
+    at: 2026-11-13T21:58:21Z
+    by: agent-S-0017
+  - to: in-progress
+    at: 2026-11-13T21:58:21Z
+    by: agent-S-0017
+  - to: done
+    at: 2026-11-13T22:23:44Z
+    by: agent-S-0017
 stream: S-0017
 tags: [integration, docs]
-touches: [integration/README.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md, design/issues/summary.md]
+touches: [integration/README.md]
 after: [T-0110]
+usage:
+  source: log
+  seconds: 1523
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 98
+      output: 35091
+      cache_read: 12993390
+      cache_write: 255231
+      cost: 4.8352
 ---
-# T-0111 integration/README.md drops the in-cluster JWKS gap and documents the TLS front, and I-0007 is closed
+# T-0111 integration/README.md drops the in-cluster JWKS gap and documents the TLS front
 
 ## Work
 
