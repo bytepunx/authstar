@@ -398,12 +398,10 @@ The golden path uses all of it:
 - Step 2 logs in with the first-admin invite, which grants `analytics:read`.
 - Step 6 checks from chronicle's own container, with `NODE_TLS_REJECT_UNAUTHORIZED` unset, that the JWKS host's cert is trusted. It then reads the auth-funnel report through portcullis on `chronicle.acme.authstar.app` with step 2's session cookie.
 
-Run it against a story's namespace once `flai kluster deploy` has passed. `flai kluster exec` gives the command that namespace's kubeconfig and `FLAI_KLUSTER_*` variables:
+Run it against a story's namespace once `flai kluster deploy` has passed. The script takes the namespace, its database prefix, and its operator tokens (`$FLAI_KLUSTER_STATE/tokens.env`) from the `FLAI_KLUSTER_*` variables. flai serve's `golden-path` check sets them, and so does `flai kluster exec`; `KLUSTER_NAMESPACE`, `KLUSTER_PREFIX`, and `KLUSTER_TOKENS` override them. It needs a kubeconfig that reaches the `dex` and `postgres` namespaces too, so a story agent's namespace-scoped one is not enough:
 
 ```sh
-flai kluster exec S-0017 -- env KLUSTER_NAMESPACE=s-0017 \
-  KLUSTER_TOKENS=.flai-cache/kluster/state/s-0017/tokens.env \
-  integration/scripts/scenario-golden-path.sh
+flai kluster exec S-0017 -- integration/scripts/scenario-golden-path.sh
 ```
 
 ### FIXED: herald's comms consumer could loop infinitely (was: "critical, unresolved bug")
