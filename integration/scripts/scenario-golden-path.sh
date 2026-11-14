@@ -354,7 +354,13 @@ else
     # this dev cluster (build-app.ts's deliberate no-op adapter); any other
     # communication.failed reason (a decrypt/key-generation error) means
     # the SOPS/keyring fix regressed.
-    sql="select content->>'type', content->>'error' from communication_event where created_on > '${before_ts}' and content->>'type' in ('communication.sent','communication.failed') order by created_on desc limit 1;"
+    # Only this invite's outcome counts: step 1's domain makes tower issue the
+    # first-admin invite before this step rotates herald's key, and herald's
+    # retries of that one fail to decrypt after before_ts too (S-0017). A
+    # communication's events share its id; its created event names the
+    # idempotency key tower sent, invite:<token>:sent.
+    step5_token="$(echo "$invite_response" | sed '$d' | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])' 2>/dev/null || echo "")"
+    sql="select content->>'type', content->>'error' from communication_event where created_on > '${before_ts}' and content->>'type' in ('communication.sent','communication.failed') and system_id = (select system_id from communication_event where content->>'idempotencyKey' = 'invite:${step5_token}:sent' limit 1) order by created_on desc limit 1;"
     outcome_type=""
     outcome_error=""
     for _ in $(seq 1 10); do
