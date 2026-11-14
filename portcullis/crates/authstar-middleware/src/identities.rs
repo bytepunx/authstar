@@ -27,6 +27,10 @@ struct ResolveRequestBody<'a> {
     idp: &'a str,
     #[serde(rename = "identityHashes")]
     identity_hashes: &'a [String],
+    // The provider's email, a hint tower files the new account's contact
+    // under (tower Story 003): an invite names its contact, so without it a
+    // first login's invite can never be redeemed (S-0017).
+    email: &'a str,
     // ADR 0092: an invite token carried through the OAuth round trip via the
     // `authstar-pending-invite` cookie (set at login initiation, read back
     // here) -- tower's own `/identities/resolve` already applies this if
@@ -60,6 +64,7 @@ pub async fn resolve_identity(
     tenant: &str,
     idp: &str,
     candidate_hashes: &[String],
+    email: &str,
     invite_token: Option<&str>,
 ) -> Result<IdentityResolution, IdentityResolveError> {
     let url = format!(
@@ -70,6 +75,7 @@ pub async fn resolve_identity(
         tenant,
         idp,
         identity_hashes: candidate_hashes,
+        email,
         redeem: invite_token.map(|token| Redeem::Invite { token }),
     };
 

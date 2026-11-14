@@ -197,6 +197,7 @@ pub async fn callback_handler(
         &tenant.slug,
         &provider_name,
         &candidate_hashes,
+        &email,
         pending_invite.as_deref(),
     )
     .await

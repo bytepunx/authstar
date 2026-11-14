@@ -732,6 +732,9 @@ async fn callback_without_pending_invite_sends_no_redeem_field() {
         .expect("no /identities/resolve request recorded");
     let body: serde_json::Value = resolve_request.body_json().unwrap();
     assert!(body.get("redeem").is_none());
+    // The userinfo email goes with it, so tower files a new account's contact
+    // under it and an invite for that contact can be redeemed (S-0017).
+    assert_eq!(body["email"], json!("user@example.com"));
 }
 
 #[tokio::test]

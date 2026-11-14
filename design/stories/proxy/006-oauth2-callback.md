@@ -1,6 +1,6 @@
 ---
 title: "Story 006: OAuth2 Callback: Code Exchange and Userinfo Fetch"
-updated: 2026-08-03
+updated: 2026-11-14
 status: draft
 ---
 # Story 006 — OAuth2 Callback: Code Exchange and Userinfo Fetch
@@ -55,7 +55,9 @@ endpoint — capturing both `email` **and** the provider's own immutable `sub`, 
       complete — it is not logged, not placed on any token, and not sent to tower.
 - [ ] The full ordered list of candidate hashes (current generation first) is sent to tower's
       `POST /identities/resolve` ([tower Story 003](../tower/003-identity-resolution-at-login.md))
-      as part of identity resolution at this login step — a genuinely different call from the
+      as part of identity resolution at this login step, with the extracted `email` as tower's
+      linking hint (tower files a new account's contact under it, so an invite naming that
+      contact can be redeemed at the same login) — a genuinely different call from the
       ordinary per-request enrichment call (Story 010's `POST /enrich`,
       [tower Story 002](../tower/002-claims-enrichment-endpoint.md)), which sends just the single
       hash the session ends up carrying and can never create an account.
