@@ -13,7 +13,7 @@ import { createIdGenerator } from './lib/ids.js'
 import { startEntitlementConsumer } from './lib/entitlement-consumer.js'
 import { startErasureAckConsumer } from './lib/erasure-ack-consumer.js'
 import { createEphemeralHeraldKey, heraldKeyFromPem, type HeraldPayloadKey } from './lib/herald-payload-crypto.js'
-import { fetchServerCredentials, watchSVIDRotation } from './lib/spiffe-mtls.js'
+import { fetchServerCredentials, watchSVIDRotation, type SecureContextTarget } from './lib/spiffe-mtls.js'
 import { resolveProvisioningConfig } from './lib/signet-bundle-config.js'
 import type { ProvisioningConfig } from './routes/provisioning.js'
 
@@ -178,7 +178,9 @@ async function main(): Promise<void> {
   const port = Number(process.env.PORT ?? 8080)
   await app.listen({ port, host: '0.0.0.0' })
   app.log.info(`tower listening on :${port} (signet config version ${bundleResponse.configVersion})`)
-  watchSVIDRotation(app.server as unknown as { setSecureContext: (ctx: { cert: string; key: string; ca: string }) => void })
+  // `buildApp`'s `tls` option makes `app.server` an `https.Server`, which
+  // Fastify's own types still declare as the plain `http.Server`.
+  const stopSVIDRotation = watchSVIDRotation(app.server as unknown as SecureContextTarget)
 
   // Race our own shutdown signal against signet's coordinated-restart wait
   // so a stuck `waitForRestart` (an anomaly portcullis's own live-cluster
@@ -192,7 +194,12 @@ async function main(): Promise<void> {
   // second call left the process hung after logging, never reaching
   // process.exit, until Kubernetes' liveness probe force-killed it).
   let closePromise: Promise<void> | undefined
-  const closeOnce = (): Promise<void> => (closePromise ??= app.close())
+  // Stopping the SVID rotation watch first ends its open FetchX509SVID
+  // stream, which would otherwise keep the process alive after close.
+  const closeOnce = (): Promise<void> => (closePromise ??= (async () => {
+    stopSVIDRotation()
+    await app.close()
+  })())
 
   await Promise.race([
     waitForRestart(workload.client, namespace, service, 30, 10_000, { signal: controller.signal })

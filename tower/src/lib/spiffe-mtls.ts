@@ -1,4 +1,4 @@
-import { createClient, parseCertificateBundle } from 'spiffe'
+import { createClient, parseCertificateBundle, type X509SVID } from 'spiffe'
 import { createPrivateKey } from 'node:crypto'
 import type { TLSSocket } from 'node:tls'
 import type { preHandlerHookHandler } from 'fastify'
@@ -22,6 +22,35 @@ export interface SpiffeServerCredentials {
   ca: string
 }
 
+// The fields of a Workload API X.509-SVID that tower's server credentials
+// are built from.
+export type SvidLike = Pick<X509SVID, 'x509Svid' | 'x509SvidKey' | 'bundle'>
+
+// One `FetchX509SVID` stream message, as far as tower reads it.
+export interface SvidMessage {
+  svids: SvidLike[]
+}
+
+// The part of an `https.Server` the rotation watch drives.
+export interface SecureContextTarget {
+  setSecureContext: (ctx: SpiffeServerCredentials) => void
+}
+
+// Converts a Workload API X.509-SVID to the PEM cert chain, key, and CA
+// bundle `https.createServer` and `setSecureContext` take.
+export function svidToCredentials(svid: SvidLike): SpiffeServerCredentials {
+  // `x509Svid` is DER, leaf-first, MAY include intermediates --
+  // `parseCertificateBundle` (not `parseCertificate`, which is
+  // documented to mis-parse a multi-cert chain) handles both cases
+  // uniformly and produces a PEM chain `https.createServer`'s own
+  // `cert` option accepts directly.
+  const cert = parseCertificateBundle(svid.x509Svid).toString('pem-chain')
+  const key = createPrivateKey({ key: Buffer.from(svid.x509SvidKey), format: 'der', type: 'pkcs8' })
+    .export({ format: 'pem', type: 'pkcs8' }) as string
+  const ca = parseCertificateBundle(svid.bundle).toString('pem-chain')
+  return { cert, key, ca }
+}
+
 // Fetches tower's own X.509-SVID (server certificate + private key) and
 // the trust-domain CA bundle needed to validate a peer's client
 // certificate, via the SPIFFE Workload API (`SPIFFE_ENDPOINT_SOCKET`-based
@@ -36,20 +65,31 @@ export async function fetchServerCredentials(): Promise<SpiffeServerCredentials>
   const rpc = client.fetchX509SVID({})
   for await (const message of rpc.responses) {
     if (message.svids.length === 0) continue
-    const svid = message.svids[0]
-    // `x509Svid` is DER, leaf-first, MAY include intermediates --
-    // `parseCertificateBundle` (not `parseCertificate`, which is
-    // documented to mis-parse a multi-cert chain) handles both cases
-    // uniformly and produces a PEM chain `https.createServer`'s own
-    // `cert` option accepts directly.
-    const cert = parseCertificateBundle(svid.x509Svid).toString('pem-chain')
-    const key = createPrivateKey({ key: Buffer.from(svid.x509SvidKey), format: 'der', type: 'pkcs8' })
-      .export({ format: 'pem', type: 'pkcs8' }) as string
-    const ca = parseCertificateBundle(svid.bundle).toString('pem-chain')
-    return { cert, key, ca }
+    return svidToCredentials(message.svids[0])
   }
   throw new Error('SPIFFE Workload API closed its FetchX509SVID stream without ever returning an SVID')
 }
+
+export interface WatchSVIDRotationOptions {
+  // The SVID pushes to apply; defaults to the Workload API's FetchX509SVID
+  // stream.
+  messages?: AsyncIterable<SvidMessage>
+  // Called once when the stream ends (`err` undefined) or fails (`err`
+  // set), never after the watch was stopped; defaults to exiting the
+  // process so Kubernetes restarts it into a fresh fetch.
+  onStreamEnd?: (err?: unknown) => void
+}
+
+function exitOnStreamEnd(err?: unknown): void {
+  if (err === undefined) {
+    process.stderr.write('SPIFFE Workload API closed FetchX509SVID stream -- cannot rotate certificates; exiting so Kubernetes restarts tower into a fresh fetch\n')
+  } else {
+    process.stderr.write(`SVID rotation watch failed applying a FetchX509SVID push -- exiting so Kubernetes restarts tower into a fresh fetch: ${err}\n`)
+  }
+  process.exit(1)
+}
+
+const STOPPED = Symbol('stopped')
 
 // Keeps the server certificate live by consuming the SPIRE Workload API's
 // indefinitely-streaming FetchX509SVID RPC and calling setSecureContext on
@@ -57,27 +97,48 @@ export async function fetchServerCredentials(): Promise<SpiffeServerCredentials>
 // intervals), always pushing the successor before the current one expires.
 // Call once immediately after app.listen() resolves -- the first push
 // (SPIRE's current SVID, the same one fetchServerCredentials already loaded)
-// is applied redundantly but harmlessly. If the stream ever closes, the
-// process exits so Kubernetes restarts into a fresh fetch.
-export function watchSVIDRotation(httpsServer: { setSecureContext: (ctx: { cert: string; key: string; ca: string }) => void }): void {
-  const client = createClient()
-  const rpc = client.fetchX509SVID({})
-  void (async () => {
-    for await (const message of rpc.responses) {
-      if (message.svids.length === 0) continue
-      const svid = message.svids[0]
-      const cert = parseCertificateBundle(svid.x509Svid).toString('pem-chain')
-      const key = createPrivateKey({ key: Buffer.from(svid.x509SvidKey), format: 'der', type: 'pkcs8' })
-        .export({ format: 'pem', type: 'pkcs8' }) as string
-      const ca = parseCertificateBundle(svid.bundle).toString('pem-chain')
-      httpsServer.setSecureContext({ cert, key, ca })
-    }
-    process.stderr.write('SPIFFE Workload API closed FetchX509SVID stream -- cannot rotate certificates; exiting\n')
-    process.exit(1)
-  })().catch((err) => {
-    process.stderr.write(`SVID rotation watch failed -- exiting: ${err}\n`)
-    process.exit(1)
+// is applied redundantly but harmlessly. If the stream ever ends or a push
+// cannot be applied, `onStreamEnd` runs (by default the process exits so
+// Kubernetes restarts into a fresh fetch). Returns a function that stops the
+// watch, idempotently, without calling `onStreamEnd`.
+export function watchSVIDRotation(server: SecureContextTarget, opts: WatchSVIDRotationOptions = {}): () => void {
+  const onStreamEnd = opts.onStreamEnd ?? exitOnStreamEnd
+  const abort = new AbortController()
+  const messages = opts.messages ?? createClient().fetchX509SVID({}, { abort: abort.signal }).responses
+  const iterator = messages[Symbol.asyncIterator]()
+
+  let stopped = false
+  let signalStop: () => void = () => {}
+  const stopSignal = new Promise<typeof STOPPED>((resolve) => {
+    signalStop = () => resolve(STOPPED)
   })
+
+  void (async () => {
+    try {
+      for (;;) {
+        const next = iterator.next()
+        // After a stop the pending read may reject (the aborted RPC); that
+        // rejection is expected and must not surface as unhandled.
+        next.catch(() => {})
+        const result = await Promise.race([next, stopSignal])
+        if (result === STOPPED) return
+        if (result.done) break
+        if (result.value.svids.length === 0) continue
+        server.setSecureContext(svidToCredentials(result.value.svids[0]))
+      }
+      if (!stopped) onStreamEnd()
+    } catch (err) {
+      if (!stopped) onStreamEnd(err)
+    }
+  })()
+
+  return () => {
+    if (stopped) return
+    stopped = true
+    signalStop()
+    abort.abort()
+    void iterator.return?.()?.catch(() => {})
+  }
 }
 
 function extractSpiffeId(subjectaltname: string | undefined): string | undefined {
