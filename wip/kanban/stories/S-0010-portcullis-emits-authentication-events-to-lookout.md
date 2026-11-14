@@ -7,7 +7,7 @@ status: ready
 parent: E-0003
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-14T08:26:33Z
+updated: 2026-11-14T09:30:30Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:52Z
@@ -62,10 +62,10 @@ cost_of_delay:
   at: 2026-11-06T18:09:53Z
 forecast:
   duration: 6h
-  delivery: 2026-11-15T11:08:00Z
-  basis: "Its own forecast of 6h; 4th in the pull order with an in-progress limit of 4, behind S-0006, S-0013, S-0017, S-0012, S-0007 and S-0008."
+  delivery: 2026-11-15T19:24:00Z
+  basis: "Its own forecast of 6h; 4th in the pull order with an in-progress limit of 4, behind S-0006, S-0013, S-0012, S-0007 and S-0008."
   by: flai
-  at: 2026-11-14T08:26:33Z
+  at: 2026-11-14T09:30:30Z
 ---
 # S-0010 Portcullis emits authentication events to lookout
 

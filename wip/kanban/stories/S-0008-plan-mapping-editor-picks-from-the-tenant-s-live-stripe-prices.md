@@ -7,7 +7,7 @@ status: ready
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-14T08:26:33Z
+updated: 2026-11-14T09:30:30Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -137,10 +137,10 @@ cost_of_delay:
     at: 2026-11-06T17:59:54Z
 forecast:
   duration: 5h
-  delivery: 2026-11-15T06:41:00Z
-  basis: "Its own forecast of 5h; 3rd in the pull order with an in-progress limit of 4, behind S-0006, S-0013, S-0017, S-0012 and S-0007."
+  delivery: 2026-11-15T13:45:00Z
+  basis: "Its own forecast of 5h; 3rd in the pull order with an in-progress limit of 4, behind S-0006, S-0013, S-0012 and S-0007."
   by: flai
-  at: 2026-11-14T08:26:33Z
+  at: 2026-11-14T09:30:30Z
 ---
 # S-0008 Plan-mapping editor picks from the tenant's live Stripe prices
 
