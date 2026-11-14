@@ -3,8 +3,8 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: closed
-count: 16
-cost: 11m
+count: 17
+cost: 12m
 first_reported: 2026-11-06T18:29:23Z
 last_reported: 2026-11-15T07:18:41Z
 updated: 2026-11-15T07:18:41Z
@@ -48,6 +48,10 @@ S-0013's close-out at fd9bf95 (job S-0013-20261114T102955Z) failed 19 of 22 stew
 ### 2026-11-14T10:38:47Z
 Story: S-0015.
 `flai test` on S-0015's herald, keep, chronicle, steward, and web paths ran every project's suite (8m15s) and failed on steward's e2e: 13 of 16 Playwright cases hung at "Connecting..." on 127.0.0.1:4611. The worktrees of S-0013, S-0014, S-0016, and S-0021 ran steward's e2e within the same two minutes, and `reuseExistingServer` shares the fixed ports 4610 and 4611 across them. S-0015 changes no steward route; web's suite, after steward's in the order, never ran.
+
+### 2026-11-14T10:47:43Z
+Story: S-0021.
+S-0021 changes no steward file. `flai test` on chart/hook, then on herald, keep, and tower, ran every project's suite. Both runs stopped at steward's Playwright e2e: 9, then 13, of `tests/e2e/operator-console.spec.ts` and `error-page.spec.ts` failed. In each failure, Connect stayed on "Connecting..." past the 5s expect timeout at 127.0.0.1:4611, while four other stories' agents ran suites on the same host. Because the tier stops at steward, tower's suite, which runs after it, never ran from `flai test`. Each run cost about 4m to 7m.
 
 ### 2026-11-14T10:47:55Z
 Story: S-0013.
