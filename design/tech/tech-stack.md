@@ -1,6 +1,6 @@
 ---
 title: Tech Stack Reference
-updated: 2026-11-09
+updated: 2026-11-14
 status: active
 topics: [all]
 ---
@@ -25,6 +25,14 @@ like).
   and `dialWorkload`/`dial_workload` (SPIFFE mTLS workload access) — the exact two access
   patterns ADR 0021/0030 already established as tower's/keep's/herald's two auth models. No
   service hand-rolls its own signet or SPIFFE integration.
+- **Calls to tower over TLS** (chronicle, herald, keep, steward, web; ADR 0113): each service's
+  `tower-tls.ts` reads the SPIRE trust bundle from the Workload API with `spiffe` 0.5.1, the
+  package `@bytepunx/signet-client` already depends on, now declared directly by each of the
+  five, and calls tower through `node:https` with that bundle as its CA. Its specs generate
+  their CA and SVIDs with `@peculiar/x509` 1.14.3, a dev dependency, as tower's own
+  `spiffe-mtls.spec.ts` does. Alternative considered: an `undici` `Agent` as global `fetch`'s
+  `dispatcher`, rejected because its major must track the one Node bundles and `node:https`
+  needs no new package.
 - **RabbitMQ**: Node services use `amqplib` (the standard AMQP 0-9-1 client) wrapped in
   `amqp-connection-manager` for automatic reconnect — consistent with how much of this design
   already treats connection resilience as a first-class concern (retry logic, idempotency keys

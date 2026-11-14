@@ -1,6 +1,6 @@
 ---
 title: System overview
-updated: 2026-11-09
+updated: 2026-11-14
 status: active
 topics: [all]
 ---
@@ -59,7 +59,7 @@ The dotted portcullis-to-lookout edge is designed but not implemented; see the s
 | Concern | How | ADRs |
 |---------|-----|------|
 | Configuration and secrets | Every service bootstraps from signet with a SPIFFE workload identity; tenant data lives in tenant namespaces, service data in service scopes. | [ADR-0004](../adrs/0004-signet-for-configuration-and-secrets.md) [ADR-0007](../adrs/0007-signet-tenant-namespace-mapping.md) [ADR-0009](../adrs/0009-tenant-data-via-syncbundle-no-github.md) [ADR-0102](../adrs/0102-signet-precedence-and-fallback-scope.md) [ADR-0103](../adrs/0103-spiffe-scoped-signet-writes-retire-admin-tokens.md) |
-| Service identity | SPIRE issues X.509 SVIDs; portcullis calls tower over mTLS. | [ADR-0008](../adrs/0008-rabbitmq-identity-without-native-spiffe.md) |
+| Service identity | SPIRE issues X.509 SVIDs; portcullis calls tower over mTLS. Chronicle, herald, keep, steward, and web verify tower's SVID against the SPIRE trust bundle and the trust domain, for tower's origin alone; every other call keeps Node's default verification. | [ADR-0008](../adrs/0008-rabbitmq-identity-without-native-spiffe.md) [ADR-0113](../adrs/0113-node-services-verify-tower-s-certificate-against-the-spire-trust-bundle-and-its.md) |
 | Messaging | One RabbitMQ topic exchange per domain: `authstar` for entitlements and comms, `analytics` for events. | [ADR-0006](../adrs/0006-rabbitmq-as-message-broker.md) [ADR-0012](../adrs/0012-rabbitmq-user-provisioning-job.md) |
 | Internal JWT | Portcullis mints an ES256 token per request, keyed per tenant, published at the tenant's JWKS URL; web and the SDKs verify it. | [ADR-0086](../adrs/0086-jwks-endpoint-for-internal-jwt-verification.md) [ADR-0091](../adrs/0091-tenant-owned-domains-and-the-authstar-admin-surface.md) |
 | Local environment | One k3d cluster via kluster, from `integration/kluster.yaml`, whose shared signet, RabbitMQ, Postgres, ClickHouse, and Dex every namespace uses. flai deploys each story in review into its own namespace, with its own vhost, prefixed databases, and signet bundles, and promotes main into `authstar`, through the `kluster:` block's scripts ([integration/README.md](../../integration/README.md)). | [ADR-0005](../adrs/0005-kluster-for-local-development-and-testing.md) |
