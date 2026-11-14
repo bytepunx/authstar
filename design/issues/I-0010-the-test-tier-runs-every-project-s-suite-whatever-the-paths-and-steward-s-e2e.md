@@ -3,11 +3,11 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: open
-count: 6
+count: 7
 cost: 11m
 first_reported: 2026-11-06T18:29:23Z
-last_reported: 2026-11-14T10:38:38Z
-updated: 2026-11-14T10:38:38Z
+last_reported: 2026-11-14T10:47:55Z
+updated: 2026-11-14T10:47:55Z
 ---
 
 # I-0010 The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
@@ -40,6 +40,10 @@ S-0025's close-out at afe869f (job S-0025-20261113T215227Z) stopped at the test 
 ### 2026-11-14T10:38:38Z
 Story: S-0013.
 S-0013's close-out at fd9bf95 (job S-0013-20261114T102955Z) failed 19 of 22 steward e2e tests. Each one hung at 'Connecting...' on steward's fixed port 4611 with the fake tower on 4610, while S-0014 and S-0015, which also change steward, were running in parallel. The code had not changed since b980be4, where every steward suite passed, and both ports were free when I looked afterwards.
+
+### 2026-11-14T10:47:55Z
+Story: S-0013.
+S-0013's close-out at 5985e15 (job S-0013-20261114T103845Z) failed the same 19 of 22 steward e2e tests: page.goto hit ERR_CONNECTION_REFUSED on 127.0.0.1:4611 once the first 3 tests had passed. Right after, `ps` showed S-0014's worktree running `playwright test` in steward (pid 1337055, started about 8 minutes earlier). That run binds the same fixed ports, 4610 and 4611. Two worktrees running steward's e2e at once is enough to fail both.
 
 ## Remediation
 
