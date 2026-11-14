@@ -659,11 +659,12 @@ update this note.
   (`{}`) instead of `nil`, closing the parse error now that `manifests/13-lookout.yaml`
   actually sets bootstrap `SIGNET_*` vars (once lookout's own companion PR merges, sync
   cycles against this file will stop erroring).
-- **Keep, herald, and web still cannot verify a portcullis-forwarded token in-cluster.** Only
-  chronicle's pod has the TLS front for the tenant's JWKS host (see "The tenant's JWKS host
-  in-cluster"). Each of the other three needs the same `hostAliases`, `tls-front` sidecar, and
-  `NODE_EXTRA_CA_CERTS` in its own manifest, and keep and herald's `towerBaseUrl` still say
-  `http://` (I-0006).
+- **Herald and web still cannot verify a portcullis-forwarded token in-cluster.** Chronicle's
+  pod and keep's have the TLS front for the tenant's JWKS host (see "The tenant's JWKS host
+  in-cluster"); keep's, in `manifests/11-keep.yaml`, runs the script from chronicle's ConfigMap
+  `chronicle-tls-front`, and its `towerBaseUrl` is `https://` (S-0006). Each of the other two
+  needs the same `hostAliases`, `tls-front` sidecar, and `NODE_EXTRA_CA_CERTS` in its own
+  manifest, and herald's `towerBaseUrl` still says `http://` (I-0006).
 - Web's own JWKS wiring — `INTERNAL_JWT_JWKS_URL` is now set, in both
   `config/authstar/web.yaml` (`internalJwtJwksUrl`, signet-sourced once web's own
   companion PR lands) and `manifests/16-web.yaml` (`INTERNAL_JWT_JWKS_URL` env var, for

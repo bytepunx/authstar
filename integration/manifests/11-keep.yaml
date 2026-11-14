@@ -2,6 +2,18 @@
 # tower's (see 10-tower.yaml's header comment): keep's
 # signet-stripe-config-store.ts calls signet's GitOpsService through
 # dialWorkloadGitOps, over workload mTLS (ADR 0103).
+#
+# The JWKS host (S-0006, as chronicle's in 14-chronicle.yaml). Keep verifies the
+# internal JWT portcullis forwards on /_authstar/me/* against
+# https://authstar.<domain>/.well-known/jwks.json, scheme fixed, and portcullis
+# listens plain HTTP. Inside this pod only, hostAliases send
+# authstar.acme.authstar.app to 127.0.0.1, where the tls-front sidecar
+# terminates TLS on 443 with the cert in Secret authstar-tls and proxies to
+# portcullis:3710, keeping Host. The sidecar runs the script in ConfigMap
+# chronicle-tls-front, which 14-chronicle.yaml defines: the deploy applies
+# every manifest before it waits for a rollout, so the pod finds it. Keep
+# trusts the harness CA through NODE_EXTRA_CA_CERTS. The pod sysctl lets the
+# image's non-root node user bind 443.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -22,6 +34,15 @@ spec:
       serviceAccountName: keep
       imagePullSecrets:
         - name: dockerhub-pull
+      # The tenant's JWKS host resolves to the tls-front sidecar below.
+      hostAliases:
+        - ip: 127.0.0.1
+          hostnames:
+            - authstar.acme.authstar.app
+      securityContext:
+        sysctls:
+          - name: net.ipv4.ip_unprivileged_port_start
+            value: "0"
       containers:
         - name: keep
           image: bytepunx/authstar-keep:latest
@@ -60,15 +81,66 @@ spec:
               value: authstar.cluster.local
             - name: SPIFFE_ENDPOINT_SOCKET
               value: unix:///run/spire/sockets/spire-agent.sock
+            # Keep's plain fetch() to tower's https towerBaseUrl has no
+            # SPIFFE-bundle CA trust wiring yet, as chronicle's (I-0001).
+            - name: NODE_TLS_REJECT_UNAUTHORIZED
+              value: "0"
+            # The harness CA that signed tls-front's cert for the JWKS host.
+            - name: NODE_EXTRA_CA_CERTS
+              value: /etc/authstar-tls-ca/ca.crt
           volumeMounts:
             - name: spiffe
               mountPath: /run/spire/sockets
+              readOnly: true
+            - name: authstar-tls-ca
+              mountPath: /etc/authstar-tls-ca
+              readOnly: true
+        - name: tls-front
+          image: bytepunx/authstar-keep:latest
+          imagePullPolicy: Always
+          command: ["node", "/etc/tls-front/front.mjs"]
+          env:
+            - name: TLS_FRONT_UPSTREAM
+              value: http://portcullis:3710
+          # The front listens on the pod's loopback only, which a tcpSocket
+          # probe (sent from the node to the pod IP) cannot reach.
+          readinessProbe:
+            exec:
+              command:
+                - node
+                - -e
+                - "require('node:net').connect(443, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"
+            initialDelaySeconds: 2
+            periodSeconds: 10
+          volumeMounts:
+            - name: tls-front
+              mountPath: /etc/tls-front
+              readOnly: true
+            - name: authstar-tls
+              mountPath: /etc/authstar-tls
               readOnly: true
       volumes:
         - name: spiffe
           csi:
             driver: csi.spiffe.io
             readOnly: true
+        - name: tls-front
+          configMap:
+            name: chronicle-tls-front
+        - name: authstar-tls
+          secret:
+            secretName: authstar-tls
+            items:
+              - key: tls.crt
+                path: tls.crt
+              - key: tls.key
+                path: tls.key
+        - name: authstar-tls-ca
+          secret:
+            secretName: authstar-tls
+            items:
+              - key: ca.crt
+                path: ca.crt
 ---
 apiVersion: v1
 kind: Service
