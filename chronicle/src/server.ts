@@ -5,6 +5,7 @@ import buildConsumer from './consumer/build-consumer.js'
 import RealClickHouseClient from './lib/clickhouse-client.js'
 import { loadEnvConfig, type ChronicleConfig } from './lib/config.js'
 import { decodeBundleSecrets, resolveConfigFromBundle } from './lib/signet-bundle-config.js'
+import { towerFetchFor } from './lib/tower-tls.js'
 
 // Production entrypoint. ADR 0102 / Story 003: unlike keep/herald/tower
 // (which require signet unconditionally), chronicle is one of the four
@@ -116,9 +117,12 @@ async function main(): Promise<void> {
   // Resolves a tenant's registered domain against tower the first time that
   // tenant's slug is seen; perTenantJwksKeyProvider caches the result for
   // the life of the process, so this is at most one round trip per tenant,
-  // not per request. Same lookup as keep's and herald's server.ts.
+  // not per request. Same lookup as keep's and herald's server.ts. Over an
+  // https towerBaseUrl, towerFetch verifies tower's SVID against the SPIRE
+  // trust bundle (ADR 0113); an http one gets plain fetch.
+  const towerFetch = await towerFetchFor(config.towerBaseUrl)
   const resolveTenantDomain = async (tenantSlug: string): Promise<string | undefined> => {
-    const response = await fetch(`${config.towerBaseUrl}/tenants/${encodeURIComponent(tenantSlug)}`)
+    const response = await towerFetch(`${config.towerBaseUrl}/tenants/${encodeURIComponent(tenantSlug)}`)
     if (!response.ok) return undefined
     const state = (await response.json()) as { domain?: string }
     return state.domain
