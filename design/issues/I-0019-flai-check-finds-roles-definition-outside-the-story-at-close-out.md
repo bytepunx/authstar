@@ -3,10 +3,10 @@ id: I-0019
 title: "flai check finds `roles.definition` outside the story at close-out"
 class: efficiency
 status: open
-count: 7
+count: 8
 first_reported: 2026-11-09T07:16:37Z
-last_reported: 2026-11-13T22:32:02Z
-updated: 2026-11-13T22:32:02Z
+last_reported: 2026-11-14T10:21:31Z
+updated: 2026-11-14T10:21:31Z
 ---
 
 # I-0019 flai check finds `roles.definition` outside the story at close-out
@@ -48,6 +48,11 @@ flai check found outside the story:
 
 ### 2026-11-13T22:32:02Z
 Story: S-0017.
+flai check found outside the story:
+`design/workflows/roles/orchestrator.md`: definition.tools lists mcp__flai__verify, which the role's rules refuse: verify is neither a read every agent has nor in tools or a permission's tools; remove it, or grant it
+
+### 2026-11-14T10:21:31Z
+Story: S-0013.
 flai check found outside the story:
 `design/workflows/roles/orchestrator.md`: definition.tools lists mcp__flai__verify, which the role's rules refuse: verify is neither a read every agent has nor in tools or a permission's tools; remove it, or grant it
 
