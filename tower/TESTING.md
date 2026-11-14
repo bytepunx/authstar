@@ -644,8 +644,7 @@ own authorization posture exactly rather than inventing a stricter one for this 
 
 - **`src/lib/spiffe-mtls.ts`** (new) — `fetchServerCredentials()` fetches tower's own X.509-SVID
   and trust-domain CA bundle via the SPIFFE Workload API (first message off the indefinitely-
-  streaming `FetchX509SVID` RPC; rotation handled by process-restart-into-fresh-fetch, same
-  posture `server.ts`'s own header comment already documents for signet). `requireSpiffePeer
+  streaming `FetchX509SVID` RPC). `requireSpiffePeer
   (trustDomain)` is a fastify `preHandler` that checks `socket.authorized` (was a chain-trusted
   cert presented at all) then extracts the SPIFFE URI SAN from `getPeerCertificate()` and checks
   it's prefixed `spiffe://${trustDomain}/` — two distinct failure modes, two distinct error
@@ -663,6 +662,19 @@ own authorization posture exactly rather than inventing a stricter one for this 
   `dialWorkload` call, same ambient `SPIFFE_ENDPOINT_SOCKET`) and passes `tls`/`spiffeTrustDomain`
   (the same `SIGNET_TRUST_DOMAIN` it already requires) into its own `buildApp()` call — the real
   production entrypoint now actually exercises this, not just the test-only path.
+- **SVID rotation in place** (I-0002) — SPIRE's SVIDs expire (default TTL 4h), so the certificate
+  `fetchServerCredentials()` loads at boot cannot serve for the life of the process.
+  `watchSVIDRotation(server, opts?)` (`src/lib/spiffe-mtls.ts`) keeps reading the same
+  `FetchX509SVID` stream and applies each SVID SPIRE pushes with `setSecureContext`, so new
+  handshakes see the current certificate without a restart. The process exits only when the
+  stream ends or a push cannot be applied (the default stream-end handler, `process.exit(1)`), and
+  Kubernetes then restarts it into a fresh fetch. `opts.messages` injects the stream of SVID
+  pushes and `opts.onStreamEnd` the stream-end handler, both defaulting to the real Workload API
+  and the exit; the watch returns an idempotent stop function, which `server.ts` calls through
+  `closeOnce` on shutdown so the open stream cannot keep the process alive after `app.close()`.
+  `spec/behavior/spiffe-svid-rotation.spec.ts` covers it with real TLS handshakes: an expired
+  SVID fails the handshake, a fresh one pushed through the injected stream is what new handshakes
+  then present, and an ended stream calls the stream-end handler.
 - See bug #8 above for the two real findings from building this: `fetchX509SVID({})`'s
   zero-argument gotcha, and why `app.inject()` cannot exercise `socket.authorized`/
   `getPeerCertificate()` at all (needed a genuine `https.Server` + real `https.request()` calls
