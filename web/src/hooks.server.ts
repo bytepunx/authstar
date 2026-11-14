@@ -1,9 +1,10 @@
-import type { Handle } from '@sveltejs/kit/hooks'
+import type { Handle, HandleFetch } from '@sveltejs/kit/hooks'
 import { jwksKeyProvider, perTenantJwksKeyProvider } from '@bytepunx/authstar-core'
 import { InvalidInternalJwtError, verifyInternalJwt } from '$lib/server/jwt'
 import { createTowerClient } from '$lib/server/clients/tower'
 import { createKeepClient } from '$lib/server/clients/keep'
 import { loadConfig } from '$lib/server/config'
+import { towerFetchFor } from '$lib/server/tower-tls'
 
 // ADR 0089: `web` is a single shared deployment serving every tenant, with
 // no Host-based signal of its own -- there is no mechanism that would ever
@@ -45,12 +46,22 @@ const jwksUrl = config.internalJwtJwksUrl
 const towerBaseUrl = config.towerBaseUrl
 const keepBaseUrl = config.keepBaseUrl
 
+// ADR 0113 (I-0001): tower serves its SPIRE SVID, so an https tower URL is
+// reached through `towerFetchFor`, which verifies tower's certificate against
+// the SPIRE trust bundle and its SPIFFE trust domain, in place of the
+// process-wide NODE_TLS_REJECT_UNAUTHORIZED=0 the chart used to set. An
+// http:// tower URL (Env-Only Mode's default) gets plain fetch. Resolved once,
+// at module load like `config`, so an https URL without the SPIFFE Workload
+// API fails startup loudly, naming SPIFFE_ENDPOINT_SOCKET.
+const towerOrigin = new URL(towerBaseUrl).origin
+const towerFetch = await towerFetchFor(towerBaseUrl)
+
 const tenantDomainCache = new Map<string, string>()
 async function resolveTenantDomain(tenantSlug: string): Promise<string | undefined> {
 	const cached = tenantDomainCache.get(tenantSlug)
 	if (cached) return cached
 	try {
-		const response = await fetch(`${towerBaseUrl}/tenants/${encodeURIComponent(tenantSlug)}`)
+		const response = await towerFetch(`${towerBaseUrl}/tenants/${encodeURIComponent(tenantSlug)}`)
 		if (!response.ok) return undefined
 		const body = (await response.json()) as { domain?: string }
 		if (!body.domain) return undefined
@@ -93,4 +104,14 @@ export const handle: Handle = async ({ event, resolve }) => {
 	}
 
 	return resolve(event)
+}
+
+// Sends web's server-side requests to tower's https origin, those its tower
+// client makes through `event.fetch`, through the tower fetch (ADR 0113).
+// Every other request goes to SvelteKit's own fetch unchanged.
+export const handleFetch: HandleFetch = async ({ request, fetch }) => {
+	if (towerOrigin.startsWith('https:') && new URL(request.url).origin === towerOrigin) {
+		return towerFetch(request)
+	}
+	return fetch(request)
 }

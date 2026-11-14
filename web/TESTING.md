@@ -38,6 +38,14 @@ static file server.
   `src/lib/server/jwt.ts`'s internal-JWT verification) directly, with no route involved at all.
   `jwt.spec.ts` signs real tokens with a locally generated ES256 keypair via `jose` — no real
   signet, but real cryptographic verification, not a stub.
+- `spec/behavior/tower-tls.spec.ts` (I-0001, ADR 0113) proves `src/lib/server/tower-tls.ts`, the
+  fetch `hooks.server.ts` reaches tower's https origin with, over real TLS handshakes: a
+  `node:https` server holds a tower-shaped SVID (a `spiffe://` URI SAN only) signed by a CA
+  generated with `@peculiar/x509` (`spec/fixtures/spiffe-test-certs.ts`). Plain `fetch` refuses
+  it, the failure `NODE_TLS_REJECT_UNAUTHORIZED=0` used to hide; the trust-bundle fetch accepts
+  it and refuses a wrong CA, a wrong trust domain, and a CA-signed cert with no SPIFFE ID. A fake
+  Workload API stream covers `watchTowerTrust`. The same spec runs in chronicle, herald, keep,
+  and steward against their copies of the module.
 
 ## `spec/components/` — the two things this project calls "component contracts"
 
