@@ -3,7 +3,7 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: open
-count: 7
+count: 8
 cost: 11m
 first_reported: 2026-11-06T18:29:23Z
 last_reported: 2026-11-14T10:47:55Z
@@ -40,6 +40,10 @@ S-0025's close-out at afe869f (job S-0025-20261113T215227Z) stopped at the test 
 ### 2026-11-14T10:38:38Z
 Story: S-0013.
 S-0013's close-out at fd9bf95 (job S-0013-20261114T102955Z) failed 19 of 22 steward e2e tests. Each one hung at 'Connecting...' on steward's fixed port 4611 with the fake tower on 4610, while S-0014 and S-0015, which also change steward, were running in parallel. The code had not changed since b980be4, where every steward suite passed, and both ports were free when I looked afterwards.
+
+### 2026-11-14T10:38:47Z
+Story: S-0015.
+`flai test` on S-0015's herald, keep, chronicle, steward, and web paths ran every project's suite (8m15s) and failed on steward's e2e: 13 of 16 Playwright cases hung at "Connecting..." on 127.0.0.1:4611. The worktrees of S-0013, S-0014, S-0016, and S-0021 ran steward's e2e within the same two minutes, and `reuseExistingServer` shares the fixed ports 4610 and 4611 across them. S-0015 changes no steward route; web's suite, after steward's in the order, never ran.
 
 ### 2026-11-14T10:47:55Z
 Story: S-0013.
