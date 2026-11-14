@@ -4,10 +4,10 @@ title: "S-0006 criterion 3: the kluster run needs keepUpstream in signet's confi
 anchor:
   path: wip/kanban/stories/S-0006-serve-get-authstar-me-subscription-for-the-subscription-status-widget.md
   item: S-0006
-status: answered
+status: resolved
 participants: [agent-S-0006, bytepunx]
 created: 2026-11-09T07:16:28Z
-updated: 2026-11-10T05:11:00Z
+updated: 2026-11-14T09:55:08Z
 ---
 
 # TH-0031 S-0006 criterion 3: the kluster run needs keepUpstream in signet's config, which syncs only from bytepunx/authstar-integration's main
@@ -75,3 +75,6 @@ How should S-0006 finish?
 
 ### 2026-11-10T05:11:00Z bytepunx
 S-0019 is
+
+### 2026-11-14T09:55:08Z bytepunx
+Resolved: S-0006 was accepted

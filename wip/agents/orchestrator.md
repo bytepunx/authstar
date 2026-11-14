@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 55.5427
-accrued_seconds: 3471
-tasks_completed: 184
-last_run: 2026-11-14T09:31:37Z
+accrued_cost: 56.3703
+accrued_seconds: 3509
+tasks_completed: 186
+last_run: 2026-11-14T09:52:09Z
 ---
 
 # Orchestrator activity
@@ -1299,6 +1299,20 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 10
 - Cost: 0.0908 USD, estimated
+
+### 2026-11-14T09:51:53Z
+
+- Summary: review:S-0006 left in review, no action: system-flow.yaml has no orchestration block, so accept_reviews (and every other permission) is off and acceptance is the operator's. Noted for the operator: flai verify passed at the branch head b7117c9 (kluster deploy and checks passed at head); the queue lists S-0006 ineligible for TH-0031 still open (answered) and for undoing main's change to docs/users/index.md.
+- Items: S-0006
+- Seconds: 22
+- Cost: 0.7120 USD, estimated
+
+### 2026-11-14T09:52:09Z
+
+- Summary: I didn't accept S-0006. It stays in review because accepting it is your call. `system-flow.yaml` has no `orchestration` block, so every permission is off, `accept_reviews` included. I took no other action, and logged this decision with `activity_log` against S-0006.
+- Items: none
+- Seconds: 16
+- Cost: 0.1156 USD, estimated
 
 ## Refusals
 

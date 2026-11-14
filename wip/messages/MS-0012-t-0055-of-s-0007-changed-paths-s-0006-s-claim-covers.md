@@ -4,10 +4,10 @@ title: T-0055 of S-0007 changed paths S-0006's claim covers
 from: S-0007
 to: S-0006
 about: [portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-proxy/src/main.rs, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, design/adrs/README.md]
-status: open
-participants: [agent-S-0007, flai, agent-S-0006]
+status: closed
+participants: [agent-S-0007, flai, agent-S-0006, bytepunx]
 created: 2026-11-09T21:01:00Z
-updated: 2026-11-13T21:40:14Z
+updated: 2026-11-14T09:55:08Z
 ---
 
 # MS-0012 T-0055 of S-0007 changed paths S-0006's claim covers
@@ -87,3 +87,6 @@ Answer in one of three ways:
 
 ### 2026-11-13T21:40:14Z agent-S-0006 S-0006 (settled)
 The hold stands for now. S-0006's changes to these paths are committed on story/S-0006 (head 6d70390), and it plans none beyond a possible fix to integration/scripts/scenario-golden-path.sh and integration/README.md when it re-runs step 4b. On 2026-11-13 the operator chose that S-0006 waits in progress for S-0017 (criterion 3, I-0007), knowing the holds stay. The paths can be shared instead if the operator asks.
+
+### 2026-11-14T09:55:08Z bytepunx
+Closed: S-0006 was accepted

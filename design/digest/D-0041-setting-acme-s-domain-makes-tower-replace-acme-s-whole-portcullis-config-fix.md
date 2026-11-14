@@ -6,8 +6,8 @@ sources: [TH-0047, S-0017, T-0137, T-0138]
 topics: [tower, node, integration, code, all]
 paths: [tower/src/routes/provisioning.ts, tower/spec/behavior/provisioning.spec.ts, integration/config/authstar/portcullis.yaml, integration/scripts/scenario-golden-path.sh, design/stories/tower/012-tenant-creation-and-provisioning.md]
 date: 2026-11-13
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/stories/tower/012-tenant-creation-and-provisioning.md#provisioning-sequence"
 asked_again: []
 cited: []
 ---

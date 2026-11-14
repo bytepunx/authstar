@@ -3,11 +3,11 @@ id: S-0006
 type: story
 nature: feature
 title: Serve GET /_authstar/me/subscription for the subscription-status widget
-status: in-progress
+status: done
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-14T05:38:34Z
+updated: 2026-11-14T09:55:08Z
 transitions:
   - to: ready
     at: 2026-10-21T05:29:49Z
@@ -27,6 +27,12 @@ transitions:
   - to: in-progress
     at: 2026-11-13T20:06:47Z
     by: bytepunx
+  - to: review
+    at: 2026-11-14T09:50:57Z
+    by: agent
+  - to: done
+    at: 2026-11-14T09:55:08Z
+    by: bytepunx
 blocked:
   - from: 2026-11-09T07:19:49Z
     until: 2026-11-09T20:48:46Z
@@ -44,7 +50,7 @@ blocked:
     until: 2026-11-14T05:38:34Z
     reason: "criterion 3 waits on S-0017: step 4b answers 403 until the harness serves the tenant's JWKS (I-0007)"
 tags: [keep, portcullis]
-touches: [docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, keep/TESTING.md, keep/spec/behavior/me.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/me.ts, portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-proxy/tests/me_tests.rs, web/src/widgets/subscription-status.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md, design/adrs/README.md, integration/config/authstar/portcullis.yaml, design/issues/I-0014-a-story-branch-cannot-change-the-harness-s-signet-config-signet-syncs-it-from.md, design/issues/summary.md, design/issues/I-0015-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md]
+touches: [docs/users/index.md, integration/README.md, integration/scripts/scenario-golden-path.sh, keep/TESTING.md, keep/spec/behavior/me.spec.ts, keep/src/lib/build-app.ts, keep/src/routes/me.ts, portcullis/TESTING.md, portcullis/crates/authstar-middleware/src/lib.rs, portcullis/crates/authstar-middleware/src/me.rs, portcullis/crates/authstar-middleware/src/router.rs, portcullis/crates/authstar-proxy/src/main.rs, portcullis/crates/authstar-proxy/tests/me_tests.rs, web/src/widgets/subscription-status.ts, design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md, design/adrs/README.md, integration/config/authstar/portcullis.yaml, design/issues/I-0014-a-story-branch-cannot-change-the-harness-s-signet-config-signet-syncs-it-from.md, design/issues/summary.md, design/issues/I-0015-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0007-the-integration-harness-cannot-serve-a-tenant-s-jwks-in-cluster-at-https.md, integration/manifests/11-keep.yaml, integration/config/authstar/keep.yaml]
 after: [S-0017]
 usage:
   source: log
@@ -65,15 +71,15 @@ usage:
       cost: 11.9161
   strategic:
     - kind: orchestrator
-      seconds: 142
+      seconds: 164
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 74
-          output: 543
-          cache_read: 2116216
-          cache_write: 323354
-          cost: 2.8176
+          input: 88
+          output: 623
+          cache_read: 2655621
+          cache_write: 401375
+          cost: 3.5296
 ---
 # S-0006 Serve GET /_authstar/me/subscription for the subscription-status widget
 
@@ -84,7 +90,7 @@ The `<authstar-subscription-status>` widget web already ships gets a real answer
 ## Acceptance criteria
 - [x] Keep exposes the route story keep/006 specifies, authenticated by the internal JWT, returning status and plan name for the caller's account or organization scope
 - [x] Portcullis routes `/_authstar/me/subscription` to keep like the other `/_authstar/me/*` routes
-- [ ] The widget renders a real status against a running stack in the integration harness's golden path
+- [x] The widget renders a real status against a running stack in the integration harness's golden path
 - [x] `docs/users/` describes the widget and `keep/TESTING.md` the route
 
 ## Tasks
@@ -104,3 +110,7 @@ Criterion 3 is unticked: the golden-path step 4b is written and documented, but 
 - 2026-11-06T17:56:48Z: moved to in-progress: Final criterion requires a test against kluster
 - 2026-11-13T20:06:47Z: moved to in-progress: Missing criteria
 - 2026-11-13: waits for S-0017 (`after`), the operator's choice: the golden path against namespace `s-0006` at 7a4cd57 passed steps 1 to 4, 5, and 6, and step 4b answered 403 from keep, which cannot fetch the tenant's JWKS in-cluster (I-0007). S-0017 writes the harness's TLS front and DNS that serve it; S-0006 re-runs step 4b on it and ticks criterion 3.
+
+### Removals kept
+
+- `docs/users/index.md`, kept by bytepunx at 2026-11-14T09:55:08Z: Additions and improvements

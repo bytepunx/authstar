@@ -2,7 +2,7 @@
 id: D-0026
 title: "Agents on this host run no cluster commands: its current kube context is a remote Linode cluster, not a disposable k3d one"
 kind: decision
-sources: [S-0009, TH-0021, S-0019, S-0025]
+sources: [S-0009, TH-0021, S-0019, S-0025, S-0017, T-0141, TH-0051]
 topics: [integration, testing, chart, kluster, all]
 paths: [integration/README.md, integration/scripts/scenario-golden-path.sh, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/lib-kluster.sh]
 date: 2026-11-06
@@ -22,4 +22,6 @@ S-0019 kept the same rule for the kluster scripts, and it is enforced: "`flai gu
 
 Since S-0025, a story's agent asks flai serve for its own namespace's deploy and teardown jobs with the MCP tools `kluster_deploy` and `kluster_teardown`. S-0025's narrative: "Will request S-0025's own deploy and teardown jobs with kluster_deploy and kluster_teardown, now that flai serve offers them to a story's agent. The operator's part narrows to `flai kluster up`, plus S-0005's teardown and main's promote, which are not S-0025's to request." These are the same jobs flai serve runs at review and acceptance, so a criterion they prove counts as live proof. flai refuses a teardown when the namespace has no deploy record left, so a teardown is never repeated on a namespace already removed.
 
-Source: S-0009, TH-0021, S-0019, S-0025.
+S-0017 found that the kubeconfig a story's agent gets reaches its own namespace only: "The golden path itself cannot run from the story's agent: the namespace kubeconfig reaches only s-0017, not dex or postgres." It proved the chain from inside its namespace instead, "with a scratch driver in tower's pod (bin/S-0017/drive.sh)". The full golden path is run by flai serve's `golden-path` check, which sets the namespace's `FLAI_KLUSTER_*` variables, or by the operator with `flai kluster exec S-nnnn -- integration/scripts/scenario-golden-path.sh`. On TH-0051 that check first ran against main's namespace `authstar`, because the script read only `KLUSTER_NAMESPACE`, `KLUSTER_PREFIX`, and `KLUSTER_TOKENS`. T-0141 made them default to `FLAI_KLUSTER_NAMESPACE`, `FLAI_KLUSTER_PREFIX`, and `$FLAI_KLUSTER_STATE/tokens.env`, so keep those defaults when you change the script.
+
+Source: S-0009, TH-0021, S-0019, S-0025, S-0017, T-0141, TH-0051.

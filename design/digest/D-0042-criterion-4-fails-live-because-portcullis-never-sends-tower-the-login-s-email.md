@@ -6,8 +6,8 @@ sources: [TH-0048, S-0017, T-0140]
 topics: [portcullis, tower, rust, integration, code, all]
 paths: [portcullis/crates/authstar-middleware/src/identities.rs, portcullis/crates/authstar-middleware/src/oauth/callback.rs, portcullis/crates/authstar-middleware/tests/integration_tests.rs, tower/src/routes/identities.ts, design/stories/proxy/006-oauth2-callback.md, integration/scripts/scenario-golden-path.sh]
 date: 2026-11-14
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/stories/proxy/006-oauth2-callback.md#acceptance-criteria"
 asked_again: []
 cited: [TH-0049]
 ---

@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 11.5475
-accrued_seconds: 1117
-tasks_completed: 7
-last_run: 2026-11-14T08:28:51Z
+accrued_cost: 13.5102
+accrued_seconds: 1288
+tasks_completed: 8
+last_run: 2026-11-14T09:33:26Z
 ---
 
 # Curator activity
@@ -67,3 +67,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0019, D-0025, D-0026, D-0027, D-0034, D-0036, D-0037, D-0041, D-0042, D-0043, D-0044
 - Seconds: 134
 - Cost: 1.4999 USD, estimated
+
+### 2026-11-14T09:33:26Z
+
+- Summary: I wrote one new digest entry (D-0045), merged S-0017 into two existing ones (D-0019, D-0026), absorbed two into the design (D-0041, D-0042), and `flai digest compact` compacted none. The harvest since 2026-11-14T08:28:51Z had 14 candidates, all from S-0017 and its fix for I-0007.
+- Trigger: accepted S-0017
+- Items: D-0019, D-0026, D-0041, D-0042, D-0045
+- Seconds: 171
+- Cost: 1.9627 USD, estimated
