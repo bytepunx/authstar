@@ -7,7 +7,7 @@ count: 2
 cost: 20m
 first_reported: 2026-11-13T12:32:47Z
 last_reported: 2026-11-13T19:47:34Z
-updated: 2026-11-13T19:47:34Z
+updated: 2026-11-14T08:26:32Z
 ---
 
 # I-0023 flai's kept kluster kubeconfig goes stale when the k3d containers restart and the API port moves
@@ -26,3 +26,5 @@ Story: S-0025.
 Three more jobs failed on the stale kubeconfig (still 127.0.0.1:41600, while the load balancer listens on 40820): S-0025's teardown at 2026-11-13T12:59Z (TH-0046), main's promote at 13:01Z, and S-0025's deploy at 13:07Z. The deploy's new kluster_require check (T-0136) named the cause and the remedy; the image load step passed, since `k3d image import` needs no kubeconfig.
 
 ## Remediation
+
+Story S-0027 remediates this issue, created from it at 2026-11-14T08:26:32Z.
