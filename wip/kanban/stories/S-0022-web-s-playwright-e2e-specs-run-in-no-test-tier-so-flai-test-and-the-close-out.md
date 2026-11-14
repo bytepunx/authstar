@@ -6,7 +6,7 @@ title: Web's Playwright e2e specs run in no test tier, so flai test and the clos
 status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-14T11:53:36Z
+updated: 2026-11-14T17:29:38Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:03Z
@@ -28,6 +28,7 @@ transitions:
     by: flai
 blocked:
   - from: 2026-11-14T11:53:36Z
+    until: 2026-11-14T17:29:38Z
     reason: awaiting the operator on TH-0038
 tags: [web]
 topics: [testing]

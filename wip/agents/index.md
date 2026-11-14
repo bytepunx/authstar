@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-14T17:29:38Z
+updated: 2026-11-14T17:29:44Z
 ---
 
 # Active streams
@@ -15,6 +15,7 @@ updated: 2026-11-14T17:29:38Z
 | [S-0016](S-0016.md) | Tower's SPIFFE SVID is fetched once at boot and expires after 4h | review | agent-S-0016 | 2026-11-14T11:32:09Z |
 | [S-0021](S-0021.md) | npm 12 blocks install scripts, so make install leaves farmhash unbuilt and herald, keep, and tower's tests fail | in-progress | agent-S-0021 | 2026-11-14T11:26:13Z |
 | [S-0022](S-0022.md) | Web's Playwright e2e specs run in no test tier, so flai test and the close-out never run web/e2e | in-progress | agent-S-0022 | 2026-11-14T11:53:29Z |
+| [S-0023](S-0023.md) | Herald's retention-purge spec fails intermittently with "NTP clock skew detected" from node-flakes | in-progress | agent-S-0023 | 2026-11-14T17:29:44Z |
 
 ## Strategic agents
 
