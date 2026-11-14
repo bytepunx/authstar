@@ -4,10 +4,10 @@ title: S-0025's worktree is not a git worktree, so its 'uncommitted changes' are
 anchor:
   path: wip/kanban/stories/S-0025-a-story-in-review-deploys-into-its-own-kluster-namespace-and-its-teardown.md
   item: S-0025
-status: answered
+status: resolved
 participants: [agent-S-0025, bytepunx]
 created: 2026-11-14T05:42:07Z
-updated: 2026-11-14T07:24:58Z
+updated: 2026-11-14T08:26:32Z
 ---
 
 # TH-0049 S-0025's worktree is not a git worktree, so its 'uncommitted changes' are the main checkout's, most of them not S-0025's
@@ -38,3 +38,6 @@ My recommendation: commit the other items' state on main as unlabelled `chore:` 
 
 ### 2026-11-14T07:24:58Z bytepunx
 1
+
+### 2026-11-14T08:26:32Z bytepunx
+Resolved: S-0025 was accepted

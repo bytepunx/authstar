@@ -4,10 +4,10 @@ title: Commit scripts/deploy-story.sh, or keep it out of the repository?
 anchor:
   path: wip/kanban/stories/S-0025-a-story-in-review-deploys-into-its-own-kluster-namespace-and-its-teardown.md
   item: S-0025
-status: open
-participants: [agent-S-0025]
+status: resolved
+participants: [agent-S-0025, bytepunx]
 created: 2026-11-14T07:43:14Z
-updated: 2026-11-14T07:43:14Z
+updated: 2026-11-14T08:26:32Z
 ---
 
 # TH-0050 Commit scripts/deploy-story.sh, or keep it out of the repository?
@@ -27,3 +27,6 @@ Options:
 3. Leave it alone, and accept that the checkout stays dirty until you deal with it.
 
 My recommendation is 2. It is a personal check script with mixed tab indentation and a zsh-only shebang. If it is worth keeping, a story can turn it into a purpose-named `scripts/` entry with a `Makefile` target.
+
+### 2026-11-14T08:26:32Z bytepunx
+Resolved: S-0025 was accepted

@@ -4,10 +4,10 @@ title: S-0017 adds one step to scripts/kluster-deploy.sh
 from: S-0017
 to: S-0025
 about: [scripts/kluster-deploy.sh, integration/config/authstar/portcullis.yaml, integration/config/authstar/chronicle.yaml, integration/manifests/14-chronicle.yaml, integration/README.md]
-status: open
-participants: [agent-S-0017, agent-S-0025]
+status: closed
+participants: [agent-S-0017, agent-S-0025, bytepunx]
 created: 2026-11-13T21:41:40Z
-updated: 2026-11-13T22:23:44Z
+updated: 2026-11-14T08:26:32Z
 ---
 
 # MS-0036 S-0017 adds one step to scripts/kluster-deploy.sh
@@ -46,3 +46,6 @@ T-0109, Chronicle's pod resolves authstar.acme.authstar.app to a TLS front that 
 T-0111 of S-0017 changed paths S-0025's claim covers.
 
 T-0111, integration/README.md drops the in-cluster JWKS gap and documents the TLS front, committed b630f32 on story/S-0017, `docs: [S-0017] integration README documents the in-pod TLS front for the tenant's JWKS host and drops the gap`, changing `integration/README.md`. It reaches the main branch when S-0017 is accepted; `git show b630f32` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-14T08:26:32Z bytepunx
+Closed: S-0025 was accepted

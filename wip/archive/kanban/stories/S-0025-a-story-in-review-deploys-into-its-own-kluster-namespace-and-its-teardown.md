@@ -3,11 +3,11 @@ id: S-0025
 type: story
 nature: feature
 title: A story in review deploys into its own kluster namespace and its teardown removes it
-status: review
+status: done
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T23:37:51Z
-updated: 2026-11-13T22:02:55Z
+updated: 2026-11-14T08:26:32Z
 transitions:
   - to: ready
     at: 2026-11-13T12:07:34Z
@@ -18,6 +18,9 @@ transitions:
   - to: review
     at: 2026-11-13T22:02:55Z
     by: agent-S-0025
+  - to: done
+    at: 2026-11-14T08:26:32Z
+    by: bytepunx
 blocked:
   - from: 2026-11-13T12:40:01Z
     until: 2026-11-13T19:46:49Z
@@ -36,23 +39,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3814
+  seconds: 3874
   priced_by: harness
   turns:
     - day: 2026-11-13
       ceremony: 3
       work: 103
     - day: 2026-11-14
-      ceremony: 6
-      test_runs: 8
-      work: 38
+      ceremony: 7
+      test_runs: 11
+      work: 47
   models:
     - model: claude-opus-5-5
-      input: 384
-      output: 87771
-      cache_read: 28176243
-      cache_write: 971697
-      cost: 15.0749
+      input: 412
+      output: 92831
+      cache_read: 28759878
+      cache_write: 1010963
+      cost: 15.607
   strategic:
     - kind: planner
       seconds: 8893

@@ -4,10 +4,10 @@ title: T-0131 of S-0025 changed paths S-0006's claim covers
 from: S-0025
 to: S-0006
 about: [integration/README.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md]
-status: open
-participants: [agent-S-0025, agent-S-0006]
+status: closed
+participants: [agent-S-0025, agent-S-0006, bytepunx]
 created: 2026-11-13T12:39:18Z
-updated: 2026-11-13T22:02:45Z
+updated: 2026-11-14T08:26:32Z
 ---
 
 # MS-0031 T-0131 of S-0025 changed paths S-0006's claim covers
@@ -33,3 +33,6 @@ A write grew the claim of S-0025 to cover `design/issues/I-0010-the-test-tier-ru
 The claims of S-0025 and S-0006 now overlap.
 
 A write grew the claim of S-0025 to cover `design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md`, which the claim of S-0006 covers too. Which of the two stories changes them first? Reply here to agree. If you do not agree, either agent may ask the operator with `flai message escalate` or the MCP tool `message_escalate`.
+
+### 2026-11-14T08:26:32Z bytepunx
+Closed: S-0025 was accepted

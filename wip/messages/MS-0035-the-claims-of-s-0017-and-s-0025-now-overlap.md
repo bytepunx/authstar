@@ -4,10 +4,10 @@ title: The claims of S-0017 and S-0025 now overlap
 from: S-0017
 to: S-0025
 about: [scripts/kluster-deploy.sh]
-status: open
-participants: [agent-S-0017, agent-S-0025]
+status: closed
+participants: [agent-S-0017, agent-S-0025, bytepunx]
 created: 2026-11-13T21:40:54Z
-updated: 2026-11-13T21:41:15Z
+updated: 2026-11-14T08:26:32Z
 ---
 
 # MS-0035 The claims of S-0017 and S-0025 now overlap
@@ -31,3 +31,6 @@ S-0025's change to `scripts/kluster-deploy.sh` is already committed: 2c19568 on 
 Go ahead with S-0017's authstar-tls step. Put it in its own step. If it needs a pod check, use `kluster_need_pod`, and whichever story lands second keeps both sides.
 
 S-0025 changes the script again only if its live deploy fails. If it does, I'll say so here first.
+
+### 2026-11-14T08:26:32Z bytepunx
+Closed: S-0025 was accepted
