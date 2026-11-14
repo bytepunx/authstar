@@ -55,9 +55,11 @@ hook:
 #   extraEnv:    a passthrough list (raw {name, value} / {name, valueFrom}
 #                entries) merged verbatim into the container's env. This is
 #                where each service's current plain-http inter-service URLs
-#                and NODE_TLS_REJECT_UNAUTHORIZED workarounds live, so the
-#                chart never hardcodes an application-level gap that's
-#                tracked elsewhere. Defaults below reproduce each service's
+#                live, so the chart never hardcodes an application-level
+#                gap that's tracked elsewhere. No service sets
+#                NODE_TLS_REJECT_UNAUTHORIZED: each Node service that calls
+#                tower verifies its SVID against the SPIRE trust bundle
+#                from the Workload API (ADR 0113). Defaults below reproduce each service's
 #                currently-live env exactly.
 #   config:      arbitrary map -- this service's plain config, pushed via
 #                the hook's PutServiceConfig call. Mirrors what this
@@ -111,12 +113,10 @@ chronicle:
           key: RABBITMQ_URL
     # Tower answers a tenant's registered domain, from which chronicle builds
     # the tenant's JWKS URL to verify the ES256 internal JWT (ADR 0089, ADR
-    # 0091). Plain fetch() like herald's and keep's, and like them with no
-    # SPIFFE-bundle CA trust wiring for this call yet (I-0001).
+    # 0091). Chronicle verifies tower's SVID against the SPIRE trust bundle
+    # (ADR 0113).
     - name: CHRONICLE_TOWER_BASE_URL
       value: "https://tower.authstar-platform.svc.cluster.local:8080"
-    - name: NODE_TLS_REJECT_UNAUTHORIZED
-      value: "0"
   config: {}
   secrets: {}
 
@@ -140,13 +140,7 @@ herald:
       memory: 256Mi
   spiffe:
     socketValue: "unix:///run/spire/sockets/spire-agent.sock"
-  extraEnv:
-    # Plain fetch() against tower's towerBaseUrl (ADR 0089's tenant-JWKS
-    # domain resolution) -- tower runs real SPIFFE mTLS unconditionally, and
-    # herald has no SPIFFE-bundle CA trust wiring of its own for this one
-    # call yet.
-    - name: NODE_TLS_REJECT_UNAUTHORIZED
-      value: "0"
+  extraEnv: []
   config: {}
   secrets: {}
 
@@ -170,12 +164,7 @@ keep:
       memory: 256Mi
   spiffe:
     socketValue: "unix:///run/spire/sockets/spire-agent.sock"
-  extraEnv:
-    # keep's role-reference-backfill.ts calls tower's own bundle-configured
-    # towerBaseUrl via plain fetch() -- no SPIFFE-bundle CA trust wiring of
-    # its own for that specific call yet.
-    - name: NODE_TLS_REJECT_UNAUTHORIZED
-      value: "0"
+  extraEnv: []
   config: {}
   secrets: {}
 
@@ -259,14 +248,12 @@ steward:
   spiffe:
     socketValue: "unix:///run/spire/sockets/spire-agent.sock"
   extraEnv:
-    # tower runs real SPIFFE mTLS unconditionally; steward's fetch client
-    # has no SPIFFE/signet wiring of its own to trust SPIRE's CA bundle.
+    # Tower serves TLS with its SPIRE SVID; steward verifies it against the
+    # SPIRE trust bundle (ADR 0113).
     - name: TOWER_URL
       value: "https://tower.authstar-platform.svc.cluster.local:8080"
     - name: HERALD_URL
       value: "http://herald.authstar-platform.svc.cluster.local:8080"
-    - name: NODE_TLS_REJECT_UNAUTHORIZED
-      value: "0"
   config: {}
   secrets: {}
 
@@ -320,8 +307,6 @@ web:
       value: "https://tower.authstar-platform.svc.cluster.local:8080"
     - name: PUBLIC_TOWER_BASE_URL
       value: "http://localhost:8080"
-    - name: NODE_TLS_REJECT_UNAUTHORIZED
-      value: "0"
     # Plain http, unlike TOWER_BASE_URL -- keep never terminates TLS.
     - name: KEEP_BASE_URL
       value: "http://keep.authstar-platform.svc.cluster.local:8080"

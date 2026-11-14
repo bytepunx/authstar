@@ -1,6 +1,6 @@
 ---
 title: "Story 001: Chart Layout and Signet-Provisioning Hook"
-updated: 2026-09-03
+updated: 2026-11-14
 status: draft
 ---
 # Story 001 — Chart Layout and Signet-Provisioning Hook
@@ -47,12 +47,12 @@ services' own pods start.
       Signet-Configured Mode support (ADR 0102/Stories 002, 003, 006, 012) even though
       `bytepunx/deploy`'s live manifests never turned it on; this chart is the vehicle that
       finally does. Every service still keeps its plain-http inter-service URLs (`TOWER_URL`/
-      `TOWER_BASE_URL`/`HERALD_URL`/`KEEP_BASE_URL`) and the `NODE_TLS_REJECT_UNAUTHORIZED=0`
-      workaround those calls currently require against tower's SPIFFE-mTLS-only server (no CA
-      trust wiring on the caller side yet) as `values.<service>.extraEnv` (a passthrough list
+      `TOWER_BASE_URL`/`HERALD_URL`/`KEEP_BASE_URL`) as `values.<service>.extraEnv` (a passthrough list
       merged into the container's `env`, not specially templated) — inert once signet overrides
       them (ADR 0102), but left as the Env-Only Mode fallback rather than deleted, so the chart
       doesn't hardcode a workaround that's really an application-level gap tracked elsewhere.
+      No service sets `NODE_TLS_REJECT_UNAUTHORIZED`: the Node services that call tower over
+      `https://` verify its SVID against the SPIRE trust bundle themselves (ADR 0113).
       Every service also needs `imagePullSecrets: [{name: dockerhub-credentials}]`
       (`values.imagePullSecretName`, chart-wide default) and, since every service dials signet
       once activated, the `csi.spiffe.io` SPIFFE volume mount at `/run/spire/sockets`.

@@ -1,6 +1,6 @@
 ---
 title: Chronicle configuration
-updated: 2026-11-06
+updated: 2026-11-14
 status: active
 ---
 
@@ -54,10 +54,9 @@ These are read from the environment in both modes. The `SIGNET_*` variables are 
 | `SIGNET_TRUST_DOMAIN` | Yes, with `SIGNET_ADDR` | none | SPIFFE trust domain for the workload dial | `chronicle.signet.trustDomain` |
 | `SIGNET_SERVICE` | No | `chronicle` | Service name of chronicle's bundle | not set |
 | `SIGNET_ADMIN_ADDR` | No | `SIGNET_ADDR` | Read for parity with the other services; chronicle makes no admin calls | not set |
-| `SPIFFE_ENDPOINT_SOCKET` | Yes, with `SIGNET_ADDR` | none | SPIFFE Workload API socket, as a `unix://` URI | `chronicle.spiffe.socketValue` |
+| `SPIFFE_ENDPOINT_SOCKET` | Yes, with `SIGNET_ADDR` or an `https://` `towerBaseUrl` | none | SPIFFE Workload API socket, as a `unix://` URI. Chronicle also reads the SPIRE trust bundle from it to verify tower's certificate when `towerBaseUrl` is `https://` ([ADR-0113](../../design/adrs/0113-node-services-verify-tower-s-certificate-against-the-spire-trust-bundle-and-its.md)); without it, such a URL fails startup | `chronicle.spiffe.socketValue` |
 | `PORT` | No | `3000` | HTTP listen port | `chronicle.port` |
 | `LOG_LEVEL` | No | `info` | Log level | not set |
-| `NODE_TLS_REJECT_UNAUTHORIZED` | No | Node's default | The chart sets `0` so chronicle's call to tower's TLS endpoint succeeds without SPIFFE CA trust wiring, as herald and keep do (`design/issues/` I-0001) | `chronicle.extraEnv` |
 
 ## How chronicle verifies requests
 
