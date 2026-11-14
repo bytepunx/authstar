@@ -3,7 +3,7 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: closed
-count: 11
+count: 12
 cost: 11m
 first_reported: 2026-11-06T18:29:23Z
 last_reported: 2026-11-15T06:13:10Z
@@ -60,6 +60,10 @@ S-0016's close-out at 8ed3b88 (job S-0016-20261114T105204Z) stopped at the test 
 ### 2026-11-14T17:49:28Z
 Story: S-0023.
 T-0126's `flai test` on three herald spec files ran every project's suite. Herald passed, then the tier failed after 6m54s on steward's Playwright e2e specs (`operator-console`, `stuck-erasure-requests`, `tenant-activity`, `tenant-stuck-erasures`), which S-0023 does not touch.
+
+### 2026-11-14T17:59:58Z
+Story: S-0023.
+S-0023's close-out job S-0023-20261114T175021Z stopped at the test tier after 9m24s, at c8d23b0. 19 of steward's Playwright e2e tests failed (`operator-console`, `stuck-erasure-requests`, `tenant-activity`, `tenant-stuck-erasures`). S-0021's close-out, job S-0021-20261114T175011Z, started 10 s earlier and passed steward's e2e on the same fixed ports. S-0023 changes no steward file.
 
 ### 2026-11-15T06:13:10Z
 Story: S-0016.
