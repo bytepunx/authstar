@@ -659,6 +659,29 @@ Both fixed in this same pass:
   (`spec/behavior/comms-consumer.spec.ts`) — no real broker needed to prove the bounded
   retry, dead-letter, and logging behavior all work.
 
+## New finding: `node-flakes` throws when the wall clock steps back
+
+### 14. A backward step of the host clock failed unrelated specs at random
+
+`node-flakes` 2.1.0 throws `NTP clock skew detected` whenever `Date.now()` reads earlier than the
+last id its generator made (the `now < lastTime` branch of its `dist/index.js`). consequent 2.0.1
+builds one generator per `initialize()` and calls it in `createId` and on every dispatch
+(`enrichEvent`), and offers no way to inject a clock or an id generator. No herald spec fakes the
+clock, so a real backward step of the host's wall clock (WSL2's time sync does this) failed
+`spec/behavior/retention-purge.spec.ts` once, in a run that changed nothing in herald
+([I-0018](../design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md)).
+
+- `spec/lib/monotonic-clock.ts`, a vitest setup file named in `vitest.config.ts`, keeps
+  `Date.now()` from ever stepping back in every behavior, e2e, and integration run. Vitest's fake
+  timers replace the global `Date` outright, so a spec that uses them bypasses it.
+- `spec/behavior/clock-skew.spec.ts` reproduces the throw: with a raw clock stepped back 5 s
+  between two `communicationType.create` commands, the second rejects with
+  `NTP clock skew detected`; with the guarded clock, both succeed.
+- Keep's suite carries the same guard (`keep/TESTING.md`).
+- The service itself is still exposed: a backward step in production fails every command herald
+  handles until the clock catches up
+  ([I-0033](../design/issues/I-0033-herald-keep-and-tower-throw-on-a-backward-wall-clock-step-in-production-node.md)).
+
 ## Practical implication for the routes/worker as shipped
 
 Every route in this codebase is written the *correct*, `find()`-based way (matching what Story
