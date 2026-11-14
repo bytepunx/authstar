@@ -2,12 +2,12 @@
 id: I-0016
 title: npm 12 blocks install scripts, so make install leaves farmhash unbuilt and herald, keep, and tower's tests fail
 class: defect
-status: open
+status: closed
 count: 1
 cost: 20m
 first_reported: 2026-11-09T07:17:12Z
 last_reported: 2026-11-09T07:17:12Z
-updated: 2026-11-09T09:04:33Z
+updated: 2026-11-14T10:47:46Z
 ---
 
 # I-0016 npm 12 blocks install scripts, so make install leaves farmhash unbuilt and herald, keep, and tower's tests fail
@@ -24,3 +24,4 @@ In S-0011's worktree, `scripts/install.sh` (npm 12.2.2, node 24.21.0) ran `npm c
 ## Remediation
 
 Story S-0021 remediates this issue, created from it at 2026-11-09T09:04:33Z.
+Closed 2026-11-14T10:47:46Z: S-0021. The cause was fixed by S-0020's `allowScripts` approvals of `farmhash@3.3.1` and `farmhash@5.0.1` in herald and keep, and by tower's existing approval of `farmhash@3.3.1` (design/tech/npm.md). S-0021 makes a recurrence fail at `make install`: `scripts/check-install-scripts.sh` runs after each project's `npm ci`. It fails, naming the project and package, on a blocked install script that `allowScripts` neither approves nor denies, and on any farmhash copy that does not load in herald, keep, or tower. It was reproduced against a scratch herald with its farmhash approval removed (T-0113). A clean `make install` exits 0, and every installed farmhash loads in herald, keep, and tower.
