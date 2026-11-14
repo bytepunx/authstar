@@ -19,9 +19,11 @@
     RoleDefinition,
     RoleDefinitionListResponse,
     RotateTenantKeysResponse,
+    StuckErasureRequest,
     TenantDetailResponse,
     TenantRotationKey,
   } from '#lib/types.js'
+  import StuckErasureRows from '#lib/components/StuckErasureRows.svelte'
 
   const slug = $derived(page.params.slug!)
 
@@ -107,6 +109,16 @@
   let activityLoading = $state(false)
   let activityError = $state<string | undefined>(undefined)
 
+  // -- Stuck Erasures (Story 004, ADR 0075) ----------------------------
+  // Tower's stuck list is cross-tenant; this section filters it to the
+  // tenant at the default 72-hour threshold. The top-level view at
+  // /erasure-requests/stuck is where an operator changes the threshold and
+  // sees the pattern across tenants.
+  const STUCK_OLDER_THAN_HOURS = 72
+  let stuckErasures = $state<StuckErasureRequest[]>([])
+  let stuckLoading = $state(false)
+  let stuckError = $state<string | undefined>(undefined)
+
   onMount(() => {
     if (!session.connected) {
       goto('/connect')
@@ -117,6 +129,7 @@
     void loadApplications()
     void loadRoleDefinitions()
     void loadActivity()
+    void loadStuckErasures()
   })
 
   async function loadDetail() {
@@ -224,6 +237,27 @@
       activityError = err instanceof ApiError ? err.message : 'Failed to load activity.'
     } finally {
       activityLoading = false
+    }
+  }
+
+  async function loadStuckErasures() {
+    // The slug the request was made for: the filter, and the guard that
+    // drops an answer that arrives after the page moved to another tenant.
+    const forSlug = slug
+    stuckLoading = true
+    stuckError = undefined
+    try {
+      const result = await apiCall<StuckErasureRequest[]>(
+        `/api/erasure-requests/stuck?olderThanHours=${STUCK_OLDER_THAN_HOURS}`,
+      )
+      if (forSlug !== slug) return
+      stuckErasures = result.filter((request) => request.tenant === forSlug)
+    } catch (err) {
+      if (forSlug !== slug) return
+      stuckErasures = []
+      stuckError = err instanceof ApiError ? err.message : 'Failed to load stuck erasure requests.'
+    } finally {
+      if (forSlug === slug) stuckLoading = false
     }
   }
 
@@ -619,6 +653,27 @@
         <li>No activity yet.</li>
       {/each}
     </ul>
+  {/if}
+</section>
+
+<section>
+  <h2>Stuck Erasures</h2>
+
+  <p>
+    Erasure requests for this tenant that some service has not acknowledged within {STUCK_OLDER_THAN_HOURS} hours.
+    <a href="/erasure-requests/stuck">See every tenant's stuck erasure requests</a>
+  </p>
+
+  {#if stuckError}
+    <p class="error" role="alert">{stuckError}</p>
+  {/if}
+
+  {#if stuckLoading}
+    <p>Loading...</p>
+  {:else if stuckErasures.length > 0}
+    <StuckErasureRows requests={stuckErasures} showTenant={false} />
+  {:else}
+    <p>No stuck erasure requests.</p>
   {/if}
 </section>
 
