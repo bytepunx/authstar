@@ -36,23 +36,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3683
+  seconds: 3814
   priced_by: harness
   turns:
     - day: 2026-11-13
       ceremony: 3
       work: 103
     - day: 2026-11-14
-      ceremony: 5
-      test_runs: 5
-      work: 30
+      ceremony: 6
+      test_runs: 8
+      work: 38
   models:
     - model: claude-opus-5-5
-      input: 356
-      output: 83088
-      cache_read: 27634739
-      cache_write: 931559
-      cost: 14.5517
+      input: 384
+      output: 87771
+      cache_read: 28176243
+      cache_write: 971697
+      cost: 15.0749
   strategic:
     - kind: planner
       seconds: 8893
