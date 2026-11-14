@@ -534,6 +534,17 @@ actor pilot slice did.
    real Postgres-backed deployment. The integration tier's own tests are scoped around this
    (see above) rather than silently asserting against a route that doesn't actually work yet.
 
+## The spec clock is kept monotonic (I-0018)
+
+`node-flakes` throws `NTP clock skew detected` when `Date.now()` reads earlier than the last id
+its provider made. Keep makes ids with it in `src/lib/ids.ts` and through consequent, and
+neither takes an injected clock, so a backward step of the host's wall clock failed unrelated
+specs at random. `spec/lib/monotonic-clock.ts`, a vitest setup file named in
+`vitest.config.ts`, keeps `Date.now()` from ever stepping back in every test run.
+`spec/behavior/clock-skew.spec.ts` reproduces the throw with a raw clock stepped back and shows
+the guarded clock does not throw. The service itself is still exposed in production
+([I-0033](../design/issues/I-0033-herald-keep-and-tower-throw-on-a-backward-wall-clock-step-in-production-node.md)).
+
 ## A related, non-bug design quirk worth knowing
 
 `scope` (`{ account: string } | { tenant: string }`) appears in several actors' `searchableBy`
