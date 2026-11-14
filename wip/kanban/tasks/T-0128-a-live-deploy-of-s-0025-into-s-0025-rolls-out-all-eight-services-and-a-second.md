@@ -3,15 +3,36 @@ id: T-0128
 type: task
 nature: remediation
 title: A live deploy of S-0025 into s-0025 rolls out all eight services, and a second deploy passes
-status: backlog
+status: done
 parent: S-0025
 owner: bytepunx
 created: 2026-11-09T23:40:33Z
-updated: 2026-11-09T23:40:33Z
-transitions: []
+updated: 2026-11-13T21:52:07Z
+transitions:
+  - to: ready
+    at: 2026-11-13T12:08:36Z
+    by: agent-S-0025
+  - to: in-progress
+    at: 2026-11-13T12:08:36Z
+    by: agent-S-0025
+  - to: done
+    at: 2026-11-13T21:52:07Z
+    by: agent-S-0025
 stream: S-0025
 tags: [kluster, scripts, integration]
-touches: [scripts/lib-kluster.sh, scripts/kluster-build.sh, scripts/kluster-deploy.sh, scripts/kluster-signet.sh, scripts/kluster-signet-push.mjs, integration/scripts/lib-secrets.sh, integration/manifests/00-namespace.yaml, integration/manifests/admin-rbac.yaml, integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/12-herald-retention-purge-cronjob.yaml, integration/manifests/13-lookout.yaml, integration/manifests/14-chronicle.yaml, integration/manifests/15-steward.yaml, integration/manifests/16-web.yaml, integration/manifests/17-portcullis.yaml, integration/config/authstar/tower.yaml, integration/config/authstar/keep.yaml, integration/config/authstar/herald.yaml, integration/config/authstar/lookout.yaml, integration/config/authstar/chronicle.yaml, integration/config/authstar/steward.yaml, integration/config/authstar/web.yaml, integration/config/authstar/portcullis.yaml]
+touches: [scripts/lib-kluster.sh, scripts/kluster-deploy.sh]
+usage:
+  source: log
+  seconds: 2587
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 155
+      output: 34627
+      cache_read: 14824023
+      cache_write: 445398
+      cost: 7.1681
 ---
 # T-0128 A live deploy of S-0025 into s-0025 rolls out all eight services, and a second deploy passes
 

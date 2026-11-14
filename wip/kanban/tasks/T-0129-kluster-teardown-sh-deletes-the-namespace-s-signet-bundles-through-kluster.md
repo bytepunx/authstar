@@ -3,15 +3,36 @@ id: T-0129
 type: task
 nature: feature
 title: kluster-teardown.sh deletes the namespace's signet bundles through kluster-signet-remove.mjs
-status: backlog
+status: done
 parent: S-0025
 owner: bytepunx
 created: 2026-11-09T23:40:46Z
-updated: 2026-11-09T23:40:46Z
-transitions: []
+updated: 2026-11-13T12:19:49Z
+transitions:
+  - to: ready
+    at: 2026-11-13T12:08:36Z
+    by: agent-S-0025
+  - to: in-progress
+    at: 2026-11-13T12:08:36Z
+    by: agent-S-0025
+  - to: done
+    at: 2026-11-13T12:19:49Z
+    by: agent-S-0025
 stream: S-0025
 tags: [kluster, scripts]
 touches: [scripts/kluster-teardown.sh, scripts/kluster-signet-remove.mjs]
+usage:
+  source: log
+  seconds: 673
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 30
+      output: 6704
+      cache_read: 2870239
+      cache_write: 86238
+      cost: 1.3879
 ---
 # T-0129 kluster-teardown.sh deletes the namespace's signet bundles through kluster-signet-remove.mjs
 

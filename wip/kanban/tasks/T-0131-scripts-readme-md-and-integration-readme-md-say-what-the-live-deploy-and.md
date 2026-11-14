@@ -3,16 +3,36 @@ id: T-0131
 type: task
 nature: improvement
 title: scripts/README.md and integration/README.md say what the live deploy and teardown changed
-status: backlog
+status: done
 parent: S-0025
 owner: bytepunx
 created: 2026-11-09T23:41:04Z
-updated: 2026-11-09T23:41:04Z
-transitions: []
+updated: 2026-11-13T12:39:18Z
+transitions:
+  - to: ready
+    at: 2026-11-13T12:33:22Z
+    by: agent-S-0025
+  - to: in-progress
+    at: 2026-11-13T12:33:22Z
+    by: agent-S-0025
+  - to: done
+    at: 2026-11-13T12:39:18Z
+    by: agent-S-0025
 stream: S-0025
 tags: [kluster, docs, integration]
 touches: [scripts/README.md, integration/README.md]
-after: [T-0130]
+usage:
+  source: log
+  seconds: 356
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 1
+      output: 224
+      cache_read: 95723
+      cache_write: 2876
+      cost: 0.0463
 ---
 # T-0131 scripts/README.md and integration/README.md say what the live deploy and teardown changed
 

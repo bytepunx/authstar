@@ -3,11 +3,11 @@ id: S-0025
 type: story
 nature: feature
 title: A story in review deploys into its own kluster namespace and its teardown removes it
-status: in-progress
+status: review
 parent: E-0005
 owner: bytepunx
 created: 2026-11-09T23:37:51Z
-updated: 2026-11-13T12:09:37Z
+updated: 2026-11-13T22:02:55Z
 transitions:
   - to: ready
     at: 2026-11-13T12:07:34Z
@@ -15,9 +15,19 @@ transitions:
   - to: in-progress
     at: 2026-11-13T12:07:49Z
     by: agent-S-0025
+  - to: review
+    at: 2026-11-13T22:02:55Z
+    by: agent-S-0025
+blocked:
+  - from: 2026-11-13T12:40:01Z
+    until: 2026-11-13T19:46:49Z
+    reason: awaiting the operator on TH-0045
+  - from: 2026-11-13T19:47:50Z
+    until: 2026-11-13T21:40:54Z
+    reason: awaiting the operator on TH-0045
 tags: [kluster, scripts, integration]
 topics: [kluster, deployment]
-touches: [scripts/kluster-build.sh, scripts/lib-kluster.sh, scripts/kluster-signet.sh, scripts/kluster-signet-push.mjs, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/README.md, integration/README.md, scripts/kluster-signet-remove.mjs, integration/scripts/lib-secrets.sh, integration/manifests/00-namespace.yaml, integration/manifests/admin-rbac.yaml, integration/manifests/10-tower.yaml, integration/manifests/11-keep.yaml, integration/manifests/11-keep-pricing-sync-cronjob.yaml, integration/manifests/12-herald.yaml, integration/manifests/12-herald-retention-purge-cronjob.yaml, integration/manifests/13-lookout.yaml, integration/manifests/14-chronicle.yaml, integration/manifests/15-steward.yaml, integration/manifests/16-web.yaml, integration/manifests/17-portcullis.yaml, integration/config/authstar/tower.yaml, integration/config/authstar/keep.yaml, integration/config/authstar/herald.yaml, integration/config/authstar/lookout.yaml, integration/config/authstar/chronicle.yaml, integration/config/authstar/steward.yaml, integration/config/authstar/web.yaml, integration/config/authstar/portcullis.yaml]
+touches: [scripts/lib-kluster.sh, scripts/kluster-deploy.sh, scripts/kluster-teardown.sh, scripts/README.md, integration/README.md, scripts/kluster-signet-remove.mjs, design/issues/I-0023-flai-s-kept-kluster-kubeconfig-goes-stale-when-the-k3d-containers-restart-and.md, design/issues/summary.md, design/issues/I-0024-a-passing-kluster-teardown-deletes-its-own-log-so-what-it-removed-cannot-be.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md]
 after: [S-0019]
 agent:
   harness: claude-code
@@ -25,9 +35,20 @@ agent:
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3293
+  priced_by: harness
+  turns:
+    - day: 2026-11-13
+      ceremony: 3
+      work: 103
+  models:
+    - model: claude-opus-5-5
+      input: 266
+      output: 59318
+      cache_read: 25394628
+      cache_write: 762999
+      cost: 12.2794
   strategic:
     - kind: planner
       seconds: 8893
@@ -40,15 +61,15 @@ usage:
           cache_write: 135227
           cost: 2.9811
     - kind: orchestrator
-      seconds: 101
+      seconds: 159
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 54
-          output: 405
-          cache_read: 1823797
-          cache_write: 324791
-          cost: 2.4353
+          input: 94
+          output: 683
+          cache_read: 2872824
+          cache_write: 520755
+          cost: 3.8648
 cost_of_delay:
   inputs:
     revenue_per_week: 1200
@@ -72,7 +93,7 @@ Prove S-0019's kluster scripts against a live cluster: a story in review deploys
 
 ## Acceptance criteria
 
-- [ ] A story in review deploys into its namespace and its teardown removes it
+- [x] A story in review deploys into its namespace and its teardown removes it
 
 ## Tasks
 
@@ -80,6 +101,7 @@ Prove S-0019's kluster scripts against a live cluster: a story in review deploys
 - T-0129 kluster-teardown.sh deletes the namespace's signet bundles through kluster-signet-remove.mjs
 - T-0130 A live teardown of S-0025 leaves nothing the deploy made, and a second teardown passes
 - T-0131 scripts/README.md and integration/README.md say what the live deploy and teardown changed
+- T-0136 The kluster scripts say the cluster does not answer, instead of a pod being absent
 
 ## Notes
 

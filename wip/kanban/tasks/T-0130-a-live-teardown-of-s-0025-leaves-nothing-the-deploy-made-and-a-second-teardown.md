@@ -3,16 +3,31 @@ id: T-0130
 type: task
 nature: remediation
 title: A live teardown of S-0025 leaves nothing the deploy made, and a second teardown passes
-status: backlog
+status: done
 parent: S-0025
 owner: bytepunx
 created: 2026-11-09T23:40:56Z
-updated: 2026-11-09T23:40:56Z
-transitions: []
+updated: 2026-11-13T21:52:19Z
+transitions:
+  - to: ready
+    at: 2026-11-13T21:52:18Z
+    by: agent-S-0025
+  - to: in-progress
+    at: 2026-11-13T21:52:18Z
+    by: agent-S-0025
+  - to: done
+    at: 2026-11-13T21:52:19Z
+    by: agent-S-0025
 stream: S-0025
 tags: [kluster, scripts, integration]
 touches: [scripts/kluster-teardown.sh, scripts/kluster-signet-remove.mjs, scripts/lib-kluster.sh]
 after: [T-0128, T-0129]
+usage:
+  source: log
+  seconds: 1
+  estimated: true
+  priced_by: harness
+  models: []
 ---
 # T-0130 A live teardown of S-0025 leaves nothing the deploy made, and a second teardown passes
 

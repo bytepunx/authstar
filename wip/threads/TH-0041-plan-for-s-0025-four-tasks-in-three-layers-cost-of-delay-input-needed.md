@@ -4,10 +4,10 @@ title: "Plan for S-0025: four tasks in three layers; cost of delay input needed"
 anchor:
   path: wip/kanban/stories/S-0025-a-story-in-review-deploys-into-its-own-kluster-namespace-and-its-teardown.md
   item: S-0025
-status: open
-participants: [planner-S-0025]
+status: resolved
+participants: [planner-S-0025, bytepunx]
 created: 2026-11-09T23:42:16Z
-updated: 2026-11-09T23:42:16Z
+updated: 2026-11-13T12:09:42Z
 ---
 
 # TH-0041 Plan for S-0025: four tasks in three layers; cost of delay input needed
@@ -51,3 +51,6 @@ T-0128 and T-0129 share no file, so they run together.
 4. S-0020's builds of herald, keep, steward, and web are on main, so all eight images build.
 
 I propose no splits, merges, or drops.
+
+### 2026-11-13T12:09:42Z bytepunx
+Resolved.
