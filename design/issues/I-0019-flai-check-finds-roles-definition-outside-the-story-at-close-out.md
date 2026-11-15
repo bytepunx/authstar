@@ -2,11 +2,11 @@
 id: I-0019
 title: "flai check finds `roles.definition` outside the story at close-out"
 class: efficiency
-status: open
+status: closed
 count: 12
 first_reported: 2026-11-09T07:16:37Z
 last_reported: 2026-11-15T06:18:13Z
-updated: 2026-11-15T06:18:13Z
+updated: 2026-11-15T07:12:19Z
 ---
 
 # I-0019 flai check finds `roles.definition` outside the story at close-out
@@ -79,3 +79,4 @@ flai check found outside the story:
 ## Remediation
 
 Story S-0024 remediates this issue, created from it at 2026-11-09T09:04:35Z.
+Closed 2026-11-15T07:12:19Z: S-0024 upgraded the system-flow template from 1.1.22 to 1.1.24 (`flai upgrade --ref 1.1.24 --keep-all`, commit 6e392bd), which adds `verify` to `design/workflows/roles/orchestrator.md`'s `tools`. Unscoped `flai check --strict` on main reports `roles.definition` on that file; on story/S-0024 it reports none.
