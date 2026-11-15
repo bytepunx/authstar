@@ -6,7 +6,7 @@ title: "flai check finds `roles.definition` outside the story at close-out"
 status: ready
 owner: bytepunx
 created: 2026-11-09T09:04:35Z
-updated: 2026-11-15T05:53:17Z
+updated: 2026-11-15T07:10:14Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:21Z
@@ -52,10 +52,10 @@ usage:
           cost: 0.8955
 forecast:
   duration: 30m
-  delivery: 2026-11-30T07:08:00Z
-  basis: "Its own forecast of 30m; 6th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010 and S-0018."
+  delivery: 2026-11-30T06:00:00Z
+  basis: "Its own forecast of 30m; 5th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008 and S-0010."
   by: flai
-  at: 2026-11-15T05:53:17Z
+  at: 2026-11-15T07:10:14Z
 finalized:
   by: bytepunx
   at: 2026-11-09T22:47:54Z
