@@ -3,10 +3,10 @@ id: S-0021
 type: story
 nature: remediation
 title: npm 12 blocks install scripts, so make install leaves farmhash unbuilt and herald, keep, and tower's tests fail
-status: in-progress
+status: done
 owner: bytepunx
 created: 2026-11-09T09:04:33Z
-updated: 2026-11-15T07:19:04Z
+updated: 2026-11-15T19:37:31Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:01Z
@@ -20,6 +20,12 @@ transitions:
   - to: in-progress
     at: 2026-11-14T18:02:17Z
     by: flai
+  - to: review
+    at: 2026-11-15T19:33:27Z
+    by: agent-S-0021
+  - to: done
+    at: 2026-11-15T19:37:31Z
+    by: alex
 blocked:
   - from: 2026-11-14T11:45:30Z
     until: 2026-11-14T17:49:29Z
@@ -31,6 +37,7 @@ blocked:
     until: 2026-11-15T07:18:42Z
     reason: awaiting the operator on TH-0065
   - from: 2026-11-15T07:19:04Z
+    until: 2026-11-15T19:32:52Z
     reason: awaiting the operator on TH-0065
 tags: [hook]
 topics: [dependencies, testing]
@@ -42,7 +49,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 6217
+  seconds: 6251
   priced_by: harness
   turns:
     - day: 2026-11-14
@@ -51,25 +58,26 @@ usage:
       work: 207
     - day: 2026-11-15
       ceremony: 1
-      work: 6
+      hand_edits: 1
+      work: 12
   models:
     - model: claude-opus-5-5
-      input: 520
-      output: 73906
-      cache_read: 60540412
-      cache_write: 1141200
-      cost: 22.2274
+      input: 538
+      output: 76819
+      cache_read: 63213471
+      cache_write: 1518868
+      cost: 25.8417
   strategic:
     - kind: orchestrator
-      seconds: 140
+      seconds: 155
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 79
-          output: 560
-          cache_read: 2281692
-          cache_write: 333486
-          cost: 2.9308
+          input: 93
+          output: 644
+          cache_read: 2704398
+          cache_write: 424246
+          cost: 3.4957
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -144,3 +152,19 @@ Cost of delay: 50 USD a week, as `flai cod` works it out, unadjusted. It comes f
 
 After: none. The story reads S-0020's `allowScripts` entries, which are already on main.
 - 2026-11-14T18:02:17Z: moved to in-progress: flai serve's checks of S-0021 against its kluster namespace ended failed, at the check golden-path, at commit 7b19fc1ce549
+
+### Kluster checks
+
+The operator chose to accept S-0021 with its kluster golden-path checks failing (TH-0065, answer 1). Three runs against `s-0021` failed, each for a reason outside S-0021's change:
+
+- Login lost the race with tower's restart after a signet change (I-0035, the same as S-0014's I-0030).
+- The shared Postgres refused tower's connections for about 2 minutes.
+- Herald's send-and-verify and chronicle's report ran inside tower's restart window (I-0031).
+
+S-0021 changes no service. Its test tier passed in the close-out at 7b19fc1.
+
+### Accepted without the kluster gate
+
+- Why: the deploy of S-0021's namespace s-0021 at c4cd05df429d passed, and no checks run against it has ended there yet
+- By: alex
+- At: 2026-11-15T19:37:31Z

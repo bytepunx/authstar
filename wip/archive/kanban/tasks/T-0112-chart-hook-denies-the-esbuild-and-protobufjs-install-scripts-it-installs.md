@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 7
-      output: 1061
-      cache_read: 869218
-      cache_write: 16385
-      cost: 0.3191
+      output: 1051
+      cache_read: 864715
+      cache_write: 20777
+      cost: 0.3535
 ---
 # T-0112 chart/hook denies the esbuild and protobufjs install scripts it installs
 

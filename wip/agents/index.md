@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-15T19:30:05Z
+updated: 2026-11-15T19:37:31Z
 ---
 
 # Active streams
@@ -11,7 +11,6 @@ updated: 2026-11-15T19:30:05Z
 | [S-0008](S-0008.md) | Plan-mapping editor picks from the tenant's live Stripe prices | ready | agent-S-0008 | 2026-11-10T04:46:16Z |
 | [S-0010](S-0010.md) | Portcullis emits authentication events to lookout | ready | agent-S-0010 | 2026-11-10T06:02:40Z |
 | [S-0014](S-0014.md) | Tower retires the tenant entitlement scope | in-progress | agent-S-0014 | 2026-11-14T18:00:44Z |
-| [S-0021](S-0021.md) | npm 12 blocks install scripts, so make install leaves farmhash unbuilt and herald, keep, and tower's tests fail | in-progress | agent-S-0021 | 2026-11-15T07:18:59Z |
 | [S-0022](S-0022.md) | Web's Playwright e2e specs run in no test tier, so flai test and the close-out never run web/e2e | in-progress | agent-S-0022 | 2026-11-15T06:12:51Z |
 
 ## Strategic agents
@@ -19,5 +18,5 @@ updated: 2026-11-15T19:30:05Z
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 20 | 66.2111 USD | 14946 | 2026-11-14T10:13:04Z |
-| [orchestrator](orchestrator.md) | 299 | 91.6037 USD | 6015 | 2026-11-15T07:40:37Z |
-| [curator](curator.md) | 14 | 21.6958 USD | 2213 | 2026-11-15T07:29:22Z |
+| [orchestrator](orchestrator.md) | 301 | 92.3006 USD | 6042 | 2026-11-15T19:34:22Z |
+| [curator](curator.md) | 15 | 23.2437 USD | 2360 | 2026-11-15T19:32:35Z |

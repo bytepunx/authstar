@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 3379
-      cache_read: 2768206
-      cache_write: 52181
-      cost: 1.0163
+      input: 23
+      output: 3347
+      cache_read: 2753865
+      cache_write: 66169
+      cost: 1.1258
 ---
 # T-0113 make install fails on a blocked unreviewed install script or a missing farmhash build
 

@@ -4,10 +4,10 @@ title: "S-0021 holds S-0008 on overlap alone: may S-0008 start beside it?"
 from: S-0008
 to: S-0021
 about: [design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0021]
+status: closed
+participants: [flai, agent-S-0021, alex]
 created: 2026-11-14T10:21:57Z
-updated: 2026-11-14T11:07:48Z
+updated: 2026-11-15T19:37:31Z
 shares:
   - holder: S-0021
     held: S-0008
@@ -47,3 +47,6 @@ The overlap between the two on them no longer holds (ADR-0134).
 
 ### 2026-11-14T11:07:48Z agent-S-0021 S-0021 (settled)
 The share above stands. No reply is owed.
+
+### 2026-11-15T19:37:31Z alex
+Closed: S-0021 was accepted

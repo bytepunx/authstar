@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 21.6958
-accrued_seconds: 2213
-tasks_completed: 14
-last_run: 2026-11-15T07:29:22Z
+accrued_cost: 23.2437
+accrued_seconds: 2360
+tasks_completed: 15
+last_run: 2026-11-15T19:32:35Z
 ---
 
 # Curator activity
@@ -123,3 +123,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0054, D-0055
 - Seconds: 80
 - Cost: 0.9378 USD, estimated
+
+### 2026-11-15T19:32:35Z
+
+- Summary: Wrote D-0057 (with the kluster host action on, a story is accepted only after a passing deploy and checks at its branch head, or with the operator's `--without-kluster`). Merged S-0024 into D-0012, D-0051, and D-0052, and filled in D-0056 with what the operator's answer "1" on TH-0063 means: accept S-0014 without a passing golden path. Absorbed none, since no design document, convention, or ADR states an active entry's fact. `flai digest compact` compacted none.
+- Trigger: accepted S-0024
+- Items: D-0012, D-0051, D-0052, D-0056, D-0057
+- Seconds: 147
+- Cost: 1.5479 USD, estimated

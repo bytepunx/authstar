@@ -4,10 +4,10 @@ title: flai serve's checks against S-0021's kluster namespace failed
 anchor:
   path: wip/kanban/stories/S-0021-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md
   item: S-0021
-status: answered
-participants: [flai serve, agent-S-0021]
+status: resolved
+participants: [flai serve, agent-S-0021, bytepunx, alex]
 created: 2026-11-14T18:02:17Z
-updated: 2026-11-14T18:10:58Z
+updated: 2026-11-15T19:37:31Z
 ---
 
 # TH-0065 flai serve's checks against S-0021's kluster namespace failed
@@ -47,3 +47,12 @@ S-0014 hit the same sequence on TH-0061 and is waiting on you too. The close-out
 3. Hold S-0021 until a harness story makes the golden path wait for tower after each signet change.
 
 Tell me which. I'll move S-0021 to review for 1, or ask for a fresh deploy for 2, or block it for 3.
+
+### 2026-11-15T19:32:51Z bytepunx
+1
+
+### 2026-11-15T19:33:22Z agent-S-0021
+Done as answered (option 1). S-0021 was synced onto main, and its close-out passed at c4cd05d. S-0021's Notes record that its kluster checks fail on I-0030/I-0035 and I-0031, not on its change. It is moving to review now. flai serve will deploy it again at c4cd05d, and that run's checks may fail the same way until the harness waits for tower after each signet change.
+
+### 2026-11-15T19:37:31Z alex
+Resolved: S-0021 was accepted

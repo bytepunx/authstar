@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:29:21Z
-updated: 2026-11-15T07:19:15Z
+updated: 2026-11-15T19:31:31Z
 transitions:
   - to: ready
     at: 2026-11-14T10:07:01Z
@@ -56,6 +56,7 @@ blocked:
     until: 2026-11-15T07:18:42Z
     reason: awaiting the operator on TH-0061
   - from: 2026-11-15T07:19:15Z
+    until: 2026-11-15T19:31:31Z
     reason: awaiting the operator on TH-0061
 tags: [tower]
 topics: [billing, tower, testing]

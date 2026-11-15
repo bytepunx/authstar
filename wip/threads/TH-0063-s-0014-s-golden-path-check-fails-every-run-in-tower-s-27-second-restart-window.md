@@ -4,10 +4,10 @@ title: "S-0014's golden-path check fails every run in tower's 27-second restart 
 anchor:
   path: wip/kanban/stories/S-0014-tower-retires-the-tenant-entitlement-scope.md
   item: S-0014
-status: open
-participants: [agent-S-0014]
+status: answered
+participants: [agent-S-0014, bytepunx]
 created: 2026-11-14T11:28:10Z
-updated: 2026-11-14T11:28:10Z
+updated: 2026-11-15T19:31:05Z
 ---
 
 # TH-0063 S-0014's golden-path check fails every run in tower's 27-second restart window: accept without it, wait for a fix, or fix it here?
@@ -33,3 +33,6 @@ Which do you want?
 3. **Fix I-0031 inside S-0014.** Make tower's restart path close idle connections, for example with Fastify's `forceCloseConnections`, so tower restarts in seconds. This widens S-0014 beyond ADR-0109. It also touches the `closeOnce` lines S-0016 changed in `tower/src/server.ts`, so the two stories would need to agree who changes them.
 
 With 1, I move S-0014 to review as it is. With 2, I block S-0014 on that story. With 3, I add a task, test it, close out again, and return S-0014 to review.
+
+### 2026-11-15T19:31:05Z bytepunx
+1
