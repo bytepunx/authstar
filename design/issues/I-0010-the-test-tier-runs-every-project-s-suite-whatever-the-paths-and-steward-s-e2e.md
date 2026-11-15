@@ -2,12 +2,12 @@
 id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
-status: open
+status: closed
 count: 11
 cost: 11m
 first_reported: 2026-11-06T18:29:23Z
 last_reported: 2026-11-15T06:13:10Z
-updated: 2026-11-15T06:13:10Z
+updated: 2026-11-15T06:14:04Z
 ---
 
 # I-0010 The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
@@ -64,3 +64,4 @@ S-0016's close-out at e6491f6 (job S-0016-20261115T055406Z), right after its reb
 ## Remediation
 
 Story S-0018 remediates this issue, created from it at 2026-11-06T21:11:49Z.
+Closed 2026-11-15T06:14:04Z: Fixed by S-0018. T-0120: scripts/test.sh takes project names and runs only those, and every project with none. T-0124: system-flow.yaml declares one test tier per project, selected by its folder and running scripts/test.sh <project>, so flai test and the close-out run only the projects a change touches; scripts/test.sh and scripts/lib-projects.sh select every tier. T-0122: steward's Playwright e2e picks two free loopback ports per run and never reuses a server, so runs in other worktrees no longer collide. Reproduced on 2026-11-15 with 4610 held by a decoy and 4611 by S-0023's live steward server: flai test chronicle/src/server.ts ran chronicle alone and passed in 6.3s, and flai test steward/playwright.config.ts ran steward alone and passed in 28.1s (T-0125).
