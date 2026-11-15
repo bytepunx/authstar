@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 22
-      output: 3909
-      cache_read: 2216492
-      cache_write: 31236
-      cost: 0.7644
+      input: 20
+      output: 3261
+      cache_read: 2218590
+      cache_write: 25674
+      cost: 0.7089
 ---
 # T-0122 Steward's e2e picks free ports for the fake tower and steward on every run
 

@@ -6,8 +6,8 @@ sources: [S-0002]
 topics: [release, ci]
 paths: [".github/workflows"]
 date: 2026-11-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/conventions/git.md#rules"
 asked_again: []
 cited: []
 ---

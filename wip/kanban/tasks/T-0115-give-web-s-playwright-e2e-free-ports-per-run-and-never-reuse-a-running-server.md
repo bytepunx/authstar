@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 11
-      output: 1984
-      cache_read: 1331633
-      cache_write: 34134
-      cost: 0.5762
+      output: 1950
+      cache_read: 1332066
+      cache_write: 33300
+      cost: 0.569
 ---
 # T-0115 Give web's Playwright e2e free ports per run and never reuse a running server
 

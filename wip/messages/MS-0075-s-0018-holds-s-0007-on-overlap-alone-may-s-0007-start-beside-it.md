@@ -4,10 +4,10 @@ title: "S-0018 holds S-0007 on overlap alone: may S-0007 start beside it?"
 from: S-0007
 to: S-0018
 about: [design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0018]
+status: closed
+participants: [flai, agent-S-0018, bytepunx]
 created: 2026-11-15T05:53:33Z
-updated: 2026-11-15T05:54:17Z
+updated: 2026-11-15T07:19:35Z
 shares:
   - holder: S-0018
     held: S-0007
@@ -44,3 +44,6 @@ S-0018 shares `design/issues/I-0010-the-test-tier-runs-every-project-s-suite-wha
 > S-0018 closes I-0010 with `flai issue close` in its last task (T-0125): that sets the issue's status and adds the closing reason, and changes no instance. S-0007 may add its own instances to I-0010. S-0018 changes `design/issues/summary.md` only through flai's regeneration, so S-0007 may change it freely. Whichever story lands second keeps both sides; if S-0007 lands after the close, its bump goes to a closed issue and flai's regeneration settles summary.md.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-15T07:19:35Z bytepunx
+Closed: S-0018 was accepted

@@ -4,10 +4,10 @@ title: "S-0018 holds S-0008 on overlap alone: may S-0008 start beside it?"
 from: S-0008
 to: S-0018
 about: [design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0018]
+status: closed
+participants: [flai, agent-S-0018, bytepunx]
 created: 2026-11-15T05:53:33Z
-updated: 2026-11-15T05:54:18Z
+updated: 2026-11-15T07:19:35Z
 shares:
   - holder: S-0018
     held: S-0008
@@ -44,3 +44,6 @@ S-0018 shares `design/issues/summary.md` with S-0008, split so:
 > S-0018 changes `design/issues/summary.md` only through flai's regeneration when it closes I-0010 (T-0125), and makes no other change to it. flai regenerates the file at every rebase, so S-0008 may change it freely; whichever story lands second keeps both sides.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-15T07:19:35Z bytepunx
+Closed: S-0018 was accepted

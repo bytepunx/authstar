@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 86.1984
-accrued_seconds: 5548
-tasks_completed: 280
-last_run: 2026-11-15T06:26:58Z
+accrued_cost: 87.7928
+accrued_seconds: 5680
+tasks_completed: 286
+last_run: 2026-11-15T07:15:36Z
 ---
 
 # Orchestrator activity
@@ -1971,6 +1971,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 11
 - Cost: 0.0897 USD, estimated
+
+### 2026-11-15T07:11:27Z
+
+- Summary: Release-due on S-0016: did not evaluate or publish, because system-flow.yaml has no orchestration block, so orchestration.permissions.publish is off by default. S-0015 and S-0016 stay accepted and unreleased; publishing is the operator's (publish formula exists).
+- Items: S-0016, S-0015
+- Seconds: 37
+- Cost: 0.4830 USD, estimated
+
+### 2026-11-15T07:11:41Z
+
+- Summary: I didn't publish S-0015 or S-0016. The `publish` permission is off, so this run made no release.
+- Items: none
+- Seconds: 14
+- Cost: 0.0679 USD, estimated
+
+### 2026-11-15T07:12:10Z
+
+- Summary: Left TH-0071 (S-0018) and TH-0072 (S-0023) unanswered: both are flai's send-back notices (last entry by flai, not a story's agent or planner) addressed to each story's agent, which rebases, closes out again, and moves its story back to review; flai serve resolves them then. No action is owed by the orchestrator.
+- Items: S-0018, S-0023
+- Seconds: 21
+- Cost: 0.2547 USD, estimated
+
+### 2026-11-15T07:12:27Z
+
+- Summary: I took no action on either reason thread. Each is flai's own notice that it sent a story back, and it is addressed to that story's agent, not the operator. My rules leave a thread alone when its last entry is by neither a story's agent nor a planner.
+- Items: none
+- Seconds: 17
+- Cost: 0.1187 USD, estimated
+
+### 2026-11-15T07:15:22Z
+
+- Summary: S-0018 moved to review at 3c680f6 (last verify passed at the head); took no action: system-flow.yaml has no orchestration block, so accept_reviews and answer_threads are off and acceptance is the operator's.
+- Items: S-0018
+- Seconds: 29
+- Cost: 0.5718 USD, estimated
+
+### 2026-11-15T07:15:36Z
+
+- Summary: I left S-0018 in review and changed nothing, because none of my permissions are on. `system-flow.yaml` has no `orchestration` block, so every permission is off by default, including `accept_reviews` and `answer_threads`. Accepting S-0018 is yours.
+- Items: none
+- Seconds: 14
+- Cost: 0.0983 USD, estimated
 
 ## Refusals
 

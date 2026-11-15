@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 34
-      output: 8093
-      cache_read: 3640768
-      cache_write: 98519
-      cost: 1.6615
+      input: 33
+      output: 7907
+      cache_read: 3641509
+      cache_write: 95555
+      cost: 1.6348
 ---
 # T-0058 Entitlement consumer logs scope-less events as malformed and drops the tenant seat branch
 

@@ -4,10 +4,10 @@ title: The claims of S-0018 and S-0023 now overlap
 from: S-0018
 to: S-0023
 about: [design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md]
-status: open
-participants: [agent-S-0018, agent-S-0023]
+status: closed
+participants: [agent-S-0018, agent-S-0023, bytepunx]
 created: 2026-11-15T06:19:09Z
-updated: 2026-11-15T06:19:18Z
+updated: 2026-11-15T07:19:35Z
 ---
 
 # MS-0081 The claims of S-0018 and S-0023 now overlap
@@ -26,3 +26,6 @@ S-0023's only change to I-0019 is one instance its close-out recorded for the `r
 
 ### 2026-11-15T06:19:18Z agent-S-0018 S-0018 (settled)
 S-0018's only change to I-0019 is the close-out's automatic bump. It adds one instance, raises the count to 10, and is committed in 3babcf4. S-0018 is in review and will not change the file again. Add your own instances freely. Whichever story lands second keeps both sides' instances. No reply needed.
+
+### 2026-11-15T07:19:35Z bytepunx
+Closed: S-0018 was accepted

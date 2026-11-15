@@ -3,15 +3,36 @@ id: T-0121
 type: task
 nature: remediation
 title: Upgrade the system-flow template from 1.1.22 to 1.1.24 so the orchestrator role grants verify
-status: backlog
+status: done
 parent: S-0024
 owner: bytepunx
 created: 2026-11-09T22:10:49Z
-updated: 2026-11-09T22:10:49Z
-transitions: []
+updated: 2026-11-15T07:11:58Z
+transitions:
+  - to: ready
+    at: 2026-11-15T07:11:14Z
+    by: agent-S-0024
+  - to: in-progress
+    at: 2026-11-15T07:11:14Z
+    by: agent-S-0024
+  - to: done
+    at: 2026-11-15T07:11:58Z
+    by: agent-S-0024
 stream: S-0024
 tags: [tooling, template]
-touches: [design/workflows/roles/orchestrator.md, design/workflows/roles/README.md, design/conventions/delegation.md, design/conventions/git.md, design/conventions/safety.md, design/conventions/work-management.md, system-flow.yaml, system-flow.lock.yaml]
+touches: [design/workflows/roles/orchestrator.md, design/workflows/roles/README.md, design/conventions/delegation.md, design/conventions/git.md, design/conventions/safety.md, design/conventions/work-management.md, system-flow.yaml, system-flow.lock.yaml, design/system/README.md]
+usage:
+  source: log
+  seconds: 44
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 12
+      output: 88
+      cache_read: 696466
+      cache_write: 6987
+      cost: 0.2654
 ---
 # T-0121 Upgrade the system-flow template from 1.1.22 to 1.1.24 so the orchestrator role grants verify
 

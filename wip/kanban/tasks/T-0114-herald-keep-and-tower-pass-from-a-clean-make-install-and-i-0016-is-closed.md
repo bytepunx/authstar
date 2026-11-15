@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 8
-      output: 1110
-      cache_read: 905291
-      cache_write: 17297
-      cost: 0.3342
+      output: 1105
+      cache_read: 905475
+      cache_write: 17068
+      cost: 0.3324
 ---
 # T-0114 herald, keep, and tower pass from a clean make install, and I-0016 is closed
 

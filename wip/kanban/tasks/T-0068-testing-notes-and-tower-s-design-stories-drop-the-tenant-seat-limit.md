@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 14
-      output: 3399
-      cache_read: 1529347
-      cache_write: 41384
-      cost: 0.6979
+      output: 3322
+      cache_read: 1529659
+      cache_write: 40139
+      cost: 0.6867
 ---
 # T-0068 Testing notes and tower's design stories drop the tenant seat limit
 

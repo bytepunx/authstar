@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 4396
-      cache_read: 2492580
-      cache_write: 35127
-      cost: 0.8596
+      input: 23
+      output: 3667
+      cache_read: 2494939
+      cache_write: 28872
+      cost: 0.7972
 ---
 # T-0125 Document per-project tiers, reproduce I-0010's instance, and close I-0010
 

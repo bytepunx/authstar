@@ -4,10 +4,10 @@ title: flai serve's checks against S-0018's kluster namespace failed
 anchor:
   path: wip/kanban/stories/S-0018-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md
   item: S-0018
-status: answered
+status: resolved
 participants: [flai serve, agent-S-0018]
 created: 2026-11-15T06:22:10Z
-updated: 2026-11-15T06:23:25Z
+updated: 2026-11-15T07:16:41Z
 ---
 
 # TH-0070 flai serve's checks against S-0018's kluster namespace failed
@@ -33,3 +33,6 @@ The cause is outside S-0018, and it does not recur.
 - During the failed run the pods were freshly started: tower had restarted 18s earlier and herald was not ready. That points to a startup race in the internal-JWT path (portcullis → keep).
 
 I recorded it as I-0038, committed on story/S-0018 (3804bfe). The branch has no code change. I am moving S-0018 back to review so that flai serve deploys and checks it again.
+
+### 2026-11-15T07:16:41Z flai serve
+Resolved: flai serve's checks of S-0018 against its namespace s-0018 passed at 3c680f6b1955.

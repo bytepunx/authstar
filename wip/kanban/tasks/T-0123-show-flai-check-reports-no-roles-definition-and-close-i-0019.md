@@ -3,16 +3,37 @@ id: T-0123
 type: task
 nature: remediation
 title: Show flai check reports no roles.definition and close I-0019
-status: backlog
+status: done
 parent: S-0024
 owner: bytepunx
 created: 2026-11-09T22:10:57Z
-updated: 2026-11-09T22:10:57Z
-transitions: []
+updated: 2026-11-15T07:12:24Z
+transitions:
+  - to: ready
+    at: 2026-11-15T07:12:15Z
+    by: agent-S-0024
+  - to: in-progress
+    at: 2026-11-15T07:12:15Z
+    by: agent-S-0024
+  - to: done
+    at: 2026-11-15T07:12:24Z
+    by: agent-S-0024
 stream: S-0024
 tags: [tooling, issues]
 touches: [design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/summary.md]
 after: [T-0121]
+usage:
+  source: log
+  seconds: 8
+  estimated: true
+  priced_by: estimate
+  models:
+    - model: claude-opus-5-5
+      input: 4
+      output: 48
+      cache_read: 283304
+      cache_write: 753
+      cost: 0.1072
 ---
 # T-0123 Show flai check reports no roles.definition and close I-0019
 

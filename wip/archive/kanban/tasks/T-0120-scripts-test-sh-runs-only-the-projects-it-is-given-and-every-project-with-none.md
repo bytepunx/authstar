@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 2399
-      cache_read: 1360228
-      cache_write: 19169
-      cost: 0.4691
+      input: 12
+      output: 2001
+      cache_read: 1361515
+      cache_write: 15756
+      cost: 0.435
 ---
 # T-0120 scripts/test.sh runs only the projects it is given, and every project with none
 

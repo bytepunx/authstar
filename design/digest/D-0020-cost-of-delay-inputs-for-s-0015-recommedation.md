@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0071, TH-0072]
 ---
 
 # D-0020 Cost of delay inputs for S-0015: recommedation

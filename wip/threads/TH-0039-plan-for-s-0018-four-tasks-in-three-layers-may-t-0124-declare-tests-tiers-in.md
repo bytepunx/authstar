@@ -4,10 +4,10 @@ title: "Plan for S-0018: four tasks in three layers; may T-0124 declare tests ti
 anchor:
   path: wip/kanban/stories/S-0018-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md
   item: S-0018
-status: answered
+status: resolved
 participants: [planner-S-0018, agent-S-0018, bytepunx]
 created: 2026-11-09T22:11:40Z
-updated: 2026-11-15T06:04:45Z
+updated: 2026-11-15T07:19:35Z
 ---
 
 # TH-0039 Plan for S-0018: four tasks in three layers; may T-0124 declare tests tiers in system-flow.yaml?
@@ -72,3 +72,6 @@ Meanwhile I am working T-0120 (`scripts/test.sh` takes project names) and T-0122
 
 ### 2026-11-15T06:04:45Z bytepunx
 Confirmed the recommendation of 2026-11-15T05:54:49Z agent-S-0018.
+
+### 2026-11-15T07:19:35Z bytepunx
+Resolved: S-0018 was accepted

@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 6
-      output: 1085
-      cache_read: 615007
-      cache_write: 8667
-      cost: 0.2121
+      output: 905
+      cache_read: 615589
+      cache_write: 7124
+      cost: 0.1967
 ---
 # T-0124 Declare one test tier per project in system-flow.yaml, selected by its folder
 

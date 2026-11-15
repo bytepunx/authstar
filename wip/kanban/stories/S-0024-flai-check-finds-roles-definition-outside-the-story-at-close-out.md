@@ -3,26 +3,41 @@ id: S-0024
 type: story
 nature: improvement
 title: "flai check finds `roles.definition` outside the story at close-out"
-status: ready
+status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:35Z
-updated: 2026-11-15T07:10:14Z
+updated: 2026-11-15T07:18:41Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:21Z
     by: bytepunx
+  - to: in-progress
+    at: 2026-11-15T07:10:25Z
+    by: agent-S-0024
 tags: []
 topics: [tooling]
-touches: [design/workflows/roles/orchestrator.md, design/workflows/roles/README.md, design/conventions/delegation.md, design/conventions/git.md, design/conventions/safety.md, design/conventions/work-management.md, system-flow.yaml, system-flow.lock.yaml, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/summary.md]
+touches: [design/workflows/roles/orchestrator.md, design/workflows/roles/README.md, design/conventions/delegation.md, design/conventions/git.md, design/conventions/safety.md, design/conventions/work-management.md, system-flow.yaml, system-flow.lock.yaml, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/summary.md, design/system/README.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 124
+  estimated: true
+  priced_by: estimate
+  turns:
+    - day: 2026-11-15
+      ceremony: 1
+      work: 19
+  models:
+    - model: claude-opus-5-5
+      input: 44
+      output: 395
+      cache_read: 2019973
+      cache_write: 127462
+      cost: 0.8102
   strategic:
     - kind: planner
       seconds: 1174

@@ -3,10 +3,10 @@ id: S-0018
 type: story
 nature: improvement
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
-status: review
+status: done
 owner: bytepunx
 created: 2026-11-06T21:11:49Z
-updated: 2026-11-15T06:25:51Z
+updated: 2026-11-15T07:19:35Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:19Z
@@ -23,6 +23,15 @@ transitions:
   - to: review
     at: 2026-11-15T06:25:51Z
     by: agent-S-0018
+  - to: in-progress
+    at: 2026-11-15T07:10:57Z
+    by: flai
+  - to: review
+    at: 2026-11-15T07:14:17Z
+    by: agent-S-0018
+  - to: done
+    at: 2026-11-15T07:19:35Z
+    by: bytepunx
 tags: [testing, scripts, steward]
 topics: [testing]
 touches: [scripts/test.sh, scripts/README.md, system-flow.yaml, steward/playwright.config.ts, steward/tests/e2e/run-fake-backend.ts, steward/TESTING.md, docs/contributors/index.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0038-golden-path-step-4b-keep-answers-403-on-authstar-me-subscription-through.md]
@@ -33,31 +42,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1787
+  seconds: 1981
   priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 2
+      ceremony: 4
       hand_edits: 2
-      work: 89
+      work: 106
   models:
     - model: claude-opus-5-5
-      input: 226
-      output: 39937
-      cache_read: 22646006
-      cache_write: 319141
-      cost: 7.8099
+      input: 266
+      output: 42709
+      cache_read: 29054959
+      cache_write: 336232
+      cost: 9.284
   strategic:
     - kind: orchestrator
-      seconds: 185
+      seconds: 225
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 87
-          output: 583
-          cache_read: 2754310
-          cache_write: 390245
-          cost: 3.5079
+          input: 105
+          output: 694
+          cache_read: 3303037
+          cache_write: 475650
+          cost: 4.2071
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -130,3 +139,4 @@ Figures:
 - Criterion 2: I-0010 is closed in 92b34bc, with a reason naming T-0120, T-0122, and T-0124.
 - Kluster: S-0018 was not deployed. All namespaces are held (by S-0014, S-0021, S-0022, and S-0023, over `kluster.agent_namespaces` of 2). Neither criterion needs a running system, because S-0018 changes only the test scripts, the manifest's tiers, and steward's Playwright config, none of which is built into an image.
 - 2026-11-15T06:22:10Z: moved to in-progress: flai serve's checks of S-0018 against its kluster namespace ended failed, at the check golden-path, at commit 3babcf408744
+- 2026-11-15T07:10:57Z: moved to in-progress: bytepunx asked its agent to rebase story/S-0018 onto main and resolve what holds its acceptance, 1 blocker: S-0018's verify does not cover the main branch it would land on: its last flai verify, at 3804bfe, ran over main at 2bfe5ec, and the 18 paths main brought in si...; its agent syncs it with flai stream sync S-0018, takes each blocker's recommended action, closes out again, and moves it to review

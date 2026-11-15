@@ -9,7 +9,7 @@ date: 2026-11-06
 status: absorbed
 absorbed_by: "design/adrs/0111-portcullis-forwards-authstar-me-to-keep-over-its-plain-http-client-until-keep.md#decision"
 asked_again: []
-cited: [T-0049, TH-0020, TH-0067]
+cited: [T-0049, TH-0020, TH-0067, TH-0071, TH-0072]
 ---
 
 # D-0013 me family reaches keep over plain HTTP, not SPIFFE mTLS: accept recommendation
