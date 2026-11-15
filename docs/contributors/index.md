@@ -1,6 +1,6 @@
 ---
 title: Contributors guide
-updated: 2026-10-21
+updated: 2026-11-15
 status: active
 ---
 
@@ -32,7 +32,11 @@ Three tiers, each run only after the cheaper one passes. The Make targets call t
 | `make integration` | `npm run test:integration` in every service that has one; testcontainers start Postgres, RabbitMQ, and ClickHouse | a running Docker daemon |
 | `make smoke` | The golden-path scenario in `integration/` against a disposable k3d cluster | the cluster `integration/README.md` describes |
 
-To run one project's tests alone, run its own `npm test` or `cargo test` in its folder; each project's `TESTING.md` says what its tiers cover.
+To run one project's tests alone, give `scripts/test.sh` its folder: `scripts/test.sh chronicle`, or `scripts/test.sh portcullis` for `cargo test` and clippy. It takes several, and with none it runs every project, as `make test` does. Each project's `TESTING.md` says what its tiers cover.
+
+`flai test` and a story's close-out run only the projects whose files changed. `system-flow.yaml` declares one test tier per project, selected by its folder and running `scripts/test.sh <project>`. A change to `scripts/test.sh` or `scripts/lib-projects.sh` selects every tier, and a change outside every project's folder selects none. Each project needs its `node_modules` (`make install`, or `npm ci` in that folder).
+
+Steward's Playwright e2e picks two free loopback ports on every run and never reuses a server it did not start, so runs in several worktrees at once do not reach each other's servers ([`steward/TESTING.md`](../../steward/TESTING.md)).
 
 CI (`.github/workflows/ci.yml`) runs `make test`'s content as a matrix on every push and pull request, and on `main` builds and pushes the image of each service whose folder changed.
 
