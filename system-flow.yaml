@@ -88,3 +88,44 @@ kluster:
   deploy: [scripts/kluster-deploy.sh]
   teardown: [scripts/kluster-teardown.sh]
   timeout: 30m
+tests:
+  - name: hook
+    command: [scripts/test.sh, chart/hook]
+    paths: ["chart/hook/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: typescript
+    command: [scripts/test.sh, clients/typescript]
+    paths: ["clients/typescript/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: chronicle
+    command: [scripts/test.sh, chronicle]
+    paths: ["chronicle/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: lookout
+    command: [scripts/test.sh, lookout]
+    paths: ["lookout/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: herald
+    command: [scripts/test.sh, herald]
+    paths: ["herald/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: keep
+    command: [scripts/test.sh, keep]
+    paths: ["keep/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: tower
+    command: [scripts/test.sh, tower]
+    paths: ["tower/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: steward
+    command: [scripts/test.sh, steward]
+    paths: ["steward/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: web
+    command: [scripts/test.sh, web]
+    paths: ["web/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
+  - name: portcullis
+    command: [scripts/test.sh, portcullis]
+    paths: ["portcullis/**", scripts/test.sh, scripts/lib-projects.sh]
+    format: plain
