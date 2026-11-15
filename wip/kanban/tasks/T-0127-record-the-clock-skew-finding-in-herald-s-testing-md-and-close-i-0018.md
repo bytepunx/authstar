@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 1246
-      cache_read: 778550
-      cache_write: 8464
-      cost: 0.2455
+      input: 6
+      output: 851
+      cache_read: 773383
+      cache_write: 8928
+      cost: 0.2417
 ---
 # T-0127 Record the clock-skew finding in herald's TESTING.md and close I-0018
 

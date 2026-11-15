@@ -3,15 +3,36 @@ id: T-0122
 type: task
 nature: remediation
 title: Steward's e2e picks free ports for the fake tower and steward on every run
-status: backlog
+status: done
 parent: S-0018
 owner: bytepunx
 created: 2026-11-09T22:10:54Z
-updated: 2026-11-09T22:10:54Z
-transitions: []
+updated: 2026-11-15T06:07:46Z
+transitions:
+  - to: ready
+    at: 2026-11-15T05:54:55Z
+    by: agent-S-0018
+  - to: in-progress
+    at: 2026-11-15T05:54:55Z
+    by: agent-S-0018
+  - to: done
+    at: 2026-11-15T06:07:46Z
+    by: agent-S-0018
 stream: S-0018
 tags: [testing, steward]
-touches: [steward/playwright.config.ts, steward/tests/e2e/run-fake-backend.ts, steward/tests/helpers/steward-server.ts, steward/TESTING.md]
+touches: [steward/playwright.config.ts, steward/tests/e2e/run-fake-backend.ts, steward/TESTING.md]
+usage:
+  source: log
+  seconds: 771
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 22
+      output: 3909
+      cache_read: 2216492
+      cache_write: 31236
+      cost: 0.7644
 ---
 # T-0122 Steward's e2e picks free ports for the fake tower and steward on every run
 

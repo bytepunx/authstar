@@ -3,10 +3,10 @@ id: S-0016
 type: story
 nature: remediation
 title: Tower's SPIFFE SVID is fetched once at boot and expires after 4h
-status: review
+status: done
 owner: bytepunx
 created: 2026-11-06T17:38:17Z
-updated: 2026-11-14T11:32:03Z
+updated: 2026-11-15T07:10:14Z
 transitions:
   - to: ready
     at: 2026-11-14T10:07:04Z
@@ -23,24 +23,36 @@ transitions:
   - to: review
     at: 2026-11-14T11:32:03Z
     by: agent-S-0016
+  - to: in-progress
+    at: 2026-11-15T05:53:30Z
+    by: flai
+  - to: review
+    at: 2026-11-15T06:15:39Z
+    by: agent-S-0016
+  - to: done
+    at: 2026-11-15T07:10:14Z
+    by: bytepunx
 tags: [tower, spiffe, mtls]
 touches: [tower/src/lib/spiffe-mtls.ts, tower/src/server.ts, tower/spec/behavior/spiffe-svid-rotation.spec.ts, tower/spec/lib/spiffe-test-certs.ts, tower/TESTING.md, design/issues/I-0002-tower-s-spiffe-svid-is-fetched-once-at-boot-and-expires-after-4h.md, design/issues/summary.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0029-services-hang-25s-after-taking-signet-s-restart-lock-so-the-golden-path-fails.md]
 usage:
   source: log
-  seconds: 4888
+  seconds: 6213
   priced_by: harness
   turns:
     - day: 2026-11-14
       ceremony: 3
       hand_edits: 3
       work: 150
+    - day: 2026-11-15
+      ceremony: 2
+      work: 47
   models:
     - model: claude-opus-5-5
-      input: 402
-      output: 63859
-      cache_read: 45527311
-      cache_write: 843716
-      cost: 15.5509
+      input: 502
+      output: 70687
+      cache_read: 62890541
+      cache_write: 1193399
+      cost: 21.9579
   strategic:
     - kind: planner
       seconds: 298
@@ -59,15 +71,15 @@ usage:
           cache_write: 627880
           cost: 13.3521
     - kind: orchestrator
-      seconds: 169
+      seconds: 201
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 103
-          output: 693
-          cache_read: 3050812
-          cache_write: 403003
-          cost: 3.8945
+          input: 122
+          output: 822
+          cache_read: 3623136
+          cache_write: 483581
+          cost: 4.6159
 cost_of_delay:
   inputs:
     revenue_per_week: 0
@@ -138,3 +150,4 @@ Assumption: no test tier in `system-flow.yaml` runs tower's tests, as TH-0009 an
   - A SIGTERM shut tower down in about 1s through the new stop function.
   - The checks passed at the same commit (job `S-0016-checks-20261114T105053Z`), with tower serving mTLS to portcullis.
 - 2026-11-14T10:48:29Z: moved to in-progress: flai serve's checks of S-0016 against its kluster namespace ended failed, at the check golden-path, at commit 51aaf5056c27
+- 2026-11-15T05:53:30Z: moved to in-progress: bytepunx asked its agent to rebase story/S-0016 onto main and resolve what holds its acceptance, 1 blocker: S-0016's verify does not cover the main branch it would land on: its last flai verify, at ecaac87, ran over main at a699fe2, and the 88 paths main brought in si...; its agent syncs it with flai stream sync S-0016, takes each blocker's recommended action, closes out again, and moves it to review

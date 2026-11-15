@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 16
-      output: 3831
-      cache_read: 1695238
-      cache_write: 31935
-      cost: 0.6632
+      output: 3736
+      cache_read: 1680609
+      cache_write: 45477
+      cost: 0.7669
 ---
 # T-0060 Tenant actor and steward's Tenant type lose seatLimit
 

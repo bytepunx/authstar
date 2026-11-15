@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 34
-      output: 8300
-      cache_read: 3672461
-      cache_write: 69181
-      cost: 1.4366
+      output: 8093
+      cache_read: 3640768
+      cache_write: 98519
+      cost: 1.6615
 ---
 # T-0058 Entitlement consumer logs scope-less events as malformed and drops the tenant seat branch
 

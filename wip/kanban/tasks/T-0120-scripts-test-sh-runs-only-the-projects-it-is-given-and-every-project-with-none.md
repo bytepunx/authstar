@@ -3,15 +3,36 @@ id: T-0120
 type: task
 nature: improvement
 title: scripts/test.sh runs only the projects it is given, and every project with none
-status: backlog
+status: done
 parent: S-0018
 owner: bytepunx
 created: 2026-11-09T22:10:46Z
-updated: 2026-11-09T22:10:46Z
-transitions: []
+updated: 2026-11-15T06:10:40Z
+transitions:
+  - to: ready
+    at: 2026-11-15T05:54:55Z
+    by: agent-S-0018
+  - to: in-progress
+    at: 2026-11-15T05:54:55Z
+    by: agent-S-0018
+  - to: done
+    at: 2026-11-15T06:10:40Z
+    by: agent-S-0018
 stream: S-0018
 tags: [testing, scripts]
-touches: [scripts/test.sh, scripts/lib-projects.sh, scripts/README.md]
+touches: [scripts/test.sh, scripts/README.md]
+usage:
+  source: log
+  seconds: 945
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 2399
+      cache_read: 1360228
+      cache_write: 19169
+      cost: 0.4691
 ---
 # T-0120 scripts/test.sh runs only the projects it is given, and every project with none
 

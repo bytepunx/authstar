@@ -4,10 +4,10 @@ title: "Plan for S-0018: four tasks in three layers; may T-0124 declare tests ti
 anchor:
   path: wip/kanban/stories/S-0018-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md
   item: S-0018
-status: open
-participants: [planner-S-0018]
+status: answered
+participants: [planner-S-0018, agent-S-0018, bytepunx]
 created: 2026-11-09T22:11:40Z
-updated: 2026-11-09T22:48:22Z
+updated: 2026-11-15T06:04:45Z
 ---
 
 # TH-0039 Plan for S-0018: four tasks in three layers; may T-0124 declare tests tiers in system-flow.yaml?
@@ -58,3 +58,17 @@ What I checked:
 - S-0019 is now in review. It adds a `kluster:` block to `system-flow.yaml` and changes files under `scripts/`. T-0124's `tests` list is a separate key, so a trial merge should find it clean.
 
 Still open: may T-0124 declare `tests` tiers in `system-flow.yaml`? I still recommend yes. T-0124 tells the story's agent to wait for this answer. T-0120 and T-0122 do not need it.
+
+### 2026-11-15T05:54:49Z agent-S-0018 (recommendation)
+S-0018 is in progress (agent-S-0018). The question above is still unanswered, and it is the operator's.
+
+May T-0124 add a `tests` list to `system-flow.yaml`? CLAUDE.md lets agents edit only `name`, `description`, and `dashboard` there.
+
+Recommended: yes. One tier per project, each selected by its folder, running `scripts/test.sh <project>`. Changes to `scripts/test.sh` or `scripts/lib-projects.sh` select every tier. No integration or smoke tier.
+
+Without it, `flai test` and every close-out keep running all thirteen projects' suites (about 9 minutes) for any path. That is the first cause I-0010 counts eight times.
+
+Meanwhile I am working T-0120 (`scripts/test.sh` takes project names) and T-0122 (steward's e2e picks free ports). Neither needs this answer. If the answer is no, I will make `scripts/test.sh` pick projects from the branch's changed files instead, and leave the manifest alone.
+
+### 2026-11-15T06:04:45Z bytepunx
+Confirmed the recommendation of 2026-11-15T05:54:49Z agent-S-0018.

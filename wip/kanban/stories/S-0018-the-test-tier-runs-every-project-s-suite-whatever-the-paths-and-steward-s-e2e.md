@@ -3,37 +3,61 @@ id: S-0018
 type: story
 nature: improvement
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
-status: ready
+status: review
 owner: bytepunx
 created: 2026-11-06T21:11:49Z
-updated: 2026-11-15T05:53:17Z
+updated: 2026-11-15T06:25:51Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:19Z
     by: bytepunx
+  - to: in-progress
+    at: 2026-11-15T05:53:32Z
+    by: agent-S-0018
+  - to: review
+    at: 2026-11-15T06:19:12Z
+    by: agent-S-0018
+  - to: in-progress
+    at: 2026-11-15T06:22:10Z
+    by: flai
+  - to: review
+    at: 2026-11-15T06:25:51Z
+    by: agent-S-0018
 tags: [testing, scripts, steward]
 topics: [testing]
-touches: [scripts/test.sh, scripts/lib-projects.sh, scripts/README.md, system-flow.yaml, steward/playwright.config.ts, steward/tests/e2e/run-fake-backend.ts, steward/tests/helpers/steward-server.ts, steward/TESTING.md, docs/contributors/index.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
+touches: [scripts/test.sh, scripts/README.md, system-flow.yaml, steward/playwright.config.ts, steward/tests/e2e/run-fake-backend.ts, steward/TESTING.md, docs/contributors/index.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0038-golden-path-step-4b-keep-answers-403-on-authstar-me-subscription-through.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 1787
+  priced_by: harness
+  turns:
+    - day: 2026-11-15
+      ceremony: 2
+      hand_edits: 2
+      work: 89
+  models:
+    - model: claude-opus-5-5
+      input: 226
+      output: 39937
+      cache_read: 22646006
+      cache_write: 319141
+      cost: 7.8099
   strategic:
     - kind: orchestrator
-      seconds: 62
+      seconds: 185
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 28
-          output: 203
-          cache_read: 964976
-          cache_write: 141563
-          cost: 1.2582
+          input: 87
+          output: 583
+          cache_read: 2754310
+          cache_write: 390245
+          cost: 3.5079
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 15m
@@ -59,8 +83,8 @@ finalized:
 This story remediates [I-0010](../../../design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md), "The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0010 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0010 is closed with `flai issue close I-0010 --reason` saying what fixed it
+- [x] The cause I-0010 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0010 is closed with `flai issue close I-0010 --reason` saying what fixed it
 
 ## Tasks
 - T-0120 scripts/test.sh runs only the projects it is given, and every project with none
@@ -99,3 +123,10 @@ Figures:
 
 - Forecast: 3h, delivery 2026-11-10T12:00:00Z, adjusted from flai's 14m and 09:30. flai worked the 14m out from size 13 (2 criteria, 11 touches) at a median of 61 s per unit over 4 done stories. That rate cannot cover four tasks across a shell script, the manifest, a Playwright config, and docs. Proving the fix also means running steward's e2e and a full `make test`, which took 9m11s in I-0010's instance. The delivery moves later by the same difference.
 - Cost of delay: 37.50 USD a week, as `flai cod` works it out from the operator's input: 15m lost per 168h cycle at 150 USD an hour. The input counts one occurrence. Every `flai test` and close-out runs the whole suite until this story lands, so the real time lost is likely higher. Raising the input is the operator's call.
+
+### Verification
+
+- Criterion 1 was verified locally. `flai test chronicle/src/server.ts` ran the chronicle tier alone in 6.3s, and `flai test steward/playwright.config.ts` ran the steward tier alone in 28.1s and passed. During both runs, 4610 was held by a decoy server and 4611 by S-0023's live steward server (T-0125's Notes). The close-out at 3babcf4 ran the ten per-project tiers in about 2.5 minutes, against the 9 minutes the single tier took.
+- Criterion 2: I-0010 is closed in 92b34bc, with a reason naming T-0120, T-0122, and T-0124.
+- Kluster: S-0018 was not deployed. All namespaces are held (by S-0014, S-0021, S-0022, and S-0023, over `kluster.agent_namespaces` of 2). Neither criterion needs a running system, because S-0018 changes only the test scripts, the manifest's tiers, and steward's Playwright config, none of which is built into an image.
+- 2026-11-15T06:22:10Z: moved to in-progress: flai serve's checks of S-0018 against its kluster namespace ended failed, at the check golden-path, at commit 3babcf408744

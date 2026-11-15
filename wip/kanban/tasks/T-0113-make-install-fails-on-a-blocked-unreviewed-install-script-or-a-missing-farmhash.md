@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 24
-      output: 3442
-      cache_read: 2782960
-      cache_write: 37852
-      cost: 0.9046
+      output: 3393
+      cache_read: 2767645
+      cache_write: 52880
+      cost: 1.0217
 ---
 # T-0113 make install fails on a blocked unreviewed install script or a missing farmhash build
 

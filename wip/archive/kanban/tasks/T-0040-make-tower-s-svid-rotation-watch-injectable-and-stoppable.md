@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 25
-      output: 3900
-      cache_read: 2780361
-      cache_write: 51526
-      cost: 0.9497
+      input: 22
+      output: 3114
+      cache_read: 2770667
+      cache_write: 52576
+      cost: 0.9674
 ---
 # T-0040 Make tower's SVID rotation watch injectable and stoppable
 

@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 14
-      output: 2297
-      cache_read: 1434693
-      cache_write: 15597
-      cost: 0.4524
+      input: 12
+      output: 1568
+      cache_read: 1425171
+      cache_write: 16452
+      cost: 0.4454
 ---
 # T-0126 Reproduce the clock-skew throw in herald and keep the spec clock monotonic
 

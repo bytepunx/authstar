@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:29:21Z
-updated: 2026-11-14T18:00:49Z
+updated: 2026-11-15T06:19:41Z
 transitions:
   - to: ready
     at: 2026-11-14T10:07:01Z
@@ -50,6 +50,9 @@ blocked:
     until: 2026-11-14T18:00:13Z
     reason: awaiting the operator on TH-0061
   - from: 2026-11-14T18:00:49Z
+    until: 2026-11-15T06:19:09Z
+    reason: awaiting the operator on TH-0061
+  - from: 2026-11-15T06:19:41Z
     reason: awaiting the operator on TH-0061
 tags: [tower]
 topics: [billing, tower, testing]
@@ -57,20 +60,23 @@ touches: [tower/src/lib/entitlement-consumer.ts, tower/src/server.ts, tower/spec
 after: [S-0004]
 usage:
   source: log
-  seconds: 4406
+  seconds: 4422
   priced_by: harness
   turns:
     - day: 2026-11-14
       ceremony: 3
       hand_edits: 3
       work: 129
+    - day: 2026-11-15
+      ceremony: 1
+      work: 2
   models:
     - model: claude-opus-5-5
-      input: 378
-      output: 91169
-      cache_read: 40337579
-      cache_write: 759875
-      cost: 15.7796
+      input: 386
+      output: 92196
+      cache_read: 41477446
+      cache_write: 1122378
+      cost: 18.9281
   strategic:
     - kind: orchestrator
       seconds: 202

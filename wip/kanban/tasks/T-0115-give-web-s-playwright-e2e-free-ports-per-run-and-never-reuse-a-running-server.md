@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 2101
-      cache_read: 1342562
-      cache_write: 25496
-      cost: 0.5111
+      input: 11
+      output: 1984
+      cache_read: 1331633
+      cache_write: 34134
+      cost: 0.5762
 ---
 # T-0115 Give web's Playwright e2e free ports per run and never reuse a running server
 

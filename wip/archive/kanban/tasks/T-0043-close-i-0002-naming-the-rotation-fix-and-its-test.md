@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 5
-      output: 866
-      cache_read: 617606
-      cache_write: 11446
-      cost: 0.211
+      output: 692
+      cache_read: 615453
+      cache_write: 11679
+      cost: 0.2149
 ---
 # T-0043 Close I-0002 naming the rotation fix and its test
 

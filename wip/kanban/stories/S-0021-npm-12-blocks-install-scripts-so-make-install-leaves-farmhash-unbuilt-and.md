@@ -6,7 +6,7 @@ title: npm 12 blocks install scripts, so make install leaves farmhash unbuilt an
 status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:33Z
-updated: 2026-11-14T18:11:11Z
+updated: 2026-11-15T06:19:45Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:01Z
@@ -25,6 +25,9 @@ blocked:
     until: 2026-11-14T17:49:29Z
     reason: awaiting the operator on TH-0062
   - from: 2026-11-14T18:11:11Z
+    until: 2026-11-15T06:19:09Z
+    reason: awaiting the operator on TH-0065
+  - from: 2026-11-15T06:19:45Z
     reason: awaiting the operator on TH-0065
 tags: [hook]
 topics: [dependencies, testing]
@@ -36,20 +39,23 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 6183
+  seconds: 6207
   priced_by: harness
   turns:
     - day: 2026-11-14
       ceremony: 3
       hand_edits: 1
       work: 207
+    - day: 2026-11-15
+      ceremony: 1
+      work: 4
   models:
     - model: claude-opus-5-5
-      input: 502
-      output: 71231
-      cache_read: 57599635
-      cache_write: 783440
-      cost: 18.7236
+      input: 514
+      output: 72870
+      cache_read: 59434003
+      cache_write: 1135583
+      cost: 21.9404
   strategic:
     - kind: orchestrator
       seconds: 140

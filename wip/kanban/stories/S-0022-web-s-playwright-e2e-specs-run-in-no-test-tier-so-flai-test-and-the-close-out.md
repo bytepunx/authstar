@@ -6,7 +6,7 @@ title: Web's Playwright e2e specs run in no test tier, so flai test and the clos
 status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-14T18:00:23Z
+updated: 2026-11-15T06:19:23Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:03Z
@@ -40,6 +40,12 @@ blocked:
     until: 2026-11-14T18:00:13Z
     reason: awaiting the operator on TH-0038
   - from: 2026-11-14T18:00:23Z
+    until: 2026-11-15T05:53:17Z
+    reason: awaiting the operator on TH-0038
+  - from: 2026-11-15T06:13:06Z
+    until: 2026-11-15T06:19:09Z
+    reason: awaiting the operator on TH-0038
+  - from: 2026-11-15T06:19:23Z
     reason: awaiting the operator on TH-0038
 tags: [web]
 topics: [testing]
@@ -51,19 +57,22 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2740
+  seconds: 3921
   priced_by: harness
   turns:
     - day: 2026-11-14
       ceremony: 9
       work: 123
+    - day: 2026-11-15
+      ceremony: 1
+      work: 12
   models:
     - model: claude-opus-5-5
-      input: 338
-      output: 61470
-      cache_read: 39288012
-      cache_write: 746109
-      cost: 14.9575
+      input: 370
+      output: 67076
+      cache_read: 45017916
+      cache_write: 1153951
+      cost: 19.4785
   strategic:
     - kind: orchestrator
       seconds: 247

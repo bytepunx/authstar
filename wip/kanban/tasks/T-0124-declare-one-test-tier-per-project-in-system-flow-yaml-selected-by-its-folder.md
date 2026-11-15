@@ -3,16 +3,37 @@ id: T-0124
 type: task
 nature: improvement
 title: Declare one test tier per project in system-flow.yaml, selected by its folder
-status: backlog
+status: done
 parent: S-0018
 owner: bytepunx
 created: 2026-11-09T22:11:02Z
-updated: 2026-11-09T22:11:02Z
-transitions: []
+updated: 2026-11-15T06:11:41Z
+transitions:
+  - to: ready
+    at: 2026-11-15T06:11:20Z
+    by: agent-S-0018
+  - to: in-progress
+    at: 2026-11-15T06:11:20Z
+    by: agent-S-0018
+  - to: done
+    at: 2026-11-15T06:11:41Z
+    by: agent-S-0018
 stream: S-0018
 tags: [testing]
 touches: [system-flow.yaml]
 after: [T-0120]
+usage:
+  source: log
+  seconds: 21
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 6
+      output: 1085
+      cache_read: 615007
+      cache_write: 8667
+      cost: 0.2121
 ---
 # T-0124 Declare one test tier per project in system-flow.yaml, selected by its folder
 

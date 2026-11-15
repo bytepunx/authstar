@@ -4,10 +4,10 @@ title: "S-0016 holds S-0007 on overlap alone: may S-0007 start beside it?"
 from: S-0007
 to: S-0016
 about: [design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0016]
+status: closed
+participants: [flai, agent-S-0016, bytepunx]
 created: 2026-11-14T10:07:40Z
-updated: 2026-11-14T10:20:18Z
+updated: 2026-11-15T07:10:14Z
 shares:
   - holder: S-0016
     held: S-0007
@@ -57,3 +57,6 @@ S-0016 shares `design/issues/I-0010-the-test-tier-runs-every-project-s-suite-wha
 > S-0016 changed I-0010 once, in 7bd7687. It is a bump that adds one instance and raises the count, and S-0016 makes no other change to the file. S-0007 may add its own instances. Whichever story lands second keeps both sides' instances.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-15T07:10:14Z bytepunx
+Closed: S-0016 was accepted

@@ -4,10 +4,10 @@ title: flai serve's checks against S-0016's kluster namespace failed
 anchor:
   path: wip/kanban/stories/S-0016-tower-s-spiffe-svid-is-fetched-once-at-boot-and-expires-after-4h.md
   item: S-0016
-status: answered
+status: resolved
 participants: [flai serve, agent-S-0016]
 created: 2026-11-14T10:48:29Z
-updated: 2026-11-14T10:51:55Z
+updated: 2026-11-15T06:18:49Z
 ---
 
 # TH-0060 flai serve's checks against S-0016's kluster namespace failed
@@ -39,3 +39,6 @@ Herald, which S-0016 does not change, did the same: it took the lock at 10:48:37
 **Evidence that the branch is sound.** I re-ran the checks at the same commit, 51aaf50, against the steady namespace. They passed: job `S-0016-checks-20261114T105053Z`, log `/home/alex/.flai/serve/checks/S-0016-20261114T105123Z.log`.
 
 I am moving S-0016 back to review at the same head plus the issue commit.
+
+### 2026-11-15T06:18:49Z flai serve
+Resolved: flai serve's checks of S-0016 against its namespace s-0016 passed at 1cfc2dcf64bf.

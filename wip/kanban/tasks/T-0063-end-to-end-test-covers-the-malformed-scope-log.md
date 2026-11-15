@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 11
-      output: 2683
-      cache_read: 1187035
-      cache_write: 22361
-      cost: 0.4644
+      output: 2616
+      cache_read: 1176791
+      cache_write: 31844
+      cost: 0.537
 ---
 # T-0063 End-to-end test covers the malformed-scope log
 

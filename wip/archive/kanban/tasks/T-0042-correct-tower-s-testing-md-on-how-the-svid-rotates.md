@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 8
-      output: 1298
-      cache_read: 925413
-      cache_write: 17150
-      cost: 0.3161
+      input: 7
+      output: 1037
+      cache_read: 922187
+      cache_write: 17499
+      cost: 0.322
 ---
 # T-0042 Correct tower's TESTING.md on how the SVID rotates
 

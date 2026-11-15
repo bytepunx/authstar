@@ -9,7 +9,7 @@ date: 2026-11-14
 status: absorbed
 absorbed_by: "design/stories/steward/004-activity-and-stuck-erasure-requests.md#stuck-erasure-requests--stewards-first-genuinely-cross-tenant-view"
 asked_again: []
-cited: []
+cited: [TH-0067]
 ---
 
 # D-0046 Where does S-0013's Stuck Erasures view live: top-level as story 004 says, or on the tenant page: S-0013 is in progress

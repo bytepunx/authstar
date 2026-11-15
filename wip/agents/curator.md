@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 15.9621
-accrued_seconds: 1557
-tasks_completed: 10
-last_run: 2026-11-14T17:30:44Z
+accrued_cost: 17.7781
+accrued_seconds: 1726
+tasks_completed: 11
+last_run: 2026-11-15T05:56:12Z
 ---
 
 # Curator activity
@@ -91,3 +91,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0001, D-0006, D-0017, D-0019, D-0021, D-0023, D-0024, D-0026, D-0034, D-0036, D-0046, D-0050
 - Seconds: 61
 - Cost: 0.7480 USD, estimated
+
+### 2026-11-15T05:56:12Z
+
+- Summary: I curated the digest for the S-0015 acceptance and the I-0028 closure, the only things harvested since 2026-11-14T17:30:44Z. I wrote no new entries, merged into D-0019, D-0020, D-0021, D-0031 and D-0050, absorbed D-0021 into ADR-0113, and `flai digest compact` compacted none.
+- Trigger: accepted S-0015
+- Items: D-0013, D-0019, D-0020, D-0021, D-0031, D-0046, D-0050
+- Seconds: 169
+- Cost: 1.8160 USD, estimated

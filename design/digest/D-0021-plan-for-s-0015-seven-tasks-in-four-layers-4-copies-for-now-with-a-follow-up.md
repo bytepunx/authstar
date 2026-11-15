@@ -2,12 +2,12 @@
 id: D-0021
 title: "Plan for S-0015: seven tasks in four layers: 4 copies for now with a follow up story to remediate this later"
 kind: answer
-sources: [TH-0026]
-topics: [herald, node, keep, steward, sveltekit, web, code, all]
-paths: [design/adrs/0111-node-services-verify-tower-against-the-spire-trust-bundle.md, design/adrs/README.md, design/tech/tech-stack.md, herald/src/lib/tower-tls.ts, herald/src/server.ts, herald/spec/behavior/tower-tls.spec.ts, herald/spec/lib/spiffe-test-certs.ts, herald/package.json, herald/package-lock.json, herald/TESTING.md, keep/src/lib/tower-tls.ts, keep/src/server.ts, keep/src/lib/role-reference-backfill.ts, keep/spec/behavior/tower-tls.spec.ts, keep/spec/lib/spiffe-test-certs.ts, keep/package.json, keep/package-lock.json, keep/TESTING.md, steward/src/lib/server/tower-tls.ts, steward/src/hooks.server.ts, steward/tests/behavior/tower-tls.spec.ts, steward/tests/helpers/spiffe-test-certs.ts, steward/package.json, steward/package-lock.json, steward/TESTING.md, web/src/lib/server/tower-tls.ts, web/src/hooks.server.ts, web/spec/behavior/tower-tls.spec.ts, web/spec/fixtures/spiffe-test-certs.ts, web/package.json, web/package-lock.json, web/TESTING.md, chart/values.yaml, chart/README.md, design/stories/chart/001-chart-layout-and-provisioning-hook.md, design/issues/I-0001-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md, design/issues/summary.md]
+sources: [TH-0026, S-0015]
+topics: [herald, node, keep, chronicle, steward, sveltekit, web, tls, code, all]
+paths: [design/adrs/0113-node-services-verify-tower-s-certificate-against-the-spire-trust-bundle-and-its.md, design/adrs/README.md, design/tech/tech-stack.md, herald/src/lib/tower-tls.ts, herald/spec/behavior/tower-tls.spec.ts, keep/src/lib/tower-tls.ts, keep/spec/behavior/tower-tls.spec.ts, chronicle/src/lib/tower-tls.ts, chronicle/spec/behavior/tower-tls.spec.ts, steward/src/lib/server/tower-tls.ts, steward/tests/behavior/tower-tls.spec.ts, web/src/lib/server/tower-tls.ts, web/spec/behavior/tower-tls.spec.ts, chart/values.yaml, design/issues/I-0001-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md]
 date: 2026-11-06
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/adrs/0113-node-services-verify-tower-s-certificate-against-the-spire-trust-bundle-and-its.md#decision"
 asked_again: []
 cited: [S-0015, T-0171, TH-0026]
 ---
@@ -20,4 +20,6 @@ The planner's proposal on TH-0026: an `undici` `Agent` for tower's origin alone,
 
 The operator answered at 2026-11-06T18:20:52Z: "4 copies for now with a follow up story to remediate this later". A story that adds a fifth Node caller of tower, or touches one of the copies, should know the copies are meant to be merged.
 
-Source: TH-0026.
+S-0015, accepted 2026-11-15, carried it out with five copies, not four: "Added T-0171 (chronicle's copy) ... The fifth copy follows the operator's four-copies answer on TH-0026 (D-0021)." It wrote "one reference module, cert helper, and spec ... and copied into each service, so the five copies stay identical", and built the module on `node:https` rather than the planned `undici` `Agent`. ADR-0113 records the decision, its five-name shape, and that "five copies of one module must change together until they are merged".
+
+Source: TH-0026, S-0015.

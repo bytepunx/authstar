@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 23
-      output: 3613
-      cache_read: 2575601
-      cache_write: 47731
-      cost: 0.8798
+      input: 20
+      output: 2885
+      cache_read: 2566620
+      cache_write: 48704
+      cost: 0.8961
 ---
 # T-0041 Test that tower serves a rotated SVID on new mTLS handshakes
 
