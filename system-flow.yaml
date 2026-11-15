@@ -6,9 +6,9 @@ owner: "bytepunx"
 repo: "https://github.com/bytepunx/authstar"
 template:
   repo: "https://github.com/bytepunx/system-flow-template"
-  ref: "v1.1.22"
-  version: "1.1.22"
-  applied: 2026-11-06T17:48:23Z
+  ref: "v1.1.24"
+  version: "1.1.24"
+  applied: 2026-11-15T07:11:21Z
 layout:
   design: design
   docs: docs
