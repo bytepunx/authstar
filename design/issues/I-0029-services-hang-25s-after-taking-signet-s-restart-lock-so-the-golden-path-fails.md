@@ -3,11 +3,11 @@ id: I-0029
 title: "Services hang ~25s after taking signet's restart lock, so the golden path fails when a check lands in the window"
 class: defect
 status: open
-count: 1
-cost: 30m
+count: 2
+cost: 23m
 first_reported: 2026-11-14T10:51:50Z
-last_reported: 2026-11-14T10:51:50Z
-updated: 2026-11-15T07:27:58Z
+last_reported: 2026-11-15T07:35:43Z
+updated: 2026-11-15T07:35:43Z
 ---
 
 # I-0029 Services hang ~25s after taking signet's restart lock, so the golden path fails when a check lands in the window
@@ -31,6 +31,10 @@ Herald, which S-0016 does not change, shows the same pattern. It took the restar
 On tower, a SIGTERM alone shut tower down in about 1s. So the hang is in the restart-lock branch after `app.close()`, most likely in `await lock.release()` from `@bytepunx/signet-client`.
 
 A second checks run at the same commit, against the steady namespace, passed. The golden path has no wait for services to settle after provisioning restarts them.
+
+### 2026-11-15T07:35:43Z
+Story: S-0024.
+S-0024 (template upgrade, no service change) deployed s-0024 at 05535bd; the golden-path check failed in step 5 with curl exit 35 right after herald's key-rotation push. Events show herald and tower killed by their liveness probes (connection refused on 8080) and restarted about 60s after the deploy, the same restart-lock hang. The failed check sent S-0024's acceptance back (TH-0074) and needs a redeploy.
 
 ## Remediation
 
