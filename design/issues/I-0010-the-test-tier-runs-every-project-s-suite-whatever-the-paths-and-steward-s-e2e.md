@@ -3,7 +3,7 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: closed
-count: 12
+count: 13
 cost: 11m
 first_reported: 2026-11-06T18:29:23Z
 last_reported: 2026-11-15T06:13:10Z
