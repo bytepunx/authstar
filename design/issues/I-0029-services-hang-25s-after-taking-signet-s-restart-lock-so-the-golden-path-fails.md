@@ -7,7 +7,7 @@ count: 1
 cost: 30m
 first_reported: 2026-11-14T10:51:50Z
 last_reported: 2026-11-14T10:51:50Z
-updated: 2026-11-14T10:51:50Z
+updated: 2026-11-15T07:27:58Z
 ---
 
 # I-0029 Services hang ~25s after taking signet's restart lock, so the golden path fails when a check lands in the window
@@ -33,3 +33,5 @@ On tower, a SIGTERM alone shut tower down in about 1s. So the hang is in the res
 A second checks run at the same commit, against the steady namespace, passed. The golden path has no wait for services to settle after provisioning restarts them.
 
 ## Remediation
+
+Story S-0038 remediates this issue, created from it at 2026-11-15T07:27:58Z.
