@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 9
-      output: 901
-      cache_read: 691052
-      cache_write: 12404
-      cost: 0.2555
+      output: 909
+      cache_read: 694701
+      cache_write: 8756
+      cost: 0.2272
 ---
 # T-0121 Upgrade the system-flow template from 1.1.22 to 1.1.24 so the orchestrator role grants verify
 

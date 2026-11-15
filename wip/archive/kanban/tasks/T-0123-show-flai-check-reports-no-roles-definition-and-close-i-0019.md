@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 4
-      output: 364
-      cache_read: 279049
-      cache_write: 5009
-      cost: 0.1032
+      input: 3
+      output: 367
+      cache_read: 280522
+      cache_write: 3535
+      cost: 0.0917
 ---
 # T-0123 Show flai check reports no roles.definition and close I-0019
 

@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 89.7816
-accrued_seconds: 5839
-tasks_completed: 292
-last_run: 2026-11-15T07:27:02Z
+accrued_cost: 91.6037
+accrued_seconds: 6015
+tasks_completed: 299
+last_run: 2026-11-15T07:40:37Z
 ---
 
 # Orchestrator activity
@@ -2056,6 +2056,55 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 19
 - Cost: 0.1868 USD, estimated
 
+### 2026-11-15T07:28:40Z
+
+- Summary: Left S-0024 in review, not verified or accepted: system-flow.yaml has no orchestration block, so accept_reviews is off. The queue also lists it ineligible while TH-0037 (cost of delay inputs, the operator's) is open.
+- Items: S-0024
+- Seconds: 34
+- Cost: 0.6232 USD, estimated
+
+### 2026-11-15T07:28:46Z
+
+- Summary: Did not evaluate or publish after S-0023's acceptance: publish is off (system-flow.yaml has no orchestration block). Pending as flai gave it: judgement policy, not met, 4 stories (S-0015, S-0016, S-0018, S-0023), 62.5 USD/week, S-0015 and S-0016 unvalued.
+- Items: S-0023
+- Seconds: 6
+- Cost: 0.0000 USD
+
+### 2026-11-15T07:28:59Z
+
+- Summary: I took no action on either reason, because every orchestrator permission is off. The committed `system-flow.yaml` has no `orchestration` block, so `accept_reviews`, `publish` and `answer_threads` all default to off.
+- Items: none
+- Seconds: 13
+- Cost: 0.1596 USD, estimated
+
+### 2026-11-15T07:29:10Z
+
+- Summary: Left TH-0074 (S-0024 sent back for rebase and the kluster deploy blocker) alone: its only entry is flai's notice, addressed to S-0024's agent, which flai serve resolves once S-0024 is back in review; nothing for the orchestrator to answer or move.
+- Items: S-0024
+- Seconds: 5
+- Cost: 0.1898 USD, estimated
+
+### 2026-11-15T07:29:20Z
+
+- Summary: I took no action on TH-0074, because the thread isn't mine to answer.
+- Items: none
+- Seconds: 10
+- Cost: 0.1235 USD, estimated
+
+### 2026-11-15T07:40:26Z
+
+- Summary: S-0024 moved to review (head 738ae9f, last flai verify passed at head, kluster deploy and checks passed); left in review untouched: system-flow.yaml has no orchestration block, so accept_reviews and every other permission is off. Its acceptance is the operator's; the board's queue also lists TH-0037 (cost of delay inputs) still open on it.
+- Items: S-0024
+- Seconds: 97
+- Cost: 0.6375 USD, estimated
+
+### 2026-11-15T07:40:37Z
+
+- Summary: I left S-0024 in review without accepting it, because I'm not allowed to accept stories here. `system-flow.yaml` has no `orchestration` block, so `accept_reviews` and all my other permissions are off.
+- Items: none
+- Seconds: 11
+- Cost: 0.0885 USD, estimated
+
 ## Refusals
 
 ### 2026-11-06T17:57:35Z
@@ -2187,3 +2236,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai accept S-0021 --by orchestrator --verified 7b19fc1ce549a235cdd5f4bc39946a844506dff5 --dry-run`
 - Needs: orchestration.permissions.accept_reviews
+
+### 2026-11-15T07:39:53Z
+
+- Call: `flai config show`
+- Needs: none

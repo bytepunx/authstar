@@ -3,10 +3,10 @@ id: S-0024
 type: story
 nature: improvement
 title: "flai check finds `roles.definition` outside the story at close-out"
-status: review
+status: done
 owner: bytepunx
 created: 2026-11-09T09:04:35Z
-updated: 2026-11-15T07:27:28Z
+updated: 2026-11-15T19:30:04Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:21Z
@@ -17,9 +17,18 @@ transitions:
   - to: review
     at: 2026-11-15T07:27:28Z
     by: agent-S-0024
+  - to: in-progress
+    at: 2026-11-15T07:28:32Z
+    by: flai
+  - to: review
+    at: 2026-11-15T07:38:02Z
+    by: agent-S-0024
+  - to: done
+    at: 2026-11-15T19:30:04Z
+    by: bytepunx
 tags: []
 topics: [tooling]
-touches: [design/workflows/roles/orchestrator.md, design/workflows/roles/README.md, design/conventions/delegation.md, design/conventions/git.md, design/conventions/safety.md, design/conventions/work-management.md, system-flow.yaml, system-flow.lock.yaml, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/summary.md, design/system/README.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md]
+touches: [design/workflows/roles/orchestrator.md, design/workflows/roles/README.md, design/conventions/delegation.md, design/conventions/git.md, design/conventions/safety.md, design/conventions/work-management.md, system-flow.yaml, system-flow.lock.yaml, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/summary.md, design/system/README.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0029-services-hang-25s-after-taking-signet-s-restart-lock-so-the-golden-path-fails.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -27,19 +36,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 1040
+  seconds: 1610
   priced_by: harness
   turns:
     - day: 2026-11-15
       ceremony: 3
-      work: 63
+      work: 93
   models:
     - model: claude-opus-5-5
-      input: 138
-      output: 13210
-      cache_read: 10132179
-      cache_write: 181860
-      cost: 3.7461
+      input: 206
+      output: 21952
+      cache_read: 16769450
+      cache_write: 211350
+      cost: 5.4846
   strategic:
     - kind: planner
       seconds: 1174
@@ -58,15 +67,15 @@ usage:
           cache_write: 530360
           cost: 7.8832
     - kind: orchestrator
-      seconds: 48
+      seconds: 184
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 18
-          output: 147
-          cache_read: 694191
-          cache_write: 90332
-          cost: 0.8955
+          input: 56
+          output: 416
+          cache_read: 1843303
+          cache_write: 259177
+          cost: 2.346
 forecast:
   duration: 30m
   delivery: 2026-11-30T06:00:00Z
@@ -122,3 +131,4 @@ Figures:
 
 - Forecast: `flai forecast` now gives 26m (126 s per unit of size over 9 done stories, size 12 from 2 criteria and 10 touches). Raised to 30m: the unscoped `flai check` and a close-out whose `system-flow.yaml` change may select every test tier (I-0010). Delivery is flai's, 2026-11-17T00:24:00Z, as 10th in the pull order.
 - Cost of delay: `flai cod` cannot work one out, since the story has no inputs and no epic, and I-0019 records no cost. The inputs are the operator's; they are asked for on TH-0037, still unanswered.
+- 2026-11-15T07:28:32Z: moved to in-progress: bytepunx asked its agent to rebase story/S-0024 onto main and resolve what holds its acceptance, 1 blocker: the kluster host action is on, so S-0024 is accepted only once its namespace was deployed at its head and, while the checks host action is on, the checks run ag...; its agent syncs it with flai stream sync S-0024, takes each blocker's recommended action, closes out again, and moves it to review

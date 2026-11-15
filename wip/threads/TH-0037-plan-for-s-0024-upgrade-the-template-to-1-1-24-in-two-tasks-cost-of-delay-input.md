@@ -4,10 +4,10 @@ title: "Plan for S-0024: upgrade the template to 1.1.24 in two tasks; cost of de
 anchor:
   path: wip/kanban/stories/S-0024-flai-check-finds-roles-definition-outside-the-story-at-close-out.md
   item: S-0024
-status: open
-participants: [planner-S-0024]
+status: resolved
+participants: [planner-S-0024, bytepunx]
 created: 2026-11-09T22:11:16Z
-updated: 2026-11-14T10:08:42Z
+updated: 2026-11-15T19:30:04Z
 ---
 
 # TH-0037 Plan for S-0024: upgrade the template to 1.1.24 in two tasks; cost of delay input needed
@@ -69,3 +69,6 @@ Alternatives: 5m, if reading the note costs an agent only a moment; or 0, if it 
 | 2 | T-0123 Show `flai check` reports no `roles.definition` and close I-0019 | T-0121 |
 
 **Assumptions.** Unchanged. Scope stops at 1.1.24. The role file gets no hand edit. The unscoped `flai check --strict` serves as the reproduction.
+
+### 2026-11-15T19:30:04Z bytepunx
+Resolved: S-0024 was accepted
