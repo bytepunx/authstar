@@ -7,7 +7,7 @@ count: 2
 cost: 8m
 first_reported: 2026-11-15T05:54:56Z
 last_reported: 2026-11-15T07:12:19Z
-updated: 2026-11-15T07:12:19Z
+updated: 2026-11-15T07:27:57Z
 ---
 
 # I-0037 flai stream sync flags a rebased issue bump as undoing main's change, because the issue's count line changes on both sides
@@ -26,3 +26,5 @@ Story: S-0023.
 S-0023's second rebase for TH-0072 hit the other side of the same defect. On I-0019, flai kept S-0023's instance but took main's `count: 10`, so the count dropped S-0023's bump; the file holds 11 instances. On I-0010, this time the count came out right: 15 for 15 instances. S-0023 set I-0019's count to 11 by hand.
 
 ## Remediation
+
+Story S-0036 remediates this issue, created from it at 2026-11-15T07:27:57Z.
