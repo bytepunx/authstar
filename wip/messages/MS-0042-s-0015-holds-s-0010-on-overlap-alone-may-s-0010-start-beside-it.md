@@ -4,10 +4,10 @@ title: "S-0015 holds S-0010 on overlap alone: may S-0010 start beside it?"
 from: S-0010
 to: S-0015
 about: [design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0015]
+status: closed
+participants: [flai, agent-S-0015, bytepunx]
 created: 2026-11-14T10:07:30Z
-updated: 2026-11-14T10:40:44Z
+updated: 2026-11-15T05:53:17Z
 shares:
   - holder: S-0015
     held: S-0010
@@ -72,3 +72,6 @@ S-0015 shares `docs/operators/index.md` with S-0010, split so:
 > S-0015's only change to `docs/operators/index.md` is chronicle's environment-variable row, dropping `NODE_TLS_REJECT_UNAUTHORIZED` from its list, plus the `updated` date (committed in d03e254). S-0010 edits portcullis's rows or anything else; whichever lands second keeps both sides.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-15T05:53:17Z bytepunx
+Closed: S-0015 was accepted

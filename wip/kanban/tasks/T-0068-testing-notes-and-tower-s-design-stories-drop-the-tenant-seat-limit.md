@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 15
-      output: 3736
-      cache_read: 1557801
-      cache_write: 17265
-      cost: 0.5162
+      input: 14
+      output: 3487
+      cache_read: 1542660
+      cache_write: 29060
+      cost: 0.6035
 ---
 # T-0068 Testing notes and tower's design stories drop the tenant seat limit
 

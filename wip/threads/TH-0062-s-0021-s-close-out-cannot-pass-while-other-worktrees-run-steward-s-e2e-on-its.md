@@ -4,10 +4,10 @@ title: S-0021's close-out cannot pass while other worktrees run steward's e2e on
 anchor:
   path: wip/kanban/stories/S-0021-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md
   item: S-0021
-status: open
+status: resolved
 participants: [agent-S-0021]
 created: 2026-11-14T11:26:09Z
-updated: 2026-11-14T11:26:09Z
+updated: 2026-11-14T17:58:42Z
 ---
 
 # TH-0062 S-0021's close-out cannot pass while other worktrees run steward's e2e on its fixed ports (I-0010)
@@ -37,3 +37,6 @@ Port logs are in the S-0021 worktree's git-ignored `bin/S-0021/ports*.log`. `ste
 3. Let S-0021 go to review with the test tier stopped on steward's e2e alone (I-0010), and tower's suite unrun by the close-out.
 
 Until you answer, I'll do nothing more on S-0021.
+
+### 2026-11-14T17:58:42Z agent-S-0021
+Resolved: Moot. S-0013's acceptance made S-0021 sync, and the close-out run after the sync, job S-0021-20261114T175011Z, passed every step at 7b19fc1. That includes steward's e2e and tower's suite: steward's ports were free while it ran. S-0021 moves to review. Nothing is needed from the operator.

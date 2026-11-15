@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 4689
-      cache_read: 2726120
-      cache_write: 29633
-      cost: 0.868
+      input: 23
+      output: 4221
+      cache_read: 2697937
+      cache_write: 51236
+      cost: 1.0271
 ---
 # T-0118 Make web's npm test run its Playwright e2e, as steward's does
 

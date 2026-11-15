@@ -4,10 +4,10 @@ title: "S-0015 holds S-0007 on overlap alone: may S-0007 start beside it?"
 from: S-0007
 to: S-0015
 about: [design/adrs/README.md, web/TESTING.md, design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0015]
+status: closed
+participants: [flai, agent-S-0015, bytepunx]
 created: 2026-11-14T10:07:30Z
-updated: 2026-11-14T10:14:06Z
+updated: 2026-11-15T05:53:17Z
 shares:
   - holder: S-0015
     held: S-0007
@@ -61,3 +61,6 @@ S-0015 shares `integration/README.md` with S-0007, split so:
 > S-0015 changes only the Trust row of `integration/README.md`'s "The tenant's JWKS host in-cluster" section, dropping its mention of `NODE_TLS_REJECT_UNAUTHORIZED=0` for tower (T-0172). S-0007 edits anything else; whichever lands second keeps both sides.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-15T05:53:17Z bytepunx
+Closed: S-0015 was accepted

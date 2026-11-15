@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [TH-0018]
 ---
 
 # D-0024 Cost of delay inputs for S-0014: set as recommended

@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 2875
-      cache_read: 1198685
-      cache_write: 13285
-      cost: 0.3972
+      input: 11
+      output: 2683
+      cache_read: 1187035
+      cache_write: 22361
+      cost: 0.4644
 ---
 # T-0063 End-to-end test covers the malformed-scope log
 

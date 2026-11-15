@@ -4,10 +4,10 @@ title: "S-0015 holds S-0008 on overlap alone: may S-0008 start beside it?"
 from: S-0008
 to: S-0015
 about: [design/adrs/README.md, keep/TESTING.md, design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0015]
+status: closed
+participants: [flai, agent-S-0015, bytepunx]
 created: 2026-11-14T10:07:30Z
-updated: 2026-11-14T10:14:08Z
+updated: 2026-11-15T05:53:17Z
 shares:
   - holder: S-0015
     held: S-0008
@@ -61,3 +61,6 @@ S-0015 shares `design/system/overview.md` with S-0008, split so:
 > S-0015's only change to `design/system/overview.md` is the "Service identity" row of the Cross-cutting table (a sentence and an ADR-0113 link), committed in 722a716, plus the `updated` date. S-0008's ADR-0110 link in keep's Parts row is apart from it; whichever lands second keeps both sides.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-15T05:53:17Z bytepunx
+Closed: S-0015 was accepted

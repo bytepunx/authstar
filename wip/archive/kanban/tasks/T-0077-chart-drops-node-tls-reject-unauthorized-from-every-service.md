@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 2456
-      cache_read: 1546991
-      cache_write: 11692
-      cost: 0.4478
+      input: 10
+      output: 2283
+      cache_read: 1535821
+      cache_write: 20160
+      cost: 0.5103
 ---
 # T-0077 Chart drops NODE_TLS_REJECT_UNAUTHORIZED from every service
 

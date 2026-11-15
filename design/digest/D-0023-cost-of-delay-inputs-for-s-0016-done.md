@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0016, TH-0015]
 ---
 
 # D-0023 Cost of delay inputs for S-0016: done

@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0015, T-0171, TH-0026]
 ---
 
 # D-0021 Plan for S-0015: seven tasks in four layers: 4 copies for now with a follow up story to remediate this later

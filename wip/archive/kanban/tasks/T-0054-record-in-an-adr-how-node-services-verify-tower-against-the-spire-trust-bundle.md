@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 9
-      output: 2000
-      cache_read: 1259860
-      cache_write: 9522
-      cost: 0.3647
+      input: 8
+      output: 1859
+      cache_read: 1250763
+      cache_write: 16418
+      cost: 0.4155
 ---
 # T-0054 Record in an ADR how Node services verify tower against the SPIRE trust bundle
 

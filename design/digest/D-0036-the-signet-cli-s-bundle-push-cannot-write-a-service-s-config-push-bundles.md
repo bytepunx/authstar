@@ -9,7 +9,7 @@ date: 2026-11-10
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [TH-0031, TH-0049]
+cited: [S-0031, T-0155, T-0168, TH-0031, TH-0049, TH-0057]
 ---
 
 # D-0036 The signet CLI's bundle push cannot write a service's config: push bundles through SyncBundle with @bytepunx/signet-client, as scripts/kluster-signet-push.mjs does

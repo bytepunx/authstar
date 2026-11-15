@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0016]
 ---
 
 # D-0017 No test tier runs keep's or web's tests: may S-0008 run npm tests directly: What command should I run to Merge story/S-0002 into main first (yours to do)?

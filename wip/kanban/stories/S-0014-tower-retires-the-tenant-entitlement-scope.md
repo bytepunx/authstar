@@ -7,7 +7,7 @@ status: in-progress
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:29:21Z
-updated: 2026-11-14T11:39:10Z
+updated: 2026-11-14T18:00:49Z
 transitions:
   - to: ready
     at: 2026-11-14T10:07:01Z
@@ -41,27 +41,36 @@ blocked:
     until: 2026-11-14T11:38:53Z
     reason: awaiting the operator on TH-0061
   - from: 2026-11-14T11:39:10Z
+    until: 2026-11-14T17:49:29Z
+    reason: awaiting the operator on TH-0061
+  - from: 2026-11-14T17:49:41Z
+    until: 2026-11-14T17:50:03Z
+    reason: awaiting the operator on TH-0061
+  - from: 2026-11-14T17:50:15Z
+    until: 2026-11-14T18:00:13Z
+    reason: awaiting the operator on TH-0061
+  - from: 2026-11-14T18:00:49Z
     reason: awaiting the operator on TH-0061
 tags: [tower]
 topics: [billing, tower, testing]
-touches: [tower/src/lib/entitlement-consumer.ts, tower/src/server.ts, tower/spec/behavior/entitlement-consumer.spec.ts, tower/src/actors/tenant_actor.ts, tower/spec/behavior/tenants.spec.ts, steward/src/lib/types.ts, tower/spec/e2e/tenant-provisioning-and-login.e2e.spec.ts, tower/TESTING.md, design/stories/tower/001-actor-definitions.md, design/stories/tower/011-tenant-management-and-key-rotation.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0030-the-golden-path-logs-in-while-tower-s-signet-coordinated-restart-after.md, design/issues/I-0031-tower-stays-down-for-about-27-seconds-after-taking-its-signet-restart-lock-app.md]
+touches: [tower/src/lib/entitlement-consumer.ts, tower/src/server.ts, tower/spec/behavior/entitlement-consumer.spec.ts, tower/src/actors/tenant_actor.ts, tower/spec/behavior/tenants.spec.ts, steward/src/lib/types.ts, tower/spec/e2e/tenant-provisioning-and-login.e2e.spec.ts, tower/TESTING.md, design/stories/tower/001-actor-definitions.md, design/stories/tower/011-tenant-management-and-key-rotation.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0030-the-golden-path-logs-in-while-tower-s-signet-coordinated-restart-after.md, design/issues/I-0031-tower-stays-down-for-about-27-seconds-after-taking-its-signet-restart-lock-app.md, design/issues/I-0034-additive-bumps-to-a-shared-issue-file-raise-overlap-messages-between-every.md]
 after: [S-0004]
 usage:
   source: log
-  seconds: 4363
+  seconds: 4406
   priced_by: harness
   turns:
     - day: 2026-11-14
       ceremony: 3
       hand_edits: 3
-      work: 120
+      work: 129
   models:
     - model: claude-opus-5-5
-      input: 354
-      output: 87117
-      cache_read: 36327062
-      cache_write: 402604
-      cost: 12.0381
+      input: 378
+      output: 91169
+      cache_read: 40337579
+      cache_write: 759875
+      cost: 15.7796
   strategic:
     - kind: orchestrator
       seconds: 202

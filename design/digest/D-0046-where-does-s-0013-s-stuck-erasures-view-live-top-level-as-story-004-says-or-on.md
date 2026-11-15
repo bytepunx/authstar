@@ -6,8 +6,8 @@ sources: [TH-0016, S-0013]
 topics: [steward, sveltekit, code, all]
 paths: [steward/src/lib/server/tower-client.ts, steward/src/lib/types.ts, steward/tests/helpers/fake-backend-server.ts, steward/tests/integration/api-wire.integration.spec.ts, "steward/src/routes/api/tenants/[slug]/activity/+server.ts", steward/tests/behavior/activity.spec.ts, steward/src/routes/api/erasure-requests/stuck/+server.ts, steward/tests/behavior/stuck-erasure-requests.spec.ts, "steward/src/routes/tenants/[slug]/+page.svelte", steward/tests/e2e/tenant-activity.spec.ts, steward/TESTING.md, design/stories/steward/004-activity-and-stuck-erasure-requests.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
 date: 2026-11-14
-status: active
-absorbed_by: ""
+status: absorbed
+absorbed_by: "design/stories/steward/004-activity-and-stuck-erasure-requests.md#stuck-erasure-requests--stewards-first-genuinely-cross-tenant-view"
 asked_again: []
 cited: []
 ---

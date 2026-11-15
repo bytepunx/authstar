@@ -3,10 +3,10 @@ id: S-0023
 type: story
 nature: remediation
 title: "Herald's retention-purge spec fails intermittently with \"NTP clock skew detected\" from node-flakes"
-status: in-progress
+status: review
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-14T17:29:44Z
+updated: 2026-11-14T18:25:48Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:04Z
@@ -14,29 +14,50 @@ transitions:
   - to: in-progress
     at: 2026-11-14T17:29:44Z
     by: agent-S-0023
+  - to: review
+    at: 2026-11-14T18:07:08Z
+    by: agent-S-0023
+  - to: in-progress
+    at: 2026-11-14T18:09:49Z
+    by: flai
+  - to: review
+    at: 2026-11-14T18:25:48Z
+    by: agent-S-0023
 tags: [herald, testing]
 topics: [testing]
-touches: [herald/spec/lib/monotonic-clock.ts, herald/spec/behavior/clock-skew.spec.ts, herald/vitest.config.ts, herald/TESTING.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md, design/issues/summary.md]
+touches: [herald/spec/lib/monotonic-clock.ts, herald/spec/behavior/clock-skew.spec.ts, herald/vitest.config.ts, herald/TESTING.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md, design/issues/summary.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0033-herald-keep-and-tower-throw-on-a-backward-wall-clock-step-in-production-node.md, keep/TESTING.md, keep/spec/behavior/clock-skew.spec.ts, keep/spec/lib/monotonic-clock.ts, keep/vitest.config.ts, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0027-golden-path-step-5-herald-cannot-decrypt-its-own-invite-after-the-key-rotation.md, design/issues/I-0036-flai-verify-panics-with-a-nil-pointer-dereference-at-cmd-verify-go-314-when-its.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
   config:
     effort: high
 usage:
-  source: sum
-  seconds: 0
-  models: []
+  source: log
+  seconds: 3214
+  priced_by: harness
+  turns:
+    - day: 2026-11-14
+      ceremony: 6
+      test_runs: 4
+      work: 104
+  models:
+    - model: claude-opus-5-5
+      input: 266
+      output: 42865
+      cache_read: 26777838
+      cache_write: 291105
+      cost: 8.4432
   strategic:
     - kind: orchestrator
-      seconds: 18
+      seconds: 114
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 8
-          output: 59
-          cache_read: 300883
-          cache_write: 42159
-          cost: 0.3919
+          input: 60
+          output: 382
+          cache_read: 1838633
+          cache_write: 256537
+          cost: 2.3337
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -62,12 +83,13 @@ finalized:
 This story remediates [I-0018](../../../design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md), "Herald's retention-purge spec fails intermittently with "NTP clock skew detected" from node-flakes". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0018 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0018 is closed with `flai issue close I-0018 --reason` saying what fixed it
+- [x] The cause I-0018 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0018 is closed with `flai issue close I-0018 --reason` saying what fixed it
 
 ## Tasks
 - T-0126 Reproduce the clock-skew throw in herald and keep the spec clock monotonic
 - T-0127 Record the clock-skew finding in herald's TESTING.md and close I-0018
+- T-0173 Keep keep's spec clock monotonic and reproduce the clock-skew throw there
 
 ## Notes
 
@@ -95,3 +117,4 @@ Touches, all predicted, none declared:
 Forecast: `flai forecast` gave 9m, from 66 s per unit of size over 3 done remediation stories at size 8 (2 criteria, 6 touches). Adjusted to 1h30m: herald's test tier alone, and the close-out that runs every project's suite (I-0010), take 8 to 10 minutes a run, and the reproduction needs at least one run failing and one passing before the close-out. Delivery moved by the same 81 minutes, from flai's 2026-11-10T11:12:00Z to 2026-11-10T12:33:00Z.
 
 Cost of delay: `flai cod` gave 25 USD a week from the operator's input, 10m lost per 168h cycle at 150 USD an hour. It stands: I-0018 has one occurrence. It understates the cost while the whole test tier runs every project, since a herald flake fails any story's run, but that is I-0010's cost, not an input to change here.
+- 2026-11-14T18:09:49Z: moved to in-progress: flai serve's checks of S-0023 against its kluster namespace ended failed, at the check golden-path, at commit ab7d457890ca

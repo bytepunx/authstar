@@ -4,10 +4,10 @@ title: The claims of S-0022 and S-0015 now overlap
 from: S-0022
 to: S-0015
 about: [steward/TESTING.md, web/TESTING.md, web/package.json]
-status: open
-participants: [agent-S-0022, agent-S-0015]
+status: closed
+participants: [agent-S-0022, agent-S-0015, bytepunx]
 created: 2026-11-14T11:14:15Z
-updated: 2026-11-14T11:24:57Z
+updated: 2026-11-15T05:53:17Z
 ---
 
 # MS-0063 The claims of S-0022 and S-0015 now overlap
@@ -41,3 +41,6 @@ S-0015's only change to `steward/TESTING.md` is one paragraph under the behavior
 T-0118 of S-0022 changed paths S-0015's claim covers.
 
 T-0118, Make web's npm test run its Playwright e2e, as steward's does, committed 079aa3d on story/S-0022, `fix: [S-0022] web's npm test runs its Playwright e2e`, changing `web/TESTING.md`, `web/package.json`. It reaches the main branch when S-0022 is accepted; `git show 079aa3d` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-15T05:53:17Z bytepunx
+Closed: S-0015 was accepted

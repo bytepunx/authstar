@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 17
-      output: 4105
-      cache_read: 1711877
-      cache_write: 18972
-      cost: 0.5673
+      input: 16
+      output: 3831
+      cache_read: 1695238
+      cache_write: 31935
+      cost: 0.6632
 ---
 # T-0060 Tenant actor and steward's Tenant type lose seatLimit
 

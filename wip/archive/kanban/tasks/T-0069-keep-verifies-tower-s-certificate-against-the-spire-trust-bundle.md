@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 13
-      output: 3054
-      cache_read: 1924031
-      cache_write: 14542
-      cost: 0.5569
+      output: 2839
+      cache_read: 1910139
+      cache_write: 25073
+      cost: 0.6346
 ---
 # T-0069 Keep verifies tower's certificate against the SPIRE trust bundle
 

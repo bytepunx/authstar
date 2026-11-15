@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: [S-0006, S-0017, S-0019, S-0025, T-0087, T-0089, T-0092, T-0128, T-0130, TH-0029, TH-0031, TH-0035, TH-0041, TH-0045]
+cited: [S-0006, S-0017, S-0019, S-0025, T-0087, T-0089, T-0092, T-0128, T-0130, T-0155, T-0156, T-0160, T-0167, TH-0029, TH-0031, TH-0035, TH-0041, TH-0045, TH-0056, TH-0057]
 ---
 
 # D-0026 Agents on this host run no cluster commands: its current kube context is a remote Linode cluster, not a disposable k3d one

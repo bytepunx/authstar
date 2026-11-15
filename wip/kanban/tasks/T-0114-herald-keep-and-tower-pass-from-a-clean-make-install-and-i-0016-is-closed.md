@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 9
-      output: 1291
-      cache_read: 913018
-      cache_write: 11286
-      cost: 0.2861
+      input: 8
+      output: 1126
+      cache_read: 910300
+      cache_write: 12381
+      cost: 0.2959
 ---
 # T-0114 herald, keep, and tower pass from a clean make install, and I-0016 is closed
 

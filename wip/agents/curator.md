@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 15.2141
-accrued_seconds: 1496
-tasks_completed: 9
-last_run: 2026-11-14T09:58:41Z
+accrued_cost: 15.9621
+accrued_seconds: 1557
+tasks_completed: 10
+last_run: 2026-11-14T17:30:44Z
 ---
 
 # Curator activity
@@ -83,3 +83,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0013, D-0019, D-0046, D-0047, D-0048, D-0049
 - Seconds: 208
 - Cost: 1.7039 USD, estimated
+
+### 2026-11-14T17:30:44Z
+
+- Summary: I wrote D-0050, merged nothing, absorbed D-0046 into design/stories/steward/004-activity-and-stuck-erasure-requests.md, and `flai digest compact` compacted no entries (it recorded citers on 10).
+- Trigger: accepted S-0013
+- Items: D-0001, D-0006, D-0017, D-0019, D-0021, D-0023, D-0024, D-0026, D-0034, D-0036, D-0046, D-0050
+- Seconds: 61
+- Cost: 0.7480 USD, estimated

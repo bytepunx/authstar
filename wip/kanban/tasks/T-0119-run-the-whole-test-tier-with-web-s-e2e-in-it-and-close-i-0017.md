@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 2
-      output: 423
-      cache_read: 246081
-      cache_write: 2675
-      cost: 0.0784
+      output: 381
+      cache_read: 243537
+      cache_write: 4625
+      cost: 0.0927
 ---
 # T-0119 Run the whole test tier with web's e2e in it, and close I-0017
 

@@ -3,10 +3,10 @@ id: S-0015
 type: story
 nature: remediation
 title: "Node services ship with NODE_TLS_REJECT_UNAUTHORIZED=0 to reach tower over mTLS"
-status: review
+status: done
 owner: bytepunx
 created: 2026-11-06T17:38:17Z
-updated: 2026-11-14T11:14:56Z
+updated: 2026-11-15T05:53:17Z
 transitions:
   - to: ready
     at: 2026-11-14T10:07:02Z
@@ -17,35 +17,47 @@ transitions:
   - to: review
     at: 2026-11-14T11:14:56Z
     by: agent-S-0015
+  - to: in-progress
+    at: 2026-11-15T05:14:41Z
+    by: flai
+  - to: review
+    at: 2026-11-15T05:25:05Z
+    by: agent-S-0015
+  - to: done
+    at: 2026-11-15T05:53:17Z
+    by: bytepunx
 tags: [herald, keep, steward, web, chart, spiffe, mtls]
-touches: [design/adrs/README.md, design/tech/tech-stack.md, herald/src/lib/tower-tls.ts, herald/src/server.ts, herald/spec/behavior/tower-tls.spec.ts, herald/spec/lib/spiffe-test-certs.ts, herald/package.json, herald/package-lock.json, herald/TESTING.md, keep/src/lib/tower-tls.ts, keep/src/server.ts, keep/src/lib/role-reference-backfill.ts, keep/spec/behavior/tower-tls.spec.ts, keep/spec/lib/spiffe-test-certs.ts, keep/package.json, keep/package-lock.json, keep/TESTING.md, steward/src/lib/server/tower-tls.ts, steward/src/hooks.server.ts, steward/tests/behavior/tower-tls.spec.ts, steward/tests/helpers/spiffe-test-certs.ts, steward/package.json, steward/package-lock.json, steward/TESTING.md, web/src/lib/server/tower-tls.ts, web/src/hooks.server.ts, web/spec/behavior/tower-tls.spec.ts, web/spec/fixtures/spiffe-test-certs.ts, web/package.json, web/package-lock.json, web/TESTING.md, chart/values.yaml, chart/README.md, design/stories/chart/001-chart-layout-and-provisioning-hook.md, design/issues/I-0001-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md, design/issues/summary.md, design/adrs/0113-node-services-verify-tower-s-certificate-against-the-spire-trust-bundle-and-its.md, design/system/overview.md, docs/operators/chronicle-configuration.md, docs/operators/index.md, chronicle/src/lib/tower-tls.ts, chronicle/src/server.ts, chronicle/spec/behavior/tower-tls.spec.ts, chronicle/spec/lib/spiffe-test-certs.ts, chronicle/package.json, chronicle/package-lock.json, chronicle/TESTING.md, integration/manifests/11-keep.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/keep.yaml, integration/config/authstar/chronicle.yaml, integration/README.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0028-golden-path-s-herald-send-and-verify-fails-intermittently-with-an-rsa-oaep.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md]
+touches: [design/adrs/README.md, design/tech/tech-stack.md, herald/src/lib/tower-tls.ts, herald/src/server.ts, herald/spec/behavior/tower-tls.spec.ts, herald/spec/lib/spiffe-test-certs.ts, herald/package.json, herald/package-lock.json, herald/TESTING.md, keep/src/lib/tower-tls.ts, keep/src/server.ts, keep/src/lib/role-reference-backfill.ts, keep/spec/behavior/tower-tls.spec.ts, keep/spec/lib/spiffe-test-certs.ts, keep/package.json, keep/package-lock.json, keep/TESTING.md, steward/src/lib/server/tower-tls.ts, steward/src/hooks.server.ts, steward/tests/behavior/tower-tls.spec.ts, steward/tests/helpers/spiffe-test-certs.ts, steward/package.json, steward/package-lock.json, steward/TESTING.md, web/src/lib/server/tower-tls.ts, web/src/hooks.server.ts, web/spec/behavior/tower-tls.spec.ts, web/spec/fixtures/spiffe-test-certs.ts, web/package.json, web/package-lock.json, web/TESTING.md, chart/values.yaml, chart/README.md, design/stories/chart/001-chart-layout-and-provisioning-hook.md, design/issues/I-0001-node-services-ship-with-node-tls-reject-unauthorized-0-to-reach-tower-over-mtls.md, design/issues/summary.md, design/adrs/0113-node-services-verify-tower-s-certificate-against-the-spire-trust-bundle-and-its.md, design/system/overview.md, docs/operators/chronicle-configuration.md, docs/operators/index.md, chronicle/src/lib/tower-tls.ts, chronicle/src/server.ts, chronicle/spec/behavior/tower-tls.spec.ts, chronicle/spec/lib/spiffe-test-certs.ts, chronicle/package.json, chronicle/package-lock.json, chronicle/TESTING.md, integration/manifests/11-keep.yaml, integration/manifests/14-chronicle.yaml, integration/config/authstar/keep.yaml, integration/config/authstar/chronicle.yaml, integration/README.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0028-golden-path-s-herald-send-and-verify-fails-intermittently-with-an-rsa-oaep.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0027-golden-path-step-5-herald-cannot-decrypt-its-own-invite-after-the-key-rotation.md]
 usage:
   source: log
-  seconds: 4061
+  seconds: 4677
   priced_by: harness
   turns:
     - day: 2026-11-14
       ceremony: 6
       test_runs: 1
       work: 164
+    - day: 2026-11-15
+      ceremony: 2
+      work: 13
   models:
     - model: claude-opus-5-5
-      input: 480
-      output: 110252
-      cache_read: 69452551
-      cache_write: 524920
-      cost: 20.1023
+      input: 512
+      output: 114154
+      cache_read: 76796153
+      cache_write: 1008056
+      cost: 25.5142
   strategic:
     - kind: orchestrator
-      seconds: 62
+      seconds: 99
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 29
-          output: 186
-          cache_read: 1003617
-          cache_write: 155254
-          cost: 1.2997
+          input: 53
+          output: 372
+          cache_read: 1691628
+          cache_write: 295038
+          cost: 2.2156
 cost_of_delay:
   inputs:
     penalty_per_week: 200
@@ -127,3 +139,4 @@ Assumptions:
 - No test tier in `system-flow.yaml` runs these services' tests, as TH-0009 and TH-0012 found for keep, web, and chronicle. The tasks name `npm run test:behavior` in each service, and the story's agent follows the operator's answer on those threads.
 - The integration bundles under `integration/config/authstar/` give tower as `http://`, so they take no agent, and this story leaves them alone.
 - Portcullis is Rust and already dials tower with its own SPIFFE client; it is out of scope.
+- 2026-11-15T05:14:41Z: moved to in-progress: bytepunx asked its agent to rebase story/S-0015 onto main and resolve what holds its acceptance, 1 blocker: S-0015's verify does not cover the main branch it would land on: its last flai verify, at 820d279, ran over main at a699fe2, and the 28 paths main brought in si...; its agent syncs it with flai stream sync S-0015, takes each blocker's recommended action, closes out again, and moves it to review

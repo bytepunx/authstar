@@ -9,7 +9,7 @@ date: 2026-11-06
 status: active
 absorbed_by: ""
 asked_again: []
-cited: []
+cited: [S-0031, T-0165, T-0168, TH-0057]
 ---
 
 # D-0006 Archiving the old per-component authstar repositories and re-registering npm Trusted Publishing against bytepunx/authstar are the operator's actions

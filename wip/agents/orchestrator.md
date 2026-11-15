@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 75.5572
-accrued_seconds: 4861
-tasks_completed: 244
-last_run: 2026-11-14T11:54:43Z
+accrued_cost: 81.7683
+accrued_seconds: 5254
+tasks_completed: 266
+last_run: 2026-11-15T05:26:18Z
 ---
 
 # Orchestrator activity
@@ -1720,6 +1720,160 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Seconds: 15
 - Cost: 0.0685 USD, estimated
 
+### 2026-11-14T17:30:31Z
+
+- Summary: release-due S-0013: did not publish. system-flow.yaml has no orchestration block, so publish is off by default. Batch left for the operator: S-0006 and S-0013, 2 accepted and unreleased, 23.53 USD/week (S-0006 unvalued), release policy judgement (not met without a judgement).
+- Items: S-0013, S-0006
+- Seconds: 19
+- Cost: 0.3386 USD, estimated
+
+### 2026-11-14T17:30:42Z
+
+- Summary: I didn't publish a release. `system-flow.yaml` has no `orchestration` block, so every permission is off by default, `publish` included.
+- Items: none
+- Seconds: 11
+- Cost: 0.0871 USD, estimated
+
+### 2026-11-14T17:51:03Z
+
+- Summary: Left TH-0040 (S-0023 plan; last entry by agent-S-0023) to the operator: system-flow.yaml sets no orchestration.permissions, so answer_threads and plan_backlog_stories are off by default; no reply, no resolve.
+- Items: S-0023
+- Seconds: 19
+- Cost: 0.3393 USD, estimated
+
+### 2026-11-14T17:51:15Z
+
+- Summary: I didn't act on TH-0040, and it stays with you. `system-flow.yaml` has no `orchestration` block, so every permission is off, including `answer_threads` and `plan_backlog_stories`. I neither replied to it nor resolved it.
+- Items: none
+- Seconds: 12
+- Cost: 0.0998 USD, estimated
+
+### 2026-11-14T17:59:44Z
+
+- Summary: Took no action on S-0021 in review. flai guard refused the dry-run acceptance because orchestration.permissions.accept_reviews is off, and system-flow.yaml has no orchestration block. The last verify passed at the branch head 7b19fc1 and all 3 criteria are ticked. Acceptance stays with the operator.
+- Items: S-0021
+- Seconds: 19
+- Cost: 0.5389 USD, estimated
+
+### 2026-11-14T17:59:56Z
+
+- Summary: I didn't accept S-0021. It stays in review for you to accept, because `orchestration.permissions.accept_reviews` is off.
+- Items: none
+- Seconds: 12
+- Cost: 0.0938 USD, estimated
+
+### 2026-11-14T18:03:02Z
+
+- Summary: TH-0065 (S-0021 kluster checks failed at golden-path): left alone. Its only entry is flai serve's notice, which answer_threads excludes; flai serve sent S-0021 back to in-progress for its agent to fix or explain, and resolves the thread itself once a checks run passes.
+- Items: S-0021
+- Seconds: 11
+- Cost: 0.2537 USD, estimated
+
+### 2026-11-14T18:03:12Z
+
+- Summary: I took no action on TH-0065. It is a notice from flai serve, and threads whose last entry is such a notice are not mine to answer.
+- Items: none
+- Seconds: 10
+- Cost: 0.1116 USD, estimated
+
+### 2026-11-14T18:04:04Z
+
+- Summary: TH-0065 (S-0021 kluster checks failed at golden-path login; agent-S-0021 says the cause is I-0035, tower's restart race, outside the story): left for the operator, because system-flow.yaml has no orchestration block, so answer_threads and every other permission is off.
+- Items: S-0021
+- Seconds: 16
+- Cost: 0.3580 USD, estimated
+
+### 2026-11-14T18:04:18Z
+
+- Summary: TH-0065 is left for you. I didn't reply to it, because I have no permission to answer threads. `system-flow.yaml` has no `orchestration` block, so `answer_threads` and every other permission is off.
+- Items: none
+- Seconds: 14
+- Cost: 0.1315 USD, estimated
+
+### 2026-11-14T18:08:03Z
+
+- Summary: Took no action on S-0023 in review: system-flow.yaml has no orchestration block, so accept_reviews and answer_threads are off by default. Acceptance of S-0023 (verify passed at branch head ab7d457) and its open plan thread TH-0040 are left to the operator.
+- Items: S-0023
+- Seconds: 22
+- Cost: 0.5468 USD, estimated
+
+### 2026-11-14T18:08:17Z
+
+- Summary: I did not accept S-0023. The manifest, `system-flow.yaml`, has no `orchestration` block, so `accept_reviews` and every other permission is off by default.
+- Items: none
+- Seconds: 14
+- Cost: 0.1748 USD, estimated
+
+### 2026-11-14T18:11:01Z
+
+- Summary: TH-0066 (S-0023 kluster checks failed; agent-S-0023 attributes it to I-0027, remediated by draft S-0032): left for the operator, since system-flow.yaml sets no orchestration.permissions, so answer_threads is off by default. No other action taken.
+- Items: S-0023
+- Seconds: 35
+- Cost: 0.4963 USD, estimated
+
+### 2026-11-14T18:11:17Z
+
+- Summary: I didn't reply to TH-0066, and the thread is still waiting on you. `system-flow.yaml` has no `orchestration` block, so every permission is off, including `answer_threads`.
+- Items: none
+- Seconds: 16
+- Cost: 0.1353 USD, estimated
+
+### 2026-11-14T18:12:03Z
+
+- Summary: Left TH-0065 (S-0021's failed kluster checks) to the operator: system-flow.yaml has no orchestration block, so answer_threads and every other permission are off; the thread asks the operator to choose between accepting S-0021 with the checks failing, a fresh redeploy, or holding it for I-0030/I-0035/I-0031.
+- Items: S-0021
+- Seconds: 29
+- Cost: 0.4177 USD, estimated
+
+### 2026-11-14T18:12:16Z
+
+- Summary: I took no action on TH-0065; it needs your decision. `system-flow.yaml` has no `orchestration` block, so every orchestrator permission is off, including `answer_threads`. I logged this in `wip/agents/orchestrator.md`.
+- Items: none
+- Seconds: 13
+- Cost: 0.1245 USD, estimated
+
+### 2026-11-14T18:26:41Z
+
+- Summary: Took no action on S-0023 in review (head 7f69beb4, last verify passed at that head): system-flow.yaml has no orchestration block, so accept_reviews, answer_threads and every other permission are off. S-0023 and its thread TH-0040 (awaiting the operator, which the queue names as its only blocker) are left to the operator.
+- Items: S-0023
+- Seconds: 20
+- Cost: 0.5594 USD, estimated
+
+### 2026-11-14T18:26:53Z
+
+- Summary: I left S-0023 in review without acting on it, because I have no permission to accept it. `system-flow.yaml` has no `orchestration` block, so every permission is off by default, including `accept_reviews` and `answer_threads`.
+- Items: none
+- Seconds: 12
+- Cost: 0.1585 USD, estimated
+
+### 2026-11-15T05:15:28Z
+
+- Summary: Left TH-0067 alone: its only entry is flai's send-back notice for S-0015's agent (not a story agent's or planner's), which flai serve resolves once S-0015 returns to review; S-0015 is in-progress, nothing for the orchestrator to do.
+- Items: S-0015
+- Seconds: 12
+- Cost: 0.2543 USD, estimated
+
+### 2026-11-15T05:16:07Z
+
+- Summary: I took no action on TH-0067; there was nothing in it for me to do.
+- Items: none
+- Seconds: 39
+- Cost: 0.1593 USD, estimated
+
+### 2026-11-15T05:26:05Z
+
+- Summary: Took no action on S-0015 in review: system-flow.yaml has no orchestration block, so accept_reviews and every other permission is off. S-0015's last verify passed at its branch head 037c10f; it stays in review for the operator to accept.
+- Items: S-0015
+- Seconds: 25
+- Cost: 0.6616 USD, estimated
+
+### 2026-11-15T05:26:18Z
+
+- Summary: I didn't accept S-0015. It stays in review for you to accept, because no orchestrator permission is on in this project.
+- Items: none
+- Seconds: 13
+- Cost: 0.1703 USD, estimated
+
 ## Refusals
 
 ### 2026-11-06T17:57:35Z
@@ -1846,3 +2000,8 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 
 - Call: `flai config show`
 - Needs: none
+
+### 2026-11-14T17:59:40Z
+
+- Call: `flai accept S-0021 --by orchestrator --verified 7b19fc1ce549a235cdd5f4bc39946a844506dff5 --dry-run`
+- Needs: orchestration.permissions.accept_reviews

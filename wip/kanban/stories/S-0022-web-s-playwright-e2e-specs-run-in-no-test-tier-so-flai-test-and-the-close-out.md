@@ -6,7 +6,7 @@ title: Web's Playwright e2e specs run in no test tier, so flai test and the clos
 status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-14T17:29:38Z
+updated: 2026-11-14T18:00:23Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:03Z
@@ -30,6 +30,17 @@ blocked:
   - from: 2026-11-14T11:53:36Z
     until: 2026-11-14T17:29:38Z
     reason: awaiting the operator on TH-0038
+  - from: 2026-11-14T17:36:57Z
+    until: 2026-11-14T17:49:29Z
+    reason: awaiting the operator on TH-0038
+  - from: 2026-11-14T17:49:42Z
+    until: 2026-11-14T17:50:03Z
+    reason: awaiting the operator on TH-0038
+  - from: 2026-11-14T17:50:13Z
+    until: 2026-11-14T18:00:13Z
+    reason: awaiting the operator on TH-0038
+  - from: 2026-11-14T18:00:23Z
+    reason: awaiting the operator on TH-0038
 tags: [web]
 topics: [testing]
 touches: [web/package.json, web/playwright.config.ts, web/e2e/fixtures/urls.ts, web/TESTING.md, scripts/check-e2e-tiers.sh, scripts/test.sh, scripts/README.md, scripts/lib-projects.sh, scripts/install.sh, ".github/workflows/ci.yml", design/issues/I-0017-web-s-playwright-e2e-specs-run-in-no-test-tier-so-flai-test-and-the-close-out.md, design/issues/summary.md, docs/contributors/index.md, steward/TESTING.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0032-the-golden-path-exits-without-a-fail-line-when-a-curl-to-tower-cannot-connect.md]
@@ -40,19 +51,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 2288
+  seconds: 2740
   priced_by: harness
   turns:
     - day: 2026-11-14
-      ceremony: 7
-      work: 112
+      ceremony: 9
+      work: 123
   models:
     - model: claude-opus-5-5
-      input: 298
-      output: 57283
-      cache_read: 33302027
-      cache_write: 361992
-      cost: 10.6035
+      input: 338
+      output: 61470
+      cache_read: 39288012
+      cache_write: 746109
+      cost: 14.9575
   strategic:
     - kind: orchestrator
       seconds: 247

@@ -3,16 +3,37 @@ id: T-0127
 type: task
 nature: remediation
 title: Record the clock-skew finding in herald's TESTING.md and close I-0018
-status: backlog
+status: done
 parent: S-0023
 owner: bytepunx
 created: 2026-11-09T22:11:34Z
-updated: 2026-11-09T22:11:34Z
-transitions: []
+updated: 2026-11-14T17:50:05Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:49:46Z
+    by: agent-S-0023
+  - to: in-progress
+    at: 2026-11-14T17:49:46Z
+    by: agent-S-0023
+  - to: done
+    at: 2026-11-14T17:50:05Z
+    by: agent-S-0023
 stream: S-0023
 tags: [herald, testing, docs]
 touches: [herald/TESTING.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md, design/issues/summary.md]
-after: [T-0126]
+after: [T-0126, T-0173]
+usage:
+  source: log
+  seconds: 19
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 8
+      output: 1246
+      cache_read: 778550
+      cache_write: 8464
+      cost: 0.2455
 ---
 # T-0127 Record the clock-skew finding in herald's TESTING.md and close I-0018
 

@@ -3,15 +3,36 @@ id: T-0126
 type: task
 nature: remediation
 title: Reproduce the clock-skew throw in herald and keep the spec clock monotonic
-status: backlog
+status: done
 parent: S-0023
 owner: bytepunx
 created: 2026-11-09T22:11:27Z
-updated: 2026-11-09T22:11:27Z
-transitions: []
+updated: 2026-11-14T17:39:47Z
+transitions:
+  - to: ready
+    at: 2026-11-14T17:30:41Z
+    by: agent-S-0023
+  - to: in-progress
+    at: 2026-11-14T17:30:41Z
+    by: agent-S-0023
+  - to: done
+    at: 2026-11-14T17:39:47Z
+    by: agent-S-0023
 stream: S-0023
 tags: [herald, testing]
 touches: [herald/spec/lib/monotonic-clock.ts, herald/spec/behavior/clock-skew.spec.ts, herald/vitest.config.ts]
+usage:
+  source: log
+  seconds: 546
+  estimated: true
+  priced_by: harness
+  models:
+    - model: claude-opus-5-5
+      input: 14
+      output: 2297
+      cache_read: 1434693
+      cache_write: 15597
+      cost: 0.4524
 ---
 # T-0126 Reproduce the clock-skew throw in herald and keep the spec clock monotonic
 

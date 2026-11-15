@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 2661
-      cache_read: 1676484
-      cache_write: 12671
-      cost: 0.4852
+      input: 11
+      output: 2474
+      cache_read: 1664379
+      cache_write: 21847
+      cost: 0.553
 ---
 # T-0171 Chronicle verifies tower's certificate against the SPIRE trust bundle
 

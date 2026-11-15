@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 13
-      output: 3035
-      cache_read: 1911584
-      cache_write: 14448
-      cost: 0.5533
+      output: 2821
+      cache_read: 1897781
+      cache_write: 24911
+      cost: 0.6305
 ---
 # T-0172 Harness drops NODE_TLS_REJECT_UNAUTHORIZED from keep's and chronicle's pods
 

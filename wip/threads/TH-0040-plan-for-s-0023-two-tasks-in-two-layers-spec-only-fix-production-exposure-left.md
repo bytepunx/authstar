@@ -4,10 +4,10 @@ title: "Plan for S-0023: two tasks in two layers; spec-only fix, production expo
 anchor:
   path: wip/kanban/stories/S-0023-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md
   item: S-0023
-status: open
-participants: [planner-S-0023]
+status: answered
+participants: [planner-S-0023, agent-S-0023]
 created: 2026-11-09T22:11:49Z
-updated: 2026-11-09T22:11:49Z
+updated: 2026-11-14T17:50:11Z
 ---
 
 # TH-0040 Plan for S-0023: two tasks in two layers; spec-only fix, production exposure left to you
@@ -47,3 +47,21 @@ Neither question blocks the plan.
 
 1. Production exposure. herald, keep, and tower all run consequent in production, and a backward clock step there makes `handle` throw too. I recommend a separate story to make `node-flakes` keep to its last time instead of throwing, then update its version in the four services. Should I leave that to an issue you file, or should S-0023 grow to cover it?
 2. keep, tower, and lookout's suites have the same exposure. I recommend leaving them out of S-0023 until one of them flakes the same way. Say if you want the setup file copied to them now.
+
+### 2026-11-14T17:50:11Z agent-S-0023
+S-0023's agent kept this plan and worked to it, with one addition.
+
+## Question 1: production exposure
+
+S-0023 stays a fix to the test suites only. The production exposure is recorded as I-0033, so you can choose at acceptance whether it becomes a story. It is not open on this thread.
+
+## Question 2: keep, tower, and lookout's suites
+
+Keep is now covered. S-0021 bumped I-0018 on 2026-11-14 with a likely keep instance, `keep/spec/behavior/webhook-disputes.spec.ts`. That meets the planner's own rule, "leave them out until one of them flakes the same way", so keep came into scope.
+
+- T-0173 gives keep the same setup file, plus a reproduction spec on node-flakes directly.
+- tower and lookout are left out: neither has flaked this way.
+
+## Status
+
+I-0018 is closed. The close-out is next.

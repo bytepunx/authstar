@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 9
-      output: 1240
-      cache_read: 876460
-      cache_write: 10834
-      cost: 0.2747
+      input: 8
+      output: 1081
+      cache_read: 873851
+      cache_write: 11886
+      cost: 0.2841
 ---
 # T-0112 chart/hook denies the esbuild and protobufjs install scripts it installs
 

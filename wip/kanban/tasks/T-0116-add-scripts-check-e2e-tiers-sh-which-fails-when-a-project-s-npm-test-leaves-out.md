@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 12
-      output: 2365
-      cache_read: 1374833
-      cache_write: 14944
-      cost: 0.4378
+      output: 2129
+      cache_read: 1360620
+      cache_write: 25839
+      cost: 0.518
 ---
 # T-0116 Add scripts/check-e2e-tiers.sh, which fails when a project's npm test leaves out its test:e2e, and run it from scripts/test.sh
 

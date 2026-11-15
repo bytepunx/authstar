@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 20
-      output: 4704
-      cache_read: 2963264
-      cache_write: 22396
-      cost: 0.8577
+      output: 4373
+      cache_read: 2941867
+      cache_write: 38616
+      cost: 0.9774
 ---
 # T-0056 Herald verifies tower's certificate against the SPIRE trust bundle
 

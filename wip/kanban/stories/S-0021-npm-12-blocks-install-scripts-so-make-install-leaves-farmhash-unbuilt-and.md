@@ -6,7 +6,7 @@ title: npm 12 blocks install scripts, so make install leaves farmhash unbuilt an
 status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:33Z
-updated: 2026-11-14T11:45:30Z
+updated: 2026-11-14T18:11:11Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:01Z
@@ -14,12 +14,21 @@ transitions:
   - to: in-progress
     at: 2026-11-14T10:21:56Z
     by: agent-S-0021
+  - to: review
+    at: 2026-11-14T17:58:50Z
+    by: agent-S-0021
+  - to: in-progress
+    at: 2026-11-14T18:02:17Z
+    by: flai
 blocked:
   - from: 2026-11-14T11:45:30Z
+    until: 2026-11-14T17:49:29Z
     reason: awaiting the operator on TH-0062
+  - from: 2026-11-14T18:11:11Z
+    reason: awaiting the operator on TH-0065
 tags: [hook]
 topics: [dependencies, testing]
-touches: [chart/hook/package.json, scripts/install.sh, scripts/check-install-scripts.sh, scripts/README.md, design/tech/npm.md, design/issues/I-0016-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md, design/issues/summary.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md]
+touches: [chart/hook/package.json, scripts/install.sh, scripts/check-install-scripts.sh, scripts/README.md, design/tech/npm.md, design/issues/I-0016-npm-12-blocks-install-scripts-so-make-install-leaves-farmhash-unbuilt-and.md, design/issues/summary.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0035-golden-path-s-login-races-tower-s-restart-after-tenant-provisioning-changes-its.md]
 agent:
   harness: claude-code
   model: claude-opus-5-5
@@ -27,30 +36,31 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5016
+  seconds: 6183
   priced_by: harness
   turns:
     - day: 2026-11-14
+      ceremony: 3
       hand_edits: 1
-      work: 146
+      work: 207
   models:
     - model: claude-opus-5-5
-      input: 354
-      output: 50243
-      cache_read: 35519674
-      cache_write: 439051
-      cost: 11.1321
+      input: 502
+      output: 71231
+      cache_read: 57599635
+      cache_write: 783440
+      cost: 18.7236
   strategic:
     - kind: orchestrator
-      seconds: 65
+      seconds: 140
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 35
-          output: 232
-          cache_read: 1050868
-          cache_write: 151094
-          cost: 1.3625
+          input: 79
+          output: 560
+          cache_read: 2281692
+          cache_write: 333486
+          cost: 2.9308
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 20m
@@ -124,3 +134,4 @@ The delivery moves by the same 1h27m, from flai's 2026-11-10T08:59Z.
 Cost of delay: 50 USD a week, as `flai cod` works it out, unadjusted. It comes from flai's input from I-0016, `time_lost_per_cycle` 20m: 20m lost per 168h cycle at 150 USD an hour. No revenue or penalty is set. That fits a remediation whose cause is already fixed.
 
 After: none. The story reads S-0020's `allowScripts` entries, which are already on main.
+- 2026-11-14T18:02:17Z: moved to in-progress: flai serve's checks of S-0021 against its kluster namespace ended failed, at the check golden-path, at commit 7b19fc1ce549

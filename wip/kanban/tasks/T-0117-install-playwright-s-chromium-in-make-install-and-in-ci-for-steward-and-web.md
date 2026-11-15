@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 11
-      output: 2140
-      cache_read: 1244080
-      cache_write: 13523
-      cost: 0.3961
+      output: 1926
+      cache_read: 1231218
+      cache_write: 23382
+      cost: 0.4687
 ---
 # T-0117 Install Playwright's chromium in make install and in CI for steward and web
 

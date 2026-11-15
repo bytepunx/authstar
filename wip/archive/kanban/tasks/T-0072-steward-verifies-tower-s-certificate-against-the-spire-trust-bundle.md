@@ -29,11 +29,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 24
-      output: 5570
-      cache_read: 3508757
-      cache_write: 26519
-      cost: 1.0156
+      input: 23
+      output: 5178
+      cache_read: 3483421
+      cache_write: 45725
+      cost: 1.1573
 ---
 # T-0072 Steward verifies tower's certificate against the SPIRE trust bundle
 
