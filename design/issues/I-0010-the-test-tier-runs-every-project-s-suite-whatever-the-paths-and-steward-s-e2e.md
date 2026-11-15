@@ -3,11 +3,11 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: closed
-count: 15
+count: 16
 cost: 11m
 first_reported: 2026-11-06T18:29:23Z
-last_reported: 2026-11-15T06:16:02Z
-updated: 2026-11-15T06:16:02Z
+last_reported: 2026-11-15T07:18:41Z
+updated: 2026-11-15T07:18:41Z
 ---
 
 # I-0010 The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
@@ -76,6 +76,10 @@ S-0016's close-out at e6491f6 (job S-0016-20261115T055406Z), right after its reb
 ### 2026-11-15T06:16:02Z
 Story: S-0023.
 S-0023's close-out job S-0023-20261115T060714Z, at c155852, stopped at the test tier after 8m21s. 19 of 23 steward e2e tests failed: `beforeEach` timed out waiting for the `acme` tenant link, so steward rendered but read an empty or foreign fake tower. Ports 4610 and 4611 were free when the job started at 06:07:14Z. S-0018's agent was running its own I-0010 reproduction (T-0125) in the same minutes. S-0023 changes no steward file.
+
+### 2026-11-15T07:18:41Z
+Story: S-0024.
+S-0024 changes no project code (a template upgrade and an issue close), yet `flai test` on its paths ran every project's suite (4m34s), and steward's Playwright e2e failed 19 specs while five other story worktrees were in progress: steward/playwright.config.ts fixes the fake tower on 4610 and steward on 4611 for every worktree.
 
 ## Remediation
 
