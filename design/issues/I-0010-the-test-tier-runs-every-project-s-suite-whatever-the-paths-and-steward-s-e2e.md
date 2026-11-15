@@ -3,11 +3,11 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: open
-count: 10
+count: 11
 cost: 11m
 first_reported: 2026-11-06T18:29:23Z
-last_reported: 2026-11-14T10:57:26Z
-updated: 2026-11-14T10:57:26Z
+last_reported: 2026-11-15T06:13:10Z
+updated: 2026-11-15T06:13:10Z
 ---
 
 # I-0010 The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
@@ -56,6 +56,10 @@ S-0013's close-out at 5985e15 (job S-0013-20261114T103845Z) failed the same 19 o
 ### 2026-11-14T10:57:26Z
 Story: S-0016.
 S-0016's close-out at 8ed3b88 (job S-0016-20261114T105204Z) stopped at the test tier on 12 steward Playwright e2e failures. That commit changes only `design/issues/` files. At the time, S-0021's worktree was running `playwright test` for steward and holding 127.0.0.1:4610. The same suite passed in S-0016's close-out at 51aaf50 an hour earlier.
+
+### 2026-11-15T06:13:10Z
+Story: S-0016.
+S-0016's close-out at e6491f6 (job S-0016-20261115T055406Z), right after its rebase onto main for acceptance, stopped at the test tier after 11m43s. Every steward Playwright e2e spec failed, including the specs S-0013 had just added. Several worktrees were syncing and closing out at the same time. The next close-out at the same commit, with no other steward e2e running, passed in 6m49s.
 
 ## Remediation
 
