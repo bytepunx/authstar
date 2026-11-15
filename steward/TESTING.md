@@ -44,8 +44,12 @@ with no SPIFFE ID. The Workload API is a fake stream. `hooks.server.ts`'s `handl
 
 Playwright drives a real Chromium browser against the real, built steward server
 (`build/index.js`, adapter-node) and a real (but fake-data) tower stand-in
-(`tests/e2e/run-fake-backend.ts`, a plain `node:http` server on a fixed port) — both started by
-Playwright's `webServer` array config, no `vite dev`, no mocked browser APIs. Exercises the
+(`tests/e2e/run-fake-backend.ts`, a plain `node:http` server) — both started by
+Playwright's `webServer` array config, no `vite dev`, no mocked browser APIs. Their ports are
+picked per run: `playwright.config.ts` takes two free loopback ports, unless
+`STEWARD_E2E_TOWER_PORT` and `STEWARD_E2E_PORT` name them, and passes them to both servers and
+its workers through the environment. Neither server is reused, so a run in another worktree,
+or one left behind, never serves this run's tests (I-0010). Exercises the
 coherent slice end-to-end: connect (bad token → distinct error; good token + required "acting
 as" → lands on Tenant Search) → search/reactivate a suspended tenant inline → create a tenant
 (and retry the identical slug on a duplicate, per tower Story 012's "retry is the correct
