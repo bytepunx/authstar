@@ -3,11 +3,11 @@ id: I-0010
 title: The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
 class: efficiency
 status: closed
-count: 14
+count: 15
 cost: 11m
 first_reported: 2026-11-06T18:29:23Z
-last_reported: 2026-11-15T06:13:10Z
-updated: 2026-11-15T06:14:04Z
+last_reported: 2026-11-15T06:16:02Z
+updated: 2026-11-15T06:16:02Z
 ---
 
 # I-0010 The test tier runs every project's suite whatever the paths, and steward's e2e uses fixed ports shared across worktrees
@@ -72,6 +72,10 @@ S-0023's close-out job S-0023-20261115T055503Z, at 561adb1 after the rebase for 
 ### 2026-11-15T06:13:10Z
 Story: S-0016.
 S-0016's close-out at e6491f6 (job S-0016-20261115T055406Z), right after its rebase onto main for acceptance, stopped at the test tier after 11m43s. Every steward Playwright e2e spec failed, including the specs S-0013 had just added. Several worktrees were syncing and closing out at the same time. The next close-out at the same commit, with no other steward e2e running, passed in 6m49s.
+
+### 2026-11-15T06:16:02Z
+Story: S-0023.
+S-0023's close-out job S-0023-20261115T060714Z, at c155852, stopped at the test tier after 8m21s. 19 of 23 steward e2e tests failed: `beforeEach` timed out waiting for the `acme` tenant link, so steward rendered but read an empty or foreign fake tower. Ports 4610 and 4611 were free when the job started at 06:07:14Z. S-0018's agent was running its own I-0010 reproduction (T-0125) in the same minutes. S-0023 changes no steward file.
 
 ## Remediation
 
