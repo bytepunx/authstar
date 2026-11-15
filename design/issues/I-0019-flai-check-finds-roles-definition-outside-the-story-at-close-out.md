@@ -3,7 +3,7 @@ id: I-0019
 title: "flai check finds `roles.definition` outside the story at close-out"
 class: efficiency
 status: open
-count: 10
+count: 11
 first_reported: 2026-11-09T07:16:37Z
 last_reported: 2026-11-15T06:18:13Z
 updated: 2026-11-15T06:18:13Z
