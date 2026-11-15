@@ -6,7 +6,7 @@ title: "A story branch cannot change the harness's signet config: signet syncs i
 status: backlog
 owner: bytepunx
 created: 2026-11-14T09:55:08Z
-updated: 2026-11-15T19:30:05Z
+updated: 2026-11-15T19:37:32Z
 transitions: []
 tags: []
 topics: [integration, signet, kluster, testing]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-14T10:09:26Z
 forecast:
   duration: 1h30m
-  delivery: 2026-12-01T09:25:00Z
-  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010, S-0026, S-0027, S-0028, S-0029 and S-0030."
+  delivery: 2026-12-01T21:21:00Z
+  basis: "Its own forecast of 1h30m; 10th in the pull order with an in-progress limit of 4, behind S-0014, S-0022, S-0012, S-0007, S-0008, S-0010, S-0026, S-0027, S-0028, S-0029 and S-0030."
   by: flai
-  at: 2026-11-15T19:30:05Z
+  at: 2026-11-15T19:37:32Z
 finalized:
   by: bytepunx
   at: 2026-11-14T10:15:41Z

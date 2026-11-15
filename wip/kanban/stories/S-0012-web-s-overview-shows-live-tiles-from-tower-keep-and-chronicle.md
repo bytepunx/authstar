@@ -7,7 +7,7 @@ status: ready
 parent: E-0004
 owner: alex
 created: 2026-10-21T05:13:43Z
-updated: 2026-11-15T19:30:05Z
+updated: 2026-11-15T19:37:32Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:57Z
@@ -36,10 +36,10 @@ cost_of_delay:
   at: 2026-11-06T18:09:26Z
 forecast:
   duration: 8h
-  delivery: 2026-12-10T19:35:00Z
-  basis: "Its own forecast of 8h; 1st in the pull order with an in-progress limit of 4, behind S-0014, S-0021 and S-0022."
+  delivery: 2026-12-10T19:43:00Z
+  basis: "Its own forecast of 8h; 1st in the pull order with an in-progress limit of 4, behind S-0014 and S-0022."
   by: flai
-  at: 2026-11-15T19:30:05Z
+  at: 2026-11-15T19:37:32Z
 ---
 # S-0012 Web's Overview shows live tiles from tower, keep, and chronicle
 

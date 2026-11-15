@@ -6,7 +6,7 @@ title: A kluster deploy's image build fails when Docker Hub's token endpoint dro
 status: backlog
 owner: bytepunx
 created: 2026-11-14T09:30:31Z
-updated: 2026-11-15T19:30:05Z
+updated: 2026-11-15T19:37:32Z
 transitions: []
 tags: []
 touches: [scripts/kluster-build.sh, scripts/test-kluster-build.sh, scripts/test.sh, scripts/README.md, integration/README.md, design/issues/I-0026-a-kluster-deploy-s-image-build-fails-when-docker-hub-s-token-endpoint-drops-the.md, design/issues/summary.md]
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-11-14T10:09:19Z
 forecast:
   duration: 1h30m
-  delivery: 2026-12-01T08:20:00Z
-  basis: "Its own forecast of 1h30m; 9th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010, S-0026, S-0027, S-0028 and S-0029."
+  delivery: 2026-12-01T20:16:00Z
+  basis: "Its own forecast of 1h30m; 9th in the pull order with an in-progress limit of 4, behind S-0014, S-0022, S-0012, S-0007, S-0008, S-0010, S-0026, S-0027, S-0028 and S-0029."
   by: flai
-  at: 2026-11-15T19:30:05Z
+  at: 2026-11-15T19:37:32Z
 finalized:
   by: bytepunx
   at: 2026-11-14T10:15:38Z

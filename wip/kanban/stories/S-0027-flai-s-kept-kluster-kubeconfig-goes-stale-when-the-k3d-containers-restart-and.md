@@ -6,7 +6,7 @@ title: flai's kept kluster kubeconfig goes stale when the k3d containers restart
 status: backlog
 owner: bytepunx
 created: 2026-11-14T08:26:32Z
-updated: 2026-11-15T19:30:05Z
+updated: 2026-11-15T19:37:32Z
 transitions: []
 tags: []
 topics: [kluster, integration, testing]
@@ -51,10 +51,10 @@ cost_of_delay:
   at: 2026-11-14T10:09:37Z
 forecast:
   duration: 1h
-  delivery: 2026-11-30T22:38:00Z
-  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 4, behind S-0014, S-0021, S-0022, S-0012, S-0007, S-0008, S-0010 and S-0026."
+  delivery: 2026-12-01T01:53:00Z
+  basis: "Its own forecast of 1h; 6th in the pull order with an in-progress limit of 4, behind S-0014, S-0022, S-0012, S-0007, S-0008, S-0010 and S-0026."
   by: flai
-  at: 2026-11-15T19:30:05Z
+  at: 2026-11-15T19:37:32Z
 finalized:
   by: bytepunx
   at: 2026-11-14T10:15:25Z
