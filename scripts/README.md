@@ -5,7 +5,7 @@ Purpose-named shell scripts for common tasks. The `Makefile` calls these; CI cal
 | Script | Does |
 |--------|------|
 | `check.sh` | Runs `flai check --strict` on this repository; with `CLOSE_OUT_STORY` set, as `flai verify` sets it for the tiers it runs, scoped to the story with `--story` and `--record-issues`, so findings outside it are notes recorded in issues; else with `MERGE_QUEUE_STORIES` set, as the merge queue's batch and bisection set it to the stories they verify, comma-separated, scoped to them with `--story` alone, so a finding outside every one is a note and none is recorded |
-| `test.sh` | Behavior and e2e tiers: every npm project's `npm test`, then `cargo test` and clippy for portcullis (`make test`) |
+| `test.sh` | Behavior and e2e tiers: every npm project's `npm test`, then `cargo test` and clippy for portcullis (`make test`). Given project names, each an npm project's path from `lib-projects.sh` or `portcullis`, it runs only those, as the manifest's per-project test tiers do; an unknown name exits 2 and lists the known ones |
 | `integration.sh` | Integration tier: `npm run test:integration` in every service that has one; needs Docker (`make integration`) |
 | `smoke.sh` | The golden-path scenario in `integration/` against a running k3d cluster (`make smoke`) |
 | `install.sh` | `npm ci` in every npm project and `cargo fetch` for portcullis (`make install`) |
