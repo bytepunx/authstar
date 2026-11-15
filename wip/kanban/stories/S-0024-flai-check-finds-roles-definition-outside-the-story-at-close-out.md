@@ -3,16 +3,19 @@ id: S-0024
 type: story
 nature: improvement
 title: "flai check finds `roles.definition` outside the story at close-out"
-status: in-progress
+status: review
 owner: bytepunx
 created: 2026-11-09T09:04:35Z
-updated: 2026-11-15T07:18:41Z
+updated: 2026-11-15T07:27:28Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:21Z
     by: bytepunx
   - to: in-progress
     at: 2026-11-15T07:10:25Z
+    by: agent-S-0024
+  - to: review
+    at: 2026-11-15T07:27:28Z
     by: agent-S-0024
 tags: []
 topics: [tooling]
@@ -24,20 +27,19 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 124
-  estimated: true
-  priced_by: estimate
+  seconds: 1040
+  priced_by: harness
   turns:
     - day: 2026-11-15
-      ceremony: 1
-      work: 19
+      ceremony: 3
+      work: 63
   models:
     - model: claude-opus-5-5
-      input: 44
-      output: 395
-      cache_read: 2019973
-      cache_write: 127462
-      cost: 0.8102
+      input: 138
+      output: 13210
+      cache_read: 10132179
+      cache_write: 181860
+      cost: 3.7461
   strategic:
     - kind: planner
       seconds: 1174
@@ -82,8 +84,8 @@ finalized:
 This story remediates [I-0019](../../../design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md), "flai check finds `roles.definition` outside the story at close-out". The issue recommends no solution yet: propose one from its instances before building it.
 
 ## Acceptance criteria
-- [ ] The cause I-0019 describes no longer occurs, with a test that reproduces it where one fits
-- [ ] I-0019 is closed with `flai issue close I-0019 --reason` saying what fixed it
+- [x] The cause I-0019 describes no longer occurs, with a test that reproduces it where one fits
+- [x] I-0019 is closed with `flai issue close I-0019 --reason` saying what fixed it
 
 ## Tasks
 - T-0121 Upgrade the system-flow template from 1.1.22 to 1.1.24 so the orchestrator role grants verify

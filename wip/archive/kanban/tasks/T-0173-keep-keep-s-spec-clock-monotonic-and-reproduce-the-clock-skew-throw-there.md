@@ -29,10 +29,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 8
-      output: 1121
-      cache_read: 1018987
-      cache_write: 11763
-      cost: 0.3185
+      output: 957
+      cache_read: 1019874
+      cache_write: 9076
+      cost: 0.2944
 ---
 # T-0173 Keep keep's spec clock monotonic and reproduce the clock-skew throw there
 

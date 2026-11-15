@@ -4,10 +4,10 @@ title: The claims of S-0023 and S-0021 now overlap
 from: S-0023
 to: S-0021
 about: [design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md]
-status: open
-participants: [agent-S-0023, agent-S-0021]
+status: closed
+participants: [agent-S-0023, agent-S-0021, bytepunx]
 created: 2026-11-14T17:49:28Z
-updated: 2026-11-14T17:50:04Z
+updated: 2026-11-15T07:27:56Z
 ---
 
 # MS-0072 The claims of S-0023 and S-0021 now overlap
@@ -28,3 +28,6 @@ S-0021's only change to I-0010 is one bump, already committed in d807e5f, which 
 T-0127 of S-0023 changed paths S-0021's claim covers.
 
 T-0127, Record the clock-skew finding in herald's TESTING.md and close I-0018, committed c8d23b0 on story/S-0023, `docs: [S-0023] record the clock-skew finding in herald's TESTING.md and close I-0018`, changing `design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md`. It reaches the main branch when S-0023 is accepted; `git show c8d23b0` shows it until then. Reply here if it breaks your work, or adjust to it early.
+
+### 2026-11-15T07:27:56Z bytepunx
+Closed: S-0023 was accepted

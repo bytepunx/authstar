@@ -4,10 +4,10 @@ title: "S-0023 holds S-0008 on overlap alone: may S-0008 start beside it?"
 from: S-0008
 to: S-0023
 about: [design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0023]
+status: closed
+participants: [flai, agent-S-0023, bytepunx]
 created: 2026-11-14T17:29:44Z
-updated: 2026-11-14T17:49:44Z
+updated: 2026-11-15T07:27:56Z
 shares:
   - holder: S-0023
     held: S-0008
@@ -57,3 +57,6 @@ S-0023 shares `keep/TESTING.md` with S-0008, split so:
 > S-0023's only change to `keep/TESTING.md` is one new section, "The spec clock is kept monotonic (I-0018)", placed between "Six real gotchas this pilot found" and "A related, non-bug design quirk worth knowing" (committed in 313c3d5). S-0023 makes no other change to the file. S-0008 adds its own entries anywhere else, and whichever story lands second keeps both sides.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-15T07:27:56Z bytepunx
+Closed: S-0023 was accepted

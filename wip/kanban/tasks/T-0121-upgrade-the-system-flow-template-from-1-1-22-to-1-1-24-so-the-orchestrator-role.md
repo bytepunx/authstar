@@ -25,14 +25,14 @@ usage:
   source: log
   seconds: 44
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 12
-      output: 88
-      cache_read: 696466
-      cache_write: 6987
-      cost: 0.2654
+      input: 9
+      output: 901
+      cache_read: 691052
+      cache_write: 12404
+      cost: 0.2555
 ---
 # T-0121 Upgrade the system-flow template from 1.1.22 to 1.1.24 so the orchestrator role grants verify
 

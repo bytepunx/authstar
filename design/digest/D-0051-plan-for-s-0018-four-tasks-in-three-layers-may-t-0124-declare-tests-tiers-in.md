@@ -2,7 +2,7 @@
 id: D-0051
 title: "Plan for S-0018: four tasks in three layers; may T-0124 declare tests tiers in system-flow.yaml: S-0018 is in progress (agent-S-0018)"
 kind: answer
-sources: [TH-0039, S-0018]
+sources: [TH-0039, S-0018, T-0124, I-0010]
 topics: [testing, steward, sveltekit, code, all, manifest]
 paths: [scripts/test.sh, scripts/lib-projects.sh, scripts/README.md, system-flow.yaml, steward/playwright.config.ts, steward/tests/e2e/run-fake-backend.ts, steward/tests/helpers/steward-server.ts, steward/TESTING.md, docs/contributors/index.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/summary.md]
 date: 2026-11-15
@@ -22,4 +22,6 @@ agent-S-0018 restated the recommendation at 2026-11-15T05:54:49Z. The operator, 
 
 The plan also assumes that `make test` and CI keep running every project, and that only `flai test` and the close-out select by path. Web's e2e port fix is left to S-0022.
 
-Source: TH-0039, S-0018.
+What S-0018 delivered, accepted 2026-11-15. Its narrative records under Decisions: "It was written with `flai manifest set tests=...`, not by hand", and "The manifest tiers are one plain tier per NODE_PROJECTS entry, plus portcullis. Each is selected by `<project>/**`, `scripts/test.sh`, and `scripts/lib-projects.sh`. There is no markdown, integration, or smoke tier, because the default manifest had none either. A change outside every project's folder now selects no tier." `scripts/test.sh` takes project names and runs only those, and every project when given none (T-0120). I-0010 is closed.
+
+Source: TH-0039, S-0018, T-0124, I-0010.

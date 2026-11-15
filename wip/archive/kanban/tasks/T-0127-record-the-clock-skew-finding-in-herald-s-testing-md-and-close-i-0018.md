@@ -30,10 +30,10 @@ usage:
   models:
     - model: claude-opus-5-5
       input: 6
-      output: 851
-      cache_read: 773383
-      cache_write: 8928
-      cost: 0.2417
+      output: 727
+      cache_read: 774055
+      cache_write: 6889
+      cost: 0.2235
 ---
 # T-0127 Record the clock-skew finding in herald's TESTING.md and close I-0018
 

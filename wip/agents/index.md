@@ -1,6 +1,6 @@
 ---
 title: Active streams
-updated: 2026-11-15T07:19:35Z
+updated: 2026-11-15T07:27:56Z
 ---
 
 # Active streams
@@ -13,13 +13,12 @@ updated: 2026-11-15T07:19:35Z
 | [S-0014](S-0014.md) | Tower retires the tenant entitlement scope | in-progress | agent-S-0014 | 2026-11-14T18:00:44Z |
 | [S-0021](S-0021.md) | npm 12 blocks install scripts, so make install leaves farmhash unbuilt and herald, keep, and tower's tests fail | in-progress | agent-S-0021 | 2026-11-15T07:18:59Z |
 | [S-0022](S-0022.md) | Web's Playwright e2e specs run in no test tier, so flai test and the close-out never run web/e2e | in-progress | agent-S-0022 | 2026-11-15T06:12:51Z |
-| [S-0023](S-0023.md) | Herald's retention-purge spec fails intermittently with "NTP clock skew detected" from node-flakes | in-progress | agent-S-0023 | 2026-11-15T07:12:32Z |
-| [S-0024](S-0024.md) | flai check finds `roles.definition` outside the story at close-out | in-progress | agent-S-0024 | 2026-11-15T07:18:52Z |
+| [S-0024](S-0024.md) | flai check finds `roles.definition` outside the story at close-out | review | agent-S-0024 | 2026-11-15T07:27:17Z |
 
 ## Strategic agents
 
 | Agent | Activities | Cost | Seconds | Last run |
 |-------|------------|------|---------|----------|
 | [planner](planner.md) | 20 | 66.2111 USD | 14946 | 2026-11-14T10:13:04Z |
-| [orchestrator](orchestrator.md) | 286 | 87.7928 USD | 5680 | 2026-11-15T07:15:36Z |
-| [curator](curator.md) | 12 | 19.2172 USD | 1915 | 2026-11-15T07:13:31Z |
+| [orchestrator](orchestrator.md) | 292 | 89.7816 USD | 5839 | 2026-11-15T07:27:02Z |
+| [curator](curator.md) | 13 | 20.7580 USD | 2133 | 2026-11-15T07:23:20Z |

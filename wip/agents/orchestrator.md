@@ -1,9 +1,9 @@
 ---
 kind: orchestrator
-accrued_cost: 87.7928
-accrued_seconds: 5680
-tasks_completed: 286
-last_run: 2026-11-15T07:15:36Z
+accrued_cost: 89.7816
+accrued_seconds: 5839
+tasks_completed: 292
+last_run: 2026-11-15T07:27:02Z
 ---
 
 # Orchestrator activity
@@ -2013,6 +2013,48 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: none
 - Seconds: 14
 - Cost: 0.0983 USD, estimated
+
+### 2026-11-15T07:20:52Z
+
+- Summary: Release-due on S-0018: no action. system-flow.yaml sets no orchestration block, so publish is off; release policy defaults to judgement (3 accepted unreleased stories S-0015, S-0016, S-0018, 37.5 USD/week per the pack's evaluation). Publishing is the operator's.
+- Items: S-0018
+- Seconds: 39
+- Cost: 0.4099 USD, estimated
+
+### 2026-11-15T07:21:05Z
+
+- Summary: I published nothing for the release-due reason on S-0018: `system-flow.yaml` has no `orchestration` block, so every permission is off, `publish` included.
+- Items: none
+- Seconds: 13
+- Cost: 0.0754 USD, estimated
+
+### 2026-11-15T07:21:53Z
+
+- Summary: No action on S-0023 or TH-0073. system-flow.yaml has no orchestration block, so accept_reviews and answer_threads are off. S-0023 is back in-progress anyway: flai sent it back at 07:20:46Z because its kluster namespace is not deployed at head 4f78e3c. TH-0073's only entry is flai's notice to the story's agent, which flai serve resolves.
+- Items: S-0023, TH-0073
+- Seconds: 35
+- Cost: 0.5714 USD, estimated
+
+### 2026-11-15T07:22:08Z
+
+- Summary: I took no action on either reason. `system-flow.yaml` has no `orchestration` block, so every permission is off, including `accept_reviews` and `answer_threads`.
+- Items: none
+- Seconds: 15
+- Cost: 0.1843 USD, estimated
+
+### 2026-11-15T07:26:43Z
+
+- Summary: S-0023 in review left for the operator: system-flow.yaml has no orchestration block, so accept_reviews and answer_threads are off. Its last verify passed at the branch head 4f78e3c, but the kluster deploy and checks are not at that head, and TH-0040 is still open, which keeps the merge queue from taking the story.
+- Items: S-0023
+- Seconds: 38
+- Cost: 0.5610 USD, estimated
+
+### 2026-11-15T07:27:02Z
+
+- Summary: I left S-0023 in review and did nothing to it. `system-flow.yaml` has no `orchestration` block, so every permission is off by default. That includes `accept_reviews` and `answer_threads`, so I can't accept the story or reply on its thread.
+- Items: none
+- Seconds: 19
+- Cost: 0.1868 USD, estimated
 
 ## Refusals
 

@@ -2,9 +2,9 @@
 id: D-0031
 title: "A story's agent runs flai test once per layer, not in each parallel task sub-agent: the one tier runs every suite for about 8 minutes and steward's e2e binds fixed ports"
 kind: decision
-sources: [S-0011, I-0010, S-0020, S-0019, S-0015]
+sources: [S-0011, I-0010, S-0020, S-0019, S-0015, S-0018]
 topics: [testing, tooling, delegation, steward, node]
-paths: [scripts/test.sh, steward/tests/e2e, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md]
+paths: [scripts/test.sh, steward/tests/e2e, steward/playwright.config.ts, system-flow.yaml, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md]
 date: 2026-11-09
 status: active
 absorbed_by: ""
@@ -20,4 +20,6 @@ S-0020 did the same, and recorded in its narrative's Decisions: "Task sub-agents
 
 The narrative notes that this departs from `delegation.md`, which has each task sub-agent run its own tests. The departure holds until I-0010 is fixed, meaning until the tier selects suites by path and steward's e2e stops binding fixed ports (S-0018). D-0011 and D-0017 say what the tier runs.
 
-Source: S-0011, I-0010, S-0020, S-0019, S-0015.
+That condition is met. S-0018 was accepted on 2026-11-15 and I-0010 closed: `system-flow.yaml` declares one tier per project, selected by its folder (D-0051), and steward's e2e picks free ports per run (D-0053). S-0018 itself still ran the rule while I-0010 stood: "Per D-0031, the sub-agent checks steward's e2e with steward's own npm scripts while I-0010 stands; I run flai test once the layer is done." Web's e2e runs in no tier until S-0022 lands (D-0030).
+
+Source: S-0011, I-0010, S-0020, S-0019, S-0015, S-0018.

@@ -4,10 +4,10 @@ title: "Plan for S-0023: two tasks in two layers; spec-only fix, production expo
 anchor:
   path: wip/kanban/stories/S-0023-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md
   item: S-0023
-status: answered
-participants: [planner-S-0023, agent-S-0023]
+status: resolved
+participants: [planner-S-0023, agent-S-0023, bytepunx]
 created: 2026-11-09T22:11:49Z
-updated: 2026-11-14T17:50:11Z
+updated: 2026-11-15T07:27:56Z
 ---
 
 # TH-0040 Plan for S-0023: two tasks in two layers; spec-only fix, production exposure left to you
@@ -65,3 +65,6 @@ Keep is now covered. S-0021 bumped I-0018 on 2026-11-14 with a likely keep insta
 ## Status
 
 I-0018 is closed. The close-out is next.
+
+### 2026-11-15T07:27:56Z bytepunx
+Resolved: S-0023 was accepted

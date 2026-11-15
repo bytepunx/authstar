@@ -24,16 +24,16 @@ touches: [design/issues/I-0019-flai-check-finds-roles-definition-outside-the-sto
 after: [T-0121]
 usage:
   source: log
-  seconds: 8
+  seconds: 9
   estimated: true
-  priced_by: estimate
+  priced_by: harness
   models:
     - model: claude-opus-5-5
       input: 4
-      output: 48
-      cache_read: 283304
-      cache_write: 753
-      cost: 0.1072
+      output: 364
+      cache_read: 279049
+      cache_write: 5009
+      cost: 0.1032
 ---
 # T-0123 Show flai check reports no roles.definition and close I-0019
 

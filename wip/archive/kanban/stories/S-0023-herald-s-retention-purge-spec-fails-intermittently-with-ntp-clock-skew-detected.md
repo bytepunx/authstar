@@ -3,10 +3,10 @@ id: S-0023
 type: story
 nature: remediation
 title: "Herald's retention-purge spec fails intermittently with \"NTP clock skew detected\" from node-flakes"
-status: in-progress
+status: done
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-15T07:11:41Z
+updated: 2026-11-15T07:27:56Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:04Z
@@ -32,6 +32,18 @@ transitions:
   - to: in-progress
     at: 2026-11-15T07:11:41Z
     by: flai
+  - to: review
+    at: 2026-11-15T07:20:19Z
+    by: agent-S-0023
+  - to: in-progress
+    at: 2026-11-15T07:20:46Z
+    by: flai
+  - to: review
+    at: 2026-11-15T07:25:24Z
+    by: agent-S-0023
+  - to: done
+    at: 2026-11-15T07:27:56Z
+    by: bytepunx
 tags: [herald, testing]
 topics: [testing]
 touches: [herald/spec/lib/monotonic-clock.ts, herald/spec/behavior/clock-skew.spec.ts, herald/vitest.config.ts, herald/TESTING.md, design/issues/I-0018-herald-s-retention-purge-spec-fails-intermittently-with-ntp-clock-skew-detected.md, design/issues/summary.md, design/issues/I-0010-the-test-tier-runs-every-project-s-suite-whatever-the-paths-and-steward-s-e2e.md, design/issues/I-0033-herald-keep-and-tower-throw-on-a-backward-wall-clock-step-in-production-node.md, keep/TESTING.md, keep/spec/behavior/clock-skew.spec.ts, keep/spec/lib/monotonic-clock.ts, keep/vitest.config.ts, design/issues/I-0019-flai-check-finds-roles-definition-outside-the-story-at-close-out.md, design/issues/I-0027-golden-path-step-5-herald-cannot-decrypt-its-own-invite-after-the-key-rotation.md, design/issues/I-0036-flai-verify-panics-with-a-nil-pointer-dereference-at-cmd-verify-go-314-when-its.md, design/issues/I-0037-flai-stream-sync-flags-a-rebased-issue-bump-as-undoing-main-s-change-because.md]
@@ -42,7 +54,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 5005
+  seconds: 5811
   priced_by: harness
   turns:
     - day: 2026-11-14
@@ -50,26 +62,26 @@ usage:
       test_runs: 4
       work: 104
     - day: 2026-11-15
-      ceremony: 2
-      work: 82
+      ceremony: 6
+      work: 136
   models:
     - model: claude-opus-5-5
-      input: 442
-      output: 58699
-      cache_read: 53362525
-      cache_write: 616005
-      cost: 16.6767
+      input: 562
+      output: 70849
+      cache_read: 75472602
+      cache_write: 671674
+      cost: 21.7876
   strategic:
     - kind: orchestrator
-      seconds: 149
+      seconds: 222
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 75
-          output: 480
-          cache_read: 2289692
-          cache_write: 331477
-          cost: 2.9141
+          input: 103
+          output: 640
+          cache_read: 3184507
+          cache_write: 464514
+          cost: 4.0465
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -132,3 +144,4 @@ Cost of delay: `flai cod` gave 25 USD a week from the operator's input, 10m lost
 - 2026-11-14T18:09:49Z: moved to in-progress: flai serve's checks of S-0023 against its kluster namespace ended failed, at the check golden-path, at commit ab7d457890ca
 - 2026-11-15T05:53:36Z: moved to in-progress: bytepunx asked its agent to rebase story/S-0023 onto main and resolve what holds its acceptance, 1 blocker: S-0023's verify does not cover the main branch it would land on: its last flai verify, at 7f69beb, ran over main at 4a628d7, and the 67 paths main brought in si...; its agent syncs it with flai stream sync S-0023, takes each blocker's recommended action, closes out again, and moves it to review
 - 2026-11-15T07:11:41Z: moved to in-progress: bytepunx asked its agent to rebase story/S-0023 onto main and resolve what holds its acceptance, 1 blocker: S-0023's verify does not cover the main branch it would land on: its last flai verify, at 336323c, ran over main at 2bfe5ec, and the 18 paths main brought in si...; its agent syncs it with flai stream sync S-0023, takes each blocker's recommended action, closes out again, and moves it to review
+- 2026-11-15T07:20:46Z: moved to in-progress: bytepunx asked its agent to rebase story/S-0023 onto main and resolve what holds its acceptance, 1 blocker: the kluster host action is on, so S-0023 is accepted only once its namespace was deployed at its head and, while the checks host action is on, the checks run ag...; its agent syncs it with flai stream sync S-0023, takes each blocker's recommended action, closes out again, and moves it to review
