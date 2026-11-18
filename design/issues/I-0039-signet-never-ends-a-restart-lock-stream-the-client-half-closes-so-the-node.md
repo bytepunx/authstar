@@ -7,7 +7,7 @@ count: 1
 cost: 30m
 first_reported: 2026-11-18T07:44:49Z
 last_reported: 2026-11-18T07:44:49Z
-updated: 2026-11-18T07:44:49Z
+updated: 2026-11-18T12:44:30Z
 ---
 
 # I-0039 Signet never ends a restart-lock stream the client half-closes, so the Node client's lock.release() never resolves
@@ -30,3 +30,5 @@ Found by S-0038 reading the sources, as the cause of I-0029 (and I-0031 on `stor
 Upstream fixes, for the signet repository: `holdLock` returns when the client's stream reaches EOF; the Node and Go clients cancel the call after `closeSend()`, or stop waiting on `recvDone`. S-0038 bounds the wait in each Node service instead.
 
 ## Remediation
+
+Story S-0040 remediates this issue, created from it at 2026-11-18T12:44:30Z.
