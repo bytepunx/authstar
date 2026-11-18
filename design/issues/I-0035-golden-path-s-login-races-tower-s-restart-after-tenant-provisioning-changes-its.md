@@ -2,12 +2,12 @@
 id: I-0035
 title: Golden path's login races tower's restart after tenant provisioning changes its signet bundle, so portcullis's callback returns 500
 class: defect
-status: open
+status: closed
 count: 2
 cost: 18m
 first_reported: 2026-11-14T18:03:10Z
 last_reported: 2026-11-14T18:10:42Z
-updated: 2026-11-18T07:34:03Z
+updated: 2026-11-18T08:38:51Z
 ---
 
 # I-0035 Golden path's login races tower's restart after tenant provisioning changes its signet bundle, so portcullis's callback returns 500
@@ -45,3 +45,4 @@ S-0021 changes none of these services.
 ## Remediation
 
 Story S-0039 remediates this issue, created from it at 2026-11-18T07:34:03Z.
+Closed 2026-11-18T08:38:51Z: S-0039: the golden path now waits for each signet-coordinated restart it sets off (integration/scripts/lib.sh's wait_for_signet_restart): after step 1's provisioning, for tower and portcullis, before the login; and after herald's key rotation, for herald and tower, before the invite, so tower encrypts it with the rotated key and step 6 starts once tower is back. Verified on s-0039 at 19867b9: the first checks run against fresh tenant state (provisioning 201) passed 11/11 after waiting 41s for tower's post-provisioning restart, and a rerun with no redeploy passed 11/11 (job S-0039-checks-20261118T083611Z). I-0030 on story/S-0014 is the same defect: close it as a duplicate of this issue when S-0014 lands.
