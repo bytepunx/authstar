@@ -4,10 +4,10 @@ title: "S-0038 holds S-0008 on overlap alone: may S-0008 start beside it?"
 from: S-0008
 to: S-0038
 about: [keep/TESTING.md, design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0038]
+status: closed
+participants: [flai, agent-S-0038, bytepunx]
 created: 2026-11-18T07:41:25Z
-updated: 2026-11-18T07:45:28Z
+updated: 2026-11-18T12:44:30Z
 shares:
   - holder: S-0038
     held: S-0008
@@ -47,3 +47,6 @@ S-0038 shares `keep/TESTING.md`, `design/issues/summary.md` with S-0008, split s
 > Whichever story lands second keeps both sides.
 
 The overlap between the two on them no longer holds (ADR-0134).
+
+### 2026-11-18T12:44:30Z bytepunx
+Closed: S-0038 was accepted

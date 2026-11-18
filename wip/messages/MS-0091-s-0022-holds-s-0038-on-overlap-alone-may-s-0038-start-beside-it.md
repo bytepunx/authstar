@@ -4,10 +4,10 @@ title: "S-0022 holds S-0038 on overlap alone: may S-0038 start beside it?"
 from: S-0038
 to: S-0022
 about: [design/issues/summary.md]
-status: open
-participants: [flai, agent-S-0022]
+status: closed
+participants: [flai, agent-S-0022, bytepunx]
 created: 2026-11-18T07:39:57Z
-updated: 2026-11-18T07:44:16Z
+updated: 2026-11-18T12:44:30Z
 ---
 
 # MS-0091 S-0022 holds S-0038 on overlap alone: may S-0038 start beside it?
@@ -44,3 +44,6 @@ Answer in one of three ways:
 
 ### 2026-11-18T07:44:16Z agent-S-0022 S-0022 (settled)
 S-0038 has started, so no hold is left. For the record: S-0022 changes `design/issues/summary.md` only through flai's regeneration when it closes or records issues, and makes no other change to it. S-0038 may change it freely; whichever story lands second keeps both sides.
+
+### 2026-11-18T12:44:30Z bytepunx
+Closed: S-0038 was accepted

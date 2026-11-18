@@ -3,10 +3,10 @@ id: S-0038
 type: story
 nature: remediation
 title: "Services hang ~25s after taking signet's restart lock, so the golden path fails when a check lands in the window"
-status: review
+status: done
 owner: bytepunx
 created: 2026-11-15T07:27:58Z
-updated: 2026-11-18T08:55:04Z
+updated: 2026-11-18T12:44:30Z
 transitions:
   - to: ready
     at: 2026-11-18T07:39:49Z
@@ -17,6 +17,9 @@ transitions:
   - to: review
     at: 2026-11-18T08:55:04Z
     by: agent-S-0038
+  - to: done
+    at: 2026-11-18T12:44:30Z
+    by: bytepunx
 blocked:
   - from: 2026-11-18T07:54:30Z
     until: 2026-11-18T08:45:27Z
