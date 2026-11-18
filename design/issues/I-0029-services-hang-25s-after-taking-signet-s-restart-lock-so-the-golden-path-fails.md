@@ -2,12 +2,12 @@
 id: I-0029
 title: "Services hang ~25s after taking signet's restart lock, so the golden path fails when a check lands in the window"
 class: defect
-status: open
+status: closed
 count: 2
 cost: 23m
 first_reported: 2026-11-14T10:51:50Z
 last_reported: 2026-11-15T07:35:43Z
-updated: 2026-11-15T07:35:43Z
+updated: 2026-11-18T08:51:39Z
 ---
 
 # I-0029 Services hang ~25s after taking signet's restart lock, so the golden path fails when a check lands in the window
@@ -39,3 +39,10 @@ S-0024 (template upgrade, no service change) deployed s-0024 at 05535bd; the gol
 ## Remediation
 
 Story S-0038 remediates this issue, created from it at 2026-11-15T07:27:58Z.
+Closed 2026-11-18T08:51:39Z: Fixed by S-0038. The hang was in `await lock.release()`, not in `app.close()`. Signet's `holdLock` never ends a lock stream the client half-closes, so `@bytepunx/signet-client` 0.9.0's `Lock.release()` never resolved (I-0039, recorded for the signet repository).
+
+Tower, herald, and keep now call `shutDownForRestart` from `src/lib/restart-on-bundle-change.ts`. It closes the app, waits at most 2s for the release, and returns so the process exits. The exit closes the connection to signet, which frees the lock. Each service has a behavior spec that reproduces the hang. Chronicle exits before releasing, and portcullis's Rust client drops the stream, so neither hung.
+
+On s-0038 at 56b429b, tower and herald took the lock at 08:50:40Z. Both exited 0 at 08:50:42Z with no liveness kill, where they had hung about 25s.
+
+I-0031, recorded on `story/S-0014`, is the same defect: its guess that `app.close()` waited on keep-alive connections did not hold. Close it with this reason when S-0014 lands.
