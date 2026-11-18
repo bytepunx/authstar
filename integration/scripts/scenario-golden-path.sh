@@ -15,7 +15,9 @@
 # Auth mechanics per step (see README.md's own writeup for the "why"):
 #   - tenant provisioning: tower's operator bearer token; step 1 gives the
 #     tenant its domain (TENANT_DOMAIN, ADR 0093), which makes tower issue
-#     the first-admin invite
+#     the first-admin invite. It changes tower's and portcullis's signet
+#     bundles, so step 1 waits for their signet-coordinated restarts
+#     (lib.sh's wait_for_signet_restart, I-0035) before the login
 #   - portcullis login: the real Dex authorization-code + PKCE flow, driven
 #     with plain curl (no headless browser -- Dex's staticPasswords
 #     connector serves a plain HTML form), started with that invite
@@ -110,7 +112,10 @@ HERALD_LOCAL_PORT="${HERALD_LOCAL_PORT:-19090}"
 WORKDIR="$(mktemp -d)"
 # port_forward disowns each kubectl, so `jobs -p` no longer lists them: keep
 # their PIDs here so the EXIT trap stops them, on a die as well as at the end.
+# PF_NAMES holds each one's service, at the same index, for
+# refresh_port_forward.
 PF_PIDS=()
+PF_NAMES=()
 trap 'kill "${PF_PIDS[@]}" 2>/dev/null || true; rm -rf "$WORKDIR"' EXIT
 
 PASS=0
@@ -123,8 +128,9 @@ skip() { log "SKIP: $1"; SKIP=$((SKIP + 1)); }
 port_forward() {
   local svc="$1" local_port="$2" remote_port="$3" namespace="${4:-$AUTHSTAR_NAMESPACE}"
   kubectl port-forward -n "$namespace" "svc/$svc" "${local_port}:${remote_port}" \
-    >"$WORKDIR/pf-${svc}.log" 2>&1 &
+    >>"$WORKDIR/pf-${svc}.log" 2>&1 &
   PF_PIDS+=("$!")
+  PF_NAMES+=("$svc")
   disown
   # bash's own /dev/tcp, not nc, which not every host has.
   for _ in $(seq 1 20); do
@@ -133,6 +139,28 @@ port_forward() {
   done
   die "port-forward to $svc:$remote_port never became ready"
 }
+
+# refresh_port_forward starts the port-forward to a service again when its
+# kubectl has exited or its local port no longer answers. A signet-coordinated
+# restart restarts the container in place, and kubectl port-forward may exit
+# on a connection the restart refused.
+refresh_port_forward() {
+  local svc="$1" local_port="$2" remote_port="$3" namespace="${4:-$AUTHSTAR_NAMESPACE}" i pid=""
+  for i in "${!PF_NAMES[@]}"; do
+    [[ "${PF_NAMES[$i]}" == "$svc" ]] && pid="${PF_PIDS[$i]}"
+  done
+  if [[ -n "$pid" ]] && kill -0 "$pid" 2>/dev/null \
+    && (exec 3<>"/dev/tcp/127.0.0.1/${local_port}") 2>/dev/null; then
+    return 0
+  fi
+  log "port-forward to $svc is gone after its restart; starting it again"
+  [[ -z "$pid" ]] || kill "$pid" 2>/dev/null || true
+  port_forward "$svc" "$local_port" "$remote_port" "$namespace"
+}
+
+# restart_since prints the time, RFC 3339 in UTC, that wait_for_signet_restart
+# reads the restart-lock line from.
+restart_since() { date -u +%Y-%m-%dT%H:%M:%SZ; }
 
 log "starting port-forwards"
 port_forward tower "$TOWER_LOCAL_PORT" 8080
@@ -154,6 +182,13 @@ TOWER_OPERATOR_TOKEN="${TOWER_OPERATOR_TOKEN:-dev-placeholder-nWvzdBisvYWVX4ZqZ4
 ##############################################################################
 log "step 1/6: tenant provisioning (tower, real, idempotent)"
 ##############################################################################
+# Provisioning pushes the tenant's keys to portcullis's signet bundle and its
+# contact-hash pepper to tower's (tower/src/routes/provisioning.ts). Each then
+# restarts under signet's restart lock, so mark both before the step and wait
+# for their restarts after it (I-0035).
+provision_since="$(restart_since)"
+tower_mark="$(restart_mark "$AUTHSTAR_NAMESPACE" tower)"
+portcullis_mark="$(restart_mark "$AUTHSTAR_NAMESPACE" portcullis)"
 provision_response="$(curl -sk -X POST "${TOWER_URL}/tenants" \
   -H "Authorization: Bearer ${TOWER_OPERATOR_TOKEN}" \
   -H "Content-Type: application/json" \
@@ -192,6 +227,13 @@ if [[ "$answered_domain" == "$TENANT_DOMAIN" ]]; then
 else
   fail "tower answers ${TENANT_SLUG}'s domain as '${answered_domain}', expected ${TENANT_DOMAIN}"
 fi
+
+# Step 2 logs in through portcullis, whose callback resolves the identity at
+# tower: wait for both restarts step 1 set off before it begins.
+wait_for_signet_restart "$AUTHSTAR_NAMESPACE" tower "$tower_mark" "$provision_since"
+wait_for_signet_restart "$AUTHSTAR_NAMESPACE" portcullis "$portcullis_mark" "$provision_since"
+refresh_port_forward tower "$TOWER_LOCAL_PORT" 8080
+refresh_port_forward portcullis "$PORTCULLIS_LOCAL_PORT" 3710
 
 ##############################################################################
 log "step 2/6: portcullis + Dex login (real OAuth2/PKCE, no browser)"
