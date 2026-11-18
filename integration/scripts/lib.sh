@@ -29,13 +29,23 @@ require_cmd() {
   command -v "$1" >/dev/null 2>&1 || die "required command '$1' not found on PATH"
 }
 
+# kube runs kubectl on KLUSTER_KUBE_CONTEXT when it is set, else on the
+# current context. scripts/kluster-deploy.sh sets it to its kluster's context.
+kube() {
+  if [[ -n "${KLUSTER_KUBE_CONTEXT:-}" ]]; then
+    kubectl --context "$KLUSTER_KUBE_CONTEXT" "$@"
+  else
+    kubectl "$@"
+  fi
+}
+
 # restart_mark prints a marker of a deployment's pods: each pod's name and its
 # containers' restart counts. The manifests label each pod app: <deploy>. A
 # container restarted in place keeps its pod and raises its count; a replaced
 # pod changes its name. Either changes the marker.
 restart_mark() {
   local namespace="$1" deploy="$2"
-  kubectl get pod -n "$namespace" -l "app=${deploy}" \
+  kube get pod -n "$namespace" -l "app=${deploy}" \
     -o jsonpath='{range .items[*]}{.metadata.name}={.status.containerStatuses[*].restartCount};{end}' 2>/dev/null || true
 }
 
@@ -43,7 +53,7 @@ restart_mark() {
 # every pod is Ready.
 pods_ready() {
   local namespace="$1" deploy="$2" states
-  states="$(kubectl get pod -n "$namespace" -l "app=${deploy}" \
+  states="$(kube get pod -n "$namespace" -l "app=${deploy}" \
     -o jsonpath='{range .items[*]}{.status.containerStatuses[*].ready} {end}' 2>/dev/null || true)"
   [[ -n "${states// /}" && "$states" != *false* ]]
 }
@@ -55,7 +65,7 @@ pods_ready() {
 # acquired" (portcullis/crates/authstar-proxy/src/main.rs).
 restart_lock_logged() {
   local namespace="$1" deploy="$2" since="$3"
-  kubectl logs -n "$namespace" -l "app=${deploy}" --all-containers=true --tail=-1 --since-time="$since" 2>/dev/null \
+  kube logs -n "$namespace" -l "app=${deploy}" --all-containers=true --tail=-1 --since-time="$since" 2>/dev/null \
     | grep -qE 'acquired restart lock|restart lock acquired'
 }
 

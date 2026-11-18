@@ -7,11 +7,14 @@
 # removal of the Deployments and CronJobs kluster's profile made; the
 # namespace's RabbitMQ vhost and user; its prefixed Postgres and ClickHouse
 # databases; its signet bundles and policies (scripts/kluster-signet.sh); and
-# the manifests, waiting for each of the eight rollouts. Each step is
+# the manifests, waiting for each of the eight rollouts and then for the
+# signet-coordinated restarts the signet step set off (I-0040). Each step is
 # idempotent, so a deploy at a new commit updates the namespace in place. In the
 # default namespace the prefix is empty, so main keeps the profile's names.
 # KLUSTER_DRY_RUN=1 prints each cluster command instead of running it.
-# KLUSTER_ROLLOUT_TIMEOUT (default 300s) bounds each rollout's wait.
+# KLUSTER_ROLLOUT_TIMEOUT (default 300s) bounds each rollout's wait;
+# SIGNET_RESTART_SETTLE_SECONDS and SIGNET_RESTART_TIMEOUT_SECONDS bound each
+# restart wait (integration/scripts/lib.sh).
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/lib-kluster.sh
@@ -103,6 +106,23 @@ for db in tower keep herald; do
 done
 ch_exec "CREATE DATABASE IF NOT EXISTS ${prefix}chronicle"
 
+# The workloads that restart under signet's restart lock when their bundle
+# changes. The signet step replaces their bundles with fresh keys, so a
+# redeploy over running ones restarts them after their rollouts have passed
+# (I-0040): mark each here, and wait for those restarts after the rollouts.
+restart_workloads="tower keep herald chronicle portcullis"
+restart_marks="$FLAI_KLUSTER_STATE/restart-marks"
+restart_since="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+if ! kluster_dry_run; then
+  : > "$restart_marks"
+  for svc in $restart_workloads; do
+    # shellcheck disable=SC2016 # expanded by bash, not this shell
+    mark="$(KLUSTER_KUBE_CONTEXT="$FLAI_KLUSTER_CONTEXT" bash -c \
+      '. integration/scripts/lib.sh && restart_mark "$1" "$2"' mark "$ns" "$svc")"
+    printf '%s %s\n' "$svc" "$mark" >> "$restart_marks"
+  done
+fi
+
 kluster_step "signet: bundles and policies for $ns"
 if [ ! -d tower/node_modules/@bytepunx/signet-client ]; then
   if kluster_dry_run; then
@@ -141,4 +161,20 @@ for svc in $KLUSTER_SERVICES; do
     kluster_die "deployment/$svc in $ns did not roll out within $rollout_timeout; its pods and last 50 log lines are above"
   fi
 done
+
+kluster_step "signet restarts: wait for those the signet step set off"
+if kluster_dry_run; then
+  kluster_log "dry run: no wait for signet-coordinated restarts"
+else
+  # integration/scripts/lib.sh's wait_for_signet_restart: a fresh namespace's
+  # marks are empty, so each wait sees its new pod and returns once it is
+  # Ready; a workload whose bundle did not change costs the settle window.
+  # shellcheck disable=SC2016 # expanded by bash, not this shell
+  KLUSTER_KUBE_CONTEXT="$FLAI_KLUSTER_CONTEXT" bash -c '
+    . integration/scripts/lib.sh
+    while read -r svc mark <&3; do
+      wait_for_signet_restart "$1" "$svc" "$mark" "$2"
+    done 3< "$3"' wait "$ns" "$restart_since" "$restart_marks" \
+    || kluster_die "a signet-coordinated restart in $ns did not finish; the restart wait's line above names the workload"
+fi
 kluster_log "deployed $FLAI_KLUSTER_TAG into $ns"
