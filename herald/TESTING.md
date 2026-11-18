@@ -605,7 +605,8 @@ bundle-change restart landed close to an external SIGTERM, hanging the process (
 `close()` isn't safe to re-enter mid-flight) until Kubernetes' liveness probe force-killed it —
 reproduced live as a real `CrashLoopBackOff`. Fixed with a `closeOnce()` helper memoizing the
 close promise; re-verified live by deliberately stacking multiple bundle changes and confirming
-a single clean restart instead of a loop.
+a single clean restart instead of a loop. The restart branch still hung on `lock.release()`
+after that fix (I-0029); see "Bounded restart-lock release" below.
 
 **Correction to this section's own earlier live-debugging theory, and two more bugs found
 and fixed in the same pass**: the original live diagnosis (recorded in
@@ -691,3 +692,24 @@ backed by a bug-fixed in-memory adapter), and the integration tier proves exactl
 same code paths do/don't currently work end-to-end against real Postgres. Re-running the `it.fails`
 integration tests after any future `consequent`/`consequent-postgres` upgrade is the fastest way to
 check whether this is still an open issue.
+
+## Bounded restart-lock release
+
+- **The hang** (I-0029, cause recorded as I-0039): on a signet bundle change, `src/server.ts`
+  took the restart lock, closed the app, and awaited `lock.release()`, which never resolved.
+  `@bytepunx/signet-client` 0.9.0's `Lock.release()` half-closes the lock stream and waits for
+  the server to end it, but signet's `holdLock` ends the stream only when the RPC's context is
+  cancelled, and a half-close does not cancel it. Herald stayed up with its port closed until the
+  liveness probe sent SIGTERM, about 26s later.
+- **The fix**: `shutDownForRestart` (`src/lib/restart-on-bundle-change.ts`, the same module as
+  tower's) closes the app, then races `lock.release()` against `RESTART_LOCK_RELEASE_TIMEOUT_MS`
+  (2s), logging `info` with `elapsed_ms` when the release ends and `warn` with `elapsed_ms` and
+  `timeout_ms` when the timeout wins (or `err` when the release fails). `server.ts` then closes
+  its consumers and exits; the exit closes the connection to signet, which cancels the RPC, and
+  signet frees the lock at once.
+- **New tests**: `spec/behavior/restart-on-bundle-change.spec.ts` (5) drives signet-client's real
+  `Lock` (`acquireLockWithStream`) over a fake stream that, like signet's server, answers
+  `ACQUIRED` and never ends after `closeSend()`: `lock.release()` alone does not settle (the
+  reproduction), `shutDownForRestart` returns within its bound and warns, a stream that ends on
+  release logs `info` only, a failed release warns without throwing, and the app closes before the
+  release.

@@ -14,6 +14,7 @@ import { createSignetAdmin } from './lib/signet-admin.js'
 import { requireBundleSecret } from './lib/bundle-secrets.js'
 import { seedBuiltInTemplates } from './lib/seed-templates.js'
 import { towerFetchFor } from './lib/tower-tls.js'
+import { shutDownForRestart } from './lib/restart-on-bundle-change.js'
 
 // Production entrypoint. Follows the exact fetch-once/watch/restart-lock
 // pattern tower's own `src/server.ts` established for this stack (signet
@@ -256,8 +257,8 @@ async function main(): Promise<void> {
     waitForRestart(workload.client, namespace, service, 30, 10_000, { signal: controller.signal })
       .then(async (lock) => {
         app.log.info('signet bundle changed -- acquired restart lock, shutting down for Kubernetes to restart')
-        await closeOnce()
-        await lock.release()
+        // Bounded: signet never ends a half-closed lock stream (I-0039).
+        await shutDownForRestart({ close: closeOnce, lock, log: app.log })
       })
       .catch((err) => {
         if (controller.signal.aborted) return // expected: our own shutdown aborted the wait
