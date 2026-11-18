@@ -15,6 +15,7 @@ import { createAmqpEntitlementPublisher, ENTITLEMENT_EXCHANGE } from './lib/amqp
 import { createConsequentSequenceProvider } from './lib/consequent-sequence-provider.js'
 import { createSecretHasher } from './lib/hash.js'
 import { requireBundleSecret } from './lib/bundle-secrets.js'
+import { shutDownForRestart } from './lib/restart-on-bundle-change.js'
 
 // ADR 0047's periodic safety-net re-run interval for the role-reference
 // backfill (`role-reference-backfill.ts`'s `refreshAll`) -- re-checks every
@@ -222,8 +223,8 @@ async function main(): Promise<void> {
     waitForRestart(workload.client, namespace, service, 30, 10_000, { signal: controller.signal })
       .then(async (lock) => {
         app.log.info('signet bundle changed -- acquired restart lock, shutting down for Kubernetes to restart')
-        await closeOnce()
-        await lock.release()
+        // Bounded: signet never ends a half-closed lock stream (I-0039).
+        await shutDownForRestart({ close: closeOnce, lock, log: app.log })
       })
       .catch((err) => {
         if (controller.signal.aborted) return // expected: our own shutdown aborted the wait

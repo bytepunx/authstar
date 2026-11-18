@@ -224,7 +224,16 @@ brings behavior to 71, for 80 total (see its own section below).
   and wiring it into the entitlement publisher, a real Stripe client factory
   (`createStripeClientFactory`), fastify app start, then racing `SIGTERM`/`SIGINT` against
   `waitForRestart`'s coordinated-restart lock. Not live-validated against a real cluster (see
-  below) — same scope decision tower's own `server.ts` documents.
+  below) — same scope decision tower's own `server.ts` documents. On a bundle change it closes
+  the app, then releases the lock through `src/lib/restart-on-bundle-change.ts`, which waits at
+  most 2s for the release before the process exits (I-0039). Signet's `holdLock` never ends a
+  lock stream the client half-closes, so signet-client 0.9.0's `Lock.release()` never resolves.
+  Unbounded, keep stayed up with its port closed until its liveness probe killed it, about 25s
+  later (I-0029). The exit closes the connection to signet, which frees the lock.
+  `spec/behavior/restart-on-bundle-change.spec.ts` reproduces the hang: it drives
+  signet-client's real `Lock` over a fake stream that, like signet, never ends after
+  `closeSend()`. It also shows that the module returns within its bound, and that it closes
+  the app before it releases the lock. The same module and spec are copied in tower and herald.
 - **`src/lib/signet-stripe-config-store.ts`** — real signet wiring for `stripe-config`
   (ADR 0052), filling the gap `src/routes/stripe-config.ts`'s own header comment flagged as
   out of scope. `get()` reads from a startup snapshot of keep's own decoded bundle secrets;
