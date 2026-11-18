@@ -174,7 +174,9 @@ so every tier runs against the same compiled artifact the real server loads, not
    Kubernetes' liveness probe eventually force-killed it — reproduced live as a real
    `CrashLoopBackOff`. Fixed with a `closeOnce()` helper that memoizes the close promise so both
    race branches share the same in-flight call; re-verified live by deliberately stacking
-   multiple bundle changes and confirming a single clean restart instead of a loop.
+   multiple bundle changes and confirming a single clean restart instead of a loop. The restart
+   branch still hung on `lock.release()` after that fix (I-0029); see "Bounded restart-lock
+   release" below.
 
 ## Scope covered by this pass (tower's four target cross-service flows)
 
@@ -685,3 +687,24 @@ own authorization posture exactly rather than inventing a stricter one for this 
   cert (reaches the real handler, denied for an unrelated reason — proving the mTLS check itself
   passed), and confirmation the check is a no-op when `tls`/`spiffeTrustDomain` are omitted. Full
   suite: 234 tests across 24 files, all passing; zero regressions.
+
+## Bounded restart-lock release
+
+- **The hang** (I-0029, cause recorded as I-0039): on a signet bundle change, `src/server.ts`
+  took the restart lock, closed the app, and awaited `lock.release()`, which never resolved.
+  `@bytepunx/signet-client` 0.9.0's `Lock.release()` half-closes the lock stream and waits for
+  the server to end it, but signet's `holdLock` ends the stream only when the RPC's context is
+  cancelled, and a half-close does not cancel it. Tower stayed up with its port closed until the
+  liveness probe sent SIGTERM, about 25s later; the SIGTERM branch then exited at once through the
+  already settled `closeOnce()`, which is why `app.close()` was not the step that hung.
+- **The fix**: `shutDownForRestart` (`src/lib/restart-on-bundle-change.ts`) closes the app, then
+  races `lock.release()` against `RESTART_LOCK_RELEASE_TIMEOUT_MS` (2s), logging `info` with
+  `elapsed_ms` when the release ends and `warn` with `elapsed_ms` and `timeout_ms` when the timeout
+  wins (or `err` when the release fails). `server.ts` then exits; the exit closes the connection
+  to signet, which cancels the RPC, and signet frees the lock at once.
+- **New tests**: `spec/behavior/restart-on-bundle-change.spec.ts` (5) drives signet-client's real
+  `Lock` (`acquireLockWithStream`) over a fake stream that, like signet's server, answers
+  `ACQUIRED` and never ends after `closeSend()`: `lock.release()` alone does not settle (the
+  reproduction), `shutDownForRestart` returns within its bound and warns, a stream that ends on
+  release logs `info` only, a failed release warns without throwing, and the app closes before the
+  release.

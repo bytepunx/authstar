@@ -15,6 +15,7 @@ import { startErasureAckConsumer } from './lib/erasure-ack-consumer.js'
 import { createEphemeralHeraldKey, heraldKeyFromPem, type HeraldPayloadKey } from './lib/herald-payload-crypto.js'
 import { fetchServerCredentials, watchSVIDRotation, type SecureContextTarget } from './lib/spiffe-mtls.js'
 import { resolveProvisioningConfig } from './lib/signet-bundle-config.js'
+import { shutDownForRestart } from './lib/restart-on-bundle-change.js'
 import type { ProvisioningConfig } from './routes/provisioning.js'
 
 // Production entrypoint. Follows the fetch-once/watch/restart-lock pattern
@@ -205,8 +206,8 @@ async function main(): Promise<void> {
     waitForRestart(workload.client, namespace, service, 30, 10_000, { signal: controller.signal })
       .then(async (lock) => {
         app.log.info('signet bundle changed -- acquired restart lock, shutting down for Kubernetes to restart')
-        await closeOnce()
-        await lock.release()
+        // Bounded: signet never ends a half-closed lock stream (I-0039).
+        await shutDownForRestart({ close: closeOnce, lock, log: app.log })
       })
       .catch((err) => {
         if (controller.signal.aborted) return // expected: our own shutdown aborted the wait
