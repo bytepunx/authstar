@@ -3,11 +3,11 @@ id: I-0027
 title: "Golden path step 5: herald cannot decrypt its own invite after the key rotation (OAEP decoding error), intermittently"
 class: defect
 status: open
-count: 3
-cost: 17m
+count: 4
+cost: 14m
 first_reported: 2026-11-14T10:26:37Z
-last_reported: 2026-11-15T05:15:22Z
-updated: 2026-11-15T05:15:22Z
+last_reported: 2026-11-18T08:51:16Z
+updated: 2026-11-18T08:51:16Z
 ---
 
 # I-0027 Golden path step 5: herald cannot decrypt its own invite after the key rotation (OAEP decoding error), intermittently
@@ -28,6 +28,10 @@ flai serve's kluster checks of S-0023 at ab7d457 (log S-0023-20261114T180934Z) f
 ### 2026-11-15T05:15:22Z
 Story: S-0015.
 S-0015's first kluster checks run at e6edbe8 (2026-11-14T10:45Z) failed golden-path step 5 with `payload decryption failed: error:02000079:rsa routines::oaep decoding error`, right after the key-rotation step passed; a rerun at the same commit passed. S-0015 had recorded it as I-0028, now closed as a duplicate of this issue.
+
+### 2026-11-18T08:51:16Z
+Story: S-0038.
+S-0038's deploy of fresh namespace s-0038 at 56b429b (job S-0038-deploy-20261118T084815Z) failed its checks only at golden-path step 5. At 08:50:33Z herald send-and-verify reported `communication.failed: payload decryption failed: error:02000079:rsa routines::oaep decoding error`. All other steps passed: 10 passed, 1 failed. S-0038 changes only the restart-lock release, and tower and herald both restarted cleanly 2s after their lock at 08:50:40Z, after step 5 had run. So this is the rotation race, not the restart hang.
 
 ## Remediation
 
