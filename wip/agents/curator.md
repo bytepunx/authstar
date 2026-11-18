@@ -1,9 +1,9 @@
 ---
 kind: curator
-accrued_cost: 23.2437
-accrued_seconds: 2360
-tasks_completed: 15
-last_run: 2026-11-15T19:32:35Z
+accrued_cost: 24.0506
+accrued_seconds: 2438
+tasks_completed: 16
+last_run: 2026-11-15T19:38:53Z
 ---
 
 # Curator activity
@@ -131,3 +131,11 @@ flai writes this document, one entry per activity, newest last; do not edit it b
 - Items: D-0012, D-0051, D-0052, D-0056, D-0057
 - Seconds: 147
 - Cost: 1.5479 USD, estimated
+
+### 2026-11-15T19:38:53Z
+
+- Summary: I wrote no new entries this run. I merged TH-0065 (S-0021) and TH-0064 (S-0022) into D-0056, and pointed D-0058 and D-0059 at it. No entry was absorbed, and `flai digest compact` compacted nothing.
+- Trigger: accepted S-0021
+- Items: D-0056, D-0058, D-0059
+- Seconds: 78
+- Cost: 0.8069 USD, estimated

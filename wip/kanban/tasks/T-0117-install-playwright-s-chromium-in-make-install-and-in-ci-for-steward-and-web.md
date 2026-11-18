@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 10
-      output: 1789
-      cache_read: 1221593
-      cache_write: 30539
-      cost: 0.5218
+      input: 8
+      output: 1357
+      cache_read: 1220258
+      cache_write: 26822
+      cost: 0.4842
 ---
 # T-0117 Install Playwright's chromium in make install and in CI for steward and web
 

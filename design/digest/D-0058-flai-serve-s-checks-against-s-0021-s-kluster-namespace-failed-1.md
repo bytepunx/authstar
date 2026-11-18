@@ -14,18 +14,8 @@ cited: []
 
 # D-0058 flai serve's checks against S-0021's kluster namespace failed: 1
 
-The operator, bytepunx, answered TH-0065 at 2026-11-15T19:32:51Z.
+The operator, bytepunx, answered TH-0065 at 2026-11-15T19:32:51Z with "1". That chose agent-S-0021's recommended option: "accept S-0021 with these kluster checks failing". The causes were the golden path's missing waits after signet changes (I-0030/I-0035) and tower's restart window (I-0031), not S-0021's change. S-0021 changed no service. Its own close-out tiers passed, and it was accepted at 2026-11-15T19:37:31Z.
 
-What was asked:
-
-```text
-flai serve's checks of S-0021 against its namespace `s-0021` at 7b19fc1ce549a235cdd5f4bc39946a844506dff5 ended failed, at the check golden-path. Their log is `/home/alex/.flai/serve/checks/S-0021-20261114T180143Z.log`.
-```
-
-The answer:
-
-```text
-1
-```
+D-0056 holds the fact: the operator accepts a story past a golden path that fails only in tower's restart window. Rely on D-0056, not this entry.
 
 Source: TH-0065.

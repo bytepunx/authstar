@@ -28,11 +28,11 @@ usage:
   priced_by: harness
   models:
     - model: claude-opus-5-5
-      input: 11
-      output: 1977
-      cache_read: 1349983
-      cache_write: 33748
-      cost: 0.5767
+      input: 9
+      output: 1500
+      cache_read: 1348508
+      cache_write: 29641
+      cost: 0.5351
 ---
 # T-0116 Add scripts/check-e2e-tiers.sh, which fails when a project's npm test leaves out its test:e2e, and run it from scripts/test.sh
 

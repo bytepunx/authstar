@@ -6,7 +6,7 @@ title: Web's Playwright e2e specs run in no test tier, so flai test and the clos
 status: in-progress
 owner: bytepunx
 created: 2026-11-09T09:04:34Z
-updated: 2026-11-15T07:19:16Z
+updated: 2026-11-18T07:55:43Z
 transitions:
   - to: ready
     at: 2026-11-14T10:09:03Z
@@ -25,6 +25,12 @@ transitions:
     by: agent-S-0022
   - to: in-progress
     at: 2026-11-14T11:47:54Z
+    by: flai
+  - to: review
+    at: 2026-11-18T07:46:53Z
+    by: agent-S-0022
+  - to: in-progress
+    at: 2026-11-18T07:52:13Z
     by: flai
 blocked:
   - from: 2026-11-14T11:53:36Z
@@ -49,6 +55,9 @@ blocked:
     until: 2026-11-15T07:18:42Z
     reason: awaiting the operator on TH-0038
   - from: 2026-11-15T07:19:16Z
+    until: 2026-11-18T07:39:58Z
+    reason: awaiting the operator on TH-0038
+  - from: 2026-11-18T07:55:43Z
     reason: awaiting the operator on TH-0038
 tags: [web]
 topics: [testing]
@@ -60,7 +69,7 @@ agent:
     effort: high
 usage:
   source: log
-  seconds: 3932
+  seconds: 4549
   priced_by: harness
   turns:
     - day: 2026-11-14
@@ -69,24 +78,27 @@ usage:
     - day: 2026-11-15
       ceremony: 1
       work: 14
+    - day: 2026-11-18
+      ceremony: 2
+      work: 59
   models:
     - model: claude-opus-5-5
-      input: 376
-      output: 67777
-      cache_read: 46288973
-      cache_write: 1157175
-      cost: 19.7726
+      input: 506
+      output: 83427
+      cache_read: 75026143
+      cache_write: 1649146
+      cost: 29.7693
   strategic:
     - kind: orchestrator
-      seconds: 247
+      seconds: 291
       estimated: true
       models:
         - model: claude-opus-5-5
-          input: 106
-          output: 832
-          cache_read: 3207431
-          cache_write: 404210
-          cost: 4.0387
+          input: 135
+          output: 1035
+          cache_read: 4049122
+          cache_write: 509466
+          cost: 5.0839
 cost_of_delay:
   inputs:
     time_lost_per_cycle: 10m
@@ -155,3 +167,4 @@ Forecast: `flai forecast` gave 16m (66s median × size 14). Raised to 2h, becaus
 Cost of delay: `flai cod` gives 25 USD a week from the operator's input, 10m lost per 168h cycle at 150 USD an hour. Kept as given.
 - 2026-11-14T11:42:29Z: moved to in-progress: flai serve's checks of S-0022 against its kluster namespace ended failed, at the check golden-path, at commit 49c2822a9c2d
 - 2026-11-14T11:47:54Z: moved to in-progress: flai serve's checks of S-0022 against its kluster namespace ended failed, at the check golden-path, at commit 49c2822a9c2d
+- 2026-11-18T07:52:13Z: moved to in-progress: flai serve's checks of S-0022 against its kluster namespace ended failed, at the check golden-path, at commit f6ff837b9082

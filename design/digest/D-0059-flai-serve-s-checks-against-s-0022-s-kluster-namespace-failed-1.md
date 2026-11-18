@@ -14,18 +14,8 @@ cited: []
 
 # D-0059 flai serve's checks against S-0022's kluster namespace failed: 1
 
-The operator, bytepunx, answered TH-0064 at 2026-11-15T19:33:12Z.
+The operator, bytepunx, answered TH-0064 at 2026-11-15T19:33:12Z with "1". That chose agent-S-0022's recommended option: "Accept S-0022 without a passing golden path". Its three runs, including one after a fresh deploy, all failed because tower could not be reached inside `s-0022` after a signet bundle change: I-0030 and I-0031, plus I-0032, where the golden path exits silently when a curl to tower cannot connect. S-0022 changed no deployed service.
 
-What was asked:
-
-```text
-flai serve's checks of S-0022 against its namespace `s-0022` at 49c2822a9c2dbbfe5e00353d348d9b6268e0ea4c ended failed, at the check golden-path. Their log is `/home/alex/.flai/serve/checks/S-0022-20261114T114147Z.log`.
-```
-
-The answer:
-
-```text
-1
-```
+D-0056 holds the fact: the operator accepts a story past a golden path that fails only in tower's restart window. Rely on D-0056, not this entry.
 
 Source: TH-0064.

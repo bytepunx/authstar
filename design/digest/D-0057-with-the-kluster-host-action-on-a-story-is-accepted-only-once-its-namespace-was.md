@@ -22,4 +22,12 @@ S-0024's agent redeployed rather than ask for `--without-kluster`. Its first dep
 
 So a story whose change cannot show in its namespace still needs a passing deploy and checks at its head before review, or the operator's explicit `--without-kluster`. The operator gave that for S-0014 on TH-0063, whose golden path failed every run in tower's restart window (D-0056).
 
+The operator, bytepunx, answered TH-0063 again at 2026-11-15T19:50:38Z.
+
+The answer:
+
+```text
+1
+```
+
 Source: S-0024, TH-0074, TH-0063.
