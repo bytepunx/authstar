@@ -384,6 +384,22 @@ databases, not asserted:
   forward doesn't error loudly, it just refuses new connections. The scenario script
   establishes its own forwards fresh on every run rather than assuming any are already up.
 
+### Waiting for the restarts the golden path sets off
+
+Two steps change signet bundles, and each workload whose bundle changes restarts under signet's fleet-wide restart lock. A step that ran inside such a restart failed: the login's callback answered 500, chronicle's report answered 401, or tower encrypted the invite with a key herald no longer held ([I-0035](../design/issues/I-0035-golden-path-s-login-races-tower-s-restart-after-tenant-provisioning-changes-its.md)). So the scenario waits for each restart it sets off before the next step:
+
+| Step | Changes the bundles of | Waits before |
+|------|------------------------|--------------|
+| 1, provisioning and the tenant's domain | tower, portcullis | step 2's login |
+| 5, herald's key rotation | herald, tower | step 5's invite |
+
+Before the step it takes each workload's restart mark (`restart_mark` in [`scripts/lib.sh`](scripts/lib.sh)): its pod's name and restart count. After it, `wait_for_signet_restart` counts the restart as begun when the mark changes, a container stops being Ready, or the workload logs its restart-lock line. It then waits until the mark has changed and the pod is Ready, and starts the step's port-forwards again where they died. When no restart begins within the settle window, as on a rerun that changes no bundle, it goes on. Each wait logs a `restart wait:` line with its outcome and duration.
+
+| Variable | Default | What it bounds |
+|----------|---------|----------------|
+| `SIGNET_RESTART_SETTLE_SECONDS` | 45 | How long to watch for a restart to begin before going on without one |
+| `SIGNET_RESTART_TIMEOUT_SECONDS` | 120 | How long a begun restart may take to finish before the scenario dies naming the workload |
+
 ### The tenant's JWKS host in-cluster
 
 Chronicle verifies the ES256 internal JWT portcullis forwards against
