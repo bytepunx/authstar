@@ -6,7 +6,7 @@ title: keep's usage-updated event still carries the retired tenant scope
 status: backlog
 owner: bytepunx
 created: 2026-11-13T12:08:12Z
-updated: 2026-11-18T12:44:14Z
+updated: 2026-11-18T12:44:30Z
 transitions: []
 tags: [keep]
 touches: [design/adrs/0113-keep-s-usage-updated-event-is-scoped-to-the-reporting-account.md, design/adrs/README.md, keep/src/routes/usage.ts, keep/src/actors/usage_record_actor.ts, keep/src/lib/entitlement-publisher.ts, keep/src/lib/consequent-sequence-provider.ts, keep/spec/behavior/usage.spec.ts, keep/spec/behavior/consequent-sequence-provider.spec.ts, keep/src/routes/billing-reads.ts, keep/spec/behavior/billing-reads.spec.ts, keep/TESTING.md, design/stories/keep/001-actor-definitions.md, design/stories/keep/005-usage-records-and-credentials.md, design/issues/I-0021-keep-s-usage-updated-event-still-carries-the-retired-tenant-scope.md, design/issues/summary.md]
@@ -50,10 +50,10 @@ cost_of_delay:
   at: 2026-11-14T10:10:00Z
 forecast:
   duration: 1h
-  delivery: 2026-12-03T14:52:00Z
+  delivery: 2026-12-03T15:09:00Z
   basis: "Its own forecast of 1h; 5th in the pull order with an in-progress limit of 4, behind S-0014, S-0022, S-0012, S-0007, S-0008 and S-0010."
   by: flai
-  at: 2026-11-18T12:44:14Z
+  at: 2026-11-18T12:44:30Z
 finalized:
   by: bytepunx
   at: 2026-11-14T10:15:18Z

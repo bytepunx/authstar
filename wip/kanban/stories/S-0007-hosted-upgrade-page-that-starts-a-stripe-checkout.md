@@ -7,7 +7,7 @@ status: ready
 parent: E-0002
 owner: alex
 created: 2026-10-21T05:13:12Z
-updated: 2026-11-18T12:44:14Z
+updated: 2026-11-18T12:44:30Z
 transitions:
   - to: ready
     at: 2026-11-09T20:44:48Z
@@ -95,10 +95,10 @@ cost_of_delay:
     at: 2026-11-06T18:21:07Z
 forecast:
   duration: 8h
-  delivery: 2026-12-13T12:49:00Z
+  delivery: 2026-12-13T12:50:00Z
   basis: "Its own forecast of 8h; 2nd in the pull order with an in-progress limit of 4, behind S-0014, S-0022 and S-0012."
   by: flai
-  at: 2026-11-18T12:44:14Z
+  at: 2026-11-18T12:44:30Z
 ---
 # S-0007 Hosted upgrade page that starts a Stripe checkout
 
