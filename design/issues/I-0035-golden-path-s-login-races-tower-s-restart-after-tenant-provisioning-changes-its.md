@@ -7,7 +7,7 @@ count: 2
 cost: 18m
 first_reported: 2026-11-14T18:03:10Z
 last_reported: 2026-11-14T18:10:42Z
-updated: 2026-11-14T18:10:42Z
+updated: 2026-11-18T07:34:03Z
 ---
 
 # I-0035 Golden path's login races tower's restart after tenant provisioning changes its signet bundle, so portcullis's callback returns 500
@@ -43,3 +43,5 @@ A checks rerun with no redeploy, at 18:09:49Z, passed login, the account, keep, 
 S-0021 changes none of these services.
 
 ## Remediation
+
+Story S-0039 remediates this issue, created from it at 2026-11-18T07:34:03Z.
