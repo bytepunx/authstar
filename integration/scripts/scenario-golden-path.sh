@@ -37,7 +37,9 @@
 #     the trust from inside the pod, then reads the auth-funnel report
 #     through portcullis's chronicle application with step 2's session
 #     cookie, so chronicle verifies a genuine portcullis-forwarded token
-#   - herald: a real key rotation followed by a real invite, verified by
+#   - herald: a real key rotation followed by a real invite, the invite only
+#     once the herald and tower restarts the rotation sets off have finished
+#     (lib.sh's wait_for_signet_restart, I-0035), verified by
 #     querying herald's own Postgres communication_event table directly
 #     (kubectl exec + psql -- no HTTP status alone can distinguish "sent"
 #     from "decrypted fine but no send adapter configured" from "never
@@ -373,6 +375,13 @@ HERALD_OPERATOR_TOKEN="${HERALD_OPERATOR_TOKEN:-dev-placeholder-LKL0D3M7tKg2ZpRX
 port_forward herald "$HERALD_LOCAL_PORT" 8080
 HERALD_URL="http://localhost:${HERALD_LOCAL_PORT}"
 
+# The rotation pushes herald's new key generations to herald's own signet
+# bundle and its payload public key to tower's
+# (herald/src/routes/operator-rotate-keys.ts). Both then restart under
+# signet's restart lock, so mark both before it (I-0035).
+rotate_since="$(restart_since)"
+herald_mark="$(restart_mark "$AUTHSTAR_NAMESPACE" herald)"
+tower_mark="$(restart_mark "$AUTHSTAR_NAMESPACE" tower)"
 rotate_response="$(curl -s -X POST "${HERALD_URL}/operator/rotate-keys" \
   -H "Authorization: Bearer ${HERALD_OPERATOR_TOKEN}" \
   -H "Content-Type: application/json" \
@@ -381,6 +390,13 @@ rotate_response="$(curl -s -X POST "${HERALD_URL}/operator/rotate-keys" \
 rotate_status="$(echo "$rotate_response" | tail -1)"
 if [[ "$rotate_status" == "200" ]]; then
   pass "herald operator key-rotation API (real signet admin push)"
+  # Wait for both restarts before the invite: tower then encrypts it with
+  # the rotated key it reloads, not the one it booted with, and step 6's
+  # report, which chronicle resolves at tower, starts once tower is back.
+  wait_for_signet_restart "$AUTHSTAR_NAMESPACE" herald "$herald_mark" "$rotate_since"
+  wait_for_signet_restart "$AUTHSTAR_NAMESPACE" tower "$tower_mark" "$rotate_since"
+  refresh_port_forward herald "$HERALD_LOCAL_PORT" 8080
+  refresh_port_forward tower "$TOWER_LOCAL_PORT" 8080
 else
   fail "herald key rotation (HTTP $rotate_status): $(echo "$rotate_response" | head -1)"
 fi
